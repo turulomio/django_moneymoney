@@ -1,0 +1,22 @@
+
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+  <h1>{% trans "Bank details" %}</h1>
+  
+  <p><strong>{% trans 'Id' %}: </strong>{{ bank.id }}</p>
+  <p><strong>{% trans 'Number' %}: </strong>{{ bank.name}}</p>
+  <p><strong>{% trans 'Active' %}: </strong>{{ bank.active}}</p>
+  
+<p class="orders">
+  <a href="{% url 'bank_update' pk=bank.id %}">{% trans 'Update bank' %}</a> |
+  <a href="{% url 'account_new' banks_id=bank.id %}">{% trans 'Add a new account' %}</a> |
+</p>
+  
+
+  <h2>{% trans "Accounts" %}</h2>
+  {{ table_accounts|safe}}
+  <h2>{% trans "Investments" %}</h2>
+  {{ qso_investments.tabulator_active.render|safe}}
+{% endblock %}

@@ -1,0 +1,424 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-06-30 06:25+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: money/templates/account_view.html:74 money/templates/report_total.html:177
+#: money/templates/vuecomponents/TableInvestmentOperations.js:129
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:197
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:197
+msgid "Name"
+msgstr ""
+
+#: money/templates/account_view.html:75
+msgid "Number"
+msgstr ""
+
+#: money/templates/account_view.html:76
+msgid "Deferred"
+msgstr ""
+
+#: money/templates/account_view.html:77
+msgid "Maximum balance"
+msgstr ""
+
+#: money/templates/account_view.html:78
+#: money/templates/report_evolution.html:154
+#: money/templates/vuecomponents/TableAccountOperations.js:65
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:163
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:176
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:189
+msgid "Balance"
+msgstr ""
+
+#: money/templates/account_view.html:79 money/templates/report_total.html:173
+#: money/templates/vuecomponents/TableAccountOperations.js:67
+#: money/templates/vuecomponents/TableDividends.js:84
+#: money/templates/vuecomponents/TableInvestmentOperations.js:93
+#: money/templates/vuecomponents/TableInvestmentOperations.js:107
+#: money/templates/vuecomponents/TableInvestmentOperations.js:121
+msgid "Actions"
+msgstr ""
+
+#: money/templates/accountoperation_new.html:88
+msgid "Something is wrong"
+msgstr ""
+
+#: money/templates/investment_update.html:100
+msgid "Last investment operation price {0}. It's range center is {1}"
+msgstr ""
+
+#: money/templates/investment_update.html:126
+msgid "Investment selling price set to {0} to gain {1}."
+msgstr ""
+
+#: money/templates/investmentoperation_new.html:48
+#: money/templates/investmentoperation_update.html:38
+msgid "Gross balance is {0}. Net balance is {1}. Leverage multiplier is {2}"
+msgstr ""
+
+#: money/templates/order_new.html:80
+msgid "Current order balance is {0}"
+msgstr ""
+
+#: money/templates/report_concepts_historical.html:69
+#: money/templates/report_evolution.html:140
+#: money/templates/report_evolution.html:152
+msgid "Year"
+msgstr ""
+
+#: money/templates/report_concepts_historical.html:70
+msgid "January"
+msgstr ""
+
+#: money/templates/report_concepts_historical.html:71
+msgid "February"
+msgstr ""
+
+#: money/templates/report_concepts_historical.html:72
+msgid "March"
+msgstr ""
+
+#: money/templates/report_concepts_historical.html:73
+msgid "April"
+msgstr ""
+
+#: money/templates/report_concepts_historical.html:74
+msgid "May"
+msgstr ""
+
+#: money/templates/report_concepts_historical.html:75
+msgid "June"
+msgstr ""
+
+#: money/templates/report_concepts_historical.html:76
+msgid "July"
+msgstr ""
+
+#: money/templates/report_concepts_historical.html:77
+msgid "August"
+msgstr ""
+
+#: money/templates/report_concepts_historical.html:78
+msgid "September"
+msgstr ""
+
+#: money/templates/report_concepts_historical.html:79
+msgid "October"
+msgstr ""
+
+#: money/templates/report_concepts_historical.html:80
+msgid "November"
+msgstr ""
+
+#: money/templates/report_concepts_historical.html:81
+msgid "December"
+msgstr ""
+
+#: money/templates/report_concepts_historical.html:82
+#: money/templates/report_evolution.html:148
+#: money/templates/report_total.html:172
+msgid "Total"
+msgstr ""
+
+#: money/templates/report_evolution.html:141
+msgid "Initial balance"
+msgstr ""
+
+#: money/templates/report_evolution.html:142
+msgid "Final balance"
+msgstr ""
+
+#: money/templates/report_evolution.html:143
+#: money/templates/report_evolution.html:155
+msgid "Difference"
+msgstr ""
+
+#: money/templates/report_evolution.html:144
+#: money/templates/report_total.html:168
+msgid "Incomes"
+msgstr ""
+
+#: money/templates/report_evolution.html:145
+#: money/templates/report_total.html:180
+msgid "Net gains"
+msgstr ""
+
+#: money/templates/report_evolution.html:146
+#: money/templates/report_total.html:181
+msgid "Net dividends"
+msgstr ""
+
+#: money/templates/report_evolution.html:147
+#: money/templates/report_total.html:169
+msgid "Expenses"
+msgstr ""
+
+#: money/templates/report_evolution.html:153
+msgid "Invested balance"
+msgstr ""
+
+#: money/templates/report_evolution.html:156
+msgid "Percentage"
+msgstr ""
+
+#: money/templates/report_evolution.html:157
+msgid "Net gains + Dividends"
+msgstr ""
+
+#: money/templates/report_evolution.html:158
+msgid "Custody commissions"
+msgstr ""
+
+#: money/templates/report_evolution.html:159
+#: money/templates/vuecomponents/TableDividends.js:82
+#: money/templates/vuecomponents/TableInvestmentOperations.js:89
+#: money/templates/vuecomponents/TableInvestmentOperations.js:103
+#: money/templates/vuecomponents/TableInvestmentOperations.js:117
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:166
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:179
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:192
+msgid "Taxes"
+msgstr ""
+
+#: money/templates/report_evolution.html:160
+msgid "Investment commissions"
+msgstr ""
+
+#: money/templates/report_evolution.html:185
+msgid ""
+"Difference between invested amount and current invesment balance is {0}."
+msgstr ""
+
+#: money/templates/report_evolution.html:188
+msgid "From {0} I've generated {1} gains (investment commisions are included)."
+msgstr ""
+
+#: money/templates/report_evolution.html:192
+msgid "Sum of taxes and custody commissions is {0}."
+msgstr ""
+
+#: money/templates/report_evolution.html:195
+msgid "So, I've generated {0} gains."
+msgstr ""
+
+#: money/templates/report_evolution.html:200
+msgid "So I'm wining {0} which is {1} per year."
+msgstr ""
+
+#: money/templates/report_evolution.html:204
+msgid "So I'm losing {0} which is {1} per year."
+msgstr ""
+
+#: money/templates/report_total.html:158 money/templates/report_total.html:167
+msgid "Month"
+msgstr ""
+
+#: money/templates/report_total.html:159
+msgid "Account balance"
+msgstr ""
+
+#: money/templates/report_total.html:160
+msgid "Investment balance"
+msgstr ""
+
+#: money/templates/report_total.html:161
+msgid "Total balance"
+msgstr ""
+
+#: money/templates/report_total.html:162
+msgid "Last month difference"
+msgstr ""
+
+#: money/templates/report_total.html:163
+msgid "% year to date"
+msgstr ""
+
+#: money/templates/report_total.html:170
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:167
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:180
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:193
+msgid "Gains"
+msgstr ""
+
+#: money/templates/report_total.html:171
+msgid "Dividends"
+msgstr ""
+
+#: money/templates/report_total.html:178
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:164
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:177
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:190
+msgid "Gross gains"
+msgstr ""
+
+#: money/templates/report_total.html:179
+msgid "Gross dividends"
+msgstr ""
+
+#: money/templates/vuecomponents/TableAccountOperations.js:62
+#: money/templates/vuecomponents/TableDividends.js:77
+#: money/templates/vuecomponents/TableInvestmentOperations.js:83
+#: money/templates/vuecomponents/TableInvestmentOperations.js:97
+#: money/templates/vuecomponents/TableInvestmentOperations.js:111
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:158
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:171
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:184
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:158
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:171
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:184
+msgid "Date and time"
+msgstr ""
+
+#: money/templates/vuecomponents/TableAccountOperations.js:63
+#: money/templates/vuecomponents/TableDividends.js:78
+msgid "Concept"
+msgstr ""
+
+#: money/templates/vuecomponents/TableAccountOperations.js:64
+msgid "Amount"
+msgstr ""
+
+#: money/templates/vuecomponents/TableAccountOperations.js:66
+#: money/templates/vuecomponents/TableInvestmentOperations.js:92
+#: money/templates/vuecomponents/TableInvestmentOperations.js:106
+#: money/templates/vuecomponents/TableInvestmentOperations.js:120
+msgid "Comment"
+msgstr ""
+
+#: money/templates/vuecomponents/TableDividends.js:79
+#: money/templates/vuecomponents/TableInvestmentOperations.js:87
+#: money/templates/vuecomponents/TableInvestmentOperations.js:101
+#: money/templates/vuecomponents/TableInvestmentOperations.js:115
+msgid "Gross"
+msgstr ""
+
+#: money/templates/vuecomponents/TableDividends.js:80
+#: money/templates/vuecomponents/TableInvestmentOperations.js:90
+#: money/templates/vuecomponents/TableInvestmentOperations.js:104
+#: money/templates/vuecomponents/TableInvestmentOperations.js:118
+msgid "Net"
+msgstr ""
+
+#: money/templates/vuecomponents/TableDividends.js:81
+#: money/templates/vuecomponents/TableInvestmentOperations.js:88
+#: money/templates/vuecomponents/TableInvestmentOperations.js:102
+#: money/templates/vuecomponents/TableInvestmentOperations.js:116
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:165
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:178
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:191
+msgid "Commission"
+msgstr ""
+
+#: money/templates/vuecomponents/TableDividends.js:83
+msgid "DPS"
+msgstr ""
+
+#: money/templates/vuecomponents/TableDividends.js:87
+msgid "Account"
+msgstr ""
+
+#: money/templates/vuecomponents/TableInvestmentOperations.js:84
+#: money/templates/vuecomponents/TableInvestmentOperations.js:98
+#: money/templates/vuecomponents/TableInvestmentOperations.js:112
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:159
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:172
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:185
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:160
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:173
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:186
+msgid "Operation"
+msgstr ""
+
+#: money/templates/vuecomponents/TableInvestmentOperations.js:85
+#: money/templates/vuecomponents/TableInvestmentOperations.js:99
+#: money/templates/vuecomponents/TableInvestmentOperations.js:113
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:160
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:173
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:186
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:161
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:174
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:187
+msgid "Shares"
+msgstr ""
+
+#: money/templates/vuecomponents/TableInvestmentOperations.js:86
+#: money/templates/vuecomponents/TableInvestmentOperations.js:100
+#: money/templates/vuecomponents/TableInvestmentOperations.js:114
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:161
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:174
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:187
+msgid "Price"
+msgstr ""
+
+#: money/templates/vuecomponents/TableInvestmentOperations.js:91
+#: money/templates/vuecomponents/TableInvestmentOperations.js:105
+#: money/templates/vuecomponents/TableInvestmentOperations.js:119
+msgid "Currency factor"
+msgstr ""
+
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:162
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:175
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:188
+msgid "Invested"
+msgstr ""
+
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:165
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:178
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:191
+msgid "% annual"
+msgstr ""
+
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:166
+msgid "% APR"
+msgstr ""
+
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:167
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:180
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:193
+msgid "% Total"
+msgstr ""
+
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:179
+#: money/templates/vuecomponents/TableInvestmentOperationsCurrent.js:192
+msgid "% TAE"
+msgstr ""
+
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:159
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:172
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:185
+msgid "Years"
+msgstr ""
+
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:162
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:175
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:188
+msgid "Gross start"
+msgstr ""
+
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:163
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:176
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:189
+msgid "Gross end"
+msgstr ""
+
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:164
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:177
+#: money/templates/vuecomponents/TableInvestmentOperationsHistorical.js:190
+msgid "Gains gross"
+msgstr ""

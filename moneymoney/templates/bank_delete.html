@@ -1,0 +1,16 @@
+
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<h1>{% trans "Delete a bank" %}</h1>
+{% if object.is_deletable %}
+    <form action="" method="post">
+    {% csrf_token %}
+    <p>Are you sure you want to delete "{{ object.name }}"?</p>
+    <input type="submit" value="Confirm" />
+    </form>
+{% else %}
+    <p>{% trans "You can't delete this bank due to it has dependent data" %}</p>
+{% endif%}
+{% endblock %}

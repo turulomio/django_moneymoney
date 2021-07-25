@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+{% load i18n %}
+{% load static %}
+{% load mymenu %}
+{% load random_numbers %}
+
+
+{# Make modifiable head elements #}
+<head>
+    <title>{% block title %}{% mypagetitle %}{% endblock title %}</title>
+    {% block head_favicon %}
+        <link rel="icon" href='{% static "images/favicon.ico" %}'>
+    {% endblock head_favicon %}
+
+    {% block head_meta %}
+        {% block head_meta_charset %}
+            <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        {% endblock head_meta_charset %}
+
+        {% block head_meta_contentlanguage %}
+            <meta http-equiv="Content-Language" value="en-US" />
+        {% endblock head_meta_contentlanguage %}
+
+        {% block head_meta_viewport %}
+            <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+        {% endblock head_meta_viewport %}
+    {% endblock head_meta %}
+
+    {% block head_js %}
+        {% block head_js_site %}
+             <script type="text/javascript" src='{% static "js/vue.min.js" %}'></script>
+             <script type="text/javascript" src='{% static "js/vuetify.min.js" %}'></script>
+             <script type="text/javascript" src='{% static "js/django_money.js" %}'></script>
+             <script src="{% url 'javascript-catalog' %}"></script>
+        {% endblock head_js_site %}
+        {% block head_js_section %}
+        {% endblock head_js_section %}
+    {% endblock head_js %}
+
+        {% block head_css %}
+        {% block head_css_site %}
+            <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+            <link rel="stylesheet" type="text/css" href='{% static "css/materialdesignicons.min.css" %}'>
+            <link rel="stylesheet" type="text/css" href='{% static "css/vuetify.min.css" %}'>
+            <link rel="stylesheet" type="text/css" href='{% static "css/mystylesvue.css" %}?dev={% random_integer 0 10000 %}'>
+        {% endblock head_css_site %}
+
+        {% block head_css_section %}
+        {% endblock head_css_section %}
+    {% endblock head_css %}
+</head>
+<body>
+<div id="app">
+    <v-app>
+    <div class="layHorizontal">
+        <div class="sidebar">
+            <p class="title"><a href="{% url 'home' %}">{% trans "Django Money" %}</a></p>
+            <p class="version">{% trans "Version:" %} {{request.VERSION}} ({{request.VERSIONDATE|date:"c"}})</p>
+            <p class="title"><a href="{% url 'home' %}"><img src='{% static "images/xulpymoney.png" %}' height="50px" width="50px"/></a></p>
+            <div class="languages" style="display:flex; flex-direction: row; justify-content: center;">
+            <form class="languages" action="{% url 'set_language' %}" method="post">{% csrf_token %}
+                <input type="hidden" name="next" value="{{redirect_to}}">
+                    <select name="language" onchange="this.form.submit()" style="all:revert" >
+                        {% get_current_language as LANGUAGE_CODE %}
+                        {% get_available_languages as LANGUAGES %}
+                        {% get_language_info_list for LANGUAGES as languages %}
+                        {% for language in languages %}
+                        <option value="{{ language.code }}" {% if language.code == LANGUAGE_CODE %} selected {% endif %}>
+                            {{ language.name_local|title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div><!--Language-->
+            <p></p>
+            {% mymenuvue %}
+
+            <p class="github"><a href="https://github.com/turulomio/" target="_blank">{% trans "Developed by Turulomio" %}</a></p>
+            <p class="github"><a href="https://github.com/turulomio/django-money" target="_blank"><img src="{% static 'images/github.png' %}" height="25px" width="25px"/></a>
+                <a href="https://github.com/turulomio/xulpymoney" target="_blank"><img src="{% static 'images/github.png' %}" height="25px" width="25px"/></a></p>
+
+        </div><!--Sidebar-->
+
+        <div class="layVertical">
+            <div class="header">
+                {% if user.is_authenticated %}
+                    <div class="headeritem"><a href="{% url 'logout' %}">{% trans "Logout" %} {{ user.username|upper }}</a></div>
+                    <div class="headeritem"><a href="{% url 'admin:index' %}">{% trans "Administration" %}</a></div>
+                    <div class="headeritem"><a href="{% url 'settings' %}">{% trans "Settings" %}</a></div>
+                {% else %}
+                    <div class="headeritem"><a href="{% url 'login' %}?next={%url 'home' %}">{% trans "Login" %}</a></div>
+                {% endif %}
+            </div> {# header #}
+
+            <div class="content"> 
+                <div class="messages">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.level_tag }}" role="alert" >{{message.message | safe}}</div>
+                        {% endfor%}
+                    {% endif %}
+                </div>
+                
+                {% if messages %}
+                    <v-snackbar v-model="snackbar" timeout="-1">
+                        <template v-slot:action="{ attrs }">
+                            <v-btn color="pink" text v-bind="attrs" @click="snackbar = false">{% trans 'Close' %}</v-btn>
+                        </template>
+                    
+                    {% for message in messages %}
+                        {{message.message | safe}}
+                    {% endfor%}
+                    </v-snackbar>
+                {% endif %}
+
+                <script>
+                    Vue.config.devtools = true;
+                    var mixin = {
+                        data: function () {
+                            return {
+                                snackbar:true,
+                                locale: '{{ LANGUAGE_CODE }}',
+                                {% autoescape off %}
+                                {% mymenuvuetree %}
+                                {% endautoescape%}
+                            }
+                        },
+                        methods: {
+                            currency_string(num, currency, decimals=2){
+                                return currency_generic_string(num, currency, '{{ LANGUAGE_CODE }}',decimals )
+                            },
+                            currency_html(num, currency, decimals=2){
+                                return currency_generic_html(num, currency, '{{ LANGUAGE_CODE }}',decimals )
+                            },
+                            percentage_string(num, decimals=2){
+                                return percentage_generic_string(num,'{{ LANGUAGE_CODE }}',decimals )
+                            },
+                            percentage_html(num, decimals=2){
+                                return percentage_generic_html(num,'{{ LANGUAGE_CODE }}',decimals )
+                            },
+                        },
+                    }
+                </script>
+                {% block content %}
+                {% endblock content %}
+            </div> {# content #}
+        </div> {# layVertical #}
+    </div> {# layHorizontal #}
+    </v-app>
+</div>
+
+
+</body>
+</html>

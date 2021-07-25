@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<h1>{% trans "Products pairs" %}</h1>
+
+<p>{% trans "Better product" %}: {{ product_better.fullName }}</p>
+<p>{% trans "Worse product" %}: {{ product_worse.fullName }}</p>
+
+
+<h2>{% trans "Chart" %}</h2>
+{{ ldo.chart|safe }}
+
+<h2>{% trans "Data" %}</h2>
+{{ ldo.tabulator.render | safe }}
+
+{% endblock %}

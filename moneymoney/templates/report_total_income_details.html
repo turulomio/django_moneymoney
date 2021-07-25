@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% load i18n %}
+
+{% block content %}
+<h1>{% trans "Total details" %} {{year}}-{{month}}</h1>
+
+
+<script>
+    $( function() {
+      $( "#tabs" ).tabs();
+    } );
+  </script>
+   
+<div id="tabs">
+    <ul>
+      <li><a href="#tabs-2">{% trans "Incomes" %}</a></li>
+      <li><a href="#tabs-1">{% trans "Expenses" %}</a></li>
+      <li><a href="#tabs-3">{% trans "Dividends" %}</a></li>
+      <li><a href="#tabs-4">{% trans "Gains" %}</a></li>
+    </ul>
+   
+  
+  <div id="tabs-1">
+    {{table_incomes|safe}}
+  </div>
+  
+  
+  <div id="tabs-2">
+    {{table_expenses|safe}}
+  </div>
+
+  <div id="tabs-3">
+    {{qso_dividends.tabulator.render |safe}}
+  </div>
+
+  <div id="tabs-4">
+    {{table_gains|safe}}
+  </div>
+</div>
+
+{% endblock %}
+

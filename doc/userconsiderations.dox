@@ -1,0 +1,16 @@
+# User considerations
+
+## Investments balance
+
+Get investments balance is complex, due to there are a lot of products with different propieties
+
+- CFD. Its operations sometimes are showed in account movements, but sometimes no
+- Shares. They allways are showed in account momvements
+
+Si contabilizaramos su balance habría una doble contabilidad, ya que no ha sido descontado de la cuenta
+
+Si embargo las ganancias o perdidas si deben de ser contabilizadas como tales
+
+También deben ser consideradas en invested y mostrar un % de apalancamiento
+
+So I've created in investments table a field call balance_percentage to show

@@ -1,0 +1,90 @@
+/*! \page "Administrator pages"
+
+Installation Initial data
+=========================
+
+Creating an app, sometimes require initial data creation. For example Grooup permissions
+
+To create we can make a migration to insert data programatically
+
+
+@code
+python manage.py makemigrations --empty yourappname
+@endcode
+
+It generates something like
+
+@code
+Migrations for 'books':
+  books/migrations/0005_auto_20180605_1942.py
+
+@endcode
+
+Now we can add now code
+
+Installation
+============
+
+In postgresql, first we create database
+
+@code
+createdb -U postgres mylibrary
+@endcode
+
+We edit django/setting.py to set connection information
+
+We run
+
+@code
+python manage.py migrate
+python manage.py createpermissions [-add_example_users is optional to create users: user and worker with password changeme]
+python manage.py changepassword
+python manage.py runserver
+@endcode
+
+Installation in apache
+======================
+
+You must configure apache with mod_wsgi support. In gentoo
+@code
+emerge -v apache mod_wsgi
+@endcode
+
+Then I had to add in /etc/conf.d/apache2 -D WSGI
+
+In gentoo I need to add this code in /etc/apache2/vhosts.d/default_vhost.include
+
+@code
+WSGIDaemonProcess localhost processes=2 threads=15
+WSGIScriptAlias /dj_books /var/www/localhost/htdocs/dj_books/dj_books/wsgi.py process-group=localhost
+Alias /dj_books/static /var/www/localhost/htdocs/dj_books/books/static
+
+
+<directory /var/www/localhost/htdocs/dj_books> 
+#<Files wsgi.py>
+#Require all granted
+#</Files>
+   AllowOverride all 
+   Require all granted 
+   Options FollowSymlinks 
+</directory> 
+@endcode
+
+@note
+In WSGIScriptAlias notice no trailing slash after the 2nd token, "/dj_books"
+@endnote
+
+
+I had to add this line before environ line in djbooks/wsgi.py
+@code
+import sys
+sys.path.append('/var/www/localhost/htdocs/dj_books/') 
+@endcode
+
+
+Then I restart apache and it works
+@code
+/etc/init.d/apache2 restart
+@endcode
+
+*/

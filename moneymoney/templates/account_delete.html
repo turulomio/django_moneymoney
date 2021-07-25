@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+    <h1>{% trans "Confirm account delete" %}</h1>
+    {% if object.is_deletable is True %}
+        <form action="" method="post">
+        {% csrf_token %}
+        <p>Are you sure you want to delete "{{ object }}"?</p>
+        <input type="submit" value="Confirm" />
+        </form>
+    {% else %}
+        <p>{% trans "This account can't be deleted due to it has dependent data" %}
+    {% endif %}
+    
+{% endblock %}

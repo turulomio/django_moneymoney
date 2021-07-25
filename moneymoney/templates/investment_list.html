@@ -1,0 +1,117 @@
+{% extends 'base_vue_all.html' %}
+
+{% load i18n %}
+
+{% load static %}
+
+{% block head_js_section %}
+    <script type="text/javascript" src='{% static "js/moment.js" %}'></script>
+    <script type="text/javascript" src='{% static "js/moment-timezone-with-data.js" %}'></script>
+{% endblock head_js_section %}
+
+
+{% block content %}
+<h1>{% trans "Investments list" %}</h1>
+
+
+{% url 'investment_list_active' as url_unchecked %}
+{% url 'investment_list_inactive' as url_checked %}
+{% trans "Check to show inactive investments" as mylabel %}
+{% include "objects/checkbox_selection.html" with label=mylabel url_checked=url_checked url_unchecked=url_unchecked %}    
+<p></p>
+        <v-data-table dense :headers="tableHeaders" :items="tableData" class="elevation-1" disable-pagination  hide-default-footer sort-by="percentage_sellingpoint"  >
+            <template v-slot:[`item.last_datetime`]="{ item }">
+                [[ localtime(item.last_datetime)]]
+            </template>
+            <template v-slot:[`item.last_quote`]="{ item }">
+                [[ currency_string(item.last_quote, localCurrency)]]
+            </template>
+            <template v-slot:[`item.daily_difference`]="{ item }">
+                <div v-html="currency_html(item.daily_difference, localCurrency)"></div>
+            </template>
+            <template v-slot:[`item.daily_percentage`]="{ item }">
+                <div v-html="percentage_html(item.daily_percentage)"></div>
+            </template>
+            <template v-slot:[`item.invested_local`]="{ item }">
+                [[ currency_string(item.invested_local, localCurrency)]]
+            </template>
+            <template v-slot:[`item.balance`]="{ item }">
+                [[ currency_string(item.balance, localCurrency)]]
+            </template>
+            <template v-slot:[`item.gains`]="{ item }">
+                <div v-html="currency_html(item.gains, localCurrency)"></div>
+            </template>
+            <template v-slot:[`item.percentage_invested`]="{ item }">
+                <div v-html="percentage_html(item.percentage_invested)"></div>
+            </template>
+            <template v-slot:[`item.percentage_sellingpoint`]="{ item }" >
+
+                <div  :class="item.percentage_sellingpoint<0.05 ? 'vuegreen' : ''" v-html="percentage_html(item.percentage_sellingpoint)"></div>
+            </template>
+
+            <template v-slot:[`item.actions`]="{ item }">
+                <v-icon small @click="viewItem(item)">mdi-pencil</v-icon>
+                <v-icon small v-if="(new Date()>new Date(item.selling_expiration)) && item.selling_expiration!=null" @click="editInvestment(item)">mdi-alarm</v-icon>          
+            </template>
+            <template v-slot:body.append="{headers}">
+                <tr style="background-color: GhostWhite">
+                    <td v-for="(header,i) in headers" :key="i">
+                        <div v-if="header.value == 'name'">
+                            Total
+                        </div>
+                        <div v-if="header.value == 'daily_difference'" align="right">
+                            <div v-html="currency_html(tableData.reduce((accum,item) => accum + item.daily_difference, 0), localCurrency)"></div>
+                        </div>
+                        <div v-if="header.value == 'invested_local'" align="right">
+                            <div v-html="currency_html(tableData.reduce((accum,item) => accum + item.invested_local, 0), localCurrency)"></div>
+                        </div>
+                        <div v-if="header.value == 'balance'" align="right">
+                            <div v-html="currency_html(tableData.reduce((accum,item) => accum + item.balance, 0), localCurrency)"></div>
+                        </div>
+                        <div v-if="header.value == 'gains'" align="right">
+                            <div v-html="currency_html(tableData.reduce((accum,item) => accum + item.gains, 0), localCurrency)"></div>
+                        </div>
+                    </td>
+                </tr>
+            </template>
+        </v-data-table>   
+
+<p></p>
+<p>{{foot}}</p>
+<p>{{balance_futures}}</p>
+
+<script>
+    new Vue({
+        ...common_vue_properties(),
+        data:function () {
+            return {
+                tableHeaders: [
+                    { text: gettext('Name'), value: 'name',sortable: true},
+                    { text: gettext('Last quote'), value: 'last_datetime',sortable: true , width:"10%"},
+                    { text: gettext('Quote'), value: 'last_quote',sortable: true, align:"right", width:"7%"},
+                    { text: gettext('Daily difference'), value: 'daily_difference',sortable: true, align:"right", width:"7%"},
+                    { text: gettext('Daily percentage'), value: 'daily_percentage',sortable: true, align:"right", width:"7%"},
+                    { text: gettext('Invested'), value: 'invested_local',sortable: true, align:"right", width:"7%"},
+                    { text: gettext('Balance'), value: 'balance',sortable: true, align:"right", width:"7%"},
+                    { text: gettext('Gains'), value: 'gains',sortable: true, align:"right", width:"7%"},
+                    { text: gettext('Percentage invested'), value: 'percentage_invested',sortable: true, align:"right", width:"7%"},
+                    { text: gettext('Percentage selling point'), value: 'percentage_sellingpoint',sortable: true, align:"right", width:"7%"},
+                    { text: gettext('Actions'), value: 'actions', sortable: true, width:"5%", cellClass: "text-nowrap" },
+                ],   
+                tableData: {{json_table|safe}},
+                localCurrency: "{{request.local_currency}}",
+            }
+        },
+        methods:{
+            viewItem(item){
+                window.location.href="{%url 'investment_view' pk=9999%}".replace("9999", item.id)
+            },
+            editInvestment(item){
+                window.location.href="{%url 'investment_update' pk=9999%}".replace("9999", item.id)
+            },
+
+        },
+    })
+</script>
+{% endblock %}
+

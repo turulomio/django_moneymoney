@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+    <h1>{% trans "Update strategy" %}</h1>
+    <form method="post">
+        <table>
+        {% csrf_token %}
+        {{ form.as_table }}
+        </table>
+    <button type="submit">{% trans "Save" %}</button>
+    </form>
+    <p class="orders">
+        <a href="{% url 'strategy_delete' pk=object.id %}">{% trans "Delete this strategy" %}</a>
+    </p>
+
+    <script>
+        var cmbType=document.getElementById("id_type");
+        window.onload=function(){strategy_update_labels(cmbType)};
+        cmbType.onchange = function() {strategy_update_labels(cmbType)};
+    </script>
+{% endblock %}

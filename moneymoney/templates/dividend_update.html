@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+    <h1>{% trans "Update a dividend" %}</h1>
+    <form method="post">
+        <table>
+        {% csrf_token %}
+        {{ form.as_table }}
+        </table>
+    <button type="submit">{% trans "Save" %}</button>
+    </form>
+    <p class="orders">
+            <a href="{% url 'dividend_delete' pk=object.id %}">{% trans "Delete this dividend" %}</a>
+    </p>
+
+{% endblock %}

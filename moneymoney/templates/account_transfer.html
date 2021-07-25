@@ -1,0 +1,17 @@
+
+{% extends 'base.html' %}
+
+{% load i18n %}
+
+{% block content %}
+    <h1>{% blocktrans with account_name=origin.name %} Account transfer from '{{ account_name }}'{% endblocktrans %}</h1>
+    <form method="post" class="form_table">
+        <table>
+        {% csrf_token %}
+        {{ form.as_table }}
+        </table>
+        <button type="submit" name="button">{% trans "Make transfer" %}</button>
+    </form>
+  
+  
+{% endblock %}

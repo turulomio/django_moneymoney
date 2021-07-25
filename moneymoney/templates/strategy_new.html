@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+    <h1>{% trans "Add a new strategy" %}</h1>   
+     <form method="post">
+        <table>
+            {% csrf_token %}
+            {{ form.as_table }}
+        </table>
+     <button type="submit">{% trans "Save" %}</button>
+    </form>
+    <script>
+        var cmbType=document.getElementById("id_type");
+        window.onload=function(){strategy_update_labels(cmbType)};
+        cmbType.onchange = function() {strategy_update_labels(cmbType)};
+    </script>
+{% endblock %}

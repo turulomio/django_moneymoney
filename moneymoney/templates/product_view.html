@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+  <h1>{% trans "Product details" %}</h1>
+<p><strong>{% trans "Id" %}: </strong>{{ product.id }}</p>
+<p><strong>{% trans "Name" %}: </strong>{{ product.name }}</p>
+<p><strong>{% trans "ISIN" %}: </strong>{{ product.isin }}</p>
+<p><strong>{% trans "Currency" %}: </strong>{{ product.currency_symbol }}</p>
+<p><strong>{% trans "Product type" %}: </strong>{{ product.productstypes.name }}</p>
+<p><strong>{% trans "Leverage" %}: </strong>{{ product.leverages.name }}</p>
+<p><strong>{% trans "Tickers" %}: </strong>{{ product.tickers }}</p>
+<p><strong>{% trans "Obsolete" %}: </strong>{{ product.obsolete }}</p>
+
+<p class="orders">
+  <a href="{% url 'quote_new' products_id=product.id %}">{% trans "Add a quote to product" %}</a> | 
+  <a href="{% url 'quote_list' products_id=product.id %}">{% trans "Quote list" %}</a> | 
+</p>
+
+<h1>{% trans "Quotes month percentage evolution" %}</h1>
+  {{ table_quotes_month_percentages |safe}}
+  
+<h1>{% trans "Quotes month evolution" %}</h1>
+  {{ table_quotes_month_quotes |safe}}
+
+<h1>{% trans "Quotes chart" %}</h1>
+
+<ajax-button id="ajax_chart_product_quotes_historical" url="{% url 'ajax_chart_product_quotes_historical' product.id %}" buttontext="{% trans 'Historical quotes chart' %}" csrf_token="{{csrf_token}}"></ajax-button>
+
+{% endblock %}

@@ -1,0 +1,21 @@
+
+{% comment %}
+Checkbox form to redirect checking
+Can be used with only
+Parameters:
+    - label Must be a cuestion to show inactive url. F.e. Show inactive investments
+    - url_checked
+    - url_unchecked
+{% endcomment %}
+
+{% if request.path == url_unchecked %}
+<form class="checkbox_selection" action="{{ url_checked }}" method="post">{% csrf_token %}
+    <input type="checkbox" value="first_checkbox"  onchange="this.form.submit();">
+    <label>{{ label }}</label>
+</form>
+{% else %} 
+<form class="checkbox_selection" action="{{ url_unchecked }}" method="post">{% csrf_token %}
+    <input type="checkbox" value="first_checkbox" checked onchange="this.form.submit();">
+    <label>{{ label }}</label>
+</form>
+{% endif %}  

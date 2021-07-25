@@ -1,0 +1,85 @@
+{% extends 'base_vue_all.html' %}
+
+{% load i18n %}
+
+{% load static %}
+
+{% block head_js_section %}
+    <script type="text/javascript" src='{% static "js/moment.js" %}'></script>
+    <script type="text/javascript" src='{% static "js/moment-timezone-with-data.js" %}'></script>
+{% endblock head_js_section %}
+
+{% block content %}
+    <h1>{% trans "Products search" %}</h1>
+    <v-card width="45%" class="padding mx-lg-auto">
+        <v-form ref="form" v-model="form_valid" lazy-validation action="{% url 'product_list_search' %}" method="GET">
+            <v-row>
+                <v-text-field dense name="search" v-model="search" label="{% trans 'Search products' %}"  placeholder="{% trans 'Enter a string' %}" autofocus></v-text-field>
+                <v-btn dense class="ml-4" color="error" @click="submit()" :disabled="form_valid==false">{% trans "Search" %}</v-btn>
+            </v-row>
+        <v-form>
+    </v-card>
+    {% if search %}
+        <h2>{% trans "Results" %}</h2>
+        <v-card flat>
+            <v-data-table dense :headers="tableHeaders" :items="tableData"  class="elevation-1" disable-pagination  hide-default-footer :sort-by="['value']" :sort-desc="[true]" fixed-header height="600">      
+                <template v-slot:[`item.last`]="{ item }">
+                    [[ currency_string(item.last, item.currency)]]
+                </template>  
+                <template v-slot:[`item.last_datetime`]="{ item }">
+                    [[ localtime(item.last_datetime)]]
+                </template>  
+                <template v-slot:[`item.name`]="{ item }">
+                    <div :class="class_name(item)">[[item.name]]</div>
+                </template>  
+                <template v-slot:[`item.actions`]="{ item }">
+                    <v-icon small @click="viewProduct(item)">mdi-eye-outline</v-icon>
+                    <v-icon small @click="editProduct(item)" v-if="item.id<0">mdi-pencil</v-icon>
+                </template>
+            </v-data-table>   
+        </v-card>
+    {% endif %}
+
+<script>
+    new Vue({
+        ...common_vue_properties(),
+        data:{
+            form_valid: false,
+            search:"{{ search }}",
+            tableHeaders: [
+                { text: 'Id', value: 'id',sortable: true },
+                { text: 'Name', value: 'name',sortable: true},
+                { text: 'ISIN',  sortable: true, value: 'isin'},
+                { text: 'Last update',  sortable: true, value: 'last_datetime'},
+                { text: 'Last quote', value: 'last', sortable: true, align: 'right' },
+                { text: 'Actions', value: 'actions', sortable: false },
+            ],   
+            tableData: {{table_products | safe}},
+        },
+        methods:{
+            editProduct(item){
+            },
+            viewProduct(item){
+                url="{% url 'product_view' pk=9999 %}".replace("9999", item.id)
+                window.location.href=url
+            },
+            class_name(item){
+                if (item.obsolete==false){
+                    return ""
+                }
+                return "text-decoration-line-through"
+            },
+            submit(){
+                if (this.$refs.form.validate()==false) return
+                if (this.search==""){
+                    alert("{% trans 'You must enter a search string' %}")
+                    return
+                }
+                this.$refs.form.$el.submit()
+            }
+        },
+    })
+</script>
+
+{% endblock %}
+

@@ -1,0 +1,54 @@
+{% extends 'base_vue_all.html' %}
+{% load i18n %}
+
+{% load static %}
+
+{% block head_js_section %}
+    <script type="text/javascript" src='{% static "js/axios.min.js" %}'></script> 
+    <script type="text/javascript" src='{% static "js/vuecomponents/AutoCompleteApiIdName.js" %}'></script>
+{% endblock head_js_section %}
+
+
+
+
+{% block content %}
+<h1>{% trans "Products comparation" %}</h1>
+<v-card class="padding">
+    <v-card-title>{% trans "Select two products" %}</v-card-title>
+    <v-card-subtitle>{% trans "Put in first place the one with better behaviour" %}</v-card-subtitle>
+    <autocompleteapi-idname ref="a" label="{% trans 'Select product A' %}"  url="{% url 'product_search' %}" v-model="product_a"></autocompleteapi-idname>
+    <autocompleteapi-idname ref="b" label="{% trans 'Select product B' %}"  url="{% url 'product_search' %}" v-model="product_b"></autocompleteapi-idname>
+    <v-card-actions>
+        <v-btn color="primary" @click="change" :disabled="(product_a==null || product_b==null)">{% trans 'Switch' %}</v-btn>
+        <v-btn color="primary" @click="pairReport" :disabled="(product_a==null || product_b==null)">{% trans 'Pair report' %}</v-btn>
+    </v-card-actions>
+</v-card>
+<script>
+    Vue.config.devtools = true
+    new Vue({
+        ...common_vue_properties(),
+        data:{
+            product_a: localStorage.product_a || null,
+            product_b: localStorage.product_b || null,
+            
+        },
+        methods:{
+            pairReport(){
+                localStorage.product_a=this.product_a
+                localStorage.product_b=this.product_b
+                window.location.replace("{% url 'products_pairs' 1111 2222%}".replace('1111', this.product_b).replace("2222", this.product_a))
+            },
+            change(){
+                var tmp=this.product_a
+                this.product_a=this.product_b
+                this.product_b=tmp
+                this.$refs.a.forceValue(this.product_a)
+                this.$refs.b.forceValue(this.product_b)
+            }
+        },
+        computed:{
+        
+        },
+    })
+</script>
+{% endblock %}

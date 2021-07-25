@@ -1,0 +1,31 @@
+/*! \page Developer
+
+
+Migrations
+==========
+
+If we make changes in app model we must create migrations with
+@code
+python3 manage.py makemigrations
+
+@endcode
+
+Django Shell. Get user permissions
+==================================
+
+@code
+from django.contrib.auth.models import User
+root = User.objects.get(username="root")
+root.get_all_permissions()
+{'auth.delete_group', 'admin.change_logentry', 'auth.add_user', 'books.add_book', 'books.change_filebooks', 'admin.add_logentry', 'books.delete_valoration', 'contenttypes.change_contenttype', 'books.add_filebooks', 'books.change_book', 'sessions.change_session', 'books.add_author', 'auth.add_group', 'auth.delete_user', 'books.add_valoration', 'admin.delete_logentry', 'books.change_valoration', 'books.delete_author', 'books.delete_book', 'books.delete_filebooks', 'books.add_profile', 'auth.add_permission', 'books.change_profile', 'contenttypes.delete_contenttype', 'auth.change_permission', 'books.delete_profile', 'auth.delete_permission', 'auth.change_group', 'contenttypes.add_contenttype', 'sessions.delete_session', 'sessions.add_session', 'books.change_author', 'auth.change_user'}
+@endcode
+
+Update translations
+===================
+
+@code
+python3 manage.py makemessages
+python3 manage.py compilemessages
+@endcode
+
+*/

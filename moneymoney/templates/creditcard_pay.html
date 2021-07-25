@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+  <h1>{% blocktrans with name=creditcard.name %}Pay deferred operations of '{{ name}}' {% endblocktrans %}</h1>
+
+      <form method="post" class="form_table">
+        <table>
+        {% csrf_token %}
+        {{ form.as_table }}
+        </table>
+        {{qso_creditcardoperations.widget_for_pay | safe}}
+        <br>
+        <button type="submit" name="button">{% trans "Make payment" %}</button>
+    </form>
+    <p></p>
+    
+{% endblock %}

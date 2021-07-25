@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% load i18n %}
+
+{% block content %}
+<h1>{% trans "My orders" %}</h1>
+
+{% url 'order_list_active' as url_unchecked %}
+{% url 'order_list_inactive' year as url_checked %}
+{% trans "Check to show old orders" as mylabel %}
+<p></p>
+{% include "objects/checkbox_selection.html" with label=mylabel url_checked=url_checked url_unchecked=url_unchecked %}    
+<p></p>
+
+{% if not active %}
+    <selector-year title="{% trans 'Select a year' %}" year_start="{{ year_start }}" year_end="{{ year_end }}" year="{{ year }}" url="{% url 'order_list_inactive' year %}"></selector-year>
+{% endif %}
+<p></p>
+
+{{ table_orders|safe}}
+<script>
+
+{% if active %}
+    // Adding background color 
+    var column = table.getColumn("percentage_from_price");
+    for (var cell of column.getCells()) {
+        if (cell.getValue()>-5 ){
+            cell.getElement().style.backgroundColor='#92ffab';
+        }
+    }
+    //Sorting
+    table.setSort([
+        {column:"percentage_from_price", dir:"desc"},
+    ]);
+{% else %}
+    //Sorting
+    table.setSort([
+        {column:"date", dir:"asc"},
+    ]);
+{% endif %}
+</script>
+
+  
+
+<p class="orders">
+  <a href="{% url 'order_new' %}">{% trans 'Add a new order' %}</a>
+</p>
+{% endblock %}
+

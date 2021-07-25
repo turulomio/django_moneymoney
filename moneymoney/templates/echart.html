@@ -1,0 +1,90 @@
+{% extends 'base_vue_all.html' %}
+
+{% load i18n %}
+
+{% block content %}
+<div id="app">
+    <div style="height: 400px;">
+        <v-chart autoresize :option="option"/>
+    </div>
+</div>
+<!--<script src="https://cdn.jsdelivr.net/npm/vue@2.6.12"></script>
+<script src="https://cdn.jsdelivr.net/npm/@vue/composition-api@1.0.0-rc.3"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.0.2"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue-echarts@6.0.0-rc.4"></script>-->
+<script>
+Vue.component("v-chart", VueECharts);
+
+new Vue({
+  el: "#app",
+  data() {
+    return {
+      option: {
+        textStyle: {
+          fontFamily: 'Inter, "Helvetica Neue", Arial, sans-serif'
+        },
+        title: {
+          text: "Traffic Sources",
+          left: "center"
+        },
+        tooltip: {
+          trigger: "item",
+          formatter: "{a} <br/>{b} : {c} ({d}%)"
+        },
+        legend: {
+          orient: "vertical",
+          left: "left",
+          data: [
+            "Direct",
+            "Email",
+            "Ad Networks",
+            "Video Ads",
+            "Search Engines"
+          ]
+        },
+        series: [
+          {
+            name: "Traffic Sources",
+            type: "pie",
+            radius: "55%",
+            center: ["50%", "60%"],
+            data: [
+              { value: 335, name: "Direct" },
+              { value: 310, name: "Email" },
+              { value: 234, name: "Ad Networks" },
+              { value: 135, name: "Video Ads" },
+              { value: 1548, name: "Search Engines" }
+            ],
+            emphasis: {
+              itemStyle: {
+                shadowBlur: 10,
+                shadowOffsetX: 0,
+                shadowColor: "rgba(0, 0, 0, 0.5)"
+              }
+            }
+          }
+        ]
+      }
+    };
+  }
+});
+</script>
+<style>
+    table.v-table tbody td,table.v-table tbody th,table.v-table tbody td.text-start {
+        height: 2px;
+        margin: 0px;
+    }
+    .theme--light.v-data-table > .v-data-table__wrapper > table > tbody > tr:not(:last-child) > td:last-child, .theme--light.v-data-table > .v-data-table__wrapper > table > tbody > tr:not(:last-child) > td:not(.v-data-table__mobile-row), .theme--light.v-data-table > .v-data-table__wrapper > table > tbody > tr:not(:last-child) > th:last-child, .theme--light.v-data-table > .v-data-table__wrapper > table > tbody > tr:not(:last-child) > th:not(.v-data-table__mobile-row), .theme--light.v-data-table > .v-data-table__wrapper > table > thead > tr:last-child > th {
+        border-bottom: thin solid rgba(0,0,0,.12);
+        height: 0px;
+    }
+    .noheight{
+        margin: 0px;
+    }
+    .green{
+        color:red;
+        font-weight: 900;
+    }
+</style>
+
+{% endblock %}

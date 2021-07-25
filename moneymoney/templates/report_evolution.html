@@ -1,0 +1,215 @@
+{% extends 'base_vue_all.html' %}
+
+{% load i18n %}
+
+{% load static %}
+
+{% block head_js_section %}
+{% endblock head_js_section %}
+
+{% block content %}
+    <h1>{% trans "Evolution report" %}</h1>
+    <div class="d-flex justify-center mb-4">
+        <v-card width="20%" class="pa-5">
+            <v-select dense label="Select the year from which to display the report" v-model="year" :items="years()" @change="change_year()"></v-select>
+        </v-card>
+    </div>
+<v-tabs  background-color="primary" dark v-model="tab" next-icon="mdi-arrow-right-bold-box-outline" prev-icon="mdi-arrow-left-bold-box-outline" show-arrows>
+    <v-tab key="0">{% trans "Assets evolution report" %}</v-tab>
+    <v-tab key="1">{% trans "Invested assets evolution report" %}</v-tab>
+    <v-tabs-slider color="yellow"></v-tabs-slider>
+</v-tabs>
+<v-tabs-items v-model="tab">
+    <v-tab-item key="0">
+        <v-card class="padding" outlined>
+
+            <v-data-table dense :headers="assetsHeaders" :items="assetsData"  class="elevation-1" disable-pagination  hide-default-footer :sort-by="['year']">      
+                <template v-slot:[`item.balance_start`]="{ item }">
+                    <div v-html="currency(item.balance_start)"></div>
+                </template>   
+                <template v-slot:[`item.balance_end`]="{ item }">
+                    <div v-html="currency(item.balance_end)"></div>
+                </template>
+                <template v-slot:[`item.diff`]="{ item }">
+                    <div v-html="currency(item.diff)"></div>
+                </template>
+                <template v-slot:[`item.dividends_net`]="{ item }">
+                    <div v-html="currency(item.dividends_net)"></div>
+                </template>        
+                <template v-slot:[`item.gains_net`]="{ item }">
+                    <div v-html="currency(item.gains_net)"></div>
+                </template>        
+                <template v-slot:[`item.incomes`]="{ item }">
+                    <div v-html="currency(item.incomes)"></div>
+                </template>        
+                <template v-slot:[`item.expenses`]="{ item }">
+                    <div v-html="currency(item.expenses)"></div>
+                </template>        
+                <template v-slot:[`item.total`]="{ item }">
+                    <div v-html="currency(item.total)"></div>
+                </template>                
+                <template v-slot:body.append="{headers}">
+                    <tr style="background-color: GhostWhite" ref="lr">
+                        <td v-for="(header,i) in headers" :key="i" >
+                            <div v-if="header.value == 'year'">
+                                Total
+                            </div>
+                            <div v-if="header.value == 'dividends_net'" align="right">
+                                <div v-html="currency(listobjects_sum(assetsData,'dividends_net'))"></div>
+                            </div>
+                            <div v-if="header.value == 'gains_net'" align="right">
+                                <div v-html="currency(listobjects_sum(assetsData,'gains_net'))"></div>
+                            </div>
+                            <div v-if="header.value == 'incomes'" align="right">
+                                <div v-html="currency(listobjects_sum(assetsData,'incomes'))"></div>
+                            </div>
+                            <div v-if="header.value == 'expenses'" align="right">
+                                <div v-html="currency(listobjects_sum(assetsData,'expenses'))"></div>
+                            </div>
+                            <div v-if="header.value == 'total'" align="right">
+                                <div v-html="currency(listobjects_sum(assetsData,'total'))"></div>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                </template>
+            </v-data-table>   
+        </v-card>
+    </v-tab-item>
+    <v-tab-item key="1">     
+        <v-card class="padding" outlined>
+            <v-data-table dense :headers="investedHeaders" :items="investedData"  class="elevation-1" disable-pagination  hide-default-footer :sort-by="['year']">      
+                <template v-slot:[`item.invested`]="{ item }">
+                    <div v-html="currency(item.invested)"></div>
+                </template>   
+                <template v-slot:[`item.balance`]="{ item }">
+                    <div v-html="currency(item.balance)"></div>
+                </template>
+                <template v-slot:[`item.diff`]="{ item }">
+                    <div v-html="currency(item.diff)"></div>
+                </template>
+                <template v-slot:[`item.percentage`]="{ item }">
+                    <div v-html="percentage_html(item.percentage)"></div>
+                </template>
+                <template v-slot:[`item.net_gains_plus_dividends`]="{ item }">
+                    <div v-html="currency(item.net_gains_plus_dividends)"></div>
+                </template>
+                <template v-slot:[`item.custody_commissions`]="{ item }">
+                    <div v-html="currency(item.custody_commissions)"></div>
+                </template>
+                <template v-slot:[`item.taxes`]="{ item }">
+                    <div v-html="currency(item.taxes)"></div>
+                </template>
+                <template v-slot:[`item.investment_commissions`]="{ item }">
+                    <div v-html="currency(item.investment_commissions)"></div>
+                </template>            
+                <template v-slot:body.append="{headers}">
+                    <tr style="background-color: GhostWhite" ref="lr">
+                        <td v-for="(header,i) in headers" :key="i" >
+                            <div v-if="header.value == 'year'">
+                                Total
+                            </div>
+                            <div v-if="header.value == 'net_gains_plus_dividends'" align="right">
+                                <div v-html="currency(listobjects_sum(investedData,'net_gains_plus_dividends'))"></div>
+                            </div>
+                            <div v-if="header.value == 'custody_commissions'" align="right">
+                                <div v-html="currency(listobjects_sum(investedData,'custody_commissions'))"></div>
+                            </div>
+                            <div v-if="header.value == 'taxes'" align="right">
+                                <div v-html="currency(listobjects_sum(investedData,'taxes'))"></div>
+                            </div>
+                            <div v-if="header.value == 'investment_commissions'" align="right">
+                                <div v-html="currency(listobjects_sum(investedData,'investment_commissions'))"></div>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                </template>
+            </v-data-table>  
+            <div class="mb-4" v-html="report()"></div>
+        </v-card>
+    </v-tab-item>
+</v-tabs-items>    
+
+<script>
+    new Vue({
+        ...common_vue_properties(),
+        data:{
+            tab:1,
+            assetsHeaders: [
+                { text: gettext('Year'), value: 'year',sortable: true },
+                { text: gettext('Initial balance'), value: 'balance_start',sortable: true, align:'right'},
+                { text: gettext('Final balance'), value: 'balance_end',sortable: true, align:'right'},
+                { text: gettext('Difference'), value: 'diff',sortable: true, align:'right'},
+                { text: gettext('Incomes'), value: 'incomes',sortable: true, align:'right'},
+                { text: gettext('Net gains'), value: 'gains_net',sortable: true, align:'right'},
+                { text: gettext('Net dividends'), value: 'dividends_net',sortable: true, align:'right'},
+                { text: gettext('Expenses'), value: 'expenses',sortable: true, align:'right'},
+                { text: gettext('Total'), value: 'total',sortable: true, align:'right'},
+            ],   
+            assetsData: {{ldo_assets.json|safe}},
+            investedHeaders: [
+                { text: gettext('Year'), value: 'year',sortable: true, width:"8.5%" },
+                { text: gettext('Invested balance'), value: 'invested',sortable: true, align:'right', width:"11.5%" },
+                { text: gettext('Balance'), value: 'balance',sortable: true, align:'right', width:"11.5%" },
+                { text: gettext('Difference'), value: 'diff',sortable: true, align:'right', width:"11.5%" },
+                { text: gettext('Percentage'), value: 'percentage',sortable: true, align:'right', width:"11.5%" },
+                { text: gettext('Net gains + Dividends'), value: 'net_gains_plus_dividends',sortable: true, align:'right', width:"11.5%" },
+                { text: gettext('Custody commissions'), value: 'custody_commissions',sortable: true, align:'right', width:"11.5%" },
+                { text: gettext('Taxes'), value: 'taxes',sortable: true, align:'right', width:"11.5%" },
+                { text: gettext('Investment commissions'), value: 'investment_commissions',sortable: true, align:'right', width:"11.5%" },
+            ],   
+            investedData: {{ldo_invested.json|safe}},
+            local_currency: '{{request.local_currency}}',
+            year:{{ldo_invested.from_year}}
+        },
+        methods:{       
+            currency(value){
+                return this.currency_html(value, this.local_currency)
+            },
+            years(){
+                var start=1990
+                var end=new Date().getFullYear()
+                return Array(end - start + 1).fill().map((_, idx) => start + idx)
+            },
+            change_year(){
+                window.location.href='{% url "report_evolution" %}' + "?from_year=" + this.year
+            },
+            report(){
+                var last=this.investedData[this.investedData.length-1]
+                var diff=last.balance-last.invested
+                var sum_gd=listobjects_sum(this.investedData,'net_gains_plus_dividends')
+                var sum_cc=listobjects_sum(this.investedData,'custody_commissions')
+                var sum_t=listobjects_sum(this.investedData,'taxes')
+                var s=""
+                s=s+"<br>"+gettext("Difference between invested amount and current invesment balance is {0}.")
+                    .replace('{0}', this.currency(diff) )
+                s=s+"<br>"
+                s=s+"<br>"+gettext("From {0} I've generated {1} gains (investment commisions are included).")
+                    .replace('{0}', this.year)
+                    .replace('{1}', this.currency(sum_gd))
+                s=s+"<br>"
+                s=s+"<br>"+gettext("Sum of taxes and custody commissions is {0}.")
+                    .replace('{0}', this.currency(sum_cc+sum_t))
+                s=s+"<br>"
+                s=s+"<br>"+gettext("So, I've generated {0} gains.")
+                    .replace('{0}', this.currency(sum_gd+sum_cc+sum_t))
+                s=s+"<br>"
+                var balance=diff+sum_gd+sum_t+sum_cc
+                if (balance>0){
+                    s=s+"<br>"+gettext("So I'm wining {0} which is {1} per year.")
+                        .replace('{0}', this.currency(balance))
+                        .replace('{1}', this.currency(balance/(new Date().getFullYear()-this.year+1)))
+                } else {
+                    s=s+"<br>"+gettext("So I'm losing {0} which is {1} per year.")
+                        .replace('{0}', this.currency(balance))
+                        .replace('{1}', this.currency(balance/(new Date().getFullYear()-this.year+1)))
+                }
+                return s
+            }
+        },
+    })
+</script>
+
+{% endblock %}
+

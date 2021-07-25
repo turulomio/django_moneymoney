@@ -1,0 +1,12 @@
+
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+    <h1>{% trans "Confirm order delete" %}</h1>
+    <form action="" method="post">
+    {% csrf_token %}
+    <p>Are you sure you want to delete an order from investment "{{ object.investments.fullName }}, that expires at {{object.expiration }}"?</p>
+    <input type="submit" value="Confirm" />
+    </form>
+{% endblock %}

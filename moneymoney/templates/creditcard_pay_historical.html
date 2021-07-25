@@ -1,0 +1,76 @@
+{% extends 'base_vue_all.html' %}
+
+{% load i18n %}
+{% load static %}
+
+{% block head_js_section %}
+    <script type="text/javascript" src='{% static "js/moment.js" %}'></script>
+{% endblock head_js_section %}
+{% block content %}
+<h1>{% blocktrans with name=creditcard.name %}Pay deferred historical operations of '{{ name}}' {% endblocktrans %}</h1>
+<v-container width="60%" >
+    <v-row>
+        <v-select dense label="Select a payment" v-model="select" :items="items" :item-text="select_text" item-value="id" @change="onChange"/>
+        </v-select>
+        <v-spacer></v-spacer>
+    </v-row>
+    <v-data-table dense :headers="tableHeaders" :items="tableData" class="elevation-1" disable-pagination  hide-default-footer :sort-by="['datetime']" fixed-header height="400">
+        <template v-slot:[`item.datetime`]="{ item, index}">
+            [[ localtime(item.datetime)  ]] 
+        </template>                        
+        <template v-slot:[`item.amount`]="{ item }">
+            [[ currency_string(item.amount, '{{ creditcard.accounts.currency }}')]]
+        </template>                   
+        <template v-slot:[`item.balance`]="{ item, index }">
+            [[ currency_string(getBalance(item ,index), '{{ creditcard.accounts.currency }}')]]
+        </template>
+    </v-data-table>   
+    <br>
+    <v-btn color="primary" @click="gotoOperationsPage()" :disabled="false">{% trans "Goto operations page" %}</v-btn>
+    <v-btn color="error" @click="refundPayment()" :disabled="false">{% trans "Refund payment"%}</v-btn>
+</v-container>
+<script>    
+    new Vue({
+        ...common_vue_properties(),
+        data:{
+            tableHeaders: [
+                { text: 'Moment', value: 'datetime',sortable: false },
+                { text: 'Concept', value: 'concept',sortable: false },
+                { text: 'Amount', value: 'amount',sortable: false, align: 'right'},
+                { text: 'Balance', value: 'balance',sortable: false, align: 'right'},
+                { text: 'Comment', value: 'comment',sortable: false},
+            ],   
+            tableData: {{json_cco | safe}},
+            items: {{json_payments | safe}},
+            select: {{select}}
+        },
+        methods:{
+            select_text(item){
+                return `${localtime(item.datetime)} were paid ${item.count} credit card operations: ${currency_string(item.amount, '{{ creditcard.accounts.currency }}')}`
+            },
+            onChange(id){
+                window.location.href = `${window.location.pathname}?accountsoperations_id=${id}`
+            },
+            refundPayment(){
+                if (confirm('{% trans "Are you sure you want to refund this payment?" %}') == true) {
+                    window.location.href = "{% url 'creditcard_pay_refund' accountsoperations_id=99999 %}".replace("99999", this.select)
+                }
+            },
+            gotoOperationsPage(){
+                    window.location.href = "{% url 'creditcard_view' pk=creditcard.id %}"
+            },
+            getBalance(item,index){
+                //Sum progresively
+                return this.tableData.slice(0, index+1).reduce((accum,item) => accum + item.amount, 0)
+            }
+        },
+    })
+</script>
+<style>
+h1 {
+    text-align: center
+}
+</style>
+
+{% endblock %}
+

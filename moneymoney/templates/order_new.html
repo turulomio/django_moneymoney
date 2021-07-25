@@ -1,0 +1,150 @@
+{% extends 'base_vue_all.html' %}
+
+{% load i18n %}
+
+{% load static %}
+
+{% block head_js_section %}
+    <script type="text/javascript" src='{% static "js/axios.min.js" %}'></script> 
+    <script type="text/javascript" src='{% static "js/vuecomponents/AutoCompleteApiIdName.js" %}'></script>
+    <script type="text/javascript" src='{% static "js/vuecomponents/MyDatePicker.js" %}'></script>
+{% endblock head_js_section %}
+{% block content %}
+    <h1>{% trans "Add a new order" %}</h1>   
+     <form method="post">
+        <table>
+            {% csrf_token %}
+            {{ form.as_table }}
+        </table>
+    <button type="submit">{% trans "Save" %}</button>
+    </form>
+    <p>
+    <p id="pOrderBalance"></p>
+    
+    <p>{% trans "To calculate order shares use next options:" %}</p>
+    <label>{% trans "Wished amount to invest" %}</label>&nbsp;<input id="txtToInvest" value="{{ view.default_amount }}"></input>
+&nbsp;
+    <label>{% trans "Selected investment leverage" %}</label>&nbsp;<input id="txtLeverage" value="1" readonly></input>
+&nbsp;
+    <label>{% trans "Shares calculation method" %}</label>&nbsp;
+    <select id="cmbShares">
+        <option value="0" selected>{% trans '--- Select an option ---' %}</option>
+        <option value="1" >{% trans 'Integer shares' %}</option>
+        <option value="2" >{% trans 'Decimal shares' %}</option>
+    </select>
+    
+    
+    <button type="button" id="cmdSetShares">{% trans "Calculate shares" %}</button>
+
+    <hr>
+    <br>
+
+    <v-card>
+        <v-form class="pa-4" ref="form" v-model="form_valid" lazy-validation action="{% url 'order_new' %}" method="POST">
+            <v-row>
+                <my-datepicker class="pa-4" name="date"  v-model="date" label="{% trans 'Enter an order date' %}"></my-datepicker>
+                <my-datepicker class="pa-4" name="expiration"  v-model="expiration" label="{% trans 'Enter an expiration date' %}"></my-datepicker>
+            </v-row>
+            <autocompleteapi-idname  label="{% trans 'Select an investment' %}"  url="{% url 'investment_search' %}" v-model="investments"></autocompleteapi-idname>
+            <v-text-field name="shares" v-model="shares" type="number" :counter="10" label="{% trans 'Enter the number of shares' %}" placeholder="{% trans 'Enter the number of shares' %}" :rules="RulesIntegerRequired(10)"></v-text-field>
+            <v-text-field name="price" v-model="price" type="number" :counter="10" label="{% trans 'Enter the order price' %}" placeholder="{% trans 'Enter the order price' %}" :rules="RulesIntegerRequired(10)"></v-text-field>
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{csrf_token}}">
+            <p></p>
+            <v-btn color="error" @click="submit()" :disabled="form_valid==false">{% trans "Add order" %}</v-btn>
+        </v-form>
+    </v-card>
+        <!-- <script>
+        {# SCRIPT TO CALCULATE SHARES #}
+        var eShares=document.getElementsByName("shares")[0];
+        var ePrice=document.getElementsByName("price")[0];
+        var pOrderBalance=document.getElementById("pOrderBalance");
+        var txtLeverage=document.getElementById("txtLeverage");
+        var txtToInvest=document.getElementById("txtToInvest");
+        var cmbShares=document.getElementById("cmbShares");
+        var cmbInvestments=document.getElementById("id_investments");
+        var cmdSetShares=document.getElementById("cmdSetShares");
+        var decimals=2;
+        var currency='{{request.local_currency}}';
+
+        cmdSetShares.addEventListener('click', (event) => {
+            let toInvest=parseNumber(txtToInvest.value);
+            let price=parseNumber(ePrice.value);
+            let real_leverage=parseNumber(txtLeverage.value);
+            
+            if (cmbShares.value=="1"){ //Integer shares
+                eShares.value=parseNumber(my_round(toInvest/price/real_leverage,0));
+            } else if (cmbShares.value=="2"){ //Decimal shares
+                eShares.value=parseNumber(my_round(toInvest/price/real_leverage, decimals));
+            }
+            update_balance();
+        });
+        
+        cmbInvestments.addEventListener('change', (event) => {
+            $.ajax({
+                type: "POST",
+                dataType:'json',
+                url: "{% url 'ajax_investment_to_json' 9999999 %}".replace("9999999", cmbInvestments.value),
+                data: {
+                    csrfmiddlewaretoken: '{{csrf_token}}',
+                },
+                success: function(result) {
+                    txtLeverage.value=result.leverages;
+                    decimals=result.decimals;
+                    currency=result.currency;
+                    update_balance();
+                },
+                error: function(result) {
+                    txtLeverage.value('Something is wrong with ajax');
+                }
+            });
+        });
+        
+        function update_balance(){
+            let price=parseNumber(ePrice.value);
+            let real_leverage=parseNumber(txtLeverage.value);
+            let shares=parseNumber(eShares.value);
+            pOrderBalance.innerHTML=gettext("Current order balance is {0}").format(currency_string(my_round(price*real_leverage*shares, decimals), currency));
+        }
+        
+        
+        
+        eShares.addEventListener('change', (event) => {
+            update_balance();
+        });    
+        ePrice.addEventListener('change', (event) => {
+            update_balance();
+        });
+        update_balance();
+
+    </script> -->
+
+<script>
+    new Vue({
+        ...common_vue_properties(),
+        data:function () {
+            return {
+                localCurrency: "{{request.local_currency}}",
+                date: new Date().toISOString().substring(0, 10),
+                expiration: null,
+                investments: null,
+                shares: 0,
+                price: 0,
+                form_valid: false,
+            }
+        },
+        methods:{
+            submit(){
+                if (this.$refs.form.validate()==false) return
+                this.$refs.form.$el.submit()
+            },
+            viewItem(item){
+                window.location.href="{%url 'investment_view' pk=9999%}".replace("9999", item.id)
+            },
+            editInvestment(item){
+                window.location.href="{%url 'investment_update' pk=9999%}".replace("9999", item.id)
+            },
+
+        },
+    })
+</script>
+{% endblock %}

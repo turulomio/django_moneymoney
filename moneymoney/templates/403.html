@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "Forbidden page" %}{% endblock %}
+
+
+{% block content %}
+  <h2>{% trans "Forbidden page" %}</h2>
+
+  <p>{% trans "You don't have enough permissions to access this page" %}</p>
+  
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+  <h1>{% trans "Product update" %}</h1>
+<form action="{% url 'product_update' %}" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="file" name="csv_file1"  onchange="this.form.submit();">
+</form>
+{% endblock %}

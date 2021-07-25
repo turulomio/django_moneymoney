@@ -1,0 +1,43 @@
+{% extends 'base_vue_all.html' %}
+
+{% load i18n %}
+{% load static %}
+
+
+{% block content %}
+    <h1>{% trans "Settings" %}</h1>   
+    <v-card>
+        <v-card-title class="headline">{% trans "Personal preferences" %}</v-card-title>
+        <v-form ref="form" v-model="form_valid" lazy-validation action="{% url 'settings' %}" method="POST">
+            <v-col>
+                <input type="hidden" name="csrfmiddlewaretoken" value="{{csrf_token}}">
+                <v-text-field name="DefaultAmountToInvest" v-model="DefaultAmountToInvest" type="text" :counter="10" label="{% trans 'Default amount to invest' %}" placeholder="{% trans 'Enter an amount' %}" :rules="RulesIntegerRequired10"></v-text-field>
+            </v-col>
+        </v-form>
+    </v-card>
+    <p></p>
+    <v-btn color="error" @click="submit()" :disabled="form_valid==false">{% trans "Save settings" %}</v-btn>
+<script>
+    new Vue({
+        ...common_vue_properties(),
+        data:{    
+            form_valid: true,
+            DefaultAmountToInvest: {{DefaultAmountToInvest}},
+            RulesIntegerRequired10: [
+                    v => !!v || "{% trans 'Number is required' %}",
+                    v => (v && v.toString().length <=10) || "{% trans 'Number must be at most 10 characters' %}",
+                    v => (v && !isNaN(parseInt(v))) || "{% trans 'Must be a integer number' %}",
+                ],       
+        },
+        computed:{
+        },
+        methods:{
+            submit(){
+                if (this.$refs.form.validate()==false) return
+                this.$refs.form.$el.submit()
+            },
+        }
+    })
+</script>
+
+{% endblock %}
