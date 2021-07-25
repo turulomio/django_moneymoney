@@ -1,8 +1,8 @@
 ## THIS IS FILE IS FROM https://github.com/turulomio/reusingcode IF YOU NEED TO UPDATE IT PLEASE MAKE A PULL REQUEST IN THAT PROJECT
 ## DO NOT UPDATE IT IN YOUR CODE IT WILL BE REPLACED USING FUNCTION IN README
 
-from money.reusing.call_by_name import call_by_name
-from money.reusing.datetime_functions import dtaware_changes_tz
+from moneymoney.reusing.call_by_name import call_by_name
+from moneymoney.reusing.datetime_functions import dtaware_changes_tz
 from django.utils.translation import gettext
 from django.urls import reverse
 

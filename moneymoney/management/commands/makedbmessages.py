@@ -1,4 +1,4 @@
-from money.reusing.connection_dj import cursor_rows
+from moneymoney.reusing.connection_dj import cursor_rows
 from django.core.management.base import BaseCommand
 
 

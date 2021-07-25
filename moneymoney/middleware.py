@@ -1,7 +1,7 @@
-from money import __version__, __versiondate__
-from money.models import Globals, Operationstypes
-from money.reusing.currency import currency_symbol
-from money.templatetags.mymenu import Menu, Action,  Group
+from moneymoney import __version__, __versiondate__
+from moneymoney.models import Globals, Operationstypes
+from moneymoney.reusing.currency import currency_symbol
+from moneymoney.templatetags.mymenu import Menu, Action,  Group
 from django.utils.translation import gettext_lazy as _
 
 ## FOR VIEWS AND TEMPLATES

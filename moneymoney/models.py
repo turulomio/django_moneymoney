@@ -16,13 +16,13 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from django.utils import timezone
 
-from money.reusing.connection_dj import cursor_one_field, cursor_one_column, cursor_one_row, cursor_rows, execute
+from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_column, cursor_one_row, cursor_rows, execute
 
-from money.investmentsoperations import InvestmentsOperations_from_investment
-from money.reusing.casts import string2list_of_integers
-from money.reusing.currency import Currency, currency_symbol
-from money.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string
-from money.reusing.percentage import Percentage
+from moneymoney.investmentsoperations import InvestmentsOperations_from_investment
+from moneymoney.reusing.casts import string2list_of_integers
+from moneymoney.reusing.currency import Currency, currency_symbol
+from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string
+from moneymoney.reusing.percentage import Percentage
 
 from xulpymoney.libxulpymoneytypes import eProductType, eComment, eConcept, eOperationType
 
@@ -532,7 +532,7 @@ class Investments(models.Model):
         
     def operations(self, request, local_currency):
         if hasattr(self, "_operations") is False:
-            from money.investmentsoperations import InvestmentsOperations_from_investment
+            from moneymoney.investmentsoperations import InvestmentsOperations_from_investment
             self._operations=InvestmentsOperations_from_investment(request, self, timezone.now(), local_currency)
         return self._operations
                 

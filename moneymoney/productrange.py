@@ -4,10 +4,10 @@ from json import dumps
 from django.urls import reverse
 from django.utils import timezone
 from xulpymoney.libmanagers import ObjectManager, DatetimeValueManager
-from money.models import Investments, Orders
-from money.reusing.listdict_functions import listdict2list
-from money.reusing.percentage import Percentage
-from money.investmentsoperations import InvestmentsOperationsManager_from_investment_queryset
+from moneymoney.models import Investments, Orders
+from moneymoney.reusing.listdict_functions import listdict2list
+from moneymoney.reusing.percentage import Percentage
+from moneymoney.investmentsoperations import InvestmentsOperationsManager_from_investment_queryset
 
 class ProductRange():
     def __init__(self, request,  id=None,  product=None,  value=None, percentage_down=None,  percentage_up=None, only_first=True, only_account=None, decimals=2):

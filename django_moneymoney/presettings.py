@@ -50,7 +50,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken', 
     'debug_toolbar',
     'corsheaders', 
-    'money',
+    'moneymoney',
 ]
 
 MIDDLEWARE = [
@@ -64,10 +64,10 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware', 
     'debug_toolbar.middleware.DebugToolbarMiddleware',
-    'money.middleware.MoneyMiddleware', 
+    'moneymoney.middleware.MoneyMiddleware', 
 ]
 
-ROOT_URLCONF = 'django_money.urls'
+ROOT_URLCONF = 'django_moneymoney.urls'
 
 TEMPLATES = [
     {
@@ -87,7 +87,7 @@ TEMPLATES = [
 
 CORS_ORIGIN_WHITELIST = "https://localhost", "http://localhost:8004", 
 
-WSGI_APPLICATION = 'django_money.wsgi.application'
+WSGI_APPLICATION = 'django_moneymoney.wsgi.application'
 
 ## Database connection definitions
 DATABASES = {
@@ -105,7 +105,7 @@ CONCURRENCY_DB_CONNECTIONS_BY_USER=4
 
 ## Locale paths in source distribution
 LOCALE_PATHS = (
-    BASE_DIR+ '/money/locale/',
+    BASE_DIR+ '/moneymoney/locale/',
 )
 
 ## Password validation 
@@ -152,7 +152,7 @@ LOGOUT_REDIRECT_URL = reverse_lazy("login")
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR+ "/money/static/"
+STATIC_ROOT = BASE_DIR+ "/moneymoney/static/"
 
 ## Sets session timeout in seconds.
 SESSION_COOKIE_AGE = 3600

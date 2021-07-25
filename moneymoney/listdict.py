@@ -28,15 +28,15 @@ import asyncio
 from asgiref.sync import sync_to_async
 from datetime import date, timedelta
 from decimal import Decimal
-from money.reusing.connection_dj import  cursor_rows, cursor_one_column, cursor_rows_as_dict, cursor_one_field
-from money.reusing.listdict_functions import listdict2dict, listdict_print,  Ldo, listdict_sum,  listdict2json
+from moneymoney.reusing.connection_dj import  cursor_rows, cursor_one_column, cursor_rows_as_dict, cursor_one_field
+from moneymoney.reusing.listdict_functions import listdict2dict, listdict_print,  Ldo, listdict_sum,  listdict2json
 from django.conf import settings
 from django.urls import reverse_lazy
 from django.templatetags.static import static
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from xulpymoney.libxulpymoneytypes import eOperationType, eConcept
-from money.models import (
+from moneymoney.models import (
     Accounts, 
     Comment, 
     Concepts, 
@@ -51,13 +51,13 @@ from money.models import (
     currencies_in_accounts, 
     money_convert, 
 )
-from money.reusing.casts import string2list_of_integers, valueORempty, var2json
-from money.reusing.currency import Currency
-from money.reusing.datetime_functions import dtaware_month_end, months, dtaware_day_end_from_date, dtaware2string, dtaware_year_start, dtaware_year_end
-from money.reusing.decorators import timeit
-from money.investmentsoperations import InvestmentsOperationsManager_from_investment_queryset, IOC, InvestmentsOperations_from_investment, InvestmentsOperationsTotalsManager_from_all_investments, InvestmentsOperationsTotalsManager_from_investment_queryset
-from money.reusing.percentage import percentage_between, Percentage
-from money.reusing.tabulator import TabulatorFromListDict, TabulatorFromQuerySet
+from moneymoney.reusing.casts import string2list_of_integers, valueORempty, var2json
+from moneymoney.reusing.currency import Currency
+from moneymoney.reusing.datetime_functions import dtaware_month_end, months, dtaware_day_end_from_date, dtaware2string, dtaware_year_start, dtaware_year_end
+from moneymoney.reusing.decorators import timeit
+from moneymoney.investmentsoperations import InvestmentsOperationsManager_from_investment_queryset, IOC, InvestmentsOperations_from_investment, InvestmentsOperationsTotalsManager_from_all_investments, InvestmentsOperationsTotalsManager_from_investment_queryset
+from moneymoney.reusing.percentage import percentage_between, Percentage
+from moneymoney.reusing.tabulator import TabulatorFromListDict, TabulatorFromQuerySet
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 Decimal ##Needed in eval

@@ -9,7 +9,7 @@ import debug_toolbar
 
 from rest_framework import routers
 
-from money import views as money_views
+from moneymoney import views as money_views
 router = routers.DefaultRouter()
 router.register(r'banks', money_views.BanksViewSet)
 
@@ -161,4 +161,4 @@ urlpatterns=urlpatterns+ i18n_patterns(
     
 )
 
-handler403 = 'money.views.error_403'
+handler403 = 'moneymoney.views.error_403'

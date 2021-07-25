@@ -3,13 +3,13 @@ from decimal import Decimal
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from math import ceil
-from money.reusing.connection_dj import cursor_one_row, cursor_rows_as_dict
-from money.reusing.currency import Currency
-from money.reusing.decorators import deprecated
-from money.reusing.datetime_functions import string2dtnaive, dtaware
-from money.reusing.listdict_functions import listdict_sum, listdict2json, listdict_print_first
-from money.reusing.percentage import Percentage, percentage_between
-from money.tables import TabulatorFromListDict
+from moneymoney.reusing.connection_dj import cursor_one_row, cursor_rows_as_dict
+from moneymoney.reusing.currency import Currency
+from moneymoney.reusing.decorators import deprecated
+from moneymoney.reusing.datetime_functions import string2dtnaive, dtaware
+from moneymoney.reusing.listdict_functions import listdict_sum, listdict2json, listdict_print_first
+from moneymoney.reusing.percentage import Percentage, percentage_between
+from moneymoney.tables import TabulatorFromListDict
 
 Decimal
 listdict_print_first
@@ -307,8 +307,8 @@ class InvestmentsOperations:
         if len(self.io)==0:
             return _("Insuficient data")
             
-        from money.listdict import QsoDividendsHomogeneus
-        from money.models import Dividends
+        from moneymoney.listdict import QsoDividendsHomogeneus
+        from moneymoney.models import Dividends
         from django.utils import timezone
             
         qso_dividends=QsoDividendsHomogeneus(self.request,  Dividends.objects.all().filter(investments_id=self.investment.id).order_by('datetime'),  self.investment)
@@ -495,7 +495,7 @@ class InvestmentsOperationsManager:
         return r
 
     def LdoInvestmentsOperationsHeterogeneus_between(self, dt_from, dt_to):
-        from money.listdict import LdoInvestmentsOperationsHeterogeneus
+        from moneymoney.listdict import LdoInvestmentsOperationsHeterogeneus
         r=LdoInvestmentsOperationsHeterogeneus(self.request)
         for io in self.list:
             for o in io.io:
@@ -507,7 +507,7 @@ class InvestmentsOperationsManager:
         return r        
 
     def LdoInvestmentsOperationsCurrentHeterogeneus_between(self, dt_from, dt_to):
-        from money.listdict import LdoInvestmentsOperationsCurrentHeterogeneus
+        from moneymoney.listdict import LdoInvestmentsOperationsCurrentHeterogeneus
         r=LdoInvestmentsOperationsCurrentHeterogeneus(self.request)
         for io in self.list:
             for o in io.io_current:
@@ -519,7 +519,7 @@ class InvestmentsOperationsManager:
         return r
         
     def LdoInvestmentsOperationsHistoricalHeterogeneus_between(self, dt_from, dt_to):
-        from money.listdict import LdoInvestmentsOperationsHistoricalHeterogeneus
+        from moneymoney.listdict import LdoInvestmentsOperationsHistoricalHeterogeneus
         r=LdoInvestmentsOperationsHistoricalHeterogeneus(self.request)
         for io in self.list:
             for o in io.io_historical:
@@ -645,7 +645,7 @@ class InvestmentsOperationsTotalsManager:
         return list(r)
         
     def json_classes_by_pci(self):
-        from money.models import Accounts
+        from moneymoney.models import Accounts
         accounts_balance=Accounts.accounts_balance_user_currency(Accounts.objects.filter(active=True), timezone.now())
         ld=[]
         for mode, name in (('p', 'Put'), ('c', 'Call'), ('i', 'Inline')):
@@ -662,7 +662,7 @@ class InvestmentsOperationsTotalsManager:
         return listdict2json(ld)
 
     def json_classes_by_product(self):
-        from money.models import Accounts
+        from moneymoney.models import Accounts
         accounts_balance=Accounts.accounts_balance_user_currency(Accounts.objects.filter(active=True), timezone.now())
         ld=[]
         for product in self.distinct_products():
@@ -676,7 +676,7 @@ class InvestmentsOperationsTotalsManager:
         return listdict2json(ld)
 
     def json_classes_by_percentage(self):
-        from money.models import Accounts
+        from moneymoney.models import Accounts
         accounts_balance=Accounts.accounts_balance_user_currency(Accounts.objects.filter(active=True), timezone.now())
         ld=[]
         for percentage in range(0, 11):
@@ -692,7 +692,7 @@ class InvestmentsOperationsTotalsManager:
         return listdict2json(ld)
 
     def json_classes_by_producttype(self):
-        from money.models import Accounts, Productstypes
+        from moneymoney.models import Accounts, Productstypes
         accounts_balance=Accounts.accounts_balance_user_currency(Accounts.objects.filter(active=True), timezone.now())
         ld=[]
         for producttype in Productstypes.objects.all():
@@ -708,7 +708,7 @@ class InvestmentsOperationsTotalsManager:
         return listdict2json(ld)
         
     def json_classes_by_leverage(self):
-        from money.models import Accounts, Leverages
+        from moneymoney.models import Accounts, Leverages
         accounts_balance=Accounts.accounts_balance_user_currency(Accounts.objects.filter(active=True), timezone.now())
         ld=[]
         for leverage in Leverages.objects.all():
@@ -735,6 +735,6 @@ def InvestmentsOperationsTotalsManager_from_investment_queryset(qs_investments, 
     return r
     
 def InvestmentsOperationsTotalsManager_from_all_investments(request, dt):
-    from money.models import Investments
+    from moneymoney.models import Investments
     qs=Investments.objects.all().select_related("products")
     return InvestmentsOperationsTotalsManager_from_investment_queryset(qs, dt, request)

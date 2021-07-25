@@ -1,4 +1,4 @@
-from  money.models import Banks
+from  moneymoney.models import Banks
 from rest_framework import serializers
 
 class BanksSerializer(serializers.HyperlinkedModelSerializer):

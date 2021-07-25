@@ -5,7 +5,7 @@
 
 
 from django.utils.translation import ugettext_lazy as _
-from money.models import Banks, Accountsoperations
+from moneymoney.models import Banks, Accountsoperations
 from django.contrib.auth.models import User, Group
 from django.urls import reverse_lazy
 from django.contrib import admin# Need to import this since auth models get registered on import.
@@ -22,9 +22,9 @@ class AccountoperationAdmin(admin.ModelAdmin):
     list_display = ['datetime','comment']
 
 
-admin.site.site_title = _('Django money')
-admin.site.site_header = _('Django money')
-admin.site.index_title = _('My Django money administration')
+admin.site.site_title = _('Django moneymoney')
+admin.site.site_header = _('Django moneymoney')
+admin.site.index_title = _('My Django moneymoney administration')
 
 admin.site.register(Accountsoperations)
 admin.site.register(Banks)

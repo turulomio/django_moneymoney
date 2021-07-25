@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.utils.translation import ugettext_lazy as _
 
-from money.models import Products,  Quotes
+from moneymoney.models import Products,  Quotes
 
 from csv import reader
 from logging import debug

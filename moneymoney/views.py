@@ -20,8 +20,8 @@ from django.utils.decorators import method_decorator
 from django.views.generic.edit import UpdateView, CreateView, DeleteView
 from math import floor
 
-from money.reusing.connection_dj import cursor_rows, cursor_one_column, execute, cursor_one_field
-from money.forms import (
+from moneymoney.reusing.connection_dj import cursor_rows, cursor_one_column, execute, cursor_one_field
+from moneymoney.forms import (
     AccountsTransferForm, 
     CreditCardPayForm, 
     ProductsRangeForm, 
@@ -29,18 +29,18 @@ from money.forms import (
     SettingsForm, 
     ChangeSellingPriceSeveralInvestmentsForm, 
 )
-from money.charts import (
+from moneymoney.charts import (
     chart_lines_total, 
     chart_product_quotes_historical, 
 )
-from money.investmentsoperations import (
+from moneymoney.investmentsoperations import (
     IOC, 
     InvestmentsOperations_from_investment, 
     InvestmentsOperationsManager_from_investment_queryset, 
     InvestmentsOperationsTotalsManager_from_investment_queryset, 
 )
-from money.productrange import ProductRangeManager
-from money.tables import (
+from moneymoney.productrange import ProductRangeManager
+from moneymoney.tables import (
     TabulatorReportConcepts, 
     TabulatorAccountOperations, 
     TabulatorAccounts, 
@@ -55,15 +55,15 @@ from money.tables import (
     TabulatorInvestmentsPairsInvestCalculator,
     table_InvestmentsOperationsCurrent_Homogeneus_UserCurrency
 )
-from money.reusing.casts import string2list_of_integers
-from money.reusing.currency import Currency
-from money.reusing.connection_dj import cursor_rows_as_dict
-from money.reusing.datetime_functions import dtaware_month_start, dtaware_month_end, dtaware_changes_tz, epochmicros2dtaware, dtaware2epochmicros
-from money.reusing.decorators import timeit
-from money.reusing.listdict_functions import listdict_sum, listdict_sum_negatives, listdict_sum_positives, listdict_has_key, listdict2json, listdict_print_first, listdict_median,  listdict_average
-from money.reusing.percentage import Percentage
+from moneymoney.reusing.casts import string2list_of_integers
+from moneymoney.reusing.currency import Currency
+from moneymoney.reusing.connection_dj import cursor_rows_as_dict
+from moneymoney.reusing.datetime_functions import dtaware_month_start, dtaware_month_end, dtaware_changes_tz, epochmicros2dtaware, dtaware2epochmicros
+from moneymoney.reusing.decorators import timeit
+from moneymoney.reusing.listdict_functions import listdict_sum, listdict_sum_negatives, listdict_sum_positives, listdict_has_key, listdict2json, listdict_print_first, listdict_median,  listdict_average
+from moneymoney.reusing.percentage import Percentage
 from django.utils.translation import ugettext_lazy as _
-from money.listdict import (
+from moneymoney.listdict import (
     LdoInvestmentsOperationsCurrentHeterogeneusSameProductInAccount, 
     LdoProductsPairsMonthHistoricalEvolution, 
     LdoInvestmentsRanking, 
@@ -92,7 +92,7 @@ from money.listdict import (
     QsoQuotes, 
     QsoStrategies, 
 )
-from money.models import (
+from moneymoney.models import (
     Operationstypes, 
     Banks, 
     Accounts, 
@@ -112,7 +112,7 @@ from money.models import (
     total_balance, 
     money_convert, 
 )
-from money.serializers import (
+from moneymoney.serializers import (
     BanksSerializer, 
 )
 
@@ -417,7 +417,7 @@ def product_update(request):
         messages.error(request, _("Uploaded file is too big ({} MB)." ).format(csv_file.size/(1000*1000),))
         return HttpResponseRedirect(reverse("product_update"))
 
-    from money.investing_com import InvestingCom
+    from moneymoney.investing_com import InvestingCom
     InvestingCom(request, csv_file, product=None)
     return HttpResponseRedirect(reverse("product_update"))
 

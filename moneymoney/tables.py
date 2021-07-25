@@ -1,4 +1,4 @@
-from money.reusing.tabulator import TabulatorFromListDict, TabulatorFromQuerySet
+from moneymoney.reusing.tabulator import TabulatorFromListDict, TabulatorFromQuerySet
 from django.utils.translation import ugettext_lazy as _
 
 

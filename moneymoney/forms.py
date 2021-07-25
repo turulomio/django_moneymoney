@@ -1,6 +1,6 @@
 from django import forms
         
-from money.models import Accounts, Products, RANGE_RECOMENDATION_CHOICES
+from moneymoney.models import Accounts, Products, RANGE_RECOMENDATION_CHOICES
 
 
 
