@@ -26,11 +26,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1' ]
 
-INTERNAL_IPS = [
-    # ...
-    '127.0.0.1',
-    # ...
-]
 REST_FRAMEWORK={ 
     'DEFAULT_AUTHENTICATION_CLASSES':[
         'rest_framework.authentication.BasicAuthentication',  ## Uncomment to use api in url 
@@ -54,10 +49,10 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware', 
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware', #Must be here
-    'corsheaders.middleware.CorsMiddleware', 
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -85,7 +80,7 @@ TEMPLATES = [
     },
 ]
 
-CORS_ORIGIN_WHITELIST = "https://localhost", "http://localhost:8004", 
+CORS_ORIGIN_WHITELIST = "http://localhost", "http://localhost:8004",   
 
 WSGI_APPLICATION = 'django_moneymoney.wsgi.application'
 

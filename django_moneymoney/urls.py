@@ -2,7 +2,6 @@ from datetime import date
 from django.contrib import admin
 from django.urls import path,  include
 from django.conf.urls.i18n import i18n_patterns, set_language 
-from django.contrib.auth.views import LoginView, logout_then_login
 from django.views.generic.base import RedirectView
 from django.views.i18n import JavaScriptCatalog
 import debug_toolbar
@@ -16,6 +15,8 @@ router.register(r'banks', money_views.BanksViewSet)
 urlpatterns=[
     path('api/', include(router.urls)),
     path('favicon.ico', RedirectView.as_view(url='/static/images/favicon.ico')),
+    path('login/', money_views.login, name="login"), 
+    path('logout/', money_views.logout, name="logout"), 
 ]
 
 urlpatterns=urlpatterns+ i18n_patterns(
@@ -29,8 +30,6 @@ urlpatterns=urlpatterns+ i18n_patterns(
     path('admin/', admin.site.urls,  name="admin-site"),
     path('', money_views.home, name='home'),
     
-    path('login/', LoginView.as_view(template_name='login.html'), name="login"), 
-    path('logout/', logout_then_login, name="logout"), 
     
     path('bank/list/', money_views.bank_list,  {'active':True}, name='bank_list_active'),
     path('bank/list/inactive/', money_views.bank_list,  {'active':False}, name='bank_list_inactive'),

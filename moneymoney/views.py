@@ -153,6 +153,7 @@ def logout(request):
     else:
         token.delete()
         return Response("Logged out")
+
 class BanksViewSet(viewsets.ModelViewSet):
     queryset = Banks.objects.all()
     serializer_class = BanksSerializer
