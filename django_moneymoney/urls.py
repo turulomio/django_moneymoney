@@ -11,6 +11,7 @@ from rest_framework import routers
 from moneymoney import views as money_views
 router = routers.DefaultRouter()
 router.register(r'banks', money_views.BanksViewSet)
+router.register(r'bankswithbalance', money_views.BanksWithBalanceViewSet)
 
 urlpatterns=[
     path('api/', include(router.urls)),
@@ -30,9 +31,6 @@ urlpatterns=urlpatterns+ i18n_patterns(
     path('admin/', admin.site.urls,  name="admin-site"),
     path('', money_views.home, name='home'),
     
-    
-    path('bank/list/', money_views.bank_list,  {'active':True}, name='bank_list_active'),
-    path('bank/list/inactive/', money_views.bank_list,  {'active':False}, name='bank_list_inactive'),
     path('bank/view/<int:pk>/', money_views.bank_view, name='bank_view'),
     path('bank/new/', money_views.bank_new.as_view(), name='bank_new'),
     path('bank/update/<int:pk>', money_views.bank_update.as_view(), name='bank_update'),

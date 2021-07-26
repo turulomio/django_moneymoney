@@ -9,7 +9,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 Decimal()#Internal eval
 
-from django.db import models, connection, transaction
+from django.db import models, transaction
 from django.db.models import Case, When
 from django.db.models.expressions import RawSQL
 from django.urls import reverse_lazy
@@ -249,12 +249,20 @@ class Banks(models.Model):
     def __str__(self):
         return self.name
 
-    def balance(self):
-        with connection.cursor() as cursor:
-            
-            cursor.execute("SELECT accounts_balance(now(), 'EUR')")#, [self.baz])
-            row = cursor.fetchone()
-            return Currency(row[0], "EUR")
+    def balance_accounts(self):
+        if hasattr(self, "_balance_accounts") is False:
+            self._balance_accounts=Accounts.accounts_balance_user_currency(self.accounts(active=True), timezone.now())
+        return self._balance_accounts
+
+    def balance_investments(self, request):
+        from moneymoney.investmentsoperations import InvestmentsOperationsTotalsManager_from_investment_queryset
+        if hasattr(self, "_balance_investments") is False:
+            iotm=InvestmentsOperationsTotalsManager_from_investment_queryset(self.investments(active=True), timezone.now(), request)
+            self._balance_investments=iotm.current_balance_user()
+        return self._balance_investments
+        
+    def balance_total(self, request):
+        return self.balance_accounts()+self.balance_investments(request)
             
     def accounts(self, active):
         return Accounts.objects.all().select_related("banks").filter(banks_id=self.id, active=active)

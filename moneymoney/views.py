@@ -44,7 +44,6 @@ from moneymoney.tables import (
     TabulatorReportConcepts, 
     TabulatorAccountOperations, 
     TabulatorAccounts, 
-    TabulatorBanks, 
     TabulatorConcepts, 
     TabulatorCreditCards, 
     TabulatorProducts, 
@@ -55,7 +54,7 @@ from moneymoney.tables import (
     TabulatorInvestmentsPairsInvestCalculator,
     table_InvestmentsOperationsCurrent_Homogeneus_UserCurrency
 )
-from moneymoney.reusing.casts import string2list_of_integers
+from moneymoney.reusing.casts import string2list_of_integers, str2bool
 from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.connection_dj import cursor_rows_as_dict
 from moneymoney.reusing.datetime_functions import dtaware_month_start, dtaware_month_end, dtaware_changes_tz, epochmicros2dtaware, dtaware2epochmicros
@@ -72,7 +71,6 @@ from moneymoney.listdict import (
     LdoDerivatives, 
     LdoProductsPairsEvolution, 
     listdict_accounts, 
-    listdict_banks, 
     listdict_chart_total_async, 
     listdict_chart_total_threadpool, 
     listdict_chart_product_quotes_historical, 
@@ -114,6 +112,7 @@ from moneymoney.models import (
 )
 from moneymoney.serializers import (
     BanksSerializer, 
+    BanksWithBalanceSerializer, 
 )
 
 
@@ -158,6 +157,32 @@ class BanksViewSet(viewsets.ModelViewSet):
     queryset = Banks.objects.all()
     serializer_class = BanksSerializer
     permission_classes = [permissions.IsAuthenticated]  
+    
+    def get_queryset(self):
+        try:
+            active = str2bool(self.request.GET.get('active'))
+        except:
+            active=None
+        if active is None:
+            return self.queryset
+        else:
+            return self.queryset.filter(active=active)
+
+class BanksWithBalanceViewSet(viewsets.ModelViewSet):
+    queryset = Banks.objects.all()
+    serializer_class = BanksWithBalanceSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+    
+    def get_queryset(self):
+        try:
+            active = str2bool(self.request.GET.get('active'))
+        except:
+            active=None
+        if active is None:
+            return self.queryset
+        else:
+            return self.queryset.filter(active=active)
+
  
 @login_required
 @transaction.atomic
@@ -435,15 +460,6 @@ def error_403(request, exception):
 @timeit
 def home(request):
     return render(request, 'home.html', locals())
-
-@login_required
-def bank_list(request, active):
-    url_unchecked=reverse_lazy("bank_list_active")
-    url_checked=reverse_lazy("bank_list_inactive")
-    banks= Banks.objects.all().filter(active=active).order_by('name')
-    banks_list=listdict_banks(request, banks, timezone.now(), active)
-    table_banks=TabulatorBanks("table_banks", 'bank_view', banks_list, request.local_currency).render()
-    return render(request, 'bank_list.html', locals())
 
 @login_required
 def account_list(request,  active=True):    
