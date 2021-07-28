@@ -5,7 +5,7 @@ from rest_framework import serializers
 class BanksSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Banks
-        fields = ('url', 'name', 'active')
+        fields = ('url', 'name', 'active', 'id')
         
 class BanksWithBalanceSerializer(serializers.HyperlinkedModelSerializer):
     balance_accounts=serializers.SerializerMethodField()
@@ -14,7 +14,7 @@ class BanksWithBalanceSerializer(serializers.HyperlinkedModelSerializer):
     is_deletable=serializers.SerializerMethodField()
     class Meta:
         model = Banks
-        fields = ('url', 'name', 'active', 'balance_accounts', 'balance_investments', 'balance_total', 'is_deletable')
+        fields = ('url', 'name', 'active', 'id','balance_accounts', 'balance_investments', 'balance_total', 'is_deletable')
         
     def get_balance_accounts(self, obj):
         return obj.balance_accounts()

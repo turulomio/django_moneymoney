@@ -161,14 +161,23 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]  
     
     def get_queryset(self):
+        # To get active or inactive accounts
         try:
             active = str2bool(self.request.GET.get('active'))
         except:
             active=None
-        if active is None:
-            return self.queryset
-        else:
+        # To get all accounts of a bank
+        try:
+            bank_id = int(self.request.GET.get('bank'))
+        except:
+            bank_id=None
+
+        if bank_id is not None:
+            return self.queryset.filter(accounts__banks__id=bank_id,  active=True)
+        elif active is not None:
             return self.queryset.filter(active=active)
+        else:
+            return self.queryset
 
 class AccountsViewSet(viewsets.ModelViewSet):
     queryset = Accounts.objects.all()
@@ -176,14 +185,23 @@ class AccountsViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]  
     
     def get_queryset(self):
+        # To get active or inactive accounts
         try:
             active = str2bool(self.request.GET.get('active'))
         except:
             active=None
-        if active is None:
-            return self.queryset
-        else:
+        # To get all accounts of a bank
+        try:
+            bank_id = int(self.request.GET.get('bank'))
+        except:
+            bank_id=None
+
+        if bank_id is not None:
+            return self.queryset.filter(banks__id=bank_id,   active=True)
+        elif active is not None:
             return self.queryset.filter(active=active)
+        else:
+            return self.queryset
 
 class BanksViewSet(viewsets.ModelViewSet):
     queryset = Banks.objects.all()
