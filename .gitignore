@@ -129,7 +129,5 @@ dmypy.json
 .eric6project/
 *.e4p
 
-django_money.epj
 node_modules/
-django_money/presettings.py
-django-money.epj
+django_moneymoney/presettings.py

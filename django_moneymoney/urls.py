@@ -10,8 +10,10 @@ from rest_framework import routers
 
 from moneymoney import views as money_views
 router = routers.DefaultRouter()
+router.register(r'accounts', money_views.AccountsViewSet)
 router.register(r'banks', money_views.BanksViewSet)
 router.register(r'bankswithbalance', money_views.BanksWithBalanceViewSet)
+router.register(r'investments', money_views.InvestmentsViewSet)
 
 urlpatterns=[
     path('api/', include(router.urls)),
@@ -152,8 +154,6 @@ urlpatterns=urlpatterns+ i18n_patterns(
     path('strategy/update/<int:pk>', money_views.strategy_update.as_view(), name='strategy_update'),
     path('strategy/delete/<int:pk>', money_views.strategy_delete.as_view(), name='strategy_delete'),
     
-    
-    path('widget/modal_window', money_views.widget_modal_window, name='widget_modal_window'),
     path('widget/echart', money_views.echart, name='echart'),
     
 )

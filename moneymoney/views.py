@@ -111,8 +111,10 @@ from moneymoney.models import (
     money_convert, 
 )
 from moneymoney.serializers import (
+    AccountsSerializer, 
     BanksSerializer, 
     BanksWithBalanceSerializer, 
+    InvestmentsSerializer, 
 )
 
 
@@ -152,6 +154,36 @@ def logout(request):
     else:
         token.delete()
         return Response("Logged out")
+
+class InvestmentsViewSet(viewsets.ModelViewSet):
+    queryset = Investments.objects.all()
+    serializer_class = InvestmentsSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+    
+    def get_queryset(self):
+        try:
+            active = str2bool(self.request.GET.get('active'))
+        except:
+            active=None
+        if active is None:
+            return self.queryset
+        else:
+            return self.queryset.filter(active=active)
+
+class AccountsViewSet(viewsets.ModelViewSet):
+    queryset = Accounts.objects.all()
+    serializer_class = AccountsSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+    
+    def get_queryset(self):
+        try:
+            active = str2bool(self.request.GET.get('active'))
+        except:
+            active=None
+        if active is None:
+            return self.queryset
+        else:
+            return self.queryset.filter(active=active)
 
 class BanksViewSet(viewsets.ModelViewSet):
     queryset = Banks.objects.all()
@@ -2103,8 +2135,6 @@ def get_parameter_to_boolean(request, parameter):
     except:
         return False
     
-def widget_modal_window(request):
-    return render(request, 'widget_modal_window.html', locals())
 
 @login_required
 def echart(request):
