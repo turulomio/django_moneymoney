@@ -37,6 +37,7 @@ class AccountsSerializer(serializers.HyperlinkedModelSerializer):
 class AccountsWithBalanceSerializer(serializers.HyperlinkedModelSerializer):
     balance_account=serializers.SerializerMethodField()
     balance_user=serializers.SerializerMethodField()
+    is_deletable=serializers.SerializerMethodField()
     banks = BanksSerializer( many=False, read_only=True)
 
     def __init__(self, *args, **kwargs):
@@ -47,7 +48,7 @@ class AccountsWithBalanceSerializer(serializers.HyperlinkedModelSerializer):
         
     class Meta:
         model = Accounts
-        fields = ('url', 'name', 'active', 'number','currency','banks', 'balance_account', 'balance_user')
+        fields = ('url', 'name', 'active', 'number','currency','banks', 'balance_account', 'balance_user', 'is_deletable')
 
 
     def get_balance_account(self, obj):
@@ -55,6 +56,8 @@ class AccountsWithBalanceSerializer(serializers.HyperlinkedModelSerializer):
 
     def get_balance_user(self, obj):
         return self._dict_balances[obj.id][1]
+    def get_is_deletable(self, obj):
+        return obj.is_deletable()
 
 class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
     accounts = AccountsSerializer( many=False, read_only=True)
