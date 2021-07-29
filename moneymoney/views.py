@@ -110,15 +110,11 @@ from moneymoney.models import (
     total_balance, 
     money_convert, 
 )
-from moneymoney.serializers import (
-    AccountsSerializer, 
-    BanksSerializer, 
-    BanksWithBalanceSerializer, 
-    InvestmentsSerializer, 
-)
+from moneymoney import serializers
 
 
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework import viewsets, permissions
@@ -157,7 +153,30 @@ def logout(request):
 
 class InvestmentsViewSet(viewsets.ModelViewSet):
     queryset = Investments.objects.all()
-    serializer_class = InvestmentsSerializer
+    serializer_class = serializers.InvestmentsSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+    
+    def get_queryset(self):
+        # To get active or inactive accounts
+        try:
+            active = str2bool(self.request.GET.get('active'))
+        except:
+            active=None
+        # To get all accounts of a bank
+        try:
+            bank_id = int(self.request.GET.get('bank'))
+        except:
+            bank_id=None
+
+        if bank_id is not None:
+            return self.queryset.filter(accounts__banks__id=bank_id,  active=True)
+        elif active is not None:
+            return self.queryset.filter(active=active)
+        else:
+            return self.queryset
+class InvestmentsWithBalanceViewSet(viewsets.ModelViewSet):
+    queryset = Investments.objects.all()
+    serializer_class = serializers.InvestmentsWithBalanceSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
     def get_queryset(self):
@@ -181,7 +200,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
 
 class AccountsViewSet(viewsets.ModelViewSet):
     queryset = Accounts.objects.all()
-    serializer_class = AccountsSerializer
+    serializer_class = serializers.AccountsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
     def get_queryset(self):
@@ -202,10 +221,37 @@ class AccountsViewSet(viewsets.ModelViewSet):
             return self.queryset.filter(active=active)
         else:
             return self.queryset
+    def get_serializer_class(self):
+        return serializers.AccountsSerializer
+
+class AccountsWithBalanceViewSet(viewsets.ModelViewSet):
+    queryset = Accounts.objects.all()
+    serializer_class = serializers.AccountsWithBalanceSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+    
+    def get_queryset(self):
+        # To get active or inactive accounts
+        try:
+            active = str2bool(self.request.GET.get('active'))
+        except:
+            active=None
+        # To get all accounts of a bank
+        try:
+            bank_id = int(self.request.GET.get('bank'))
+        except:
+            bank_id=None
+
+        if bank_id is not None:
+            return self.queryset.filter(banks__id=bank_id,   active=True)
+        elif active is not None:
+            return self.queryset.filter(active=active)
+        else:
+            return self.queryset
+            
 
 class BanksViewSet(viewsets.ModelViewSet):
     queryset = Banks.objects.all()
-    serializer_class = BanksSerializer
+    serializer_class = serializers.BanksSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
     def get_queryset(self):
@@ -220,7 +266,7 @@ class BanksViewSet(viewsets.ModelViewSet):
 
 class BanksWithBalanceViewSet(viewsets.ModelViewSet):
     queryset = Banks.objects.all()
-    serializer_class = BanksWithBalanceSerializer
+    serializer_class = serializers.BanksWithBalanceSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
     def get_queryset(self):
@@ -1058,42 +1104,6 @@ class investmentoperation_delete(DeleteView):
         execute("delete from investmentsaccountsoperations where investmentsoperations_id=%s",(self.object.id, )) 
         return super(investmentoperation_delete, self).delete(*args, **kwargs)
 
-        
-@method_decorator(login_required, name='dispatch')
-class bank_new(SuccessMessageMixin, CreateView):
-    model = Banks
-    fields = ( 'name', 'active')
-    template_name="bank_new.html"
-
-    def get_success_message(self, cleaned_data):
-        return _("Bank created successfully")
-
-    def get_success_url(self):
-        return reverse_lazy('bank_list_active')    
-        
-    def get_form(self, form_class=None): 
-        if form_class is None: 
-            form_class = self.get_form_class()
-        form = super(bank_new, self).get_form(form_class)
-        form.fields['name'].widget = forms.TextInput()
-        return form
-
-    def get_initial(self):
-        return {
-            'active': True, 
-        }
-  
-@method_decorator(login_required, name='dispatch')
-class bank_update(SuccessMessageMixin, UpdateView):
-    model = Banks
-    fields = ['name', 'active']
-    template_name="bank_update.html"
-    
-    def get_success_message(self, cleaned_data):
-        return _("Bank updated successfully")
-
-    def get_success_url(self):
-        return reverse_lazy('bank_list_active')
     
 @login_required
 def bank_view(request, pk):
@@ -1105,19 +1115,27 @@ def bank_view(request, pk):
     list_accounts=listdict_accounts(accounts, request.local_currency)
     table_accounts=TabulatorAccounts("table_accounts", "account_view", list_accounts, request.local_currency).render()
     return render(request, 'bank_view.html', locals())
+
+@csrf_exempt
+@api_view(['GET', ])
+@permission_classes([permissions.IsAuthenticated, ])
+def investments_of_a_bank(request, bank_id):
+    bank=get_object_or_404(Banks, pk=bank_id)
+
+    investments=bank.investments(True)
+    qso_investments=QsoInvestments(request, investments)
+    return JsonResponse(listdict2json(qso_investments.listdict_active()), safe=False)
+
+@csrf_exempt
+@api_view(['GET', ])
+@permission_classes([permissions.IsAuthenticated, ])
+def accounts_of_a_bank(request, bank_id):
+    bank=get_object_or_404(Banks, pk=bank_id)
+
+    accounts= bank.accounts(True)
+    list_accounts=listdict_accounts(accounts, request.local_currency)
+    return JsonResponse(listdict2json(list_accounts), safe=False)
     
-@method_decorator(login_required, name='dispatch')
-class bank_delete(DeleteView):
-    model = Banks
-    template_name = 'bank_delete.html'
-        
-    def delete(self, request, *args, **kwargs):
-        messages.success(self.request, _("Bank was successfully deleted"))
-        return super(DeleteView, self).delete(request, *args, **kwargs)
-
-    def get_success_url(self):
-        return reverse_lazy('bank_list_active')
-
 @timeit
 @login_required
 def report_total(request):

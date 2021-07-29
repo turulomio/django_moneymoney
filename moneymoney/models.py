@@ -80,7 +80,14 @@ class Accounts(models.Model):
     ## @return Tuple (balance_account_currency | balance_user_currency)
     def balance(self, dt,  local_currency):
         r=cursor_one_row("select * from account_balance(%s,%s,%s)", (self.id, dt, local_currency))
-        return Currency(r['balance_account_currency'], self.currency), Currency(r['balance_user_currency'], r['user_currency'])
+        return r['balance_account_currency'], r['balance_user_currency']
+        
+    def balance_account(self, dt, local_currency):
+        return self.balance(dt, local_currency)[0]
+        
+    def balance_user(self, dt, local_currency):
+        return self.balance(dt, local_currency)[1]
+        
 
     def mycurrency(self, value):
         return Currency(value, self.currency)
