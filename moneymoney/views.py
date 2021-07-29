@@ -174,6 +174,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
             return self.queryset.filter(active=active)
         else:
             return self.queryset
+
 class InvestmentsWithBalanceViewSet(viewsets.ModelViewSet):
     queryset = Investments.objects.all()
     serializer_class = serializers.InvestmentsWithBalanceSerializer

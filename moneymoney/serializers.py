@@ -1,6 +1,7 @@
-from  moneymoney.models import Accounts, Banks, Investments
+from  moneymoney.models import Accounts, Banks, Investments, percentage_to_selling_point
 from rest_framework import serializers
 from django.utils import timezone
+from moneymoney.reusing.percentage import percentage_between
 
 
 class BanksSerializer(serializers.HyperlinkedModelSerializer):
@@ -64,9 +65,19 @@ class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
 class InvestmentsWithBalanceSerializer(serializers.HyperlinkedModelSerializer):
     accounts = AccountsSerializer( many=False, read_only=True)
     balance_user=serializers.SerializerMethodField()
+    last_datetime=serializers.SerializerMethodField()
+    last=serializers.SerializerMethodField()
+    currency=serializers.SerializerMethodField()
+    daily_difference=serializers.SerializerMethodField()
+    daily_percentage=serializers.SerializerMethodField()
+    invested_user=serializers.SerializerMethodField()
+    gains_user=serializers.SerializerMethodField()
+    percentage_invested=serializers.SerializerMethodField()
+    percentage_selling_point=serializers.SerializerMethodField()
+    selling_expiration=serializers.SerializerMethodField()
     class Meta:
         model = Investments
-        fields = ('url', 'id','name', 'active','accounts', 'balance_user')
+        fields = ('url', 'id','name', 'active','accounts', 'last_datetime',  'last', 'daily_difference','daily_percentage', 'invested_user', 'gains_user','balance_user', 'currency', 'percentage_invested', 'percentage_selling_point', 'selling_expiration')
         
     def __init__(self, *args, **kwargs):
         super(InvestmentsWithBalanceSerializer, self).__init__(*args, **kwargs)
@@ -77,38 +88,28 @@ class InvestmentsWithBalanceSerializer(serializers.HyperlinkedModelSerializer):
             return
         for o in args[0]:
             self._dict_iot[o.id]=InvestmentsOperationsTotals_from_investment(o, timezone.now(), self.context['request'].local_currency)
-            print(self._dict_iot[o.id])
     def get_balance_user(self, obj):
-        return self._dict_iot[obj.id].io_total_current["balance_user"]
-    
-#    def get_auxiliar_data(self, obj):
-#        from moneymoney.investmentsoperations import InvestmentsOperations_from_investment
-#        if hasattr(self, "_iotm") is False:
-#            print("HOLA iotm")
-#            self._iotm=InvestmentsOperations_from_investment(self.context['request'],  obj, timezone.now(), self.context['request'].local_currency):obj.balance(timezone.now(),self.context['request'].local_currency )  
-#
-#            def listdict_active(self):
-#        list_=[]
-#        
-#        self.iotm=InvestmentsOperationsTotalsManager_from_investment_queryset(self.qs, timezone.now(), self.request)
-#                
-#        for iot in self.iotm:
-#            basic_quotes=iot.investment.products.basic_results()
-#            list_.append({
-#                    "id": iot.investment.id, 
-#                    "active":iot.investment.active, 
-#                    "name": iot.investment.fullName(), 
-#                    "last_datetime": basic_quotes['last_datetime'], 
-#                    "last_quote": basic_quotes['last'], 
-#                    "daily_difference": iot.current_last_day_diff(), 
-#                    "daily_percentage":percentage_between(basic_quotes['penultimate'], basic_quotes['last']),             
-#                    "invested_local": iot.io_total_current["invested_user"], 
-#                    "balance": iot.io_total_current["balance_user"], 
-#                    "gains": iot.io_total_current["gains_gross_user"],  
-#                    "percentage_invested": Percentage(iot.io_total_current["gains_gross_user"], iot.io_total_current["invested_user"]), 
-#                    "percentage_sellingpoint": percentage_to_selling_point(iot.io_total_current["shares"], iot.investment.selling_price, basic_quotes['last']), 
-#                    "selling_expiration": iot.investment.selling_expiration, 
-#                    "currency": iot.investment.products.currency
-#                }
-#            )
-#        return list_
+        return self._dict_iot[obj.id].io_total_current["balance_user"]    
+    def get_last_datetime(self, obj):
+        return self._dict_iot[obj.id].investment.products.basic_results()['last_datetime']
+    def get_last(self, obj):
+        return self._dict_iot[obj.id].investment.products.basic_results()['last']
+    def get_daily_difference(self, obj):
+        return self._dict_iot[obj.id].current_last_day_diff()
+    def get_daily_percentage(self, obj):
+        return percentage_between(self._dict_iot[obj.id].investment.products.basic_results()['penultimate'], self._dict_iot[obj.id].investment.products.basic_results()['last']).value
+    def get_currency(self, obj):
+        return self._dict_iot[obj.id].investment.products.currency
+    def get_invested_user(self, obj):
+        return self._dict_iot[obj.id].io_total_current["invested_user"]    
+    def get_gains_user(self, obj):
+        return self._dict_iot[obj.id].io_total_current["gains_gross_user"]    
+    def get_percentage_invested(self, obj):
+        if self._dict_iot[obj.id].io_total_current["invested_user"]!=0:
+            return self._dict_iot[obj.id].io_total_current["gains_gross_user"]/self._dict_iot[obj.id].io_total_current["invested_user"]
+        return None
+
+    def get_selling_expiration(self, obj):
+        return self._dict_iot[obj.id].investment.selling_expiration
+    def get_percentage_selling_point(self, obj):
+        return percentage_to_selling_point(self._dict_iot[obj.id].io_total_current["shares"], self._dict_iot[obj.id].investment.selling_price, self._dict_iot[obj.id].investment.products. basic_results()['last']).value                    
