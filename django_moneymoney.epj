@@ -2,7 +2,7 @@
   "header": {
     "comment": "eric project file for project django_moneymoney",
     "copyright": "Copyright (C) 2021 , ",
-    "saved": "2021-07-29, 07:57:12"
+    "saved": "2021-07-29, 20:29:04"
   },
   "project": {
     "AUTHOR": "",
@@ -53,8 +53,7 @@
       "doc/entity_relationship.md",
       "doc/javascript.md",
       "doc/permissions.md",
-      "doc/structure.md",
-      "/home/max/Proyectos/django-money/money/templates"
+      "doc/structure.md"
     ],
     "OTHERTOOLSPARMS": {},
     "PACKAGERSPARMS": {},
@@ -120,7 +119,8 @@
       "moneymoney/management/commands/makedbmessages.py",
       "moneymoney/management/commands/dumppostgres.py",
       "moneymoney/management/commands/makejsmessages.py",
-      "moneymoney/management/commands/procedure.py"
+      "moneymoney/management/commands/procedure.py",
+      "update_reusing.py"
     ],
     "SPELLEXCLUDES": "",
     "SPELLLANGUAGE": "en_US",
