@@ -10,18 +10,19 @@ from rest_framework import routers
 
 from moneymoney import views as money_views
 router = routers.DefaultRouter()
+print(dir(router.register))
 router.register(r'accounts', money_views.AccountsViewSet)
-router.register(r'accountswithbalance', money_views.AccountsWithBalanceViewSet)
 router.register(r'banks', money_views.BanksViewSet)
-router.register(r'bankswithbalance', money_views.BanksWithBalanceViewSet)
 router.register(r'investments', money_views.InvestmentsViewSet)
-router.register(r'investmentswithbalance', money_views.InvestmentsWithBalanceViewSet)
 
 urlpatterns=[
     path('api/', include(router.urls)),
     path('favicon.ico', RedirectView.as_view(url='/static/images/favicon.ico')),
     path('login/', money_views.login, name="login"), 
     path('logout/', money_views.logout, name="logout"), 
+    path('accounts/withbalance/', money_views.accounts_with_balance, name='accounts_with_balance'),
+    path('banks/withbalance/', money_views.banks_with_balance, name='banks_with_balance'),
+    path('investments/withbalance/', money_views.investments_with_balance, name='investments_with_balance'),
 ]
 
 urlpatterns=urlpatterns+ i18n_patterns(
@@ -45,7 +46,7 @@ urlpatterns=urlpatterns+ i18n_patterns(
     path('account/new/<int:banks_id>/', money_views.account_new.as_view(), name='account_new'),
     path('account/update/<int:pk>/', money_views.account_update.as_view(), name='account_update'),    
     path('account/delete/<int:pk>/', money_views.account_delete.as_view(), name='account_delete'),
-    path('account/bank/<int:bank_id>/', money_views.accounts_of_a_bank, name='accounts_of_a_bank'),
+#    path('account/bank/<int:bank_id>/', money_views.accounts_of_a_bank, name='accounts_of_a_bank'),
     
     path('accountoperation/new/<int:accounts_id>/', money_views.accountoperation_new.as_view(), name='accountoperation_new'),
     path('accountoperation/update/<int:pk>/', money_views.accountoperation_update.as_view(), name='accountoperation_update'),
@@ -91,7 +92,6 @@ urlpatterns=urlpatterns+ i18n_patterns(
     path('investment/search/', money_views.investment_search,  name='investment_search'),
     path('investment/sameproduct/changesp/<int:products_id>', money_views.investments_same_product_change_selling_price, name='investments_same_product_change_selling_price'),
     
-    path('investment/bank/<int:bank_id>/', money_views.investments_of_a_bank, name='investments_of_a_bank'),
     
     
     

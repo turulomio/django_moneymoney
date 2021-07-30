@@ -60,7 +60,7 @@ from moneymoney.reusing.connection_dj import cursor_rows_as_dict
 from moneymoney.reusing.datetime_functions import dtaware_month_start, dtaware_month_end, dtaware_changes_tz, epochmicros2dtaware, dtaware2epochmicros
 from moneymoney.reusing.decorators import timeit
 from moneymoney.reusing.listdict_functions import listdict_sum, listdict_sum_negatives, listdict_sum_positives, listdict_has_key, listdict2json, listdict_print_first, listdict_median,  listdict_average
-from moneymoney.reusing.percentage import Percentage
+from moneymoney.reusing.percentage import Percentage,  percentage_between
 from django.utils.translation import ugettext_lazy as _
 from moneymoney.listdict import (
     LdoInvestmentsOperationsCurrentHeterogeneusSameProductInAccount, 
@@ -109,6 +109,7 @@ from moneymoney.models import (
     StrategiesTypes, 
     total_balance, 
     money_convert, 
+    percentage_to_selling_point, 
 )
 from moneymoney import serializers
 
@@ -121,7 +122,15 @@ from rest_framework import viewsets, permissions
 
 from xulpymoney.libxulpymoneytypes import eConcept, eComment, eProductType, eOperationType
 listdict_print_first
-
+from django.core.serializers.json import DjangoJSONEncoder
+class MyDjangoJSONEncoder(DjangoJSONEncoder):
+    
+    def default(self, o):
+        if isinstance(o, Decimal):
+            return float(o)
+        if isinstance(o, Percentage):
+            return o.value
+        return super().default(o)
 
 
 @api_view(['POST'])
@@ -175,29 +184,29 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
         else:
             return self.queryset
 
-class InvestmentsWithBalanceViewSet(viewsets.ModelViewSet):
-    queryset = Investments.objects.all()
-    serializer_class = serializers.InvestmentsWithBalanceSerializer
-    permission_classes = [permissions.IsAuthenticated]  
-    
-    def get_queryset(self):
-        # To get active or inactive accounts
-        try:
-            active = str2bool(self.request.GET.get('active'))
-        except:
-            active=None
-        # To get all accounts of a bank
-        try:
-            bank_id = int(self.request.GET.get('bank'))
-        except:
-            bank_id=None
-
-        if bank_id is not None:
-            return self.queryset.filter(accounts__banks__id=bank_id,  active=True)
-        elif active is not None:
-            return self.queryset.filter(active=active)
-        else:
-            return self.queryset
+#class InvestmentsWithBalanceViewSet(viewsets.ModelViewSet):
+#    queryset = Investments.objects.all()
+#    serializer_class = serializers.InvestmentsWithBalanceSerializer
+#    permission_classes = [permissions.IsAuthenticated]  
+#    
+#    def get_queryset(self):
+#        # To get active or inactive accounts
+#        try:
+#            active = str2bool(self.request.GET.get('active'))
+#        except:
+#            active=None
+#        # To get all accounts of a bank
+#        try:
+#            bank_id = int(self.request.GET.get('bank'))
+#        except:
+#            bank_id=None
+#
+#        if bank_id is not None:
+#            return self.queryset.filter(accounts__banks__id=bank_id,  active=True)
+#        elif active is not None:
+#            return self.queryset.filter(active=active)
+#        else:
+#            return self.queryset
 
 class AccountsViewSet(viewsets.ModelViewSet):
     queryset = Accounts.objects.all()
@@ -222,39 +231,37 @@ class AccountsViewSet(viewsets.ModelViewSet):
             return self.queryset.filter(active=active)
         else:
             return self.queryset
-    def get_serializer_class(self):
-        return serializers.AccountsSerializer
 
-class AccountsWithBalanceViewSet(viewsets.ModelViewSet):
-    queryset = Accounts.objects.all()
-    serializer_class = serializers.AccountsWithBalanceSerializer
-    permission_classes = [permissions.IsAuthenticated]  
-    
-    def get_queryset(self):
-        # To get active or inactive accounts
-        try:
-            active = str2bool(self.request.GET.get('active'))
-        except:
-            active=None
-        # To get all accounts of a bank
-        try:
-            bank_id = int(self.request.GET.get('bank'))
-        except:
-            bank_id=None
-
-        if bank_id is not None:
-            return self.queryset.filter(banks__id=bank_id,   active=True)
-        elif active is not None:
-            return self.queryset.filter(active=active)
-        else:
-            return self.queryset
+#class AccountsWithBalanceViewSet(viewsets.ModelViewSet):
+#    queryset = Accounts.objects.all()
+#    serializer_class = serializers.AccountsWithBalanceSerializer
+#    permission_classes = [permissions.IsAuthenticated]  
+#    
+#    def get_queryset(self):
+#        # To get active or inactive accounts
+#        try:
+#            active = str2bool(self.request.GET.get('active'))
+#        except:
+#            active=None
+#        # To get all accounts of a bank
+#        try:
+#            bank_id = int(self.request.GET.get('bank'))
+#        except:
+#            bank_id=None
+#
+#        if bank_id is not None:
+#            return self.queryset.filter(banks__id=bank_id,   active=True)
+#        elif active is not None:
+#            return self.queryset.filter(active=active)
+#        else:
+#            return self.queryset
             
 
 class BanksViewSet(viewsets.ModelViewSet):
     queryset = Banks.objects.all()
-    serializer_class = serializers.BanksSerializer
     permission_classes = [permissions.IsAuthenticated]  
-    
+    serializer_class =  serializers.BanksSerializer
+
     def get_queryset(self):
         try:
             active = str2bool(self.request.GET.get('active'))
@@ -265,21 +272,102 @@ class BanksViewSet(viewsets.ModelViewSet):
         else:
             return self.queryset.filter(active=active)
 
-class BanksWithBalanceViewSet(viewsets.ModelViewSet):
-    queryset = Banks.objects.all()
-    serializer_class = serializers.BanksWithBalanceSerializer
-    permission_classes = [permissions.IsAuthenticated]  
-    
-    def get_queryset(self):
-        try:
-            active = str2bool(self.request.GET.get('active'))
-        except:
-            active=None
-        if active is None:
-            return self.queryset
-        else:
-            return self.queryset.filter(active=active)
 
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def banks_with_balance(request):
+    active=RequestGetBool(request, 'active')
+    if active is None:
+        qs=Banks.objects.all() 
+    else:
+        qs=Banks.objects.filter(active=active)
+            
+    r=[]
+    for o in qs:
+        balance_accounts=o.balance_accounts()
+        balance_investments=o.balance_investments(request)
+        r.append({
+            "id": o.id,  
+            "name":o.name, 
+            "active":o.active, 
+            "url":request.build_absolute_uri(reverse('banks-detail', args=(o.pk, ))), 
+            "balance_accounts": balance_accounts, 
+            "balance_investments": balance_investments, 
+            "balance_total": balance_accounts+balance_investments, 
+            "is_deletable": o.is_deletable()
+        })
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+        
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def accounts_with_balance(request):
+    active=RequestGetBool(request, 'active')
+    bank_id=RequestGetInteger(request, 'bank')
+
+    if bank_id is not None:
+        qs=Accounts.objects.filter(banks__id=bank_id,   active=True)
+    elif active is not None:
+        qs=Accounts.objects.filter( active=active)
+    else:
+        qs=Accounts.objects.all()
+            
+    r=[]
+    for o in qs:
+        balance_account, balance_user=o.balance(timezone.now(), request.local_currency ) 
+        r.append({
+            "id": o.id,  
+            "name":o.name, 
+            "active":o.active, 
+            "url":request.build_absolute_uri(reverse('accounts-detail', args=(o.pk, ))), 
+            "number": o.number, 
+            "balance_account": balance_account,  
+            "balance_user": balance_user, 
+            "is_deletable": o.is_deletable(), 
+            "currency": o.currency, 
+        })
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def investments_with_balance(request):
+    from moneymoney.investmentsoperations import InvestmentsOperationsTotals_from_investment
+    active=RequestGetBool(request, 'active', None)
+    bank_id=RequestGetInteger(request, 'bank', None)
+
+    if bank_id is not None:
+        qs=Investments.objects.filter(accounts__banks__id=bank_id,   active=True)
+    elif active is not None:
+        qs=Investments.objects.filter( active=active)
+    else:
+        qs=Investments.objects.all()
+            
+    r=[]
+    for o in qs:
+        iot=InvestmentsOperationsTotals_from_investment(o, timezone.now(), request.local_currency)
+        percentage_invested=None if iot.io_total_current["invested_user"]==0 else  iot.io_total_current["gains_gross_user"]/iot.io_total_current["invested_user"]
+
+        r.append({
+            "id": o.id,  
+            "name":o.name, 
+            "active":o.active, 
+            "url":request.build_absolute_uri(reverse('investments-detail', args=(o.pk, ))), 
+            "accounts__url":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.id, ))), 
+            "last_datetime": o.products.basic_results()['last_datetime'], 
+            "last": o.products.basic_results()['last'], 
+            "daily_difference": iot.current_last_day_diff(), 
+            "daily_percentage":percentage_between(o.products.basic_results()['penultimate'], o.products.basic_results()['last']), 
+            "invested_user": iot.io_total_current["invested_user"], 
+            "gains_user": iot.io_total_current["gains_gross_user"], 
+            "balance_user": iot.io_total_current["balance_user"], 
+            "currency": o.products.currency, 
+            "percentage_invested": percentage_invested, 
+            "percentage_selling_point": percentage_to_selling_point(iot.io_total_current["shares"], iot.investment.selling_price, o.products.basic_results()['last']), 
+            "selling_expiration": o.selling_expiration, 
+        })
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
  
 @login_required
 @transaction.atomic
@@ -309,7 +397,6 @@ def order_list(request,  active, year=date.today().year):
     
 @login_required
 def  table_product_list_from_ids(request, ids):
-        print("OBSOLETE")
         ids=tuple(ids)
         listproducts=cursor_rows("""
 select 
@@ -1117,25 +1204,15 @@ def bank_view(request, pk):
     table_accounts=TabulatorAccounts("table_accounts", "account_view", list_accounts, request.local_currency).render()
     return render(request, 'bank_view.html', locals())
 
-@csrf_exempt
-@api_view(['GET', ])
-@permission_classes([permissions.IsAuthenticated, ])
-def investments_of_a_bank(request, bank_id):
-    bank=get_object_or_404(Banks, pk=bank_id)
 
-    investments=bank.investments(True)
-    qso_investments=QsoInvestments(request, investments)
-    return JsonResponse(listdict2json(qso_investments.listdict_active()), safe=False)
+            
 
-@csrf_exempt
-@api_view(['GET', ])
-@permission_classes([permissions.IsAuthenticated, ])
-def accounts_of_a_bank(request, bank_id):
-    bank=get_object_or_404(Banks, pk=bank_id)
+#    investments=bank.investments(True)
+#    qso_investments=QsoInvestments(request, investments)
+#    return JsonResponse(listdict2json(qso_investments.listdict_active()), safe=False)
+#
+##        fields = ('url', 'name', 'active', 'id','balance_accounts', 'balance_investments', 'balance_total', 'is_deletable')
 
-    accounts= bank.accounts(True)
-    list_accounts=listdict_accounts(accounts, request.local_currency)
-    return JsonResponse(listdict2json(list_accounts), safe=False)
     
 @timeit
 @login_required
@@ -2246,4 +2323,16 @@ def getGlobal(key, default, type="str"):
     except:
         return default
     
-    
+def RequestGetBool(request, field, default=None):
+    try:
+        r = str2bool(request.GET.get(field))
+    except:
+        r=default
+    return r    
+def RequestGetInteger(request, field, default=None):
+    try:
+        r = int(request.GET.get(field))
+    except:
+        r=default
+    return r
+
