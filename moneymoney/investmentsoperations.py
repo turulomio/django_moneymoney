@@ -5,11 +5,9 @@ from django.utils.translation import ugettext_lazy as _
 from math import ceil
 from moneymoney.reusing.connection_dj import cursor_one_row, cursor_rows_as_dict
 from moneymoney.reusing.currency import Currency
-from moneymoney.reusing.decorators import deprecated
 from moneymoney.reusing.datetime_functions import string2dtnaive, dtaware
 from moneymoney.reusing.listdict_functions import listdict_sum, listdict2json, listdict_print_first
 from moneymoney.reusing.percentage import Percentage, percentage_between
-from moneymoney.tables import TabulatorFromListDict
 
 Decimal
 listdict_print_first
@@ -206,88 +204,6 @@ class InvestmentsOperations:
                 r=r - o["commission_account"]
         return r
         
-        
-    def current_listdict_tabulator_homogeneus_investment(self, request):
-        for ioc in self.io_current:
-            o=IOC(self.investment, ioc)
-            ioc["percentage_annual_investment"]=o.percentage_annual_investment()
-            ioc["percentage_apr_investment"]=o.percentage_apr_investment()
-            ioc["percentage_total_investment"]=o.percentage_total_investment()
-            ioc["operationstypes"]=request.operationstypes[ioc["operationstypes_id"]]
-        return self.io_current
-        
-                
-    def current_tabulator_homogeneus_investment(self):
-        r=TabulatorFromListDict(f"{self.name}_current_tabulator_homogeneus_investment")
-        r.setDestinyUrl(None)
-        r.setLocalZone(self.request.local_zone)
-        r.setListDict(self.current_listdict_tabulator_homogeneus_investment(self.request))
-        r.setFields("id","datetime", "operationstypes",  "shares", "price_investment", "invested_investment", "balance_investment", "gains_gross_investment", "percentage_annual_investment", "percentage_apr_investment", "percentage_total_investment")
-        r.setHeaders("Id", _("Date and time"), _("Operation type"),  _("Shares"), _("Price"), _("Invested"), _("Current balance"), _("Gross gains"), _("% year"), _("% APR"), _("% Total"))
-        r.setTypes("int","datetime", "str",  "Decimal", self.investment.products.currency, self.investment.products.currency, self.investment.products.currency,  self.investment.products.currency, "percentage", "percentage", "percentage")
-        r.setBottomCalc(None, None, None, "sum", None, "sum", "sum", "sum", None, None, None)
-        r.showLastRecord(False)
-        
-        r.setHTMLCodeAfterObjectCreation(f"""
-    <p>{_("Current average price is {} in investment currency").format(self.current_average_price_investment())}</p>
-""")
-        return r        
-
-    def current_tabulator_homogeneus_user(self):
-        currency=self.request.local_currency
-        r=TabulatorFromListDict(f"{self.name}_current_tabulator_homogeneus_user")
-        r.setDestinyUrl(None)
-        r.setLocalZone(self.request.local_zone)
-        r.setListDict(self.current_listdict_tabulator_homogeneus_investment(self.request))
-        r.setFields("id","datetime", "name","operationstypes",  "shares", "price_user", "invested_user", "balance_user", "gains_gross_user", "percentage_annual", "percentage_apr", "percentage_total")
-        r.setHeaders("Id", _("Date and time"), _("Name"),  _("Operation type"),  _("Shares"), _("Price"), _("Invested"), _("Current balance"), _("Gross gains"), _("% year"), _("% APR"), _("% Total"))
-        r.setTypes("int","datetime", "str", "str",  "Decimal", currency, currency, currency, currency, "percentage", "percentage", "percentage")
-        r.setBottomCalc(None, None, None, None, "sum", None,  "sum", "sum", "sum", None, None, None)
-        r.showLastRecord(False)
-        r.setHTMLCodeAfterObjectCreation(f"""
-    <p>{_("Current average price is {} in user currency").format(self.current_average_price_user())}</p>
-""")
-        return r
-
-
-    def o_tabulator_homogeneus_investment(self):
-        r=TabulatorFromListDict(f"{self.name}_o_tabulator_homogeneus_investment")
-        r.setDestinyUrl("investmentoperation_update")
-        r.setLocalZone(self.request.local_zone)
-        r.setListDict(self.o_listdict_tabulator_homogeneus(self.request))
-        r.setFields("id","datetime", "operationstypes","shares", "price", "gross_investment","commission", "taxes" , "net_investment","currency_conversion",  "comment")
-        r.setHeaders("Id", _("Date and time"), _("Operation types"),  _("Shares"), _("Price"), _("Gross"), _("Commission"), _("Taxes"), _("Net"), _("Currency convertion"),  _("Comment"))
-        r.setTypes("int","datetime", "str","Decimal", self.investment.products.currency, self.investment.products.currency, self.investment.products.currency, self.investment.accounts.currency,self.investment.accounts.currency,"Decimal6", "str")
-        r.setBottomCalc(None, None, None, "sum", None, "sum","sum", "sum", "sum", None, None)
-        r.showLastRecord(False)
-        return r
-
-    def historical_tabulator_homogeneus_user(self):
-        c=self.request.local_currency
-        r=TabulatorFromListDict(f"{self.name}_historical_tabulator_homogeneus_investment")
-        r.setDestinyUrl(None)
-        r.setLocalZone(self.request.local_zone)
-        r.setListDict(self.historical_listdict_homogeneus(self.request))
-        r.setFields("id","dt_end", "years","operationstypes","shares", "gross_start_user", "gross_end_user", "gains_gross_user", "commissions_user", "taxes_user", "gains_net_user")
-        r.setHeaders("Id", _("Date and time"), _("Years"), _("Operation type"),  _("Shares"), _("Gross start"), _("Gross end"), _("Gross gains"), _("Commissions"), _("Taxes"), _("Net gains"))
-        r.setTypes("int","datetime", "int",  "str", "Decimal", c, c, c, c, c, c)
-        r.setBottomCalc(None, None, None,None, None, "sum", "sum", "sum", "sum", "sum", "sum")
-        r.showLastRecord(False)
-        return r
-        
-    @deprecated
-    def historical_tabulator_homogeneus_investment(self):
-        r=TabulatorFromListDict(f"{self.name}_historical_tabulator_homogeneus_user")
-        r.setDestinyUrl(None)
-        r.setLocalZone(self.request.local_zone)
-        r.setListDict(self.historical_listdict_homogeneus(self.request))
-        r.setFields("id","dt_end", "years","operationstypes","shares", "gross_start_investment", "gross_end_investment", "gains_gross_investment", "commissions_account", "taxes_account", "gains_net_investment")
-        r.setHeaders("Id", _("Date and time"), _("Years"), _("Operation type"),  _("Shares"), _("Gross start"), _("Gross end"), _("Gross gains"), _("Commissions"), _("Taxes"), _("Net gains"))
-        r.setTypes("int","datetime", "int",  "str", "Decimal", self.investment.products.currency, self.investment.products.currency, self.investment.products.currency, self.investment.products.currency, self.investment.products.currency, self.investment.products.currency)
-        r.setBottomCalc(None, None, None,None, None, "sum", "sum", "sum", "sum", "sum", "sum")
-        r.showLastRecord(False)
-        return r
-
     def historical_listdict_homogeneus(self, request):
         for ioh in self.io_historical:
             ioh["operationstypes"]=request.operationstypes[ioh["operationstypes_id"]]
