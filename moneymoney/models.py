@@ -258,7 +258,7 @@ class Banks(models.Model):
 
     def balance_accounts(self):
         if hasattr(self, "_balance_accounts") is False:
-            self._balance_accounts=Accounts.accounts_balance_user_currency(self.accounts(active=True), timezone.now())
+            self._balance_accounts=Accounts.accounts_balance_user_currency(self.accounts(True), timezone.now())
         return self._balance_accounts
 
     def balance_investments(self, request):

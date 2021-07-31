@@ -175,11 +175,11 @@ def AccountsWithBalance(request):
     bank_id=RequestGetInteger(request, 'bank')
 
     if bank_id is not None:
-        qs=Accounts.objects.filter(banks__id=bank_id,   active=True)
+        qs=Accounts.objects.select_related("banks").filter(banks__id=bank_id,   active=True)
     elif active is not None:
-        qs=Accounts.objects.filter( active=active)
+        qs=Accounts.objects.select_related("banks").filter( active=active)
     else:
-        qs=Accounts.objects.all()
+        qs=Accounts.objects.select_related("banks").all()
             
     r=[]
     for o in qs:
@@ -212,18 +212,20 @@ def AccountsoperationsWithBalance(request):
         account=Accounts.objects.get(pk=accounts_id)
         dt_initial=dtaware_month_start(year, month, request.local_zone)
         initial_balance=account.balance( dt_initial, request.local_currency)[0]
-        qs=Accountsoperations.objects.filter(datetime__year=year, datetime__month=month, accounts__id=accounts_id)
+        qs=Accountsoperations.objects.select_related("accounts").select_related("operationstypes").select_related("concepts").filter(datetime__year=year, datetime__month=month, accounts__id=accounts_id).order_by("datetime")
 
     r=[]
     for o in qs:
         r.append({
             "id": o.id,  
+            "url": request.build_absolute_uri(reverse('accountsoperations-detail', args=(o.pk, ))), 
             "datetime":o.datetime, 
             "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(o.concepts.pk, ))), 
             "operationstypes":request.build_absolute_uri(reverse('operationstypes-detail', args=(o.operationstypes.pk, ))), 
             "amount": o.amount, 
             "balance":  initial_balance + o.amount, 
             "comment": Comment().decode(o.comment), 
+            "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.pk, ))), 
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
@@ -238,11 +240,11 @@ def InvestmentsWithBalance(request):
     bank_id=RequestGetInteger(request, 'bank', None)
 
     if bank_id is not None:
-        qs=Investments.objects.filter(accounts__banks__id=bank_id,   active=True)
+        qs=Investments.objects.select_related("accounts").select_related("products").select_related("products__productstypes").select_related("products__leverages").filter(accounts__banks__id=bank_id,   active=True)
     elif active is not None:
-        qs=Investments.objects.filter( active=active)
+        qs=Investments.objects.select_related("accounts").select_related("products").select_related("products__productstypes").select_related("products__leverages").filter( active=active)
     else:
-        qs=Investments.objects.all()
+        qs=Investments.objects.select_related("accounts").select_related("products").select_related("products__productstypes").select_related("products__leverages").all()
             
     r=[]
     for o in qs:
