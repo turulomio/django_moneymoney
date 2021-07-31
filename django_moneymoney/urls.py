@@ -10,17 +10,21 @@ from rest_framework import routers
 from moneymoney import views as money_views
 router = routers.DefaultRouter()
 router.register(r'accounts', money_views.AccountsViewSet)
+router.register(r'accountsoperations', money_views.AccountsoperationsViewSet)
 router.register(r'banks', money_views.BanksViewSet)
+router.register(r'concepts', money_views.ConceptsViewSet)
 router.register(r'investments', money_views.InvestmentsViewSet)
+router.register(r'operationstypes', money_views.OperationstypesViewSet)
 
 urlpatterns=[
     path('api/', include(router.urls)),
     path('favicon.ico', RedirectView.as_view(url='/static/images/favicon.ico')),
     path('login/', money_views.login, name="login"), 
     path('logout/', money_views.logout, name="logout"), 
-    path('accounts/withbalance/', money_views.accounts_with_balance, name='accounts_with_balance'),
-    path('banks/withbalance/', money_views.banks_with_balance, name='banks_with_balance'),
-    path('investments/withbalance/', money_views.investments_with_balance, name='investments_with_balance'),
+    path('accounts/withbalance/', money_views.AccountsWithBalance, name='AccountsWithBalance'),
+    path('accountsoperations/withbalance/', money_views.AccountsoperationsWithBalance, name='AccountsoperationsWithBalance'),
+    path('banks/withbalance/', money_views.BanksWithBalance, name='BanksWithBalance'),
+    path('investments/withbalance/', money_views.InvestmentsWithBalance, name='InvestmentsWithBalance'),
 ]
 
 urlpatterns=urlpatterns+ i18n_patterns(

@@ -31,6 +31,7 @@ REST_FRAMEWORK={
         'rest_framework.authentication.BasicAuthentication',  ## Uncomment to use api in url 
         'rest_framework.authentication.TokenAuthentication', 
     ], 
+    'COERCE_DECIMAL_TO_STRING': False
 #    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
 }
 ## Application definitions

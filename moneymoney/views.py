@@ -6,13 +6,18 @@ from django.utils import timezone
 from django.http import JsonResponse
 from moneymoney.reusing.connection_dj import execute, cursor_one_field
 from moneymoney.reusing.casts import str2bool
+from moneymoney.reusing.datetime_functions import dtaware_month_start
 from moneymoney.reusing.decorators import timeit
 from moneymoney.reusing.percentage import Percentage,  percentage_between
 
 from moneymoney.models import (
     Banks, 
     Accounts, 
+    Accountsoperations, 
+    Comment, 
+    Concepts, 
     Investments, 
+    Operationstypes, 
     percentage_to_selling_point, 
 )
 from moneymoney import serializers
@@ -57,6 +62,15 @@ def logout(request):
     else:
         token.delete()
         return Response("Logged out")
+
+class ConceptsViewSet(viewsets.ModelViewSet):
+    queryset = Concepts.objects.all()
+    serializer_class = serializers.ConceptsSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+class OperationstypesViewSet(viewsets.ModelViewSet):
+    queryset = Operationstypes.objects.all()
+    serializer_class = serializers.OperationstypesSerializer
+    permission_classes = [permissions.IsAuthenticated]  
 
 class InvestmentsViewSet(viewsets.ModelViewSet):
     queryset = Investments.objects.all()
@@ -105,6 +119,11 @@ class AccountsViewSet(viewsets.ModelViewSet):
             return self.queryset.filter(active=active)
         else:
             return self.queryset
+class AccountsoperationsViewSet(viewsets.ModelViewSet):
+    queryset = Accountsoperations.objects.all()
+    serializer_class = serializers.AccountsoperationsSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+    
 
 class BanksViewSet(viewsets.ModelViewSet):
     queryset = Banks.objects.all()
@@ -125,7 +144,7 @@ class BanksViewSet(viewsets.ModelViewSet):
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-def banks_with_balance(request):
+def BanksWithBalance(request):
     active=RequestGetBool(request, 'active')
     if active is None:
         qs=Banks.objects.all() 
@@ -151,7 +170,7 @@ def banks_with_balance(request):
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-def accounts_with_balance(request):
+def AccountsWithBalance(request):
     active=RequestGetBool(request, 'active')
     bank_id=RequestGetInteger(request, 'bank')
 
@@ -180,11 +199,40 @@ def accounts_with_balance(request):
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
+
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def AccountsoperationsWithBalance(request):        
+    accounts_id=RequestGetInteger(request, 'account')
+    year=RequestGetInteger(request, 'year')
+    month=RequestGetInteger(request, 'month')
+    
+    if accounts_id is not None and year is not None and month is not None:
+        account=Accounts.objects.get(pk=accounts_id)
+        dt_initial=dtaware_month_start(year, month, request.local_zone)
+        initial_balance=account.balance( dt_initial, request.local_currency)[0]
+        qs=Accountsoperations.objects.filter(datetime__year=year, datetime__month=month, accounts__id=accounts_id)
+
+    r=[]
+    for o in qs:
+        r.append({
+            "id": o.id,  
+            "datetime":o.datetime, 
+            "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(o.concepts.pk, ))), 
+            "operationstypes":request.build_absolute_uri(reverse('operationstypes-detail', args=(o.operationstypes.pk, ))), 
+            "amount": o.amount, 
+            "balance":  initial_balance + o.amount, 
+            "comment": Comment().decode(o.comment), 
+        })
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+
+
 @timeit
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-def investments_with_balance(request):
+def InvestmentsWithBalance(request):
     from moneymoney.investmentsoperations import InvestmentsOperationsTotals_from_investment
     active=RequestGetBool(request, 'active', None)
     bank_id=RequestGetInteger(request, 'bank', None)

@@ -1112,6 +1112,8 @@ class Comment:
         return True
 
     def decode(self, string):
+            if string=="":
+                return ""
 #        try:
             (code, args)=self.get(string)
             if code==None:
