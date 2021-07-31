@@ -7,15 +7,11 @@ class BanksSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('url', 'name', 'active', 'id')
 
 class AccountsSerializer(serializers.HyperlinkedModelSerializer):
-    banks = BanksSerializer( many=False, read_only=True)
     class Meta:
         model = Accounts
         fields = ('url', 'name', 'active', 'number','currency','banks')
 
-
-
 class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
-    accounts = AccountsSerializer( many=False, read_only=True)
     class Meta:
         model = Investments
         fields = ('url', 'id','name', 'active','accounts')

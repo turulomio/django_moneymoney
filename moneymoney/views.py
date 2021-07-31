@@ -176,6 +176,7 @@ def accounts_with_balance(request):
             "is_deletable": o.is_deletable(), 
             "currency": o.currency, 
             "banks__name": o.banks.name,  
+            "banks":request.build_absolute_uri(reverse('banks-detail', args=(o.banks.pk, ))), 
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 

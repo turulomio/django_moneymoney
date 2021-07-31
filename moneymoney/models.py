@@ -48,7 +48,7 @@ CURRENCY_CHOICES =(
 
 class Accounts(models.Model):
     name = models.TextField(blank=True, null=True)
-    banks = models.ForeignKey('Banks', models.DO_NOTHING, blank=True, null=True)
+    banks = models.ForeignKey('Banks',  models.DO_NOTHING, related_name="accounts", blank=False, null=False)
     active = models.BooleanField(blank=False, null=False)
     number = models.CharField(max_length=24, blank=True, null=True)
     currency = models.TextField()
