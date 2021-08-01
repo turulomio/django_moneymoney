@@ -44,7 +44,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework.authtoken', 
-    'debug_toolbar',
     'corsheaders', 
     'moneymoney',
 ]
@@ -59,7 +58,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware', 
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'moneymoney.middleware.MoneyMiddleware', 
 ]
 

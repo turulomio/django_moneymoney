@@ -81,35 +81,7 @@ class Accounts(models.Model):
     def balance(self, dt,  local_currency):
         r=cursor_one_row("select * from account_balance(%s,%s,%s)", (self.id, dt, local_currency))
         return r['balance_account_currency'], r['balance_user_currency']
-        
-    def balance_account(self, dt, local_currency):
-        return self.balance(dt, local_currency)[0]
-        
-    def balance_user(self, dt, local_currency):
-        return self.balance(dt, local_currency)[1]
-        
 
-    def mycurrency(self, value):
-        return Currency(value, self.currency)
-
-    def currency_symbol(self):
-        return currency_symbol(self.currency)
-    
-    @staticmethod
-    def accounts_balance_user_currency(qs, dt):
-        if len (qs)==0:
-            return 0
-        return cursor_one_field("select sum((account_balance(accounts.id,%s,'EUR')).balance_user_currency) from  accounts where id in %s", (dt, qs_list_of_ids(qs)))
-    
-
-    @staticmethod
-    def queryset_active_order_by_fullname():
-        ids=[]
-        for account in sorted(Accounts.objects.select_related('banks').filter(active=True), key=lambda o: o.fullName()):
-            ids.append(account.id)
-        preserved = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(ids)])
-        queryset = Accounts.objects.select_related('banks').filter(pk__in=ids).order_by(preserved)
-        return queryset    
 ## This model is not in Xulpymoney to avoid changing a lot of code
 class Stockmarkets(models.Model):
     id = models.IntegerField(primary_key=True)
@@ -252,13 +224,15 @@ class Banks(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'banks'        
+        db_table = 'banks'      
+
     def __str__(self):
         return self.name
 
     def balance_accounts(self):
         if hasattr(self, "_balance_accounts") is False:
-            self._balance_accounts=Accounts.accounts_balance_user_currency(self.accounts(True), timezone.now())
+            qs=Accounts.objects.all().filter(banks_id=self.id, active=True)
+            self._balance_accounts=accounts_balance_user_currency(qs,  timezone.now())
         return self._balance_accounts
 
     def balance_investments(self, request):
@@ -270,9 +244,6 @@ class Banks(models.Model):
         
     def balance_total(self, request):
         return self.balance_accounts()+self.balance_investments(request)
-            
-    def accounts(self, active):
-        return Accounts.objects.all().select_related("banks").filter(banks_id=self.id, active=active)
 
     def investments(self, active):
         investments= Investments.objects.all().select_related("products").select_related("products__productstypes").select_related("accounts").filter(accounts__banks__id=self.id, active=active)
@@ -351,6 +322,14 @@ class Creditcards(models.Model):
         managed = False
         db_table = 'creditcards'
 
+    def is_deletable(self):
+        """Función que devuelve un booleano si una cuenta es borrable, es decir, que no tenga registros dependientes."""           
+        if self.deferred==False:
+            return True
+        
+        if Creditcardsoperations.objects.filter(creditcards_id=self.id).exists():
+            return False
+        return True
 
 class Creditcardsoperations(models.Model):
     concepts = models.ForeignKey(Concepts, models.DO_NOTHING)
@@ -1036,6 +1015,10 @@ def balance_user_by_operationstypes(year,  month,  operationstypes_id, local_cur
                     r=r+money_convert(dtaware_month_end(year, month, local_zone), row['amount'], currency, local_currency)
     return r
 
+def accounts_balance_user_currency(qs, dt):
+    if len (qs)==0:
+        return 0
+    return cursor_one_field("select sum((account_balance(accounts.id,%s,'EUR')).balance_user_currency) from  accounts where id in %s", (dt, qs_list_of_ids(qs)))
 
 
 
@@ -1146,7 +1129,7 @@ class Comment:
             elif code==eComment.Dividend:#Comentario de cuenta asociada al dividendo
                 dividend=self.decode_objects(string)
                 if dividend is not None:
-                    return _( "From {}. Gross {}. Net {}.".format(dividend.investments.name, dividend.investments.accounts.mycurrency(dividend.gross), dividend.investments.accounts.mycurrency(dividend.net)))
+                    return _( "From {}. Gross {}. Net {}.".format(dividend.investments.name, Currency(dividend.gross,  dividend.investments.accounts.currency), Currency(dividend.net, dividend.investments.accounts.currency)))
                 return _("Error decoding dividend comment")
 
             elif code==eComment.CreditCardBilling:#Facturaci´on de tarjeta diferida

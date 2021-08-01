@@ -2,8 +2,6 @@ from django.contrib import admin
 from django.urls import path,  include
 from django.conf.urls.i18n import i18n_patterns, set_language 
 from django.views.generic.base import RedirectView
-from django.views.i18n import JavaScriptCatalog
-import debug_toolbar
 
 from rest_framework import routers
 
@@ -12,6 +10,8 @@ router = routers.DefaultRouter()
 router.register(r'accounts', money_views.AccountsViewSet)
 router.register(r'accountsoperations', money_views.AccountsoperationsViewSet)
 router.register(r'banks', money_views.BanksViewSet)
+router.register(r'creditcards', money_views.CreditcardsViewSet)
+router.register(r'creditcardsoperations', money_views.CreditcardsoperationsViewSet)
 router.register(r'concepts', money_views.ConceptsViewSet)
 router.register(r'investments', money_views.InvestmentsViewSet)
 router.register(r'operationstypes', money_views.OperationstypesViewSet)
@@ -23,13 +23,13 @@ urlpatterns=[
     path('logout/', money_views.logout, name="logout"), 
     path('accounts/withbalance/', money_views.AccountsWithBalance, name='AccountsWithBalance'),
     path('accountsoperations/withbalance/', money_views.AccountsoperationsWithBalance, name='AccountsoperationsWithBalance'),
+    path('creditcards/withbalance/', money_views.CreditcardsWithBalance, name='CreditcardsWithBalance'),
+    path('creditcardsoperations/withbalance/', money_views.CreditcardsoperationsWithBalance, name='CreditcardsoperationsWithBalance'),
     path('banks/withbalance/', money_views.BanksWithBalance, name='BanksWithBalance'),
     path('investments/withbalance/', money_views.InvestmentsWithBalance, name='InvestmentsWithBalance'),
 ]
 
 urlpatterns=urlpatterns+ i18n_patterns(
-    path('jsi18n/', JavaScriptCatalog.as_view(), name='javascript-catalog'),
-    path('__debug__/', include(debug_toolbar.urls)),
     path('i18n/setlang/',  set_language, name="set_language"), 
     path('admin/', admin.site.urls,  name="admin-site"),
 

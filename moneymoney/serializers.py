@@ -3,6 +3,8 @@ from  moneymoney.models import (
     Accountsoperations, 
     Banks, 
     Concepts, 
+    Creditcards, 
+    Creditcardsoperations, 
     Investments, 
     Operationstypes, 
 )
@@ -27,6 +29,17 @@ class ConceptsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Concepts
         fields = ('url', 'id', 'name',  'operationstypes', 'editable')
+
+class CreditcardsSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Creditcards
+        fields = ('url', 'id', 'name',  'number', 'accounts', 'maximumbalance', 'deferred', 'active')
+        
+class CreditcardsoperationsSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Creditcardsoperations
+        fields = ('url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','accounts')
+
 class OperationstypesSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Operationstypes
