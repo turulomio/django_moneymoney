@@ -38,7 +38,7 @@ class CreditcardsSerializer(serializers.HyperlinkedModelSerializer):
 class CreditcardsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Creditcardsoperations
-        fields = ('url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','accounts')
+        fields = ('url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','creditcards', 'paid','paid_datetime')
 
 class OperationstypesSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:

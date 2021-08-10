@@ -270,6 +270,8 @@ def CreditcardsoperationsWithBalance(request):
             "balance":  initial_balance + o.amount, 
             "comment": Comment().decode(o.comment), 
             "creditcards":request.build_absolute_uri(reverse('creditcards-detail', args=(o.creditcards.pk, ))), 
+            "paid": o.paid, 
+            "paid_datetime": o.paid_datetime, 
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
