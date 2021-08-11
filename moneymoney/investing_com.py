@@ -3,14 +3,14 @@ from django.utils.translation import ugettext_lazy as _
 from moneymoney.models import Products,  Quotes
 
 from csv import reader
-from logging import debug
-from datetime import date
+#from logging import debug
+#from datetime import date
 from io import StringIO
-from xulpymoney.objects.quote import Quote
-from xulpymoney.objects.ohcl import  OHCLDaily
-from xulpymoney.casts import string2decimal
-from xulpymoney.datetime_functions import dtaware, string2date, string2dtaware, string2time
-from xulpymoney.libxulpymoneytypes import eTickerPosition
+#from xulpymoney.objects.quote import Quote
+#from xulpymoney.objects.ohcl import  OHCLDaily
+from moneymoney.reusing.casts import string2decimal
+from moneymoney.reusing.datetime_functions import dtaware, string2date, string2dtaware
+#from monemoney.models import eTickerPosition
 
 class InvestingCom:
     def __init__(self, request, filename_in_memory, product=None):
@@ -55,38 +55,39 @@ class InvestingCom:
     ## 6 % Var. 
     ## 7 Hora
     def append_from_default(self):
-        with open(self.filename) as csv_file:
-            csv_reader = reader(csv_file, delimiter=',')
-            line_count = 0
-            for row in csv_reader:
-                if line_count >0:#Ignores headers line
-                    products=self.mem.data.products.find_all_by_ticker(row[1], eTickerPosition.InvestingCom)
-                    print(row[1], len(products))
-                    if len(products)==0:
-                        print(_(f"Product with InvestingCom ticker {row[1]} wasn't found"))
-                    for product in products:
-                        if row[7].find(":")==-1:#It's a date
-                            try:
-                                quote=Quote(self.mem)
-                                quote.product=product
-                                date_=string2date(row[7], "DD/MM")
-                                quote.datetime=dtaware(date_,quote.product.stockmarket.closes,self.mem.localzone_name)#Without 4 microseconds becaouse is not a ohcl
-                                quote.quote=string2decimal(row[2])
-                                self.append(quote)
-                            except:
-                                debug("Error parsing "+ str(row))
-                        else: #It's an hour
-                            try:
-                                quote=Quote(self.mem)
-                                quote.product=product
-                                time_=string2time(row[7], "HH:MM:SS")
-                                quote.datetime=dtaware(date.today(), time_, self.mem.localzone_name)
-                                quote.quote=string2decimal(row[3])
-                                self.append(quote)
-                            except:
-                                debug("Error parsing "+ str(row))
-                line_count += 1
-        print("Added {} quotes from {} CSV lines".format(self.length(), line_count))
+        pass
+#        with open(self.filename) as csv_file:
+#            csv_reader = reader(csv_file, delimiter=',')
+#            line_count = 0
+#            for row in csv_reader:
+#                if line_count >0:#Ignores headers line
+#                    products=self.mem.data.products.find_all_by_ticker(row[1], eTickerPosition.InvestingCom)
+#                    print(row[1], len(products))
+#                    if len(products)==0:
+#                        print(_(f"Product with InvestingCom ticker {row[1]} wasn't found"))
+#                    for product in products:
+#                        if row[7].find(":")==-1:#It's a date
+#                            try:
+#                                quote=Quote(self.mem)
+#                                quote.product=product
+#                                date_=string2date(row[7], "DD/MM")
+#                                quote.datetime=dtaware(date_,quote.product.stockmarket.closes,self.mem.localzone_name)#Without 4 microseconds becaouse is not a ohcl
+#                                quote.quote=string2decimal(row[2])
+#                                self.append(quote)
+#                            except:
+#                                debug("Error parsing "+ str(row))
+#                        else: #It's an hour
+#                            try:
+#                                quote=Quote(self.mem)
+#                                quote.product=product
+#                                time_=string2time(row[7], "HH:MM:SS")
+#                                quote.datetime=dtaware(date.today(), time_, self.mem.localzone_name)
+#                                quote.quote=string2decimal(row[3])
+#                                self.append(quote)
+#                            except:
+#                                debug("Error parsing "+ str(row))
+#                line_count += 1
+#        print("Added {} quotes from {} CSV lines".format(self.length(), line_count))
         
     ## 0 Nombre 
     ## 1 Símbolo    
@@ -120,11 +121,11 @@ class InvestingCom:
                     code=f"{row[1]}#{row[2]}"
                     
                 if len(products)==0:
-                    d={"product":None,  "quote":None,  "code":code,  "log": "Product wasn't found"}
+                    d={"product":None,   "code":code,  "log": "Product wasn't found"}
                     
                     
                 for product in products:
-                    d={"product": product.fullName(),  "quote":None,  "code":code}
+                    d={"product": product.fullName(),   "code":code}
                     if row[16].find(":")==-1:#It's a date
                         try:
                             quote=Quotes()
@@ -134,7 +135,6 @@ class InvestingCom:
                             quote.quote=string2decimal(row[3])
                             quotes_count=quotes_count+1
                             d["log"]=quote.save()
-                            d["quote"]=str(quote)
                         except:
                             d["log"]="Error parsing date"+ str(row)
                     else: #It's an hour
@@ -145,7 +145,6 @@ class InvestingCom:
                             quote.quote=string2decimal(row[3])
                             quotes_count=quotes_count+1
                             d["log"]=quote.save()
-                            d["quote"]=str(quote)
                         except:
                             d["log"]="Error parsing hour" + str(row)
                     r.append(d)
@@ -156,22 +155,23 @@ class InvestingCom:
     ## "Fecha","Último","Apertura","Máximo","Mínimo","Vol.","% var."
     ## "22.07.2019","10,074","10,060","10,148","9,987","10,36M","-0,08%"
     def append_from_historical(self):
-            with open(self.filename) as csv_file:
-                csv_reader = reader(csv_file, delimiter=',')
-                line_count = 0
-                for row in csv_reader:
-                    if line_count >0:#Ignores headers line
-                        try:
-                            ohcl=OHCLDaily(self.mem)
-                            ohcl.product=self.product
-                            ohcl.date=string2date(row[0], "DD.MM.YYYY")
-                            ohcl.close=string2decimal(row[1])
-                            ohcl.open=string2decimal(row[2])
-                            ohcl.high=string2decimal(row[3])
-                            ohcl.low=string2decimal(row[4])
-                            for quote in ohcl.generate_4_quotes():
-                                self.append(quote)
-                        except:
-                            debug("Error parsing" + str(row))
-                    line_count += 1
-            print("Added {} quotes from {} CSV lines".format(self.length(), line_count))
+        pass
+#            with open(self.filename) as csv_file:
+#                csv_reader = reader(csv_file, delimiter=',')
+#                line_count = 0
+#                for row in csv_reader:
+#                    if line_count >0:#Ignores headers line
+#                        try:
+#                            ohcl=OHCLDaily(self.mem)
+#                            ohcl.product=self.product
+#                            ohcl.date=string2date(row[0], "DD.MM.YYYY")
+#                            ohcl.close=string2decimal(row[1])
+#                            ohcl.open=string2decimal(row[2])
+#                            ohcl.high=string2decimal(row[3])
+#                            ohcl.low=string2decimal(row[4])
+#                            for quote in ohcl.generate_4_quotes():
+#                                self.append(quote)
+#                        except:
+#                            debug("Error parsing" + str(row))
+#                    line_count += 1
+#            print("Added {} quotes from {} CSV lines".format(self.length(), line_count))

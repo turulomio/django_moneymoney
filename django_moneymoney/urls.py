@@ -28,6 +28,9 @@ urlpatterns=[
     path('banks/withbalance/', money_views.BanksWithBalance, name='BanksWithBalance'),
     path('investments/withbalance/', money_views.InvestmentsWithBalance, name='InvestmentsWithBalance'),
     path('products/update/', money_views.ProductsUpdate, name='ProductsUpdate'),
+    path('reports/annual/<int:year>/', money_views.ReportAnnual, name='ReportAnnual'),
+    path('reports/annual/income/<int:year>/', money_views.ReportAnnualIncome, name='ReportAnnualIncome'),
+    path('reports/annual/gainsbyproductstypes/<int:year>/', money_views.ReportAnnualGainsByProductstypes, name='ReportAnnualGainsByProductstypes'),
 ]
 
 urlpatterns=urlpatterns+ i18n_patterns(

@@ -1,12 +1,17 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from decimal import Decimal
+from django.conf import settings
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import ugettext_lazy as _
 from django.http import JsonResponse
-from moneymoney.reusing.connection_dj import execute, cursor_one_field
+from moneymoney.investmentsoperations import InvestmentsOperations_from_investment
+from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows
 from moneymoney.reusing.casts import str2bool
-from moneymoney.reusing.datetime_functions import dtaware_month_start
+from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end
+from moneymoney.reusing.listdict_functions import listdict2dict
 from moneymoney.reusing.decorators import timeit
 from moneymoney.reusing.percentage import Percentage,  percentage_between
 
@@ -18,9 +23,14 @@ from moneymoney.models import (
     Concepts, 
     Creditcards, 
     Creditcardsoperations, 
+    Dividends, 
     Investments, 
     Operationstypes, 
+    Productstypes, 
     percentage_to_selling_point, 
+    total_balance, 
+    balance_user_by_operationstypes, 
+    eOperationType, 
 )
 from moneymoney import serializers
 from rest_framework.decorators import api_view, permission_classes
@@ -377,6 +387,175 @@ def ProductsUpdate(request):
     r=ic.get()
     
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+ 
+ 
+def ReportAnnual(request, year):
+    def month_results(month_end, month_name, local_currency):
+        return month_end, month_name, total_balance(month_end, local_currency)
+        
+    #####################
+    local_zone=request.local_zone
+    local_currency=request.local_currency
+    dtaware_last_year=dtaware_year_end(year, local_zone)
+    last_year_balance=total_balance(dtaware_last_year, request.local_currency)['total_user']
+    list_=[]
+    futures=[]
+    
+    # HA MEJORADO UNOS 5 segundos de 7 a 2
+    with ThreadPoolExecutor(max_workers=settings.CONCURRENCY_DB_CONNECTIONS_BY_USER) as executor:
+        for month_name, month in (
+            (_("January"), 1), 
+            (_("February"), 2), 
+            (_("March"), 3), 
+            (_("April"), 4), 
+            (_("May"), 5), 
+            (_("June"), 6), 
+            (_("July"), 7), 
+            (_("August"), 8), 
+            (_("September"), 9), 
+            (_("October"), 10), 
+            (_("November"), 11), 
+            (_("December"), 12), 
+        ):
+        
+            month_end=dtaware_month_end(year, month, local_zone)
+            futures.append(executor.submit(month_results, month_end,  month_name, local_currency))
+
+    futures= sorted(futures, key=lambda future: future.result()[0])#month_end
+    last_month=last_year_balance
+    for future in futures:
+        month_end, month_name,  total = future.result()
+        list_.append({
+            "month_number":month_end, 
+            "month": month_name,
+            "account_balance":total['accounts_user'], 
+            "investment_balance":total['investments_user'], 
+            "total":total['total_user'] , 
+            "percentage_year": percentage_between(last_year_balance, total['total_user'] ), 
+            "diff_lastmonth": total['total_user']-last_month, 
+        })
+        last_month=total['total_user']
+    for d in list_:
+        print(d["total"],  last_year_balance)
+    return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
+ 
+ 
+def ReportAnnualIncome(request, year):
+    def qs_investments_netgains_usercurrency_in_year_month(qs_investments, year, month, local_currency, local_zone):
+        r =0
+        #Git investments with investmentsoperations in this year, month
+        dt_year_month=dtaware_month_end(year, month, local_zone)
+        for investment in Investments.objects.raw("select distinct(investments.*) from investmentsoperations, investments where date_part('year', datetime)=%s and date_part('month', datetime)=%s and investments.id=investmentsoperations.investments_id", (year, month)):
+            investments_operations=InvestmentsOperations_from_investment(request, investment, dt_year_month, local_currency)
+            for ioh in investments_operations.io_historical:
+                if ioh['dt_end'].year==year and ioh['dt_end'].month==month:
+                        r=r+ioh['gains_net_user']
+        return r
+    
+    def month_results(year,  month, month_name):
+        dividends=Dividends.netgains_dividends(year, month)
+        incomes=balance_user_by_operationstypes(year,  month,  eOperationType.Income, local_currency, local_zone)-dividends
+        expenses=balance_user_by_operationstypes(year,  month,  eOperationType.Expense, local_currency, local_zone)
+        
+        start=timezone.now()
+    
+
+        gains=qs_investments_netgains_usercurrency_in_year_month(qs_investments, year, month, local_currency, local_zone)
+        print("Loading list netgains opt took {} (CUELLO BOTELLA UNICO)".format(timezone.now()-start))        
+        
+        total=incomes+gains+expenses+dividends
+        
+        return month_name, month,  year,  incomes, expenses, gains, dividends, total
+    
+    list_=[]
+    futures=[]
+    local_zone=request.local_zone
+    local_currency=request.local_currency
+    qs_investments=Investments.objects.all()
+    
+    
+    # HA MEJORADO UNOS 3 segundos de 16 a 13
+    with ThreadPoolExecutor(max_workers=settings.CONCURRENCY_DB_CONNECTIONS_BY_USER) as executor:
+        for month_name, month in (
+            (_("January"), 1), 
+            (_("February"), 2), 
+            (_("March"), 3), 
+            (_("April"), 4), 
+            (_("May"), 5), 
+            (_("June"), 6), 
+            (_("July"), 7), 
+            (_("August"), 8), 
+            (_("September"), 9), 
+            (_("October"), 10), 
+            (_("November"), 11), 
+            (_("December"), 12), 
+        ):
+            futures.append(executor.submit(month_results, year, month, month_name))
+        
+        for future in as_completed(futures):
+            #print(future, future.result())
+            month_name, month,  year,  incomes, expenses, gains, dividends, total = future.result()
+            list_.append({
+                "id": f"{year}/{month}/", 
+                "month_number":month, 
+                "month": month_name,
+                "incomes":incomes, 
+                "expenses":expenses, 
+                "gains":gains, 
+                "dividends":dividends, 
+                "total":total,  
+            })
+            
+    list_= sorted(list_, key=lambda item: item["month_number"])
+    return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
+
+    
+def ReportAnnualGainsByProductstypes(request, year):
+    local_currency=request.local_currency
+    gains=cursor_rows("""
+select 
+    investments.id, 
+    productstypes_id, 
+    (investment_operations(investments.id, make_timestamp(%s,12,31,23,59,59)::timestamp with time zone, %s)).io_historical 
+from  
+    investments, 
+    products 
+where investments.products_id=products.id""", (year, local_currency, ))
+    
+    #This inner joins its made to see all productstypes_id even if they are Null.
+    # Subquery for dividends is used due to if I make a where from dividends table I didn't get null productstypes_id
+    dividends=cursor_rows("""
+select  
+    productstypes_id, 
+    sum(dividends.gross) as gross,
+    sum(dividends.net) as net
+from 
+    products
+    left join investments on products.id=investments.products_id
+    left join (select * from dividends where extract('year' from datetime)=%s) dividends on investments.id=dividends.investments_id
+group by productstypes_id""", (year, ))
+    dividends_dict=listdict2dict(dividends, "productstypes_id")
+    l=[]
+    for pt in Productstypes.objects.all():
+        gains_net, gains_gross= 0, 0
+        for row in gains:
+            if row["productstypes_id"]==pt.id:
+                io_historical=eval(row["io_historical"])
+                for ioh in io_historical:
+                    if int(ioh["dt_end"][0:4])==year:
+                        gains_net=gains_net+ioh["gains_net_user"]
+                        gains_gross=gains_gross+ioh["gains_gross_user"]
+
+        l.append({
+                "id": pt.id, 
+                "name":pt.name, 
+                "gains_gross": gains_gross, 
+                "dividends_gross":dividends_dict[pt.id]["gross"], 
+                "gains_net":gains_net, 
+                "dividends_net": dividends_dict[pt.id]["net"], 
+        })
+    return JsonResponse( l, encoder=MyDjangoJSONEncoder,     safe=False)
+
  
 def setGlobal(key, value):
     number=cursor_one_field("select count(*) from globals where global=%s", (key, ))
