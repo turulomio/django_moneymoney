@@ -27,7 +27,7 @@ from rest_framework.decorators import api_view, permission_classes
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
 from django.core.serializers.json import DjangoJSONEncoder
 
 class MyDjangoJSONEncoder(DjangoJSONEncoder):    
@@ -351,6 +351,32 @@ def InvestmentsWithBalance(request):
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
  
+ 
+@csrf_exempt
+@api_view(['POST', ])
+@permission_classes([permissions.IsAuthenticated, ])
+def ProductsUpdate(request):
+    # if not GET, then proceed
+    if "csv_file1" not in request.FILES:
+        print("You must upload a file")
+        return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
+    else:
+        csv_file = request.FILES["csv_file1"]
+        
+    if not csv_file.name.endswith('.csv'):
+        print('File is not CSV type')
+        return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
+
+    #if file is too large, return
+    if csv_file.multiple_chunks():
+        print("Uploaded file is too big ({} MB).".format(csv_file.size/(1000*1000),))
+        return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
+
+    from moneymoney.investing_com import InvestingCom
+    ic=InvestingCom(request, csv_file, product=None)
+    r=ic.get()
+    
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
  
 def setGlobal(key, value):
     number=cursor_one_field("select count(*) from globals where global=%s", (key, ))

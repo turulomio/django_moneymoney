@@ -27,6 +27,7 @@ urlpatterns=[
     path('creditcardsoperations/withbalance/', money_views.CreditcardsoperationsWithBalance, name='CreditcardsoperationsWithBalance'),
     path('banks/withbalance/', money_views.BanksWithBalance, name='BanksWithBalance'),
     path('investments/withbalance/', money_views.InvestmentsWithBalance, name='InvestmentsWithBalance'),
+    path('products/update/', money_views.ProductsUpdate, name='ProductsUpdate'),
 ]
 
 urlpatterns=urlpatterns+ i18n_patterns(

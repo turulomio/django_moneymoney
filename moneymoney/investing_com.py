@@ -1,4 +1,3 @@
-from django.contrib import messages
 from django.utils.translation import ugettext_lazy as _
 
 from moneymoney.models import Products,  Quotes
@@ -20,18 +19,21 @@ class InvestingCom:
         self.product=product
         self.columns=self.get_number_of_csv_columns()
         self.log=[]
+        
+    def get(self):
         if self.product==None: #Several products
             if self.columns==8:
-                messages.info(self.request,"append_from_default")
-                self.append_from_default()
+#                messages.info(self.request,"append_from_default")
+                return self.append_from_default()
             elif self.columns==39:
                 self.log.append(_("Adding quotes from Investing.com portfolio"))
-                self.append_from_portfolio()
+                return self.append_from_portfolio()
             else:
-                messages.error(self.request,"The number of columns doesn't match: {}".format(self.columns))
+#                messages.error(self.request,"The number of columns doesn't match: {}".format(self.columns))
+                return "NUMBER OF COLUMNS DOESN'T MATCH"
         else:
-            messages.info(self.request, "append_from_historical")
-            self.append_from_historical()
+#            messages.info(self.request, "append_from_historical")
+            return self.append_from_historical()
             
     def get_csv_object_seeking(self):
         self.filename_in_memory.seek(0)
@@ -47,7 +49,7 @@ class InvestingCom:
     ## 0 Índice 
     ## 1 Símbolo    
     ## 2 Último 
-    ## 3 Máximo 
+    ## 3 Máximo append_from_portfolio
     ## 4 Mínimo 
     ## 5 Var
     ## 6 % Var. 
@@ -105,33 +107,24 @@ class InvestingCom:
     ## 16  Hora Cap. mercado    Ingresos    Vol. promedio (3m)  BPA PER Beta    Dividendo   Rendimiento 5 minutos   15 minutos  30 minutos  1 hora  5 horas Diario  Semanal Mensual Diario  Semanal Mensual Anual   1 año   3 años
     ## It has 39 columns
     def append_from_portfolio(self):
+        r=[]
         line_count = 0
         quotes_count = 0
         for row in self.get_csv_object_seeking():
             if line_count >0:#Ignores headers line
-#                ## Casos especiales por ticker repetido se compara con más información.
-#                if row[1]=="DE30" and row[2]=="DE":
-#                    products=[Products.objects.get(id=78094),]#DAX 30
-#                elif row [1]=="DE30" and row[2]=="Eurex":
-#                    products=(Products.objects.get(id=81752),)#CFD DAX 30
-#                elif row[1]=="US2000" and row[2]=="P":
-#                    products=[Products.objects.get(id=81745),]#RUSELL 2000
-#                elif row [1]=="US2000" and row[2]=="ICE":
-#                    products=(Products.objects.get(id=81760),)#CFD RUSELL 2000
-#                elif "EUR/USD" in row [1]:
-#                    products=(Products.objects.get(id=74747),)#EUR/USD
-#                elif "Oro al " in row [1]:
-#                    products=(Products.objects.get(id=81758), Products.objects.get(id=81757))#CFD ORO
-#                else:
                 if row[2]=="":
                     products=Products.objects.raw('SELECT products.* FROM products where tickers[5]=%s', (f"{row[1]}", ))
+                    code=f"{row[1]}"
                 else:
                     products=Products.objects.raw('SELECT products.* FROM products where tickers[5]=%s', (f"{row[1]}#{row[2]}", ))
-
+                    code=f"{row[1]}#{row[2]}"
+                    
                 if len(products)==0:
-                    self.log.append(_(f"Product with InvestingCom ticker {row[1]} wasn't found"))
-
+                    d={"product":None,  "quote":None,  "code":code,  "log": "Product wasn't found"}
+                    
+                    
                 for product in products:
+                    d={"product": product.fullName(),  "quote":None,  "code":code}
                     if row[16].find(":")==-1:#It's a date
                         try:
                             quote=Quotes()
@@ -140,9 +133,10 @@ class InvestingCom:
                             quote.datetime=dtaware(date_, product.stockmarkets.closes, product.stockmarkets.zone)#Without 4 microseconds becaouse is not a ohcl
                             quote.quote=string2decimal(row[3])
                             quotes_count=quotes_count+1
-                            self.log.append(quote.save())
+                            d["log"]=quote.save()
+                            d["quote"]=str(quote)
                         except:
-                            self.log.append("Error parsing date"+ str(row) )
+                            d["log"]="Error parsing date"+ str(row)
                     else: #It's an hour
                         try:
                             quote=Quotes()
@@ -150,17 +144,13 @@ class InvestingCom:
                             quote.datetime=string2dtaware(row[16],"%H:%M:%S", self.request.globals["mem__localzone"])
                             quote.quote=string2decimal(row[3])
                             quotes_count=quotes_count+1
-                            self.log.append(quote.save())
+                            d["log"]=quote.save()
+                            d["quote"]=str(quote)
                         except:
-                            self.log.append("Error parsing hour" + str(row))
+                            d["log"]="Error parsing hour" + str(row)
+                    r.append(d)
             line_count += 1
-        lis=""
-        for o in self.log:
-            lis=lis+f"<li>{o}</li>"
-        messages.info(self.request,f"""Managed {quotes_count} quotes from {line_count} CSV lines
-    <ul>
-        {lis}
-    </ul>""")
+        return r
 
     ## Imports data from a CSV file with this struct. It has 6 columns
     ## "Fecha","Último","Apertura","Máximo","Mínimo","Vol.","% var."
