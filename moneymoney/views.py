@@ -256,6 +256,7 @@ def AccountsoperationsWithBalance(request):
             "comment": Comment().decode(o.comment), 
             "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.pk, ))), 
         })
+        initial_balance=initial_balance + o.amount
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 @csrf_exempt
