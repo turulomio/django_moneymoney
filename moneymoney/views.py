@@ -7,9 +7,9 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.http import JsonResponse
-from moneymoney.investmentsoperations import InvestmentsOperations_from_investment
+from moneymoney.investmentsoperations import InvestmentsOperations_from_investment,  InvestmentsOperationsManager_from_investment_queryset, InvestmentsOperationsTotals_from_investment
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows
-from moneymoney.reusing.casts import str2bool
+from moneymoney.reusing.casts import str2bool, string2list_of_integers
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end
 from moneymoney.reusing.listdict_functions import listdict2dict
 from moneymoney.reusing.decorators import timeit
@@ -27,6 +27,7 @@ from moneymoney.models import (
     Investments, 
     Operationstypes, 
     Productstypes, 
+    Strategies, 
     percentage_to_selling_point, 
     total_balance, 
     balance_user_by_operationstypes, 
@@ -108,6 +109,65 @@ class OperationstypesViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.OperationstypesSerializer
     permission_classes = [permissions.IsAuthenticated]  
 
+class StrategiesViewSet(viewsets.ModelViewSet):
+    queryset = Strategies.objects.all()
+    serializer_class = serializers.StrategiesSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
+
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def StrategiesWithBalance(request):        
+    active=RequestGetBool(request, 'active')
+    if active is None:
+        qs=Strategies.objects.all() 
+    else:
+        if active is True:
+            qs=Strategies.objects.filter(dt_to__isnull=True)
+        else:
+            qs=Strategies.objects.filter(dt_to__isnull=False)
+
+    r=[]
+    for o in qs:
+        gains_current_net_user=0
+        gains_historical_net_user=0
+        dividends_net_user=0
+        
+        investments_ids=string2list_of_integers(o.investments)
+        qs_investments_in_strategy=Investments.objects.filter(id__in=(investments_ids))
+        io_in_strategy=InvestmentsOperationsManager_from_investment_queryset(qs_investments_in_strategy, timezone.now(), request)
+        
+        gains_current_net_user=io_in_strategy.current_gains_net_user() 
+        gains_historical_net_user=io_in_strategy.historical_gains_net_user_between_dt(o.dt_from, o.dt_to_for_comparations())
+        dividends_net_user=Dividends.net_gains_baduser_between_datetimes_for_some_investments(investments_ids, o.dt_from, o.dt_to_for_comparations())
+        r.append({
+            "id": o.id,  
+            "url": request.build_absolute_uri(reverse('strategies-detail', args=(o.pk, ))), 
+            "name":o.name, 
+            "dt_from": o.dt_from, 
+            "dt_to": o.dt_to, 
+            "invested": io_in_strategy.current_invested_user(), 
+            "gains_current_net_user":  gains_current_net_user,  
+            "gains_historical_net_user": gains_historical_net_user, 
+            "dividends_net_user": dividends_net_user, 
+            "total_net_user":gains_current_net_user + gains_historical_net_user + dividends_net_user, 
+            "investments":o.investments, 
+            "type": o.type, 
+            "comment": o.comment, 
+            "additional1": o.additional1, 
+            "additional2": o.additional2, 
+            "additional3": o.additional3, 
+            "additional4": o.additional4, 
+            "additional5": o.additional5, 
+            "additional6": o.additional6, 
+            "additional7": o.additional7, 
+            "additional8": o.additional8, 
+            "additional9": o.additional9, 
+            "additional10": o.additional10, 
+        })
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+
 class InvestmentsViewSet(viewsets.ModelViewSet):
     queryset = Investments.objects.all()
     serializer_class = serializers.InvestmentsSerializer
@@ -148,6 +208,7 @@ class AccountsViewSet(viewsets.ModelViewSet):
             return self.queryset.filter(active=active)
         else:
             return self.queryset
+
 class AccountsoperationsViewSet(viewsets.ModelViewSet):
     queryset = Accountsoperations.objects.all()
     serializer_class = serializers.AccountsoperationsSerializer
@@ -326,7 +387,7 @@ def CreditcardsWithBalance(request):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsWithBalance(request):
-    from moneymoney.investmentsoperations import InvestmentsOperationsTotals_from_investment
+
     active=RequestGetBool(request, 'active', None)
     bank_id=RequestGetInteger(request, 'bank', None)
 

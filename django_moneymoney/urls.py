@@ -15,6 +15,7 @@ router.register(r'creditcardsoperations', money_views.CreditcardsoperationsViewS
 router.register(r'concepts', money_views.ConceptsViewSet)
 router.register(r'investments', money_views.InvestmentsViewSet)
 router.register(r'operationstypes', money_views.OperationstypesViewSet)
+router.register(r'strategies', money_views.StrategiesViewSet)
 
 urlpatterns=[
     path('api/', include(router.urls)),
@@ -31,6 +32,8 @@ urlpatterns=[
     path('reports/annual/<int:year>/', money_views.ReportAnnual, name='ReportAnnual'),
     path('reports/annual/income/<int:year>/', money_views.ReportAnnualIncome, name='ReportAnnualIncome'),
     path('reports/annual/gainsbyproductstypes/<int:year>/', money_views.ReportAnnualGainsByProductstypes, name='ReportAnnualGainsByProductstypes'),
+    
+    path('strategies/withbalance/', money_views.StrategiesWithBalance, name='StrategiesWithBalance'),
 ]
 
 urlpatterns=urlpatterns+ i18n_patterns(

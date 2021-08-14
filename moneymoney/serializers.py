@@ -7,6 +7,7 @@ from  moneymoney.models import (
     Creditcardsoperations, 
     Investments, 
     Operationstypes, 
+    Strategies, 
 )
 from rest_framework import serializers
 
@@ -49,3 +50,8 @@ class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Accountsoperations
         fields = ('url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','accounts')
+
+class StrategiesSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Strategies
+        fields = ('url', 'id', 'name',  'investments', 'dt_from','dt_to','type','comment','additional1','additional2','additional3','additional4','additional5','additional6','additional7','additional8','additional9','additional10')
