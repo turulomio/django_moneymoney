@@ -1095,7 +1095,7 @@ class Strategies(models.Model):
     ## Replaces None for dt_to and sets a very big datetine
     def dt_to_for_comparations(self):
         if self.dt_to is None:
-            return timezone.now()+timedelta(days=365*100)
+            return timezone.now()
         return self.dt_to
 
 def percentage_to_selling_point(shares, selling_price, last_quote):       

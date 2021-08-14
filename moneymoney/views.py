@@ -450,7 +450,10 @@ def ProductsUpdate(request):
     
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
  
- 
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
 def ReportAnnual(request, year):
     def month_results(month_end, month_name, local_currency):
         return month_end, month_name, total_balance(month_end, local_currency)
@@ -458,7 +461,7 @@ def ReportAnnual(request, year):
     #####################
     local_zone=request.local_zone
     local_currency=request.local_currency
-    dtaware_last_year=dtaware_year_end(year, local_zone)
+    dtaware_last_year=dtaware_year_end(year-1, local_zone)
     last_year_balance=total_balance(dtaware_last_year, request.local_currency)['total_user']
     list_=[]
     futures=[]
@@ -497,11 +500,17 @@ def ReportAnnual(request, year):
             "diff_lastmonth": total['total_user']-last_month, 
         })
         last_month=total['total_user']
-    for d in list_:
-        print(d["total"],  last_year_balance)
-    return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
+#    for d in list_:
+#        print(d["total"],  last_year_balance)
+        
+    r={"last_year_balance": last_year_balance,  "dtaware_last_year": dtaware_last_year,  "data": list_}
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
  
  
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
 def ReportAnnualIncome(request, year):
     def qs_investments_netgains_usercurrency_in_year_month(qs_investments, year, month, local_currency, local_zone):
         r =0
@@ -518,12 +527,9 @@ def ReportAnnualIncome(request, year):
         dividends=Dividends.netgains_dividends(year, month)
         incomes=balance_user_by_operationstypes(year,  month,  eOperationType.Income, local_currency, local_zone)-dividends
         expenses=balance_user_by_operationstypes(year,  month,  eOperationType.Expense, local_currency, local_zone)
-        
-        start=timezone.now()
-    
 
         gains=qs_investments_netgains_usercurrency_in_year_month(qs_investments, year, month, local_currency, local_zone)
-        print("Loading list netgains opt took {} (CUELLO BOTELLA UNICO)".format(timezone.now()-start))        
+        #print("Loading list netgains opt took {} (CUELLO BOTELLA UNICO)".format(timezone.now()-start))        
         
         total=incomes+gains+expenses+dividends
         
@@ -572,6 +578,10 @@ def ReportAnnualIncome(request, year):
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
 
     
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
 def ReportAnnualGainsByProductstypes(request, year):
     local_currency=request.local_currency
     gains=cursor_rows("""
