@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import date
 from decimal import Decimal
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
@@ -26,6 +27,7 @@ from moneymoney.models import (
     Dividends, 
     Investments, 
     Operationstypes, 
+    Orders, 
     Productstypes, 
     Strategies, 
     percentage_to_selling_point, 
@@ -102,6 +104,11 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
 class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
     queryset = Creditcardsoperations.objects.all()
     serializer_class = serializers.CreditcardsoperationsSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
+class OrdersViewSet(viewsets.ModelViewSet):
+    queryset = Orders.objects.all()
+    serializer_class = serializers.OrdersSerializer
     permission_classes = [permissions.IsAuthenticated]  
 
 class OperationstypesViewSet(viewsets.ModelViewSet):
@@ -422,8 +429,42 @@ def InvestmentsWithBalance(request):
             "selling_expiration": o.selling_expiration, 
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
- 
- 
+
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def OrdersList(request):        
+    active=RequestGetBool(request, 'active')
+    expired=RequestGetBool(request, 'expired')
+    executed=RequestGetBool(request, 'executed')
+    if active is not None:
+        qs=Orders.objects.filter(expiration__gt=date.today(),  executed__isnull=True).select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__productstypes").select_related("investments__products__leverages")
+    elif expired is not None:
+        qs=Orders.objects.filter(expiration__lte=date.today(),  executed__isnull=True).select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__productstypes").select_related("investments__products__leverages")
+    elif executed is not None:
+        qs=Orders.objects.filter(executed__isnull=False).select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__productstypes").select_related("investments__products__leverages")
+    else:
+        qs=Orders.objects.all().select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__productstypes").select_related("investments__products__leverages")
+
+    r=[]
+    for o in qs:
+        r.append({
+            "id": o.id,  
+            "url": request.build_absolute_uri(reverse('orders-detail', args=(o.pk, ))), 
+            "date":o.date, 
+            "expiration": o.expiration, 
+            "investments": request.build_absolute_uri(reverse('investments-detail', args=(o.pk, ))), 
+            "investmentsname":o.investments.fullName(), 
+            "currency": o.investments.products.currency, 
+            "shares": o.shares, 
+            "price": o.price, 
+            "amount": o.shares*o.price*o.investments.products.real_leveraged_multiplier(), 
+            "percentage_from_price": percentage_between(o.price, o.investments.products.basic_results()["last"]),
+           "executed": o.executed,  
+        })
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+
 @csrf_exempt
 @api_view(['POST', ])
 @permission_classes([permissions.IsAuthenticated, ])

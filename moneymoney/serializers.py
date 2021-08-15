@@ -6,6 +6,7 @@ from  moneymoney.models import (
     Creditcards, 
     Creditcardsoperations, 
     Investments, 
+    Orders, 
     Operationstypes, 
     Strategies, 
 )
@@ -50,6 +51,11 @@ class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Accountsoperations
         fields = ('url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','accounts')
+        
+class OrdersSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Orders
+        fields = ('url', 'date', 'expiration',  'shares', 'price','investments','executed')
 
 class StrategiesSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:

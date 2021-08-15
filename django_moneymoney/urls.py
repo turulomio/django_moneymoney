@@ -14,6 +14,7 @@ router.register(r'creditcards', money_views.CreditcardsViewSet)
 router.register(r'creditcardsoperations', money_views.CreditcardsoperationsViewSet)
 router.register(r'concepts', money_views.ConceptsViewSet)
 router.register(r'investments', money_views.InvestmentsViewSet)
+router.register(r'orders', money_views.OrdersViewSet)
 router.register(r'operationstypes', money_views.OperationstypesViewSet)
 router.register(r'strategies', money_views.StrategiesViewSet)
 
@@ -28,6 +29,7 @@ urlpatterns=[
     path('creditcardsoperations/withbalance/', money_views.CreditcardsoperationsWithBalance, name='CreditcardsoperationsWithBalance'),
     path('banks/withbalance/', money_views.BanksWithBalance, name='BanksWithBalance'),
     path('investments/withbalance/', money_views.InvestmentsWithBalance, name='InvestmentsWithBalance'),
+    path('orders/list/', money_views.OrdersList, name='OrdersList'),
     path('products/update/', money_views.ProductsUpdate, name='ProductsUpdate'),
     path('reports/annual/<int:year>/', money_views.ReportAnnual, name='ReportAnnual'),
     path('reports/annual/income/<int:year>/', money_views.ReportAnnualIncome, name='ReportAnnualIncome'),
