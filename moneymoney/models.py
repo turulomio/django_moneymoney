@@ -670,7 +670,17 @@ class Investments(models.Model):
             from moneymoney.investmentsoperations import InvestmentsOperations_from_investment
             self._operations=InvestmentsOperations_from_investment(request, self, timezone.now(), local_currency)
         return self._operations
-                
+
+    ## Función que devuelve un booleano si una cuenta es borrable, es decir, que no tenga registros dependientes.
+    def is_deletable(self):
+        if (
+                Investmentsoperations.objects.filter(investments_id=self.id).exists() or
+                Dividends.objects.filter(investments_id=self.id).exists() or
+                Orders.objects.filter(investments_id=self.id).exists()
+            ):
+            return False
+        return True
+
     def hasSameAccountCurrency(self):
         """
             Returns a boolean

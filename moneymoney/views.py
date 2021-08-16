@@ -434,6 +434,7 @@ def InvestmentsWithBalance(request):
             "balance_percentage": o.balance_percentage, 
             "daily_adjustment": o.daily_adjustment, 
             "selling_price": o.selling_price, 
+            "is_deletable": o.is_deletable(), 
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
