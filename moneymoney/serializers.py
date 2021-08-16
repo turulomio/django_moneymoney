@@ -6,8 +6,12 @@ from  moneymoney.models import (
     Creditcards, 
     Creditcardsoperations, 
     Investments, 
+    Leverages, 
     Orders, 
     Operationstypes, 
+    Products, 
+    Productstypes, 
+    Stockmarkets, 
     Strategies, 
 )
 from rest_framework import serializers
@@ -25,8 +29,8 @@ class AccountsSerializer(serializers.HyperlinkedModelSerializer):
 class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Investments
-        fields = ('url', 'id','name', 'active','accounts')
-        
+        fields = ('url', 'id','name', 'active','accounts', 'selling_price', 'products',  'selling_expiration', 'daily_adjustment', 'balance_percentage')
+
 class ConceptsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Concepts
@@ -51,11 +55,30 @@ class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Accountsoperations
         fields = ('url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','accounts')
-        
+                
+class LeveragesSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Leverages
+        fields = ('url', 'id', 'name', 'multiplier')
 class OrdersSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Orders
         fields = ('url', 'date', 'expiration',  'shares', 'price','investments','executed')
+        
+class ProductsSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Products
+        fields = ('url', 'id', 'name',  'isin', 'currency','productstypes','agrupations', 'web', 'address', 'phone', 'mail', 'percentage', 'pci', 'leverages', 'stockmarkets', 'comment',  'obsolete', 'tickers', 'high_low', 'decimals')
+        
+class ProductstypesSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Productstypes
+        fields = ('url', 'id', 'name')        
+class StockmarketsSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Stockmarkets
+        fields = ('url', 'id', 'name')
+
 
 class StrategiesSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:

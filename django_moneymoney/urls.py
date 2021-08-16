@@ -14,9 +14,13 @@ router.register(r'creditcards', money_views.CreditcardsViewSet)
 router.register(r'creditcardsoperations', money_views.CreditcardsoperationsViewSet)
 router.register(r'concepts', money_views.ConceptsViewSet)
 router.register(r'investments', money_views.InvestmentsViewSet)
+router.register(r'leverages', money_views.LeveragesViewSet)
 router.register(r'orders', money_views.OrdersViewSet)
 router.register(r'operationstypes', money_views.OperationstypesViewSet)
+router.register(r'products', money_views.ProductsViewSet)
+router.register(r'productstypes', money_views.ProductstypesViewSet)
 router.register(r'strategies', money_views.StrategiesViewSet)
+router.register(r'stockmarkets', money_views.StockmarketsViewSet)
 
 urlpatterns=[
     path('api/', include(router.urls)),

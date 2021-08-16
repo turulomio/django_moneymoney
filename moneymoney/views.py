@@ -26,9 +26,12 @@ from moneymoney.models import (
     Creditcardsoperations, 
     Dividends, 
     Investments, 
+    Leverages, 
     Operationstypes, 
     Orders, 
+    Products, 
     Productstypes, 
+    Stockmarkets, 
     Strategies, 
     percentage_to_selling_point, 
     total_balance, 
@@ -415,7 +418,8 @@ def InvestmentsWithBalance(request):
             "name":o.fullName(), 
             "active":o.active, 
             "url":request.build_absolute_uri(reverse('investments-detail', args=(o.pk, ))), 
-            "accounts__url":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.id, ))), 
+            "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.id, ))), 
+            "products":request.build_absolute_uri(reverse('products-detail', args=(o.products.id, ))), 
             "last_datetime": o.products.basic_results()['last_datetime'], 
             "last": o.products.basic_results()['last'], 
             "daily_difference": iot.current_last_day_diff(), 
@@ -427,9 +431,16 @@ def InvestmentsWithBalance(request):
             "percentage_invested": percentage_invested, 
             "percentage_selling_point": percentage_to_selling_point(iot.io_total_current["shares"], iot.investment.selling_price, o.products.basic_results()['last']), 
             "selling_expiration": o.selling_expiration, 
+            "balance_percentage": o.balance_percentage, 
+            "daily_adjustment": o.daily_adjustment, 
+            "selling_price": o.selling_price, 
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
+class LeveragesViewSet(viewsets.ModelViewSet):
+    queryset = Leverages.objects.all()
+    serializer_class = serializers.LeveragesSerializer
+    permission_classes = [permissions.IsAuthenticated]  
 @timeit
 @csrf_exempt
 @api_view(['GET', ])    
@@ -465,6 +476,16 @@ def OrdersList(request):
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
+class ProductsViewSet(viewsets.ModelViewSet):
+    queryset = Products.objects.all()
+    serializer_class = serializers.ProductsSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
+class ProductstypesViewSet(viewsets.ModelViewSet):
+    queryset = Productstypes.objects.all()
+    serializer_class = serializers.ProductstypesSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+    
 @csrf_exempt
 @api_view(['POST', ])
 @permission_classes([permissions.IsAuthenticated, ])
@@ -670,6 +691,12 @@ group by productstypes_id""", (year, ))
     return JsonResponse( l, encoder=MyDjangoJSONEncoder,     safe=False)
 
  
+class StockmarketsViewSet(viewsets.ModelViewSet):
+    queryset = Stockmarkets.objects.all()
+    serializer_class = serializers.StockmarketsSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
+
 def setGlobal(key, value):
     number=cursor_one_field("select count(*) from globals where global=%s", (key, ))
     if number==0:

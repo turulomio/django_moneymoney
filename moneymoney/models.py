@@ -793,7 +793,7 @@ class Investmentsaccountsoperations(models.Model):
 class Leverages(models.Model):
     id = models.IntegerField(primary_key=True)
     name = models.TextField()
-    multiplier = models.DecimalField(max_digits=65535, decimal_places=65535)
+    multiplier = models.DecimalField(max_digits=100, decimal_places=2)
 
     class Meta:
         managed = False
