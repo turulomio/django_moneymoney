@@ -89,6 +89,17 @@ class InvestmentsOperations:
         for o in self.io_historical:
             o["dt_start"]=postgres_datetime_string_2_dtaware(o["dt_start"])
             o["dt_end"]=postgres_datetime_string_2_dtaware(o["dt_end"])
+            
+    def json(self):
+        r={}
+        r["investment"]={
+            "name": self.investment.name, 
+            "fullName": self.investment.fullName(), 
+        }
+        r["io"]=self.io
+        r["io_current"]=self.io_current
+        r["io_historical"]=self.io_historical
+        return r
         
     ## Returns the last operation of the io_current
     def  current_last_operation(self):

@@ -476,6 +476,23 @@ def InvestmentsWithBalance(request):
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
+
+
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def InvestmentsoperationsFull(request):
+#   investments_operations=
+    ids=RequestGetListOfIntegers(request, "investments")
+    r=[]
+    for o in Investments.objects.filter(id__in=ids):
+        r.append(InvestmentsOperations_from_investment(request, o, timezone.now(), request.local_currency).json())
+    print(r)
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+
+
+
 class LeveragesViewSet(viewsets.ModelViewSet):
     queryset = Leverages.objects.all()
     serializer_class = serializers.LeveragesSerializer
@@ -764,6 +781,13 @@ def RequestGetBool(request, field, default=None):
 def RequestGetInteger(request, field, default=None):
     try:
         r = int(request.GET.get(field))
+    except:
+        r=default
+    return r
+
+def RequestGetListOfIntegers(request, field, default=None, separator=","):    
+    try:
+        r = string2list_of_integers(request.GET.get(field), separator)
     except:
         r=default
     return r
