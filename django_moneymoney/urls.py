@@ -31,6 +31,7 @@ urlpatterns=[
     path('accountsoperations/withbalance/', money_views.AccountsoperationsWithBalance, name='AccountsoperationsWithBalance'),
     path('creditcards/withbalance/', money_views.CreditcardsWithBalance, name='CreditcardsWithBalance'),
     path('creditcardsoperations/withbalance/', money_views.CreditcardsoperationsWithBalance, name='CreditcardsoperationsWithBalance'),
+    path('creditcardsoperations/payment/<int:pk>/', money_views.CreditcardsoperationsPayment, name='CreditcardsoperationsPayment'),
     path('banks/withbalance/', money_views.BanksWithBalance, name='BanksWithBalance'),
     path('investments/withbalance/', money_views.InvestmentsWithBalance, name='InvestmentsWithBalance'),
     path('orders/list/', money_views.OrdersList, name='OrdersList'),
@@ -38,7 +39,6 @@ urlpatterns=[
     path('reports/annual/<int:year>/', money_views.ReportAnnual, name='ReportAnnual'),
     path('reports/annual/income/<int:year>/', money_views.ReportAnnualIncome, name='ReportAnnualIncome'),
     path('reports/annual/gainsbyproductstypes/<int:year>/', money_views.ReportAnnualGainsByProductstypes, name='ReportAnnualGainsByProductstypes'),
-    
     path('strategies/withbalance/', money_views.StrategiesWithBalance, name='StrategiesWithBalance'),
 ]
 

@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.models import User
+from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
@@ -11,7 +12,7 @@ from django.http import JsonResponse
 from moneymoney.investmentsoperations import InvestmentsOperations_from_investment,  InvestmentsOperationsManager_from_investment_queryset, InvestmentsOperationsTotals_from_investment
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows
 from moneymoney.reusing.casts import str2bool, string2list_of_integers
-from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end
+from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware
 from moneymoney.reusing.listdict_functions import listdict2dict
 from moneymoney.reusing.decorators import timeit
 from moneymoney.reusing.percentage import Percentage,  percentage_between
@@ -36,6 +37,8 @@ from moneymoney.models import (
     percentage_to_selling_point, 
     total_balance, 
     balance_user_by_operationstypes, 
+    eComment, 
+    eConcept, 
     eOperationType, 
 )
 from moneymoney import serializers
@@ -330,6 +333,41 @@ def AccountsoperationsWithBalance(request):
         initial_balance=initial_balance + o.amount
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
+@csrf_exempt
+@api_view(['POST', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+@transaction.atomic
+def CreditcardsoperationsPayment(request, pk):
+    creditcard=Creditcards.objects.get(pk=pk)
+    dt_payment=RequestPostDtaware(request, "dt_payment")
+    cco_ids=RequestPostListOfIntegers(request, "cco")
+    
+    if creditcard is not None and dt_payment is not None and cco_ids is not None:
+        qs_cco=Creditcardsoperations.objects.all().filter(pk__in=(cco_ids))
+        sumamount=0
+        for o in qs_cco:
+            sumamount=sumamount+o.amount
+        
+        c=Accountsoperations()
+        c.datetime=dt_payment
+        c.concepts=Concepts.objects.get(pk=eConcept.CreditCardBilling)
+        c.operationstypes=c.concepts.operationstypes
+        c.amount=sumamount
+        c.accounts=creditcard.accounts
+        c.comment="Transaction in progress"
+        c.save()
+        c.comment=Comment().encode(eComment.CreditCardBilling, creditcard, c)
+        c.save()
+
+        #Modifica el registro y lo pone como paid y la datetime de pago y añade la opercuenta
+        for o in qs_cco:
+            o.paid_datetime=dt_payment
+            o.paid=True
+            o.accountsoperations_id=c.id
+            o.save()
+        return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
+    return JsonResponse( False, encoder=MyDjangoJSONEncoder,     safe=False)
+    
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -722,9 +760,24 @@ def RequestGetBool(request, field, default=None):
     except:
         r=default
     return r    
+
 def RequestGetInteger(request, field, default=None):
     try:
         r = int(request.GET.get(field))
+    except:
+        r=default
+    return r
+
+def RequestPostListOfIntegers(request, field, default=None,  separator=","):
+    try:
+        r = string2list_of_integers(request.POST.get(field), separator)
+    except:
+        r=default
+    return r
+
+def RequestPostDtaware(request, field, default=None):
+    try:
+        r = string2dtaware(request.POST.get(field), "JsUtcIso", request.local_zone)
     except:
         r=default
     return r
