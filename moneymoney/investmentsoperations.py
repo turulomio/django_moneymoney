@@ -95,6 +95,9 @@ class InvestmentsOperations:
         r["investment"]={
             "name": self.investment.name, 
             "fullName": self.investment.fullName(), 
+            "leverage_multiplier": self.investment.products.leverages.multiplier, 
+            "leverage_real_multiplier": self.investment.products.real_leveraged_multiplier(), 
+            "gains_at_sellingpoint": self.current_gains_gross_investment_at_selling_price(), 
         }
         r["io"]=self.io
         r["io_current"]=self.io_current

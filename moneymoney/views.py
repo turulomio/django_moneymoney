@@ -15,6 +15,7 @@ from moneymoney.reusing.casts import str2bool, string2list_of_integers
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware
 from moneymoney.reusing.listdict_functions import listdict2dict
 from moneymoney.reusing.decorators import timeit
+from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.percentage import Percentage,  percentage_between
 
 from moneymoney.models import (
@@ -55,6 +56,8 @@ class MyDjangoJSONEncoder(DjangoJSONEncoder):
             return float(o)
         if isinstance(o, Percentage):
             return o.value
+        if isinstance(o, Currency):
+            return o.amount
         return super().default(o)
 
 @api_view(['POST'])
