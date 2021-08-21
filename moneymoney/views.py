@@ -483,12 +483,10 @@ def InvestmentsWithBalance(request):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsoperationsFull(request):
-#   investments_operations=
     ids=RequestGetListOfIntegers(request, "investments")
     r=[]
     for o in Investments.objects.filter(id__in=ids):
         r.append(InvestmentsOperations_from_investment(request, o, timezone.now(), request.local_currency).json())
-    print(r)
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
 
@@ -497,6 +495,7 @@ class LeveragesViewSet(viewsets.ModelViewSet):
     queryset = Leverages.objects.all()
     serializer_class = serializers.LeveragesSerializer
     permission_classes = [permissions.IsAuthenticated]  
+
 @timeit
 @csrf_exempt
 @api_view(['GET', ])    
