@@ -115,6 +115,22 @@ class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.CreditcardsoperationsSerializer
     permission_classes = [permissions.IsAuthenticated]  
 
+class DividendsViewSet(viewsets.ModelViewSet):
+    queryset = Dividends.objects.all()
+    serializer_class = serializers.DividendsSerializer
+    permission_classes = [permissions.IsAuthenticated] 
+    
+    def get_queryset(self):
+        investments_ids=RequestGetListOfIntegers(self.request, 'investments')
+        datetime=RequestGetDtaware(self.request, 'from')
+        print(investments_ids,  datetime)
+        if investments_ids is not None and datetime is None:
+            return self.queryset.filter(investments__in=investments_ids)
+        elif investments_ids is not None and datetime is not None:
+            return self.queryset.filter(investments__in=investments_ids,  datetime__gte=datetime)
+        else:
+            return self.queryset
+    
 class OrdersViewSet(viewsets.ModelViewSet):
     queryset = Orders.objects.all()
     serializer_class = serializers.OrdersSerializer
@@ -797,6 +813,15 @@ def RequestGetListOfIntegers(request, field, default=None, separator=","):
 def RequestPostListOfIntegers(request, field, default=None,  separator=","):
     try:
         r = string2list_of_integers(request.POST.get(field), separator)
+    except:
+        r=default
+    return r
+
+def RequestGetDtaware(request, field, default=None):
+    print(request.GET.get(field))
+    print(string2dtaware(request.GET.get(field), "JsUtcIso", request.local_zone))
+    try:
+        r = string2dtaware(request.GET.get(field), "JsUtcIso", request.local_zone)
     except:
         r=default
     return r

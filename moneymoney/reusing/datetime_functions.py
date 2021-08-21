@@ -256,7 +256,7 @@ def string2dtnaive(s, format):
         if format=="%Y-%m-%d %H:%M:%S.":#2017-11-20 23:00:00.000000  ==>  microsecond. Notice the point in format
             arrPunto=s.split(".")
             s=arrPunto[0]
-            micro=int(arrPunto[1])
+            micro=int(arrPunto[1]) if len(arrPunto)==2 else 0
             dt=datetime.strptime( s, "%Y-%m-%d %H:%M:%S" )
             dt=dt+timedelta(microseconds=micro)
             return dt

@@ -5,6 +5,7 @@ from  moneymoney.models import (
     Concepts, 
     Creditcards, 
     Creditcardsoperations, 
+    Dividends, 
     Investments, 
     Leverages, 
     Orders, 
@@ -25,6 +26,11 @@ class AccountsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Accounts
         fields = ('url', 'name', 'active', 'number','currency','banks')
+        
+class DividendsSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Dividends
+        fields = ('url', 'id', 'investments', 'gross','taxes','net', 'dps', 'datetime', 'accountsoperations', 'commission', 'concepts', 'currency_conversion')
 
 class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
