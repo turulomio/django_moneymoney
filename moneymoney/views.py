@@ -125,11 +125,11 @@ class DividendsViewSet(viewsets.ModelViewSet):
         datetime=RequestGetDtaware(self.request, 'from')
         print(investments_ids,  datetime)
         if investments_ids is not None and datetime is None:
-            return self.queryset.filter(investments__in=investments_ids)
+            return self.queryset.filter(investments__in=investments_ids).order_by("datetime")
         elif investments_ids is not None and datetime is not None:
-            return self.queryset.filter(investments__in=investments_ids,  datetime__gte=datetime)
+            return self.queryset.filter(investments__in=investments_ids,  datetime__gte=datetime).order_by("datetime")
         else:
-            return self.queryset
+            return self.queryset.order_by("datetime")
     
 class OrdersViewSet(viewsets.ModelViewSet):
     queryset = Orders.objects.all()
@@ -818,8 +818,6 @@ def RequestPostListOfIntegers(request, field, default=None,  separator=","):
     return r
 
 def RequestGetDtaware(request, field, default=None):
-    print(request.GET.get(field))
-    print(string2dtaware(request.GET.get(field), "JsUtcIso", request.local_zone))
     try:
         r = string2dtaware(request.GET.get(field), "JsUtcIso", request.local_zone)
     except:
