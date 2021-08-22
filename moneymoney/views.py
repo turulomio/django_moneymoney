@@ -517,6 +517,47 @@ def InvestmentsoperationsEvolutionChart(request):
     io=InvestmentsOperations_from_investment(request, Investments.objects.get(pk=id), timezone.now(), request.local_currency)
     return JsonResponse( io.chart_evolution(), encoder=MyDjangoJSONEncoder,     safe=False)
 
+@csrf_exempt
+@transaction.atomic
+@timeit
+@api_view(['POST', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def investments_same_product_change_selling_price(request, products_id):
+
+    if request.method == 'POST':
+        form = ChangeSellingPriceSeveralInvestmentsForm(request.POST)
+        print(form)
+        if form.is_valid():
+            for investment_id in string2list_of_integers(form.cleaned_data['investments']):
+                inv=Investments.objects.get( pk=investment_id)
+                inv.selling_price=form.cleaned_data["selling_price"]
+                inv.selling_expiration=form.cleaned_data["selling_expiration"]
+                print(form.cleaned_data)
+                print(inv)
+                inv.save()
+            messages.success(request, _("Investments updated saved successfully"))
+        else:
+            messages.warning(request, _("Something is wrong"))
+            
+    ## DEBE HACERSE DESPUES DEL POST O SALEN MAS LSO DATOS
+    ## Adds all active investments to iom of the same product_benchmark
+    product=get_object_or_404(Products, pk=products_id)
+    qs_investments=Investments.objects.filter(products_id=products_id, active=True)
+    iom=InvestmentsOperationsManager_from_investment_queryset(qs_investments, datetime.now(), request)
+    data=[]
+    for io in iom.list:
+        data.append({
+            "id": io.investment.id, 
+            "name":io.investment.fullName(), 
+            "shares":io.current_shares(), 
+            "average_price":io.current_average_price_investment().amount, 
+            "balance_investment": io.current_balance_investment(), 
+            "invested": io.current_invested_user(),  
+            "selling_price": io.investment.selling_price,
+            "selling_expiration":io.investment.selling_expiration,  
+        })
+    json_data=listdict2json(data)
+    return render(request, 'investments_same_product_change_selling_price.html', locals())
 
 class LeveragesViewSet(viewsets.ModelViewSet):
     queryset = Leverages.objects.all()
