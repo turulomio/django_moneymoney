@@ -508,6 +508,14 @@ def InvestmentsoperationsFull(request):
         r.append(InvestmentsOperations_from_investment(request, o, timezone.now(), request.local_currency).json())
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def InvestmentsoperationsEvolutionChart(request):
+    id=RequestGetInteger(request, "investment")
+    io=InvestmentsOperations_from_investment(request, Investments.objects.get(pk=id), timezone.now(), request.local_currency)
+    return JsonResponse( io.chart_evolution(), encoder=MyDjangoJSONEncoder,     safe=False)
 
 
 class LeveragesViewSet(viewsets.ModelViewSet):
