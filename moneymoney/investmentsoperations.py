@@ -253,7 +253,7 @@ class InvestmentsOperations:
         datetimes_list=list(datetimes)
         datetimes_list.sort()
         
-        str_datetimes_list=[]
+#        str_datetimes_list=[]
                 
         invested=[]
         gains_dividends=[]
@@ -262,7 +262,7 @@ class InvestmentsOperations:
         gains=[]
         
         for i, dt in enumerate(datetimes_list):
-            str_datetimes_list.append(str(dt.date()))
+#            str_datetimes_list.append(str(dt.date()))
             oper_dt=InvestmentsOperations_from_investment(self.request, self.investment, dt, self.request.local_currency)
             #Calculate dividends in datetime
             dividend_net=0
@@ -277,7 +277,7 @@ class InvestmentsOperations:
             dividends.append(float(dividend_net))
             gains.append(float(oper_dt.historical_gains_net_user()))
         return {
-            "datetimes": str_datetimes_list, 
+            "datetimes": datetimes_list, 
             "invested": invested, 
             "balance":balance, 
             "gains_dividends":gains_dividends, 
