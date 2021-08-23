@@ -29,6 +29,7 @@ urlpatterns=[
     path('login/', money_views.login, name="login"), 
     path('logout/', money_views.logout, name="logout"), 
     path('accounts/withbalance/', money_views.AccountsWithBalance, name='AccountsWithBalance'),
+    path('accounts/transfer/', money_views.AccountTransfer, name='AccountTransfer'),
     path('accountsoperations/withbalance/', money_views.AccountsoperationsWithBalance, name='AccountsoperationsWithBalance'),
     path('creditcards/withbalance/', money_views.CreditcardsWithBalance, name='CreditcardsWithBalance'),
     path('creditcardsoperations/withbalance/', money_views.CreditcardsoperationsWithBalance, name='CreditcardsoperationsWithBalance'),

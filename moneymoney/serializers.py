@@ -25,7 +25,7 @@ class BanksSerializer(serializers.HyperlinkedModelSerializer):
 class AccountsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Accounts
-        fields = ('url', 'name', 'active', 'number','currency','banks')
+        fields = ('url', 'id','name', 'active', 'number','currency','banks')
         
 class DividendsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:

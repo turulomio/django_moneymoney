@@ -5,6 +5,7 @@ from django.conf import settings
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.models import User
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
@@ -223,6 +224,69 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
             return self.queryset.filter(active=active)
         else:
             return self.queryset
+
+
+@csrf_exempt
+@api_view(['POST', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+@transaction.atomic
+def AccountTransfer(request): 
+    origin=RequestPostUrl(request, 'origin')#Returns an account object
+    destiny=RequestPostUrl(request, 'destiny')
+    datetime=RequestPostDtaware(request, 'datetime')
+    amount=RequestPostDecimal(request, 'amount')
+    commission=RequestPostDecimal(request, 'commission',  0)
+    print(origin, destiny, datetime, amount,  commission)
+    if (
+        destiny is not None and
+        origin is not None and
+        datetime is not None and
+        amount is not None and amount >=0 and
+        commission >=0 and
+        destiny.id!=origin.id
+    ):
+        if commission >0:
+            ao_commission=Accountsoperations()
+            ao_commission.datetime=datetime
+            concept_commision=Concepts.objects.get(pk=eConcept.BankCommissions)
+            ao_commission.concepts=concept_commision
+            ao_commission.operationstypes=concept_commision.operationstypes
+            ao_commission.amount=-commission
+            ao_commission.accounts=origin
+            ao_commission.save()
+        else:
+            ao_commission=None
+
+        #Origin
+        ao_origin=Accountsoperations()
+        ao_origin.datetime=datetime
+        concept_transfer_origin=Concepts.objects.get(pk=eConcept.TransferOrigin)
+        ao_origin.concepts=concept_transfer_origin
+        ao_origin.operationstypes=concept_transfer_origin.operationstypes
+        ao_origin.amount=-amount
+        ao_origin.accounts=origin
+        ao_origin.save()
+
+        #Destiny
+        ao_destiny=Accountsoperations()
+        ao_destiny.datetime=datetime
+        concept_transfer_destiny=Concepts.objects.get(pk=eConcept.TransferDestiny)
+        ao_destiny.concepts=concept_transfer_destiny
+        ao_destiny.operationstypes=concept_transfer_destiny.operationstypes
+        ao_destiny.amount=amount
+        ao_destiny.accounts=destiny
+        ao_destiny.save()
+
+        #Encoding comments
+        ao_origin.comment=Comment().encode(eComment.AccountTransferOrigin, ao_origin, ao_destiny, ao_commission)
+        ao_origin.save()
+        ao_destiny.comment=Comment().encode(eComment.AccountTransferDestiny, ao_origin, ao_destiny, ao_commission)
+        ao_destiny.save()
+        if ao_commission is not None:
+            ao_commission.comment=Comment().encode(eComment.AccountTransferOriginCommission, ao_origin, ao_destiny, ao_commission)
+            ao_commission.save()
+        return Response({'status': 'details'}, status=status.HTTP_200_OK)
+    return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
 
 class AccountsViewSet(viewsets.ModelViewSet):
     queryset = Accounts.objects.all()
@@ -525,7 +589,7 @@ def InvestmentsoperationsEvolutionChart(request):
 def investments_same_product_change_selling_price(request, products_id):
 
     if request.method == 'POST':
-        form = ChangeSellingPriceSeveralInvestmentsForm(request.POST)
+        form = None
         print(form)
         if form.is_valid():
             for investment_id in string2list_of_integers(form.cleaned_data['investments']):
@@ -535,15 +599,12 @@ def investments_same_product_change_selling_price(request, products_id):
                 print(form.cleaned_data)
                 print(inv)
                 inv.save()
-            messages.success(request, _("Investments updated saved successfully"))
-        else:
-            messages.warning(request, _("Something is wrong"))
             
     ## DEBE HACERSE DESPUES DEL POST O SALEN MAS LSO DATOS
     ## Adds all active investments to iom of the same product_benchmark
     product=get_object_or_404(Products, pk=products_id)
     qs_investments=Investments.objects.filter(products_id=products_id, active=True)
-    iom=InvestmentsOperationsManager_from_investment_queryset(qs_investments, datetime.now(), request)
+    iom=InvestmentsOperationsManager_from_investment_queryset(qs_investments, timezone.now(), request)
     data=[]
     for io in iom.list:
         data.append({
@@ -851,6 +912,12 @@ def RequestGetInteger(request, field, default=None):
     except:
         r=default
     return r
+def RequestPostInteger(request, field, default=None):
+    try:
+        r = int(request.POST.get(field))
+    except:
+        r=default
+    return r
 
 def RequestGetListOfIntegers(request, field, default=None, separator=","):    
     try:
@@ -880,5 +947,27 @@ def RequestPostDtaware(request, field, default=None):
         r=default
     return r
 
+def RequestPostDecimal(request, field, default=None):
+    try:
+        r = Decimal(request.POST.get(field))
+    except:
+        r=default
+    return r
 
+import urllib.parse
+from django.urls import resolve
+
+def obj_from_url(request, url):
+    path = urllib.parse.urlparse(url).path
+    resolved_func, unused_args, resolved_kwargs = resolve(path)
+    class_=resolved_func.cls()
+    class_.request=request
+    return class_.get_queryset().get(pk=int(resolved_kwargs['pk']))
  
+## Returns a model obect
+def RequestPostUrl(request, field,  default=None):
+    try:
+        r = obj_from_url(request, request.POST.get(field))
+    except:
+        r=default
+    return r

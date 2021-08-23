@@ -2,7 +2,7 @@
   "header": {
     "comment": "eric project file for project django_moneymoney",
     "copyright": "Copyright (C) 2021 , ",
-    "saved": "2021-08-01, 09:18:00"
+    "saved": "2021-08-22, 20:49:53"
   },
   "project": {
     "AUTHOR": "",
@@ -87,7 +87,6 @@
       "moneymoney/middleware.py",
       "moneymoney/tests.py",
       "moneymoney/investmentsoperations.py",
-      "moneymoney/reusing/tabulator.py",
       "moneymoney/reusing/decorators.py",
       "moneymoney/reusing/datetime_functions.py",
       "moneymoney/reusing/github.py",
