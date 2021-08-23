@@ -33,9 +33,13 @@ class DividendsSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('url', 'id', 'investments', 'gross','taxes','net', 'dps', 'datetime', 'accountsoperations', 'commission', 'concepts', 'currency_conversion')
 
 class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
+    fullname = serializers.SerializerMethodField()
     class Meta:
         model = Investments
-        fields = ('url', 'id','name', 'active','accounts', 'selling_price', 'products',  'selling_expiration', 'daily_adjustment', 'balance_percentage')
+        fields = ('url', 'id','name', 'active','accounts', 'selling_price', 'products',  'selling_expiration', 'daily_adjustment', 'balance_percentage', 'fullname')
+
+    def get_fullname(self, obj):
+        return obj.fullName()
 
 class ConceptsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:

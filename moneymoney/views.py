@@ -202,7 +202,7 @@ def StrategiesWithBalance(request):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 class InvestmentsViewSet(viewsets.ModelViewSet):
-    queryset = Investments.objects.all()
+    queryset = Investments.objects.select_related("accounts").all()
     serializer_class = serializers.InvestmentsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
@@ -289,7 +289,7 @@ def AccountTransfer(request):
     return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
 
 class AccountsViewSet(viewsets.ModelViewSet):
-    queryset = Accounts.objects.all()
+    queryset = Accounts.objects.select_related("banks").all()
     serializer_class = serializers.AccountsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
@@ -649,7 +649,7 @@ def OrdersList(request):
             "url": request.build_absolute_uri(reverse('orders-detail', args=(o.pk, ))), 
             "date":o.date, 
             "expiration": o.expiration, 
-            "investments": request.build_absolute_uri(reverse('investments-detail', args=(o.pk, ))), 
+            "investments": request.build_absolute_uri(reverse('investments-detail', args=(o.investments.pk, ))), 
             "investmentsname":o.investments.fullName(), 
             "currency": o.investments.products.currency, 
             "shares": o.shares, 
