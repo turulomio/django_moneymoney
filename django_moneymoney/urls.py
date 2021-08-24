@@ -15,6 +15,7 @@ router.register(r'creditcardsoperations', money_views.CreditcardsoperationsViewS
 router.register(r'concepts', money_views.ConceptsViewSet)
 router.register(r'dividends', money_views.DividendsViewSet)
 router.register(r'investments', money_views.InvestmentsViewSet)
+router.register(r'investmentsoperations', money_views.InvestmentsoperationsViewSet)
 router.register(r'leverages', money_views.LeveragesViewSet)
 router.register(r'orders', money_views.OrdersViewSet)
 router.register(r'operationstypes', money_views.OperationstypesViewSet)

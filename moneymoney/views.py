@@ -29,6 +29,7 @@ from moneymoney.models import (
     Creditcardsoperations, 
     Dividends, 
     Investments, 
+    Investmentsoperations, 
     Leverages, 
     Operationstypes, 
     Orders, 
@@ -226,6 +227,11 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
             return self.queryset
 
 
+class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
+    queryset = Investmentsoperations.objects.all()
+    serializer_class = serializers.InvestmentsoperationsSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+    
 @csrf_exempt
 @api_view(['POST', ])    
 @permission_classes([permissions.IsAuthenticated, ])

@@ -7,6 +7,7 @@ from  moneymoney.models import (
     Creditcardsoperations, 
     Dividends, 
     Investments, 
+    Investmentsoperations, 
     Leverages, 
     Orders, 
     Operationstypes, 
@@ -40,6 +41,11 @@ class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
 
     def get_fullname(self, obj):
         return obj.fullName()
+
+class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Investmentsoperations
+        fields = ('url', 'id','operationstypes', 'investments','shares', 'taxes', 'commission',  'price', 'datetime', 'comment', 'show_in_ranges', 'currency_conversion')
 
 class ConceptsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
