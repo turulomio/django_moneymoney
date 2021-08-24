@@ -874,6 +874,15 @@ group by productstypes_id""", (year, ))
         })
     return JsonResponse( l, encoder=MyDjangoJSONEncoder,     safe=False)
 
+@csrf_exempt
+@api_view(['GET', ])
+@permission_classes([permissions.IsAuthenticated, ])
+def Statistics(request):
+    r=[]
+    for name, cls in ((_("Accounts"), Accounts), (_("Accounts operations"), Accountsoperations), (_("Banks"), Banks), (_("Concept"),  Concepts)):
+        r.append({"name": name, "value":cls.objects.all().count()})
+    return JsonResponse(r, safe=False)
+    
  
 class StockmarketsViewSet(viewsets.ModelViewSet):
     queryset = Stockmarkets.objects.all()
