@@ -1,3 +1,5 @@
+
+import urllib.parse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
 from decimal import Decimal
@@ -6,7 +8,7 @@ from django.contrib.auth.hashers import check_password
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.shortcuts import get_object_or_404
-from django.urls import reverse
+from django.urls import reverse, resolve
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.http import JsonResponse
@@ -665,6 +667,32 @@ def OrdersList(request):
            "executed": o.executed,  
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+    
+ 
+@csrf_exempt
+@timeit
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def ProductsRanges(request):
+    product=RequestGetUrl(request, "product")
+    only_first=RequestGetBool(request, "only_first")
+    percentage_between_ranges=RequestGetInteger(request, "percentage_between_ranges")
+    if percentage_between_ranges is not None:
+        percentage_between_ranges=percentage_between_ranges/1000
+    percentage_gains=RequestGetInteger(request, "percentage_gains")
+    if percentage_gains is not None:
+        percentage_gains=percentage_gains/1000
+    amount_to_invest=RequestGetInteger(request, "amount_to_invest")
+    recomendation_methods=RequestGetInteger(request, "recomendation_methods")
+    account=RequestGetUrl(request, "account")
+    if not (product is None or only_first is None or percentage_between_ranges is None or percentage_gains is None or amount_to_invest is None or recomendation_methods is None):
+        from moneymoney.productrange import ProductRangeManager
+        
+        prm=ProductRangeManager(request, product, percentage_between_ranges, percentage_gains, only_first,  account, decimals=product.decimals)
+        prm.setInvestRecomendation(recomendation_methods)
+
+        return JsonResponse( prm.json(), encoder=MyDjangoJSONEncoder, safe=False)
+    return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
 
 class ProductsViewSet(viewsets.ModelViewSet):
     queryset = Products.objects.all()
@@ -920,6 +948,12 @@ def RequestGetBool(request, field, default=None):
     except:
         r=default
     return r    
+def RequestPostBool(request, field, default=None):
+    try:
+        r = str2bool(request.POST.get(field))
+    except:
+        r=default
+    return r    
 
 def RequestGetInteger(request, field, default=None):
     try:
@@ -969,8 +1003,6 @@ def RequestPostDecimal(request, field, default=None):
         r=default
     return r
 
-import urllib.parse
-from django.urls import resolve
 
 def obj_from_url(request, url):
     path = urllib.parse.urlparse(url).path
@@ -983,6 +1015,14 @@ def obj_from_url(request, url):
 def RequestPostUrl(request, field,  default=None):
     try:
         r = obj_from_url(request, request.POST.get(field))
+    except:
+        r=default
+    return r
+ 
+## Returns a model obect
+def RequestGetUrl(request, field,  default=None):
+    try:
+        r = obj_from_url(request, request.GET.get(field))
     except:
         r=default
     return r

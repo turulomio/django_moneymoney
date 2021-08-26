@@ -40,6 +40,7 @@ urlpatterns=[
     path('investmentsoperations/full/', money_views.InvestmentsoperationsFull, name='InvestmentsoperationsFull'),
     path('investmentsoperations/evolutionchart/', money_views.InvestmentsoperationsEvolutionChart, name='InvestmentsoperationsEvolutionChart'),
     path('orders/list/', money_views.OrdersList, name='OrdersList'),
+    path('products/ranges/', money_views.ProductsRanges, name='ProductsRanges'),
     path('products/update/', money_views.ProductsUpdate, name='ProductsUpdate'),
     path('reports/annual/<int:year>/', money_views.ReportAnnual, name='ReportAnnual'),
     path('reports/annual/income/<int:year>/', money_views.ReportAnnualIncome, name='ReportAnnualIncome'),
