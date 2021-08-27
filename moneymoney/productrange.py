@@ -1,7 +1,5 @@
 from datetime import date
 from decimal import Decimal
-from json import dumps
-from django.urls import reverse
 from django.utils import timezone
 from moneymoney.reusing.libmanagers import ObjectManager, DatetimeValueManager
 from moneymoney.models import Investments, Orders

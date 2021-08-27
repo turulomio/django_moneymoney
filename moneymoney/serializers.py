@@ -47,6 +47,25 @@ class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
         model = Investmentsoperations
         fields = ('url', 'id','operationstypes', 'investments','shares', 'taxes', 'commission',  'price', 'datetime', 'comment', 'show_in_ranges', 'currency_conversion')
 
+    
+    def create(self, validated_data):
+        created=serializers.HyperlinkedModelSerializer.create(self,  validated_data)
+        created.update_associated_account_operation(self.context.get("request"))
+        return created
+    
+    def update(self, instance, validated_data):
+        updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
+        updated.update_associated_account_operation(self.context.get("request"))
+        return updated
+        
+    def delete(self, instance):
+        print(instance)
+        deleted=serializers.HyperlinkedModelSerializer.update(self, instance)
+        deleted.update_associated_account_operation(self.context.get("request"))
+
+
+
+
 class ConceptsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Concepts

@@ -730,16 +730,22 @@ class Investmentsoperations(models.Model):
     def __str__(self):
         return "InvestmentOperation"
 
+
+    def delete(self):
+        execute("delete from investmentsaccountsoperations where investmentsoperations_id=%s",(self.id, )) 
+        models.Model.delete(self)
+        
+
+
     ## Esta función actualiza la tabla investmentsaccountsoperations que es una tabla donde 
     ## se almacenan las accountsoperations automaticas por las operaciones con investments. Es una tabla 
     ## que se puede actualizar en cualquier momento con esta función
-
     @transaction.atomic
-    def update_associated_account_operation(self,  request, local_currency):
+    def update_associated_account_operation(self,  request):
         #/Borra de la tabla investmentsaccountsoperations los de la operinversión pasada como parámetro
         execute("delete from investmentsaccountsoperations where investmentsoperations_id=%s",(self.id, )) 
 
-        investment_operations=InvestmentsOperations_from_investment(request, self.investments, timezone.now(), local_currency)
+        investment_operations=InvestmentsOperations_from_investment(request, self.investments, timezone.now(), request.local_currency)
         io=investment_operations.o_find_by_id(self.id)
         
         if self.investments.daily_adjustment is True: #Because it uses adjustment information
