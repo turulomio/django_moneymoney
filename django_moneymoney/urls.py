@@ -44,6 +44,11 @@ urlpatterns=[
     path('products/update/', money_views.ProductsUpdate, name='ProductsUpdate'),
     path('reports/annual/<int:year>/', money_views.ReportAnnual, name='ReportAnnual'),
     path('reports/annual/income/<int:year>/', money_views.ReportAnnualIncome, name='ReportAnnualIncome'),
+    
+    path('reports/evolutionassets/<int:from_year>/', money_views.ReportEvolutionAssets, name='ReportEvolutionAssets'),
+    path('reports/evolutioninvested/<int:from_year>/', money_views.ReportEvolutionInvested, name='ReportEvolutionInvested'),
+    
+    
     path('reports/annual/gainsbyproductstypes/<int:year>/', money_views.ReportAnnualGainsByProductstypes, name='ReportAnnualGainsByProductstypes'),
     path('statistics/', money_views.Statistics, name='Statistics'),
     path('strategies/withbalance/', money_views.StrategiesWithBalance, name='StrategiesWithBalance'),

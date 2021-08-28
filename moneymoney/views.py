@@ -15,7 +15,7 @@ from django.http import JsonResponse
 from moneymoney.investmentsoperations import InvestmentsOperations_from_investment,  InvestmentsOperationsManager_from_investment_queryset, InvestmentsOperationsTotals_from_investment
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows
 from moneymoney.reusing.casts import str2bool, string2list_of_integers
-from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware
+from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start
 from moneymoney.reusing.listdict_functions import listdict2dict
 from moneymoney.reusing.decorators import timeit
 from moneymoney.reusing.currency import Currency
@@ -907,6 +907,65 @@ group by productstypes_id""", (year, ))
                 "dividends_net": dividends_dict[pt.id]["net"], 
         })
     return JsonResponse( l, encoder=MyDjangoJSONEncoder,     safe=False)
+    
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def ReportEvolutionAssets(request, from_year):
+    tb={}
+    for year in range(from_year-1, date.today().year+1):
+        tb[year]=total_balance(dtaware_month_end(year, 12, request.local_zone), request.local_currency)
+    
+    
+    list_=[]
+    for year in range(from_year, date.today().year+1): 
+        dt_from=dtaware_year_start(year, request.local_zone)
+        dt_to=dtaware_year_end(year, request.local_zone)
+        dividends=Dividends.net_gains_baduser_between_datetimes(dt_from, dt_to)
+        incomes=0
+        gains=0
+        expenses=0
+        list_.append({
+            "year": year, 
+            "balance_start": tb[year-1]["total_user"], 
+            "balance_end": tb[year]["total_user"],  
+            "diff": tb[year]["total_user"]-tb[year-1]["total_user"], 
+            "incomes":incomes, 
+            "gains_net":gains, 
+            "dividends_net":dividends, 
+            "expenses":expenses, 
+            "total":incomes+gains+dividends+expenses, 
+        })
+
+    return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
+    
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def ReportEvolutionInvested(request, from_year):
+    list_=[]
+    qs=Investments.objects.all()
+    for year in range(from_year, date.today().year+1): 
+        iom=InvestmentsOperationsManager_from_investment_queryset(qs, dtaware_month_end(year, 12, request.local_zone), request)
+        dt_from=dtaware_year_start(year, request.local_zone)
+        dt_to=dtaware_year_end(year, request.local_zone)
+        
+        custody_commissions=cursor_one_field("select sum(amount) from accountsoperations where concepts_id = %s and datetime>%s and datetime<= %s", (eConcept.CommissionCustody, dt_from, dt_to))
+        taxes=cursor_one_field("select sum(amount) from accountsoperations where concepts_id in( %s,%s) and datetime>%s and datetime<= %s", (eConcept.TaxesReturn, eConcept.TaxesPayment, dt_from, dt_to))
+        d={}
+        d['year']=year
+        d['invested']=iom.current_invested_user()
+        d['balance']=iom.current_balance_futures_user()
+        d['diff']=d['balance']-d['invested']
+        d['percentage']=percentage_between(d['invested'], d['balance'])
+        d['net_gains_plus_dividends']=iom.historical_gains_net_user_between_dt(dt_from, dt_to)+Dividends.net_gains_baduser_between_datetimes_for_some_investments(iom.list_of_investments_ids(), dt_from, dt_to)
+        d['custody_commissions']=0 if custody_commissions is None else custody_commissions
+        d['taxes']=0 if taxes is None else taxes
+        d['investment_commissions']=iom.o_commissions_account_between_dt(dt_from, dt_to)
+        list_.append(d)
+    return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
 
 @csrf_exempt
 @api_view(['GET', ])
