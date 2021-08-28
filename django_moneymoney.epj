@@ -2,7 +2,7 @@
   "header": {
     "comment": "eric project file for project django_moneymoney",
     "copyright": "Copyright (C) 2021 , ",
-    "saved": "2021-08-22, 20:49:53"
+    "saved": "2021-08-28, 20:27:19"
   },
   "project": {
     "AUTHOR": "",
@@ -107,7 +107,9 @@
       "moneymoney/management/commands/dumppostgres.py",
       "moneymoney/management/commands/makejsmessages.py",
       "moneymoney/management/commands/procedure.py",
-      "update_reusing.py"
+      "update_reusing.py",
+      "moneymoney/productrange.py",
+      "moneymoney/reusing/libmanagers.py"
     ],
     "SPELLEXCLUDES": "",
     "SPELLLANGUAGE": "en_US",

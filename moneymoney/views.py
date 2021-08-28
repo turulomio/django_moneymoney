@@ -12,11 +12,11 @@ from django.urls import reverse, resolve
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.http import JsonResponse
-from moneymoney.investmentsoperations import InvestmentsOperations_from_investment,  InvestmentsOperationsManager_from_investment_queryset, InvestmentsOperationsTotals_from_investment
-from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows
+from moneymoney.investmentsoperations import InvestmentsOperations_from_investment,  InvestmentsOperationsManager_from_investment_queryset, InvestmentsOperationsTotals_from_investment, InvestmentsOperationsTotalsManager_from_all_investments
+from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict
 from moneymoney.reusing.casts import str2bool, string2list_of_integers
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start
-from moneymoney.reusing.listdict_functions import listdict2dict
+from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by
 from moneymoney.reusing.decorators import timeit
 from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.percentage import Percentage,  percentage_between
@@ -966,6 +966,42 @@ def ReportEvolutionInvested(request, from_year):
         d['investment_commissions']=iom.o_commissions_account_between_dt(dt_from, dt_to)
         list_.append(d)
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
+    
+    
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def ReportRanking(request):
+    iotm=InvestmentsOperationsTotalsManager_from_all_investments(request, timezone.now())
+    products_ids=cursor_one_column('select distinct(products_id) from investments')
+    products=Products.objects.all().filter(id__in=products_ids)
+    ld=[]
+    dividends=cursor_rows_as_dict("investments_id","select investments_id, sum(net) from dividends group by investments_id")
+    for product in products:
+        d={}
+        d["id"]=product.id
+        d["name"]=product.fullName()
+        d["current_net_gains"]=0
+        d["historical_net_gains"]=0
+        d["dividends"]=0
+        for iot in iotm.list:
+            if iot.investment.products.id==product.id:
+                d["current_net_gains"]=d["current_net_gains"]+iot.io_total_current["gains_net_user"]
+                d["historical_net_gains"]=d["historical_net_gains"]+iot.io_total_historical["gains_net_user"]
+                try:
+                    d["dividends"]=d["dividends"]+dividends[iot.investment.id]["sum"]
+                except:
+                    pass
+        d["total"]=d["current_net_gains"]+d["historical_net_gains"]+d["dividends"]
+        ld.append(d)
+        
+    ld=listdict_order_by(ld, "total", True)
+    ranking=1
+    for d in ld:
+        d["ranking"]=ranking
+        ranking=ranking+1
+    return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
 
 @csrf_exempt
 @api_view(['GET', ])

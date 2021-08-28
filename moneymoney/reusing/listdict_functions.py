@@ -100,6 +100,10 @@ def listdict_has_key(listdict, key):
         return False
     return key in listdict[0]
 
+def listdict_order_by(ld, key, reverse=False):
+    return sorted(ld,  key=lambda item: item[key], reverse=reverse)
+
+
 def listdict_print(listdict):
     for row in listdict:
         print(row)
