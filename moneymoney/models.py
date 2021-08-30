@@ -432,7 +432,8 @@ class Concepts(models.Model):
     ## Esta función fue optimizada de 23 queries y 8.43 ms a 7 queries en 4.79ms
     def queryset_for_dividends_order_by_fullname():
         ids=[]
-        for concept in sorted(Concepts.objects.select_related('operationstypes').filter(pk__in=(eConcept.Dividends, eConcept.AssistancePremium,  eConcept.DividendsSaleRights, eConcept.RolloverPaid, eConcept.RolloverReceived, eConcept.BondsCouponRunPayment, eConcept.BondsCouponRunIncome, eConcept.BondsCoupon)), key=lambda o: o.fullName()):
+        for concept in sorted(Concepts.objects.select_related('operationstypes').filter(pk__in=(
+        eConcept.Dividends, eConcept.AssistancePremium,  eConcept.DividendsSaleRights, eConcept.RolloverPaid, eConcept.RolloverReceived, eConcept.BondsCouponRunPayment, eConcept.BondsCouponRunIncome, eConcept.BondsCoupon)), key=lambda o: o.fullName()):
             ids.append(concept.id)
         preserved = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(ids)])
         queryset = Concepts.objects.select_related('operationstypes').filter(pk__in=ids).order_by(preserved)
@@ -495,7 +496,7 @@ class Dividends(models.Model):
     net = models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True)
     dps = models.DecimalField(max_digits=100, decimal_places=6, blank=True, null=True)
     datetime = models.DateTimeField(blank=True, null=True)
-    accountsoperations = models.ForeignKey('Accountsoperations', models.DO_NOTHING)
+    accountsoperations = models.ForeignKey('Accountsoperations', models.DO_NOTHING, null=True)
     commission = models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True)
     concepts = models.ForeignKey(Concepts, models.DO_NOTHING)
     currency_conversion = models.DecimalField(max_digits=10, decimal_places=6)
@@ -504,6 +505,11 @@ class Dividends(models.Model):
         managed = False
         db_table = 'dividends'
 
+    def delete(self):
+        execute("delete from accountsoperations where id=%s",(self.accountsoperations.id, )) 
+        models.Model.delete(self)
+       
+        
     ## TODO This method should take care of diffrent currencies in accounts. Dividens are in account currency
     @staticmethod
     def netgains_dividends(year, month):
@@ -554,16 +560,11 @@ class Dividends(models.Model):
             dividends=0
         return dividends
 
-
-    def delete_associated_account_operation(self):
-        if hasattr(self,  "accountsoperations") is True:
-            execute("delete from accountsoperations where id=%s",(self.accountsoperations.id, ))        
-
     ## Esta función actualiza la tabla investmentsaccountsoperations que es una tabla donde 
     ## se almacenan las accountsoperations automaticas por las operaciones con investments. Es una tabla 
     ## que se puede actualizar en cualquier momento con esta función
     def update_associated_account_operation(self):
-        if hasattr(self,  "accountsoperations") is False:#Insert
+        if self.accountsoperations is None:#Insert
             c=Accountsoperations()
             c.datetime=self.datetime
             c.concepts=self.concepts
@@ -573,7 +574,7 @@ class Dividends(models.Model):
             c.comment=Comment().encode(eComment.Dividend, self)
             c.accounts=self.investments.accounts
             c.save()
-            return c
+            self.accountsoperations=c
         else:#update
             self.accountsoperations.datetime=self.datetime
             self.accountsoperations.concepts=self.concepts
@@ -582,7 +583,7 @@ class Dividends(models.Model):
             self.accountsoperations.comment=Comment().encode(eComment.Dividend, self)
             self.accountsoperations.accounts=self.investments.accounts
             self.accountsoperations.save()
-            return self.accountsoperations
+        self.save()
 
 class Dps(models.Model):
     date = models.DateField(blank=True, null=True)
