@@ -21,6 +21,7 @@ router.register(r'orders', money_views.OrdersViewSet)
 router.register(r'operationstypes', money_views.OperationstypesViewSet)
 router.register(r'products', money_views.ProductsViewSet)
 router.register(r'productstypes', money_views.ProductstypesViewSet)
+router.register(r'quotes', money_views.QuotesViewSet)
 router.register(r'strategies', money_views.StrategiesViewSet)
 router.register(r'stockmarkets', money_views.StockmarketsViewSet)
 

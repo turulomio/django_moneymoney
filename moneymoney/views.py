@@ -37,6 +37,7 @@ from moneymoney.models import (
     Orders, 
     Products, 
     Productstypes, 
+    Quotes, 
     Stockmarkets, 
     Strategies, 
     percentage_to_selling_point, 
@@ -730,6 +731,11 @@ def ProductsUpdate(request):
     
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
  
+class QuotesViewSet(viewsets.ModelViewSet):
+    queryset = Quotes.objects.all()
+    serializer_class = serializers.QuotesSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
 @timeit
 @csrf_exempt
 @api_view(['GET', ])    

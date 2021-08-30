@@ -1033,7 +1033,7 @@ class Quotes(models.Model):
     def __str__(self):
         return f"Quote ({self.id}) of '{self.products.name}' at {self.datetime} is {self.quote}"
         
-    def save(self):
+    def modelsave(self):
         quotes=Quotes.objects.all().filter(datetime=self.datetime, products=self.products)
         if quotes.count()>0:
             for quote in quotes:

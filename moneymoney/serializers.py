@@ -13,6 +13,7 @@ from  moneymoney.models import (
     Operationstypes, 
     Products, 
     Productstypes, 
+    Quotes, 
     Stockmarkets, 
     Strategies, 
 )
@@ -116,6 +117,23 @@ class ProductstypesSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Productstypes
         fields = ('url', 'id', 'name')        
+
+class QuotesSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Quotes
+        fields = ('url', 'id', 'datetime', 'quote',  'products')      
+
+    
+    def create(self, validated_data):
+        quotes=Quotes.objects.all().filter(datetime=validated_data['datetime'], products=validated_data['products'])
+        if quotes.count()!=0:
+            quotes.delete()
+        created=serializers.HyperlinkedModelSerializer.create(self,  validated_data)
+        return created
+
+
+
+
 class StockmarketsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Stockmarkets
