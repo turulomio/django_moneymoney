@@ -30,6 +30,7 @@ from moneymoney.models import (
     Creditcards, 
     Creditcardsoperations, 
     Dividends, 
+    EstimationsDps, 
     Investments, 
     Investmentsoperations, 
     Leverages, 
@@ -204,6 +205,11 @@ def StrategiesWithBalance(request):
             "additional10": o.additional10, 
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+
+class EstimationsDpsViewSet(viewsets.ModelViewSet):
+    queryset = EstimationsDps.objects.all()
+    serializer_class = serializers.EstimationsDpsSerializer
+    permission_classes = [permissions.IsAuthenticated]  
 
 class InvestmentsViewSet(viewsets.ModelViewSet):
     queryset = Investments.objects.select_related("accounts").all()
@@ -913,7 +919,59 @@ group by productstypes_id""", (year, ))
                 "dividends_net": dividends_dict[pt.id]["net"], 
         })
     return JsonResponse( l, encoder=MyDjangoJSONEncoder,     safe=False)
-    
+
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def ReportDividends(request):
+    qs_investments=Investments.objects.filter(active=True).select_related("products").select_related("accounts").select_related("products__leverages").select_related("products__productstypes")
+    shares=cursor_rows_as_dict("investments_id", """
+        select 
+            investments.id as investments_id ,
+            sum(shares) as shares
+            from investments, investmentsoperations where active=true and investments.id=investmentsoperations.investments_id group by investments.id""")
+    estimations=cursor_rows_as_dict("products_id",  """
+        select 
+            distinct(products.id) as products_id, 
+            estimation, 
+            date_estimation,
+            (last_penultimate_lastyear(products.id, now())).last 
+        from products, estimations_dps where products.id=estimations_dps.products_id and year=%s""", (date.today().year, ))
+    quotes=cursor_rows_as_dict("products_id",  """
+        select 
+            products_id, 
+            products.currency,
+            (last_penultimate_lastyear(products.id, now())).last 
+            from products, investments where investments.products_id=products.id and investments.active=true""")
+    ld_report=[]
+    for inv in qs_investments:        
+        if inv.products_id in estimations:
+            dps=estimations[inv.products_id]["estimation"]
+            date_estimation=estimations[inv.products_id]["date_estimation"]
+            percentage=Percentage(dps, quotes[inv.products_id]["last"])
+            estimated=shares[inv.id]["shares"]*dps*inv.products.real_leveraged_multiplier()
+        else:
+            dps= 0
+            date_estimation=date(date.today().year-1, 12, 31)
+            percentage=0
+            estimated=0
+        
+        
+        d={
+            "products_id": inv.products_id, 
+            "name":  inv.fullName(), 
+            "current_price": quotes[inv.products_id]["last"], 
+            "dps": dps, 
+            "shares": shares[inv.id]["shares"], 
+            "date_estimation": date_estimation, 
+            "estimated": estimated, 
+            "percentage": percentage,  
+            "currency": quotes[inv.products_id]["currency"]
+        }
+        ld_report.append(d)
+    return JsonResponse( ld_report, encoder=MyDjangoJSONEncoder,     safe=False)
+
 @timeit
 @csrf_exempt
 @api_view(['GET', ])    

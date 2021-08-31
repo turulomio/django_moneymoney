@@ -14,6 +14,7 @@ router.register(r'creditcards', money_views.CreditcardsViewSet)
 router.register(r'creditcardsoperations', money_views.CreditcardsoperationsViewSet)
 router.register(r'concepts', money_views.ConceptsViewSet)
 router.register(r'dividends', money_views.DividendsViewSet)
+router.register(r'estimations_dps', money_views.EstimationsDpsViewSet)
 router.register(r'investments', money_views.InvestmentsViewSet)
 router.register(r'investmentsoperations', money_views.InvestmentsoperationsViewSet)
 router.register(r'leverages', money_views.LeveragesViewSet)
@@ -45,6 +46,7 @@ urlpatterns=[
     path('products/update/', money_views.ProductsUpdate, name='ProductsUpdate'),
     path('reports/annual/<int:year>/', money_views.ReportAnnual, name='ReportAnnual'),
     path('reports/annual/income/<int:year>/', money_views.ReportAnnualIncome, name='ReportAnnualIncome'),
+    path('reports/dividends/', money_views.ReportDividends, name='ReportDividends'),
     
     path('reports/evolutionassets/<int:from_year>/', money_views.ReportEvolutionAssets, name='ReportEvolutionAssets'),
     path('reports/evolutioninvested/<int:from_year>/', money_views.ReportEvolutionInvested, name='ReportEvolutionInvested'),
