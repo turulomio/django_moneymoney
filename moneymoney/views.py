@@ -643,7 +643,7 @@ def OrdersList(request):
     expired=RequestGetBool(request, 'expired')
     executed=RequestGetBool(request, 'executed')
     if active is not None:
-        qs=Orders.objects.filter(expiration__gt=date.today(),  executed__isnull=True).select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__productstypes").select_related("investments__products__leverages")
+        qs=Orders.objects.filter(expiration__gte=date.today(),  executed__isnull=True).select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__productstypes").select_related("investments__products__leverages")
     elif expired is not None:
         qs=Orders.objects.filter(expiration__lte=date.today(),  executed__isnull=True).select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__productstypes").select_related("investments__products__leverages")
     elif executed is not None:
