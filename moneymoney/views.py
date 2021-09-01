@@ -12,7 +12,7 @@ from django.urls import reverse, resolve
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.http import JsonResponse
-from moneymoney.investmentsoperations import InvestmentsOperations_from_investment,  InvestmentsOperationsManager_from_investment_queryset, InvestmentsOperationsTotals_from_investment, InvestmentsOperationsTotalsManager_from_all_investments
+from moneymoney.investmentsoperations import IOC, InvestmentsOperations_from_investment,  InvestmentsOperationsManager_from_investment_queryset, InvestmentsOperationsTotals_from_investment, InvestmentsOperationsTotalsManager_from_all_investments
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict
 from moneymoney.reusing.casts import str2bool, string2list_of_integers
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start
@@ -1030,8 +1030,38 @@ def ReportEvolutionInvested(request, from_year):
         d['investment_commissions']=iom.o_commissions_account_between_dt(dt_from, dt_to)
         list_.append(d)
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
-    
-    
+
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def ReportsInvestmentsLastOperation(request):
+    method=RequestGetInteger(request, "method", 0)
+    ld=[]
+    if method==0:
+        investments=Investments.objects.filter(active=True).select_related("accounts").select_related("products")
+        iom=InvestmentsOperationsManager_from_investment_queryset(investments, timezone.now(), request)
+        
+        for io in iom:
+            last=io.current_last_operation_excluding_additions()
+            if last is None:
+                continue
+            ioc_last=IOC(io.investment, last )
+            ld.append({
+                "id": io.investment.id, 
+                "name": io.investment.fullName(), 
+                "datetime": ioc_last.d["datetime"], 
+                "last_shares": ioc_last.d['shares'], 
+                "last_price": ioc_last.d['price_investment'], 
+                "decimals": io.investment.products.decimals, 
+                "shares": io.current_shares(),  
+                "balance": io.current_balance_futures_user(),  
+                "gains": io.current_gains_gross_user(),  
+                "percentage_last": ioc_last.percentage_total_investment().value, 
+                "percentage_invested": io.current_percentage_invested_user().value, 
+                "percentage_sellingpoint": ioc_last.percentage_sellingpoint().value,   
+            })
+    return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
 @timeit
 @csrf_exempt
 @api_view(['GET', ])    

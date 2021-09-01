@@ -47,12 +47,10 @@ urlpatterns=[
     path('reports/annual/<int:year>/', money_views.ReportAnnual, name='ReportAnnual'),
     path('reports/annual/income/<int:year>/', money_views.ReportAnnualIncome, name='ReportAnnualIncome'),
     path('reports/dividends/', money_views.ReportDividends, name='ReportDividends'),
-    
+    path('reports/investments/lastoperation/', money_views.ReportsInvestmentsLastOperation, name='ReportsInvestmentsLastOperation'),
     path('reports/evolutionassets/<int:from_year>/', money_views.ReportEvolutionAssets, name='ReportEvolutionAssets'),
     path('reports/evolutioninvested/<int:from_year>/', money_views.ReportEvolutionInvested, name='ReportEvolutionInvested'),
     path('reports/ranking/', money_views.ReportRanking, name='ReportRanking'),
-    
-    
     path('reports/annual/gainsbyproductstypes/<int:year>/', money_views.ReportAnnualGainsByProductstypes, name='ReportAnnualGainsByProductstypes'),
     path('statistics/', money_views.Statistics, name='Statistics'),
     path('strategies/withbalance/', money_views.StrategiesWithBalance, name='StrategiesWithBalance'),
