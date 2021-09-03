@@ -3,7 +3,6 @@ from decimal import Decimal
 from django.utils import timezone
 from moneymoney.reusing.libmanagers import ObjectManager, DatetimeValueManager
 from moneymoney.models import Investments, Orders
-from moneymoney.reusing.listdict_functions import listdict2list
 from moneymoney.reusing.percentage import Percentage
 from moneymoney.investmentsoperations import InvestmentsOperationsManager_from_investment_queryset
 
@@ -123,11 +122,20 @@ class ProductRangeManager(ObjectManager):
             current_value=current_value*(1-self.percentage_down.value)
             i=i+1
 
+        print(max_, self.getIndexOfValue(max_))
+        print(min_, self.getIndexOfValue(min_))
         self.qs_investments=Investments.objects.select_related("accounts").filter(active=True, products_id=self.product.id)
         self.iom=InvestmentsOperationsManager_from_investment_queryset(self.qs_investments, timezone.now(), self.request)
         
         self.orders=Orders.objects.select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__leverages").select_related("investments__products__productstypes").filter(executed=None, expiration__gte=date.today())
 
+        
+    def getIndexOfValue(self, value):
+        for index,  pr in enumerate(self.arr):
+            if pr.isInside(value) is True:
+                return index
+        return None
+                
         
     ## @return LIst of range values of the manager
     def list_of_range_values(self):
