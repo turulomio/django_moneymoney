@@ -41,6 +41,7 @@ from moneymoney.models import (
     Quotes, 
     Stockmarkets, 
     Strategies, 
+    currencies_in_accounts, 
     percentage_to_selling_point, 
     total_balance, 
     balance_user_by_operationstypes, 
@@ -427,6 +428,7 @@ def AccountsoperationsWithBalance(request):
             "balance":  initial_balance + o.amount, 
             "comment": Comment().decode(o.comment), 
             "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.pk, ))), 
+            "currency": o.accounts.currency, 
         })
         initial_balance=initial_balance + o.amount
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
@@ -869,7 +871,87 @@ def ReportAnnualIncome(request, year):
             
     list_= sorted(list_, key=lambda item: item["month_number"])
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
+    
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def ReportAnnualIncomeDetails(request, year, month):
+    def listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, operationstypes_id, local_currency, local_zone):
+        # Expenses
+        r=[]
+        balance=0
+        for currency in currencies_in_accounts():
+            for op in cursor_rows("""
+                select datetime,concepts_id, amount, comment
+                from 
+                    accountsoperations,
+                    accounts
+                where 
+                    operationstypes_id=%s and 
+                    date_part('year',datetime)=%s and
+                    date_part('month',datetime)=%s and
+                    accounts.currency=%s and
+                    accounts.id=accountsoperations.accounts_id   
+            union all 
+                select datetime,concepts_id, amount, comment
+                from 
+                    creditcardsoperations ,
+                    creditcards,
+                    accounts
+                where 
+                    operationstypes_id=%s and 
+                    date_part('year',datetime)=%s and
+                    date_part('month',datetime)=%s and
+                    accounts.currency=%s and
+                    accounts.id=creditcards.accounts_id and
+                    creditcards.id=creditcardsoperations.creditcards_id""", (operationstypes_id, year, month,  currency, operationstypes_id, year, month,  currency)):
+                if local_currency==currency:
+                    balance=balance+op["amount"]
+                    r.append({
+                        "id":-1, 
+                        "datetime": op['datetime'], 
+                        "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(op["concepts_id"], ))), 
+                        "amount":op['amount'], 
+                        "balance": balance,
+                        "comment":Comment().decode(op["comment"]), 
+                        "currency": currency, 
+                    })
+                else:
+                    print("TODO")
+                
+            r= sorted(r,  key=lambda item: item['datetime'])
+    #            r=r+money_convert(dtaware_month_end(year, month, local_zone), balance, currency, local_currency)
+        return r
+    def dividends():
+        r=[]
+        for o in Dividends.objects.all().filter(datetime__year=year, datetime__month=month).order_by('datetime'):
+            r.append({"id":o.id, "datetime":o.datetime, "concepts":o.concepts.name, "gross":o.gross, "net":o.net, "taxes":o.taxes, "commission":o.commission})
+        return r
+    def listdict_investmentsoperationshistorical(request, year, month, local_currency, local_zone):
+        #Git investments with investmentsoperations in this year, month
+        list_ioh=[]
+        dict_ot=Operationstypes.dictionary()
+        dt_year_month=dtaware_month_end(year, month, local_zone)
+        for investment in Investments.objects.raw("select distinct(investments.*) from investmentsoperations, investments where date_part('year', datetime)=%s and date_part('month', datetime)=%s and investments.id=investmentsoperations.investments_id", (year, month)):
+            investments_operations=InvestmentsOperations_from_investment(request, investment, dt_year_month, local_currency)
+            
+            for ioh in investments_operations.io_historical:
+                if ioh['dt_end'].year==year and ioh['dt_end'].month==month:
+                    ioh["name"]=investment.fullName()
+                    ioh["operationstypes"]=dict_ot[ioh["operationstypes_id"]]
+                    ioh["years"]=0
+                    list_ioh.append(ioh)
+        list_ioh= sorted(list_ioh,  key=lambda item: item['dt_end'])
+        return list_ioh
+    ####
+    r={}
+    r["expenses"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, 1,  request.local_currency, request.local_zone)
+    r["incomes"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, 2,  request.local_currency, request.local_zone)
+    r["dividends"]=dividends()
+    r["gains"]=listdict_investmentsoperationshistorical(request, year, month, request.local_currency, request.local_zone)
 
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
     
 @timeit
 @csrf_exempt

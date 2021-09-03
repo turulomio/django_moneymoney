@@ -46,6 +46,7 @@ urlpatterns=[
     path('products/update/', money_views.ProductsUpdate, name='ProductsUpdate'),
     path('reports/annual/<int:year>/', money_views.ReportAnnual, name='ReportAnnual'),
     path('reports/annual/income/<int:year>/', money_views.ReportAnnualIncome, name='ReportAnnualIncome'),
+    path('reports/annual/income/details/<int:year>/<int:month>/', money_views.ReportAnnualIncomeDetails, name='ReportAnnualIncomeDetails'),
     path('reports/dividends/', money_views.ReportDividends, name='ReportDividends'),
     path('reports/investments/lastoperation/', money_views.ReportsInvestmentsLastOperation, name='ReportsInvestmentsLastOperation'),
     path('reports/evolutionassets/<int:from_year>/', money_views.ReportEvolutionAssets, name='ReportEvolutionAssets'),
@@ -55,7 +56,6 @@ urlpatterns=[
     path('statistics/', money_views.Statistics, name='Statistics'),
     path('strategies/withbalance/', money_views.StrategiesWithBalance, name='StrategiesWithBalance'),
 ]
-
 urlpatterns=urlpatterns+ i18n_patterns(
     path('i18n/setlang/',  set_language, name="set_language"), 
     path('admin/', admin.site.urls,  name="admin-site"),
