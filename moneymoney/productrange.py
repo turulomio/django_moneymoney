@@ -258,9 +258,27 @@ class ProductRangeManager(ObjectManager):
                     o.recomendation_invest=True
 
     def json(self):
-        r=[]
+        r={}
+        ohcl=[]
+        ld_ohcl=self.product.ohclDailyBeforeSplits()         
+        dvm=DatetimeValueManager()
+        for d in ld_ohcl:
+            ohcl.append((d["date"], d["close"]))
+            dvm.appendDV(d["date"], d["close"])
+        
+        #Series for variable smas
+        smas=[]
+        for sma_ in self.list_of_sma_of_current_method():   
+            
+            sma={"name": f"SMA{sma_}", "data":[]}
+            for o in dvm.sma(sma_):
+                sma["data"].append((o.datetime, o.value))
+                
+            smas.append(sma)
+
+        d=[]
         for i, o in enumerate(self.arr):
-            r.append({
+            d.append({
                 "value": round(float(o.value),  self.decimals), 
                 "recomendation_invest": o.recomendation_invest, 
                 "investments_inside": o.getInvestmentsOperationsInsideJson(self.iom), 
@@ -268,112 +286,11 @@ class ProductRangeManager(ObjectManager):
                 "current_in_range": o.isInside(self.product.basic_results()["last"]), 
                 "limits": str(o)
             })
+            
+        r["pr"]=d
+        r["product"]={
+            "name": o.product.fullName(), 
+        }
+        r["ohcl"]=ohcl
+        r["smas"]=smas
         return r
-
-    ## ECHARTS
-    def eChartVUE(self, name="chart_product_ranges"):            
-        ld_ohcl=self.product.ohclDailyBeforeSplits()         
-        dvm=DatetimeValueManager()
-        for d in ld_ohcl:
-            dvm.appendDV(d["date"], d["close"])
-        
-        #Series for variable smas
-        sma_series=""
-        sma_series_legend=""
-        for sma in self.list_of_sma_of_current_method():   
-            l=["None"]*sma
-            for o in dvm.sma(sma):
-                l.append(float(o.value))
-            sma_series=sma_series+f"""{{
-                        name: 'SMA{sma}',
-                        type: 'line',
-                        data: {str(l)},
-                        smooth: true,
-                        showSymbol: false,
-                        lineStyle: {{
-                            width: 1
-                        }}
-                    }},
-    """   
-            sma_series_legend=sma_series_legend+f"'SMA{sma}', "
-        sma_series_legend=sma_series_legend[:-2]
-        
-        #Series for product ranges horizontal lines
-        ranges_series=""
-        for range_ in self:
-            if range_.recomendation_invest is True:
-                ranges_series=ranges_series+f"""
-                    {{
-                        type: 'line',
-                        data: {str([float(range_.value)]*len(ld_ohcl))},
-                        tooltip: {{
-                            show: false
-                        }}, 
-                        showSymbol: false,
-                        itemStyle: {{
-                            color: 'rgba(255, 173, 177, 0.4)'
-                        }}, 
-                    }},
-    """
-       
-        return f"""
-        {{
-                legend: {{
-                    data: ['{self.product.name}', {sma_series_legend}],
-                    inactiveColor: '#777',
-                }},
-                tooltip: {{
-                    trigger: 'axis',
-                    axisPointer: {{
-                        animation: false,
-                        type: 'cross',
-                        lineStyle: {{
-                            color: '#376df4',
-                            width: 2,
-                            opacity: 1
-                        }}
-                    }}
-                }},
-                xAxis: {{
-                    type: 'category',
-                    data: {str(listdict2list(ld_ohcl, "date", cast="str"))},
-                    axisLine: {{ lineStyle: {{ color: '#8392A5' }} }}
-                }},
-                yAxis: {{
-                    scale: true,
-                    axisLine: {{ lineStyle: {{ color: '#8392A5' }} }},
-                    splitLine: {{ show: false }}
-                }},
-                grid: {{
-                    bottom: 80, 
-                    left:80
-                }},
-                dataZoom: [{{
-                    textStyle: {{
-                        color: '#8392A5'
-                    }},
-                    handleIcon: 'path://M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4v1.3h1.3v-1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
-                    dataBackground: {{
-                        areaStyle: {{
-                            color: '#8392A5'
-                        }},
-                        lineStyle: {{
-                            opacity: 0.8,
-                            color: '#8392A5'
-                        }}
-                    }},
-                    brushSelect: true
-                }}, {{
-                    type: 'inside'
-                }}],
-                series: [
-                    {{
-                        type: 'line',
-                        name: '{self.product.name}',
-                        data: {str(listdict2list(ld_ohcl, "close", cast="float"))},
-                    }},
-                    {ranges_series}, 
-                    {sma_series}, 
-                ]
-            }}
-        """

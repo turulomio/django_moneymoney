@@ -700,7 +700,8 @@ def ProductsRanges(request):
 
         return JsonResponse( prm.json(), encoder=MyDjangoJSONEncoder, safe=False)
     return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
-
+    
+    
 class ProductsViewSet(viewsets.ModelViewSet):
     queryset = Products.objects.all()
     serializer_class = serializers.ProductsSerializer
