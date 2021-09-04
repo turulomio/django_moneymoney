@@ -1,7 +1,7 @@
 
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
@@ -15,7 +15,7 @@ from django.http import JsonResponse
 from moneymoney.investmentsoperations import IOC, InvestmentsOperations_from_investment,  InvestmentsOperationsManager_from_investment_queryset, InvestmentsOperationsTotals_from_investment, InvestmentsOperationsTotalsManager_from_all_investments
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict
 from moneymoney.reusing.casts import str2bool, string2list_of_integers
-from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start
+from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months
 from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by
 from moneymoney.reusing.decorators import timeit
 from moneymoney.reusing.currency import Currency
@@ -1086,6 +1086,42 @@ def ReportEvolutionAssets(request, from_year):
         })
 
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
+    
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def ReportEvolutionAssetsChart(request):
+    def month_results(year, month,  local_currency, local_zone):
+        dt=dtaware_month_end(year, month, local_zone)
+        return dt, total_balance(dt, local_currency)
+    #####################
+    year_from=RequestGetInteger(request, "from")
+    if year_from==date.today().year:
+        months_12=date.today()-timedelta(days=365)
+        list_months=months(months_12.year, months_12.month)
+    else:
+        list_months=months(year_from, 1)
+        
+    l=[]
+    futures=[]
+    
+    # HA MEJORADO UNOS 5 segundos de 10 segundos a 3 para 12 meses
+    with ThreadPoolExecutor(max_workers=settings.CONCURRENCY_DB_CONNECTIONS_BY_USER) as executor:
+        for year,  month in list_months:    
+            futures.append(executor.submit(month_results, year, month, request.local_currency,  request.local_zone))
+
+#    futures= sorted(futures, key=lambda future: future.result()[0])#month_end
+    for future in futures:
+        dt, total=future.result()
+        l.append({
+            "datetime":dt, 
+            "total_user": total["total_user"], 
+            "invested_user":total["investments_invested_user"], 
+            "investments_user":total["investments_user"], 
+            "accounts_user":total["accounts_user"], 
+        })
+    return JsonResponse( l, encoder=MyDjangoJSONEncoder,     safe=False)
     
 @timeit
 @csrf_exempt
