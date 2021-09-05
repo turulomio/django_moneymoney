@@ -1,4 +1,3 @@
-from django.contrib import admin
 from django.urls import path,  include
 from django.conf.urls.i18n import i18n_patterns, set_language 
 from django.views.generic.base import RedirectView
@@ -62,7 +61,6 @@ urlpatterns=[
 ]
 urlpatterns=urlpatterns+ i18n_patterns(
     path('i18n/setlang/',  set_language, name="set_language"), 
-    path('admin/', admin.site.urls,  name="admin-site"),
 
 )
 

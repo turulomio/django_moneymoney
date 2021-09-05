@@ -10,7 +10,7 @@
 ##https://docs.djangoproject.com/en/1.11/ref/settings/
 
 import os
-from django.urls import reverse_lazy
+#from django.urls import reverse_lazy
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -138,9 +138,9 @@ USE_L10N = True
 DATE_FORMAT = "Y-m-d"
 DATE_INPUT_FORMATS = ('%Y-%m-%d')
 
-LOGIN_URL = reverse_lazy("login")
-LOGIN_REDIRECT_URL = reverse_lazy("home")
-LOGOUT_REDIRECT_URL = reverse_lazy("login")
+#LOGIN_URL = reverse_lazy("login")
+#LOGIN_REDIRECT_URL = reverse_lazy("home")
+#LOGOUT_REDIRECT_URL = reverse_lazy("login")
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
