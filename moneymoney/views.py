@@ -15,7 +15,7 @@ from django.http import JsonResponse
 from moneymoney.investmentsoperations import IOC, InvestmentsOperations_from_investment,  InvestmentsOperationsManager_from_investment_queryset, InvestmentsOperationsTotals_from_investment, InvestmentsOperationsTotalsManager_from_all_investments, InvestmentsOperationsTotalsManager_from_investment_queryset
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict
 from moneymoney.reusing.casts import str2bool, string2list_of_integers
-from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months
+from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date
 from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by
 from moneymoney.reusing.decorators import timeit
 from moneymoney.reusing.currency import Currency
@@ -563,7 +563,7 @@ def InvestmentsWithBalance(request):
         r.append({
             "id": o.id,  
             "name":o.name, 
-            "name":o.fullName(), 
+            "fullname":o.fullName(), 
             "active":o.active, 
             "url":request.build_absolute_uri(reverse('investments-detail', args=(o.pk, ))), 
             "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.id, ))), 
@@ -692,6 +692,93 @@ def OrdersList(request):
 @timeit
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
+def ProductsPairs(request):
+    #fromyear=RequestGetInteger(request, "fromyear", date.today().year-3) 
+    product_better=RequestGetUrl(request, "a")
+    product_worse=RequestGetUrl(request, "b")
+    
+    r=[]
+    if product_better.currency==product_worse.currency:
+        common_quotes=cursor_rows("""
+            select 
+                make_date(a.year, a.month,1) as date, 
+                a.products_id as a, 
+                a.open as a_open, 
+                b.products_id as b, 
+                b.open as b_open 
+            from 
+                ohclmonthlybeforesplits(%s) as a ,
+                ohclmonthlybeforesplits(%s) as b 
+            where 
+                a.year=b.year and 
+                a.month=b.month
+        UNION ALL
+            select
+                now()::date as date,
+                %s as a, 
+                (select last from last_penultimate_lastyear(%s,now())) as a_open, 
+                %s as b, 
+                (select last from last_penultimate_lastyear(%s,now())) as b_open
+                """, (product_worse.id, product_better.id, 
+                product_worse.id, product_worse.id, product_better.id, product_better.id))
+    else: #Uses worse currency
+        #Fist condition in where it's to remove quotes without money_convert due to no data
+        common_quotes=cursor_rows("""
+            select 
+                make_date(a.year,a.month,1) as date, 
+                a.products_id as a, 
+                a.open as a_open, 
+                b.products_id as b, 
+                money_convert(make_date(a.year,a.month,1)::timestamp with time zone, b.open, %s, %s) as b_open
+            from 
+                ohclmonthlybeforesplits(%s) as a 
+                ,ohclmonthlybeforesplits(%s) as b 
+            where 
+                b.open != money_convert(make_date(a.year,a.month,1)::timestamp with time zone, b.open, %s, %s)  and
+                a.year=b.year and 
+                a.month=b.month
+        UNION ALL
+            select
+                now()::date as date,
+                %s as a, 
+                (select last from last_penultimate_lastyear(%s,now())) as a_open, 
+                %s as b, 
+                money_convert(now(), (select last from last_penultimate_lastyear(%s,now())), %s,%s) as b_open
+                """, ( product_better.currency,  product_worse.currency, 
+                        product_worse.id, 
+                        product_better.id, 
+                        product_better.currency,  product_worse.currency, 
+                        
+                        product_worse.id,
+                        product_worse.id,
+                        product_better.id, 
+                        product_better.id, product_better.currency,  product_worse.currency))
+#def listdict_products_pairs_evolution_from_datetime(product_worse, product_better, common_quotes, basic_results_worse,   basic_results_better):
+
+    last_pr=Percentage(0, 1)
+    first_pr=common_quotes[0]["b_open"]/common_quotes[0]["a_open"]
+    for row in common_quotes:#a worse, b better
+        pr=row["b_open"]/row["a_open"]
+        r.append({
+            "datetime": dtaware_day_end_from_date(row["date"], request.local_zone), 
+            "price_worse": row["a_open"], 
+            "price_better": row["b_open"], 
+            "price_ratio": pr, 
+            "price_ratio_percentage_from_start": percentage_between(first_pr, pr), 
+            "price_ratio_percentage_month_diff": percentage_between(last_pr, pr)
+        })
+        last_pr=pr
+    
+    #list_products_evolution=listdict_products_pairs_evolution_from_datetime(product_worse, product_better, common_monthly_quotes, basic_results_worse,  basic_results_better)
+
+    
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+
+@csrf_exempt
+@timeit
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+
 def ProductsRanges(request):
     product=RequestGetUrl(request, "product")
     only_first=RequestGetBool(request, "only_first")
