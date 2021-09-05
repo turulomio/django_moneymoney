@@ -216,6 +216,12 @@ class EstimationsDpsViewSet(viewsets.ModelViewSet):
 @timeit
 @csrf_exempt
 @api_view(['GET', ])    
+def home(request):
+    return JsonResponse( True,  encoder=MyDjangoJSONEncoder,     safe=False)
+
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsClasses(request):
     qs_investments_active=Investments.objects.filter(active=True).select_related("products").select_related("products__productstypes").select_related("accounts").select_related("products__leverages")

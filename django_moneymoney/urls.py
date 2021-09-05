@@ -29,6 +29,7 @@ router.register(r'stockmarkets', money_views.StockmarketsViewSet)
 urlpatterns=[
     path('api/', include(router.urls)),
     path('favicon.ico', RedirectView.as_view(url='/static/images/favicon.ico')),
+    path('home/', money_views.home, name="home"), #La puso porque fallaba production con apache
     path('login/', money_views.login, name="login"), 
     path('logout/', money_views.logout, name="logout"), 
     path('accounts/withbalance/', money_views.AccountsWithBalance, name='AccountsWithBalance'),
