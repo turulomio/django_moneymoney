@@ -13,6 +13,7 @@ from  moneymoney.models import (
     Orders, 
     Operationstypes, 
     Products, 
+    Productspairs, 
     Productstypes, 
     Quotes, 
     Stockmarkets, 
@@ -126,6 +127,11 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
         model = Products
         fields = ('url', 'id', 'name',  'isin', 'currency','productstypes','agrupations', 'web', 'address', 'phone', 'mail', 'percentage', 'pci', 'leverages', 'stockmarkets', 'comment',  'obsolete', 'tickers', 'high_low', 'decimals')
         
+class ProductspairsSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Productspairs
+        fields = ('url', 'name', 'a',  'b')
+
 class ProductstypesSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Productstypes

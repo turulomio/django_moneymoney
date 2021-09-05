@@ -1006,6 +1006,15 @@ where
 """, (self.id, ))
         
 
+class Productspairs(models.Model):
+    name = models.CharField(max_length=200, blank=False, null=False)
+    a = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='products')
+    b = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='+')
+
+    class Meta:
+        managed = False
+        db_table = 'productspairs'
+
 class Productstypes(models.Model):
     id = models.IntegerField(primary_key=True)
     name = models.TextField()

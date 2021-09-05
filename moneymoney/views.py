@@ -37,6 +37,7 @@ from moneymoney.models import (
     Operationstypes, 
     Orders, 
     Products, 
+    Productspairs, 
     Productstypes, 
     Quotes, 
     Stockmarkets, 
@@ -804,6 +805,11 @@ def ProductsRanges(request):
 class ProductsViewSet(viewsets.ModelViewSet):
     queryset = Products.objects.all()
     serializer_class = serializers.ProductsSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
+class ProductspairsViewSet(viewsets.ModelViewSet):
+    queryset = Productspairs.objects.all()
+    serializer_class = serializers.ProductspairsSerializer
     permission_classes = [permissions.IsAuthenticated]  
 
 class ProductstypesViewSet(viewsets.ModelViewSet):
