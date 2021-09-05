@@ -298,6 +298,8 @@ class ProductRangeManager(ObjectManager):
         r["pr"]=d
         r["product"]={
             "name": o.product.fullName(), 
+            "last": o.product.basic_results()["last"], 
+            "currency": o.product.currency, 
         }
         r["ohcl"]=ohcl
         r["smas"]=smas

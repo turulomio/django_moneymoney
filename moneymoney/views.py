@@ -553,7 +553,8 @@ def InvestmentsWithBalance(request):
 
         r.append({
             "id": o.id,  
-            "name":o.fullName(), 
+            "name":o.name, 
+            "fullname":o.fullName(), 
             "active":o.active, 
             "url":request.build_absolute_uri(reverse('investments-detail', args=(o.pk, ))), 
             "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.id, ))), 
