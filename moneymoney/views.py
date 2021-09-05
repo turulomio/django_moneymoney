@@ -12,7 +12,7 @@ from django.urls import reverse, resolve
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.http import JsonResponse
-from moneymoney.investmentsoperations import IOC, InvestmentsOperations_from_investment,  InvestmentsOperationsManager_from_investment_queryset, InvestmentsOperationsTotals_from_investment, InvestmentsOperationsTotalsManager_from_all_investments
+from moneymoney.investmentsoperations import IOC, InvestmentsOperations_from_investment,  InvestmentsOperationsManager_from_investment_queryset, InvestmentsOperationsTotals_from_investment, InvestmentsOperationsTotalsManager_from_all_investments, InvestmentsOperationsTotalsManager_from_investment_queryset
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict
 from moneymoney.reusing.casts import str2bool, string2list_of_integers
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months
@@ -211,6 +211,15 @@ class EstimationsDpsViewSet(viewsets.ModelViewSet):
     queryset = EstimationsDps.objects.all()
     serializer_class = serializers.EstimationsDpsSerializer
     permission_classes = [permissions.IsAuthenticated]  
+
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def InvestmentsClasses(request):
+    qs_investments_active=Investments.objects.filter(active=True).select_related("products").select_related("products__productstypes").select_related("accounts").select_related("products__leverages")
+    iotm=InvestmentsOperationsTotalsManager_from_investment_queryset(qs_investments_active, timezone.now(), request)
+    return JsonResponse( iotm.json_classes(), encoder=MyDjangoJSONEncoder,     safe=False)
 
 class InvestmentsViewSet(viewsets.ModelViewSet):
     queryset = Investments.objects.select_related("accounts").all()
@@ -554,7 +563,7 @@ def InvestmentsWithBalance(request):
         r.append({
             "id": o.id,  
             "name":o.name, 
-            "fullname":o.fullName(), 
+            "name":o.fullName(), 
             "active":o.active, 
             "url":request.build_absolute_uri(reverse('investments-detail', args=(o.pk, ))), 
             "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.id, ))), 

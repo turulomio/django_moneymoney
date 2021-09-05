@@ -7,7 +7,7 @@ from math import ceil
 from moneymoney.reusing.connection_dj import cursor_one_row, cursor_rows_as_dict
 from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.datetime_functions import string2dtnaive, dtaware
-from moneymoney.reusing.listdict_functions import listdict_sum, listdict2json, listdict_print_first
+from moneymoney.reusing.listdict_functions import listdict_sum, listdict_print_first
 from moneymoney.reusing.percentage import Percentage, percentage_between
 
 Decimal
@@ -501,8 +501,8 @@ class InvestmentsOperationsTotalsManager:
         return list(r)
         
     def json_classes_by_pci(self):
-        from moneymoney.models import Accounts
-        accounts_balance=Accounts.accounts_balance_user_currency(Accounts.objects.filter(active=True), timezone.now())
+        from moneymoney.models import Accounts, accounts_balance_user_currency
+        accounts_balance=accounts_balance_user_currency(Accounts.objects.filter(active=True), timezone.now())
         ld=[]
         for mode, name in (('p', 'Put'), ('c', 'Call'), ('i', 'Inline')):
             d={"name": name, "balance": 0,  "invested": 0}
@@ -515,11 +515,21 @@ class InvestmentsOperationsTotalsManager:
                 d["invested"]=d["invested"]+accounts_balance
             ld.append(d)
         
-        return listdict2json(ld)
+        return ld
+
+
+    def json_classes(self):
+        d={}
+        d["by_leverage"]=self.json_classes_by_leverage()
+        d["by_pci"]=self.json_classes_by_pci()
+        d["by_percentage"]=self.json_classes_by_percentage()
+        d["by_product"]=self.json_classes_by_product()
+        d["by_producttype"]=self.json_classes_by_producttype()
+        return d
 
     def json_classes_by_product(self):
-        from moneymoney.models import Accounts
-        accounts_balance=Accounts.accounts_balance_user_currency(Accounts.objects.filter(active=True), timezone.now())
+        from moneymoney.models import Accounts, accounts_balance_user_currency
+        accounts_balance=accounts_balance_user_currency(Accounts.objects.filter(active=True), timezone.now())
         ld=[]
         for product in self.distinct_products():
             d={"name": product.fullName(), "balance": 0,  "invested": 0}
@@ -529,11 +539,11 @@ class InvestmentsOperationsTotalsManager:
                     d["invested"]=d["invested"]+iot.io_total_current["invested_user"]
             ld.append(d)
         ld.append({"name": "Accounts", "balance": accounts_balance,  "invested": accounts_balance})
-        return listdict2json(ld)
+        return ld
 
     def json_classes_by_percentage(self):
-        from moneymoney.models import Accounts
-        accounts_balance=Accounts.accounts_balance_user_currency(Accounts.objects.filter(active=True), timezone.now())
+        from moneymoney.models import Accounts, accounts_balance_user_currency
+        accounts_balance=accounts_balance_user_currency(Accounts.objects.filter(active=True), timezone.now())
         ld=[]
         for percentage in range(0, 11):
             d={"name": f"{percentage*10}% variable", "balance": 0,  "invested": 0}
@@ -545,11 +555,11 @@ class InvestmentsOperationsTotalsManager:
                 d["balance"]=d["balance"]+accounts_balance
                 d["invested"]=d["invested"]+accounts_balance
             ld.append(d)
-        return listdict2json(ld)
+        return ld
 
     def json_classes_by_producttype(self):
-        from moneymoney.models import Accounts, Productstypes
-        accounts_balance=Accounts.accounts_balance_user_currency(Accounts.objects.filter(active=True), timezone.now())
+        from moneymoney.models import Accounts, Productstypes, accounts_balance_user_currency
+        accounts_balance=accounts_balance_user_currency(Accounts.objects.filter(active=True), timezone.now())
         ld=[]
         for producttype in Productstypes.objects.all():
             d={"name": producttype.name, "balance": 0,  "invested": 0}
@@ -561,11 +571,11 @@ class InvestmentsOperationsTotalsManager:
                 d["balance"]=d["balance"]+accounts_balance
                 d["invested"]=d["invested"]+accounts_balance
             ld.append(d)
-        return listdict2json(ld)
+        return ld
         
     def json_classes_by_leverage(self):
-        from moneymoney.models import Accounts, Leverages
-        accounts_balance=Accounts.accounts_balance_user_currency(Accounts.objects.filter(active=True), timezone.now())
+        from moneymoney.models import Accounts, Leverages, accounts_balance_user_currency
+        accounts_balance=accounts_balance_user_currency(Accounts.objects.filter(active=True), timezone.now())
         ld=[]
         for leverage in Leverages.objects.all():
             d={"name": leverage.name, "balance": 0,  "invested": 0}
@@ -577,7 +587,7 @@ class InvestmentsOperationsTotalsManager:
                 d["balance"]=d["balance"]+accounts_balance
                 d["invested"]=d["invested"]+accounts_balance
             ld.append(d)
-        return listdict2json(ld)
+        return ld
 
 ## Generate object from and ids list
 def InvestmentsOperationsTotalsManager_from_investment_queryset(qs_investments, dt, request):
