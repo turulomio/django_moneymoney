@@ -772,7 +772,8 @@ def ProductsPairs(request):
             "price_better": row["b_open"], 
             "price_ratio": pr, 
             "price_ratio_percentage_from_start": percentage_between(first_pr, pr), 
-            "price_ratio_percentage_month_diff": percentage_between(last_pr, pr)
+            "price_ratio_percentage_month_diff": percentage_between(last_pr, pr), 
+            'currency':  product_better.currency, 
         })
         last_pr=pr
     
