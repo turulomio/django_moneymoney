@@ -128,6 +128,22 @@ class InvestmentsOperations:
     def current_invested_user(self):
         return listdict_sum(self.io_current, "invested_user")
         
+        
+        
+    def current_highest_price(self):
+        r=0
+        for o in self.io_current:
+            if o["price_investment"]>r:
+                r=o["price_investment"]
+        return r
+        
+    def current_lowest_price(self):
+        r=10000000
+        for o in self.io_current:
+            if o["price_investment"]<r:
+                r=o["price_investment"]
+        return r
+        
     def current_average_price_account(self):
         """Calcula el precio medio de compra"""
         shares=self.current_shares()
@@ -312,6 +328,24 @@ class InvestmentsOperationsManager:
 
     def append(self, o):
         self.list.append(o)
+        
+        
+    def current_highest_price(self):
+        r=0
+        for io in self.list:
+            highest=io.current_highest_price()
+            if highest>r:
+                r=highest
+        return r
+        
+    def current_lowest_price(self):
+        r=10000000
+        for io in self.list:
+            lowest=io.current_lowest_price()
+            if lowest<r:
+                r=lowest
+        return r
+        
         
     def current_balance_futures_user(self):
         r=0

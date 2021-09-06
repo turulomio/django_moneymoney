@@ -1,5 +1,4 @@
 from datetime import date
-from decimal import Decimal
 from django.utils import timezone
 from moneymoney.reusing.libmanagers import ObjectManager, DatetimeValueManager
 from moneymoney.models import Investments, Orders
@@ -84,9 +83,9 @@ class ProductRange():
                 })
         return r
       
-
+## @param additional_ranges. Number ranges to show over and down calculated limits
 class ProductRangeManager(ObjectManager):
-    def __init__(self, request, product, percentage_down, percentage_up, only_first=True, only_account=None, decimals=2):
+    def __init__(self, request, product, percentage_down, percentage_up, only_first=True, only_account=None, decimals=2, additional_ranges=3):
         ObjectManager.__init__(self)
         self.only_first=only_first
         self.only_account=only_account
@@ -97,46 +96,49 @@ class ProductRangeManager(ObjectManager):
         self.decimals=decimals
         self.method=0
         
-        max_=self.product.highest_investment_operation_price()
-        min_=self.product.lowest_investment_operation_price()
         
-        
-        if max_ is not None and min_ is not None: #Investment with shares
-            range_highest=max_*Decimal(1+self.percentage_down.value*10)#5 times up value
-            range_lowest=min_*Decimal(1-self.percentage_down.value*10)#5 times down value
-        else: # No investment jet and shows ranges from product current price
-            range_highest=self.product.basic_results()["last"]*Decimal(1+self.percentage_down.value*10)#5 times up value
-            range_lowest=self.product.basic_results()["last"]*Decimal(1-self.percentage_down.value*10)#5 times down value
+        self.qs_investments=Investments.objects.select_related("accounts").filter(active=True, products_id=self.product.id)
+        self.iom=InvestmentsOperationsManager_from_investment_queryset(self.qs_investments, timezone.now(), self.request)
+        self.orders=Orders.objects.select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__leverages").select_related("investments__products__productstypes").filter(executed=None, expiration__gte=date.today())
 
-        if range_lowest<Decimal(0.001):#To avoid infinity loop
-            range_lowest=Decimal(0.001)
-
-
-
+        self.tmp=[]
         self.highest_range_value=10000000
         current_value=self.highest_range_value
         i=0
+        range_lowest=0.000001
         while current_value>range_lowest:
-            if current_value>=range_lowest and current_value<=range_highest:
-                self.append(ProductRange(self.request,  i, self.product,current_value, self.percentage_down, percentage_up, self.only_first, self.only_account))
+            self.tmp.append(ProductRange(self.request,  i, self.product,current_value, self.percentage_down, percentage_up, self.only_first, self.only_account))
             current_value=current_value*(1-self.percentage_down.value)
             i=i+1
 
-        print(max_, self.getIndexOfValue(max_))
-        print(min_, self.getIndexOfValue(min_))
-        self.qs_investments=Investments.objects.select_related("accounts").filter(active=True, products_id=self.product.id)
-        self.iom=InvestmentsOperationsManager_from_investment_queryset(self.qs_investments, timezone.now(), self.request)
+        print("RANGOS TMP", len(self.tmp))
         
-        self.orders=Orders.objects.select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__leverages").select_related("investments__products__productstypes").filter(executed=None, expiration__gte=date.today())
+#        max_=self.product.highest_investment_operation_price()
+#        min_=self.product.lowest_investment_operation_price()
 
+        max_=self.iom.current_highest_price()
+        min_=self.iom.current_lowest_price()
         
-    def getIndexOfValue(self, value):
-        for index,  pr in enumerate(self.arr):
+        if max_ is not None and min_ is not None: #Investment with shares
+            top_index= self.getTmpIndexOfValue(max_)-additional_ranges-1
+            bottom_index= self.getTmpIndexOfValue(min_)+additional_ranges+1
+        else: # No investment jet and shows ranges from product current price
+            current_index=self.getTmpIndexOfValue(self.product.basic_results()["last"])
+            top_index=current_index-additional_ranges-1
+            bottom_index=current_index+additional_ranges+1
+
+        print(max_, top_index)
+        print(min_,  bottom_index)
+        
+        self.arr=self.tmp[top_index:bottom_index]
+        print("ARR",  len(self.arr))
+
+    def getTmpIndexOfValue(self, value):
+        for index,  pr in enumerate(self.tmp):
             if pr.isInside(value) is True:
                 return index
         return None
-                
-        
+
     ## @return LIst of range values of the manager
     def list_of_range_values(self):
         return self.list_of("value")
