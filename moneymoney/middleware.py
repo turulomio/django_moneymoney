@@ -1,6 +1,5 @@
 from moneymoney import __version__, __versiondate__
 from moneymoney.models import Globals
-from moneymoney.reusing.currency import currency_symbol
 
 ## FOR VIEWS AND TEMPLATES
 class MoneyMiddleware:
@@ -27,4 +26,3 @@ class MoneyMiddleware:
             request.globals[g.global_field.replace("/", ("__"))]=g.value
         request.local_currency=request.globals["mem__localcurrency"]
         request.local_zone=request.globals["mem__localzone"]
-        request.local_currency_symbol=currency_symbol(request.globals["mem__localcurrency"])

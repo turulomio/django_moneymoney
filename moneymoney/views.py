@@ -228,6 +228,14 @@ def InvestmentsClasses(request):
     iotm=InvestmentsOperationsTotalsManager_from_investment_queryset(qs_investments_active, timezone.now(), request)
     return JsonResponse( iotm.json_classes(), encoder=MyDjangoJSONEncoder,     safe=False)
 
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def Timezones(request):
+    from pytz import all_timezones
+    return JsonResponse( all_timezones, encoder=MyDjangoJSONEncoder,     safe=False)
+
 class InvestmentsViewSet(viewsets.ModelViewSet):
     queryset = Investments.objects.select_related("accounts").all()
     serializer_class = serializers.InvestmentsSerializer
@@ -1325,7 +1333,7 @@ def ReportRanking(request):
         d["ranking"]=ranking
         ranking=ranking+1
     return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
-
+    
 @csrf_exempt
 @api_view(['GET', ])
 @permission_classes([permissions.IsAuthenticated, ])
@@ -1334,8 +1342,26 @@ def Statistics(request):
     for name, cls in ((_("Accounts"), Accounts), (_("Accounts operations"), Accountsoperations), (_("Banks"), Banks), (_("Concept"),  Concepts)):
         r.append({"name": name, "value":cls.objects.all().count()})
     return JsonResponse(r, safe=False)
-    
- 
+
+@csrf_exempt
+@api_view(['GET', 'POST'])
+@permission_classes([permissions.IsAuthenticated, ])
+@transaction.atomic
+def Settings(request):
+    if request.method == 'GET':
+        r={}
+        r['local_zone']=request.local_zone
+        r['local_currency']=request.local_currency
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+    elif request.method == 'POST':
+        local_currency=RequestPostString(request,"local_currency")
+        local_zone=RequestPostString(request,"local_zone")
+        if local_currency is not None and local_zone is not None:
+            setGlobal("mem/localcurrency", local_currency)
+            setGlobal("mem/localzone", local_zone)
+            return JsonResponse(True, safe=False)
+        return JsonResponse(False, safe=False)
+
 class StockmarketsViewSet(viewsets.ModelViewSet):
     queryset = Stockmarkets.objects.all()
     serializer_class = serializers.StockmarketsSerializer
@@ -1382,6 +1408,13 @@ def RequestGetInteger(request, field, default=None):
 def RequestPostInteger(request, field, default=None):
     try:
         r = int(request.POST.get(field))
+    except:
+        r=default
+    return r
+    
+def RequestPostString(request, field, default=None):
+    try:
+        r = request.POST.get(field)
     except:
         r=default
     return r
