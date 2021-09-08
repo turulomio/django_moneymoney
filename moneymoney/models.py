@@ -314,7 +314,7 @@ class Accountsoperations(models.Model):
     amount = models.DecimalField(max_digits=100, decimal_places=2)
     comment = models.TextField(blank=True, null=True)
     accounts = models.ForeignKey(Accounts, models.DO_NOTHING)
-    datetime = models.DateTimeField(blank=True, null=True)
+    datetime = models.DateTimeField(blank=False, null=False)
 
     class Meta:
         managed = False
