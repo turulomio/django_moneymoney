@@ -243,17 +243,12 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         # To get active or inactive accounts
-        try:
-            active = str2bool(self.request.GET.get('active'))
-        except:
-            active=None
-        # To get all accounts of a bank
-        try:
-            bank_id = int(self.request.GET.get('bank'))
-        except:
-            bank_id=None
+        active=RequestGetBool(self.request, "active")
+        bank_id=RequestGetInteger(self.request,"bank")
 
-        if bank_id is not None:
+        if bank_id is None and active is None:
+            return self.queryset
+        elif bank_id is not None:
             return self.queryset.filter(accounts__banks__id=bank_id,  active=True)
         elif active is not None:
             return self.queryset.filter(active=active)
