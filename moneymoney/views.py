@@ -1046,17 +1046,19 @@ def ReportAnnualIncomeDetails(request, year, month):
     def listdict_investmentsoperationshistorical(request, year, month, local_currency, local_zone):
         #Git investments with investmentsoperations in this year, month
         list_ioh=[]
-        dict_ot=Operationstypes.dictionary()
         dt_year_month=dtaware_month_end(year, month, local_zone)
+        ioh_id=0#To avoid vue.js warnings
         for investment in Investments.objects.raw("select distinct(investments.*) from investmentsoperations, investments where date_part('year', datetime)=%s and date_part('month', datetime)=%s and investments.id=investmentsoperations.investments_id", (year, month)):
             investments_operations=InvestmentsOperations_from_investment(request, investment, dt_year_month, local_currency)
             
             for ioh in investments_operations.io_historical:
                 if ioh['dt_end'].year==year and ioh['dt_end'].month==month:
+                    ioh["id"]=ioh_id
                     ioh["name"]=investment.fullName()
-                    ioh["operationstypes"]=dict_ot[ioh["operationstypes_id"]]
-                    ioh["years"]=0
+                    ioh["operationstypes"]=request.build_absolute_uri(reverse('operationstypes-detail', args=(ioh["operationstypes_id"],  )))
+                    ioh["years"]=round(Decimal((ioh["dt_end"]-ioh["dt_start"]).days/365), 2)
                     list_ioh.append(ioh)
+                    ioh_id=ioh_id+1
         list_ioh= sorted(list_ioh,  key=lambda item: item['dt_end'])
         return list_ioh
     ####

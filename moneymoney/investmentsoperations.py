@@ -91,7 +91,7 @@ class InvestmentsOperations:
             o["operationstypes"]=self.request.build_absolute_uri(reverse('operationstypes-detail', args=(o["operationstypes_id"],  )))
            
         self.io_historical=eval(str_ld_io_historical)
-        for o in self.io_historical:
+        for index, o in enumerate(self.io_historical):
             o["dt_start"]=postgres_datetime_string_2_dtaware(o["dt_start"])
             o["dt_end"]=postgres_datetime_string_2_dtaware(o["dt_end"])
             o["operationstypes"]=self.request.build_absolute_uri(reverse('operationstypes-detail', args=(o["operationstypes_id"],  )))        
