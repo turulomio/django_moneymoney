@@ -113,12 +113,24 @@ class ProductRangeManager(ObjectManager):
 
         print("RANGOS TMP", len(self.tmp))
         
-#        max_=self.product.highest_investment_operation_price()
-#        min_=self.product.lowest_investment_operation_price()
-
+        #Calculate max_ price and min_price. last price and orders is valorated too 
         max_=self.iom.current_highest_price()
         min_=self.iom.current_lowest_price()
+        if product.basic_results()["last"]> max_:
+            max_=product.basic_results()["last"]
+        if product.basic_results()["last"]< min_:
+            min_=product.basic_results()["last"]
+        for o in self.orders:
+            if self.only_account is not None:#If different account continues
+                if o.investments.accounts.id != self.only_account.id:
+                    continue
+            if o.investments.products.id==self.product.id:
+                if o.price>max_:
+                    max_=o.price
+                if o.price<min_:
+                    min_=o.price
         
+        # Calculate array index and generates arr
         if max_ is not None and min_ is not None: #Investment with shares
             top_index= self.getTmpIndexOfValue(max_)-additional_ranges-1
             bottom_index= self.getTmpIndexOfValue(min_)+additional_ranges+1

@@ -16,7 +16,7 @@ from moneymoney.investmentsoperations import IOC, InvestmentsOperations_from_inv
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict
 from moneymoney.reusing.casts import str2bool, string2list_of_integers
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date
-from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by
+from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average
 from moneymoney.reusing.decorators import timeit
 from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.percentage import Percentage,  percentage_between
@@ -1117,6 +1117,124 @@ group by productstypes_id""", (year, ))
         })
     return JsonResponse( l, encoder=MyDjangoJSONEncoder,     safe=False)
 
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def ReportConcepts(request):
+    year=RequestGetInteger(request, "year")
+    month=RequestGetInteger(request,  "month")
+    if year is None or month is None:
+        return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
+        
+    r={}
+    r["positive"]=[]
+    month_balance_positive=0
+    dict_month_positive={}
+    r["negative"]=[]
+    month_balance_negative=0
+    dict_month_negative={}
+    dict_median={}
+    
+    concepts=Concepts.objects.all().select_related("operationstypes")
+    
+    ## median
+    for row in cursor_rows("""
+select
+    concepts_id as id, 
+    median(amount) as median
+from 
+    accountsoperations
+group by 
+    concepts_id
+"""):
+        dict_median[row['id']]=row['median']
+    ## Data
+    for row in cursor_rows("""
+select
+    concepts_id as id, 
+    sum(amount) as total
+from 
+    accountsoperations
+where 
+    date_part('year', datetime)=%s and
+    date_part('month', datetime)=%s and
+    operationstypes_id in (1,2)
+group by 
+    concepts_id
+""", (year, month)):
+        if row['total']>=0:
+            month_balance_positive+=row['total']
+            dict_month_positive[row['id']]=row['total']
+        else:
+            month_balance_negative+=row['total']
+            dict_month_negative[row['id']]=row['total']
+
+    ## list
+    for concept in concepts:
+        if concept.id in dict_month_positive.keys():
+            r["positive"].append({
+                "concept": request.build_absolute_uri(reverse('concepts-detail', args=(concept.pk, ))), 
+                "name": concept.name, 
+                "operationstypes": request.build_absolute_uri(reverse('operationstypes-detail', args=(concept.pk, ))), 
+                "total": dict_month_positive.get(concept.id, 0), 
+                "percentage_total": Percentage(dict_month_positive.get(concept.id, 0), month_balance_positive), 
+                "median":dict_median.get(concept.id, 0), 
+            })   
+    ## list negative
+    for concept in concepts:
+        if concept.id in dict_month_negative.keys():
+            r["negative"].append({
+                "concept": request.build_absolute_uri(reverse('concepts-detail', args=(concept.pk, ))), 
+                "name": concept.name, 
+                "operationstypes": request.build_absolute_uri(reverse('operationstypes-detail', args=(concept.pk, ))), 
+                "total": dict_month_negative.get(concept.id, 0), 
+                "percentage_total": Percentage(dict_month_negative.get(concept.id, 0), month_balance_negative), 
+                "median":dict_median.get(concept.id, 0), 
+            })
+
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def ReportConceptsHistorical(request):
+    concept=RequestGetUrl(request, "concept")
+    if concept is None:
+        return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
+    r={}
+    json_concepts_historical=[]
+    
+    rows=cursor_rows("""
+    select date_part('year',datetime)::int as year,  date_part('month',datetime)::int as month, sum(amount) as value 
+    from ( 
+                SELECT accountsoperations.datetime, accountsoperations.concepts_id,  accountsoperations.amount  FROM accountsoperations where concepts_id={0} 
+                    UNION ALL 
+                SELECT creditcardsoperations.datetime, creditcardsoperations.concepts_id, creditcardsoperations.amount FROM creditcardsoperations where concepts_id={0}
+            ) as uni 
+    group by date_part('year',datetime), date_part('month',datetime) order by 1,2 ;
+    """.format(concept.id))
+
+    firstyear=int(rows[0]['year'])
+    # Create all data spaces filling year
+    for year in range(firstyear, date.today().year+1):
+        json_concepts_historical.append({"year": year, "m1":0, "m2":0, "m3":0, "m4":0, "m5":0, "m6":0, "m7":0, "m8":0, "m9":0, "m10":0, "m11":0, "m12":0, "total":0})
+    # Fills spaces with values
+    for row in rows:
+        j_row=json_concepts_historical[row['year']-firstyear]
+        j_row[f"m{row['month']}"]=float(row['value'])
+    
+    for d in json_concepts_historical:
+        d["total"]=d["m1"]+d["m2"]+d["m3"]+d["m4"]+d["m5"]+d["m6"]+d["m7"]+d["m8"]+d["m9"]+d["m10"]+d["m11"]+d["m12"]
+
+    r["data"]=json_concepts_historical
+    r["total"]=listdict_sum(json_concepts_historical, "total")
+    r["median"]=listdict_median(rows, 'value')
+    r["average"]=listdict_average(rows, 'value')
+    
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+    
 @timeit
 @csrf_exempt
 @api_view(['GET', ])    
