@@ -694,6 +694,7 @@ def OrdersList(request):
             "amount": o.shares*o.price*o.investments.products.real_leveraged_multiplier(), 
             "percentage_from_price": percentage_between(o.investments.products.basic_results()["last"], o.price),
            "executed": o.executed,  
+           "current_price": o.investments.products.basic_results()["last"], 
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
     
