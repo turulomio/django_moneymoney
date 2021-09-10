@@ -94,7 +94,8 @@ class InvestmentsOperations:
         for o in self.io_historical:
             o["dt_start"]=postgres_datetime_string_2_dtaware(o["dt_start"])
             o["dt_end"]=postgres_datetime_string_2_dtaware(o["dt_end"])
-            o["operationstypes"]=self.request.build_absolute_uri(reverse('operationstypes-detail', args=(o["operationstypes_id"],  )))
+            o["operationstypes"]=self.request.build_absolute_uri(reverse('operationstypes-detail', args=(o["operationstypes_id"],  )))        
+            o["years"]=round(Decimal((o["dt_end"]-o["dt_start"]).days/365), 2)
             
     def json(self):
         r={}
@@ -240,12 +241,7 @@ class InvestmentsOperations:
             if dt_from<=o["datetime"] and o["datetime"]<=dt_to:
                 r=r - o["commission_account"]
         return r
-        
-    def historical_listdict_homogeneus(self, request):
-        for ioh in self.io_historical:
-            ioh["operationstypes"]=request.operationstypes[ioh["operationstypes_id"]]
-            ioh["years"]=0
-        return self.io_historical
+
 
     ## Gets and investment operation from its listdict_io using an id
     ## @param id integer with the id of the investment operation

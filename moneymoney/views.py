@@ -511,6 +511,7 @@ def CreditcardsoperationsWithBalance(request):
             "creditcards":request.build_absolute_uri(reverse('creditcards-detail', args=(o.creditcards.pk, ))), 
             "paid": o.paid, 
             "paid_datetime": o.paid_datetime, 
+            "currency": o.creditcards.accounts.currency, 
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
