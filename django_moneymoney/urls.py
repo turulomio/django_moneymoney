@@ -47,6 +47,7 @@ urlpatterns=[
     path('products/pairs/', money_views.ProductsPairs,  name='ProductsPairs'),
     path('products/ranges/', money_views.ProductsRanges, name='ProductsRanges'),
     path('products/update/', money_views.ProductsUpdate, name='ProductsUpdate'),
+    path('products/quotes/ohcl/', money_views.ProductsQuotesOHCL, name='ProductsQuotesOHCL'),
     path('reports/annual/<int:year>/', money_views.ReportAnnual, name='ReportAnnual'),
     path('reports/annual/income/<int:year>/', money_views.ReportAnnualIncome, name='ReportAnnualIncome'),
     path('reports/concepts/', money_views.ReportConcepts, name='ReportConcepts'),

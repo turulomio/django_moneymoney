@@ -801,6 +801,19 @@ def ProductsPairs(request):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 
+def ProductsQuotesOHCL(request):
+    product=RequestGetUrl(request, "product")
+    print(product)
+    if product is not None:
+        ld_ohcl=product.ohclDailyBeforeSplits()         
+        return JsonResponse( ld_ohcl, encoder=MyDjangoJSONEncoder, safe=False)
+    return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
+
+@csrf_exempt
+@timeit
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+
 def ProductsRanges(request):
     product=RequestGetUrl(request, "product")
     only_first=RequestGetBool(request, "only_first")

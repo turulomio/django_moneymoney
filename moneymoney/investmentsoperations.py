@@ -101,11 +101,17 @@ class InvestmentsOperations:
         r={}
         r["investment"]={
             "name": self.investment.name, 
+            "selling_price": self.investment.selling_price, 
             "fullName": self.investment.fullName(), 
             "leverage_multiplier": self.investment.products.leverages.multiplier, 
             "leverage_real_multiplier": self.investment.products.real_leveraged_multiplier(), 
             "gains_at_sellingpoint": self.current_gains_gross_investment_at_selling_price(), 
             "url": self.request.build_absolute_uri(reverse('investments-detail', args=(self.investment.id, ))), 
+        }
+        r["product"]={
+            "name": self.investment.products.name, 
+            "currency": self.investment.products.currency, 
+            "url": self.request.build_absolute_uri(reverse('products-detail', args=(self.investment.products.id, ))), 
         }
         r["io"]=self.io
         r["io_current"]=self.io_current
