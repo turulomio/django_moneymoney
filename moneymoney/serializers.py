@@ -109,9 +109,12 @@ class OperationstypesSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('url', 'id', 'name')
         
 class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
+    currency = serializers.SerializerMethodField()
     class Meta:
         model = Accountsoperations
-        fields = ('url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','accounts')
+        fields = ('url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','accounts',  'currency')
+    def get_currency(self, obj):
+        return obj.accounts.currency
                 
 class LeveragesSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:

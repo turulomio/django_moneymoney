@@ -345,7 +345,15 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.AccountsoperationsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
+    
+    def get_queryset(self):
+        search=RequestGetString(self.request, 'search')
 
+        if search is not None:
+            return self.queryset.filter(comment__icontains=search)
+        else:
+            return self.queryset
+            
 class BanksViewSet(viewsets.ModelViewSet):
     queryset = Banks.objects.all()
     permission_classes = [permissions.IsAuthenticated]  
@@ -428,6 +436,7 @@ def AccountsoperationsWithBalance(request):
     accounts_id=RequestGetInteger(request, 'account')
     year=RequestGetInteger(request, 'year')
     month=RequestGetInteger(request, 'month')
+    
     
     if accounts_id is not None and year is not None and month is not None:
         account=Accounts.objects.get(pk=accounts_id)
@@ -1529,6 +1538,13 @@ def RequestPostInteger(request, field, default=None):
         r=default
     return r
     
+def RequestGetString(request, field, default=None):
+    try:
+        r = request.GET.get(field)
+    except:
+        r=default
+    return r
+
 def RequestPostString(request, field, default=None):
     try:
         r = request.POST.get(field)
