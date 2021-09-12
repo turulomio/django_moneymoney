@@ -12,7 +12,7 @@ from django.urls import reverse, resolve
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.http import JsonResponse
-from moneymoney.investmentsoperations import IOC, InvestmentsOperations_from_investment,  InvestmentsOperationsManager_from_investment_queryset, InvestmentsOperationsTotals_from_investment, InvestmentsOperationsTotalsManager_from_all_investments, InvestmentsOperationsTotalsManager_from_investment_queryset
+from moneymoney.investmentsoperations import IOC, InvestmentsOperations_from_investment,  InvestmentsOperationsManager_from_investment_queryset, InvestmentsOperationsTotals_from_investment, InvestmentsOperationsTotalsManager_from_all_investments, InvestmentsOperationsTotalsManager_from_investment_queryset, Simulate_InvestmentsOperations_from_investment
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict
 from moneymoney.reusing.casts import str2bool, string2list_of_integers
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date
@@ -619,6 +619,26 @@ def InvestmentsoperationsFull(request):
         r.append(InvestmentsOperations_from_investment(request, o, timezone.now(), request.local_currency).json())
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
+@csrf_exempt
+@api_view(['POST', ])    
+@timeit
+@permission_classes([permissions.IsAuthenticated, ])
+def InvestmentsoperationsFullSimulation(request):
+    print(request.data)
+    investments=[]
+    for url in request.data["investments"]:
+        investments.append(obj_from_url(request, url))## Como todas deben ser iguales uso la primera
+    dt=string2dtaware(request.data["dt"],  "JsUtcIso", request.local_zone)
+    local_currency=request.data["local_currency"]
+    temporaltable=request.data["temporaltable"]
+    listdict=request.data["operations"]
+    for d in listdict:
+        d["datetime"]=string2dtaware(d["datetime"],  "JsUtcIso", request.local_zone)
+        d["investments_id"]=investments[0].id
+        d["operationstypes_id"]=id_from_url(request, d["operationstypes"])
+    r=Simulate_InvestmentsOperations_from_investment(request, investments,  dt,  local_currency,  listdict,  temporaltable).json()
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+
 @timeit
 @csrf_exempt
 @api_view(['GET', ])    
@@ -697,6 +717,7 @@ def OrdersList(request):
             "date":o.date, 
             "expiration": o.expiration, 
             "investments": request.build_absolute_uri(reverse('investments-detail', args=(o.investments.pk, ))), 
+            "products": request.build_absolute_uri(reverse('products-detail', args=(o.investments.products.pk, ))), 
             "investmentsname":o.investments.fullName(), 
             "currency": o.investments.products.currency, 
             "shares": o.shares, 
@@ -800,7 +821,6 @@ def ProductsPairs(request):
 @timeit
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-
 def ProductsQuotesOHCL(request):
     product=RequestGetUrl(request, "product")
     print(product)
@@ -813,7 +833,6 @@ def ProductsQuotesOHCL(request):
 @timeit
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-
 def ProductsRanges(request):
     product=RequestGetUrl(request, "product")
     only_first=RequestGetBool(request, "only_first")
@@ -1607,6 +1626,12 @@ def obj_from_url(request, url):
     class_=resolved_func.cls()
     class_.request=request
     return class_.get_queryset().get(pk=int(resolved_kwargs['pk']))
+def id_from_url(request, url):
+    path = urllib.parse.urlparse(url).path
+    resolved_func, unused_args, resolved_kwargs = resolve(path)
+    class_=resolved_func.cls()
+    class_.request=request
+    return int(resolved_kwargs['pk'])
  
 ## Returns a model obect
 def RequestPostUrl(request, field,  default=None):
