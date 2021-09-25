@@ -1,4 +1,5 @@
 from datetime import date
+from django.urls import reverse
 from django.utils import timezone
 from moneymoney.reusing.libmanagers import ObjectManager, DatetimeValueManager
 from moneymoney.models import Investments, Orders
@@ -61,9 +62,17 @@ class ProductRange():
                         continue
                 if self.isInside(op["price_investment"])==True:
                     r.append({
-#                        "url": reverse('investment_view', args=(io.investment.id,)), 
+                        "url":self.request.build_absolute_uri(reverse('investments-detail', args=(io.investment.pk, ))), 
+                        "id": io.investment.pk, 
                         "name": io.investment.fullName(), 
                         "invested": op[ 'invested_user'], 
+                        "currency": io.investment.products.currency, 
+                        "active": io.investment.active, 
+                        "selling_price": io.investment.selling_price, 
+                        "daily_adjustment": io.investment.daily_adjustment, 
+                        "selling_expiration": io.investment.selling_expiration, 
+                        "products": self.request.build_absolute_uri(reverse('products-detail', args=(io.investment.products.pk, ))), 
+                        "accounts": self.request.build_absolute_uri(reverse('accounts-detail', args=(io.investment.accounts.pk, ))), 
                     })
 
         return r
