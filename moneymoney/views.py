@@ -599,6 +599,7 @@ def InvestmentsWithBalance(request):
             "percentage_invested": percentage_invested, 
             "percentage_selling_point": percentage_to_selling_point(iot.io_total_current["shares"], iot.investment.selling_price, o.products.basic_results()['last']), 
             "selling_expiration": o.selling_expiration, 
+            "shares":iot.io_total_current["shares"], 
             "balance_percentage": o.balance_percentage, 
             "daily_adjustment": o.daily_adjustment, 
             "selling_price": o.selling_price, 
