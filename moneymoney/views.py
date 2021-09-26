@@ -596,6 +596,7 @@ def InvestmentsWithBalance(request):
             "gains_user": iot.io_total_current["gains_gross_user"], 
             "balance_user": iot.io_total_current["balance_user"], 
             "currency": o.products.currency, 
+            "currency_account": o.accounts.currency, 
             "percentage_invested": percentage_invested, 
             "percentage_selling_point": percentage_to_selling_point(iot.io_total_current["shares"], iot.investment.selling_price, o.products.basic_results()['last']), 
             "selling_expiration": o.selling_expiration, 
