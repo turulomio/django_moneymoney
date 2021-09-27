@@ -1079,13 +1079,13 @@ class Splits(models.Model):
 
 
 class StrategiesTypes(models.IntegerChoices):
-    Generic = 0, _('Genéric') #additional { }
     PairsInSameAccount = 1, _('Pairs in same account') #additional {"worse":_, "better":_ "account" }
     Ranges = 2,  _('Product ranges')
+    Generic = 3, _('Genéric') #additional { }
 
 class Strategies(models.Model):
     name = models.TextField()
-    investments = models.TextField(blank=True, null=True)
+    investments = models.TextField(blank=False, null=False)
     dt_from = models.DateTimeField(blank=True, null=True)
     dt_to = models.DateTimeField(blank=True, null=True)
     type = models.IntegerField(choices=StrategiesTypes.choices)
