@@ -1145,6 +1145,7 @@ group by productstypes_id""", (year, ))
     l=[]
     for pt in Productstypes.objects.all():
         gains_net, gains_gross= 0, 0
+        dividends_gross, dividends_net=0, 0
         for row in gains:
             if row["productstypes_id"]==pt.id:
                 io_historical=eval(row["io_historical"])
@@ -1152,14 +1153,22 @@ group by productstypes_id""", (year, ))
                     if int(ioh["dt_end"][0:4])==year:
                         gains_net=gains_net+ioh["gains_net_user"]
                         gains_gross=gains_gross+ioh["gains_gross_user"]
+        try:
+            dividends_gross=dividends_dict[pt.id]["gross"]
+        except:
+            dividends_gross=0
+        try:
+            dividends_net=dividends_dict[pt.id]["net"]
+        except:
+            dividends_net=0
 
         l.append({
                 "id": pt.id, 
                 "name":pt.name, 
                 "gains_gross": gains_gross, 
-                "dividends_gross":dividends_dict[pt.id]["gross"], 
+                "dividends_gross":dividends_gross, 
                 "gains_net":gains_net, 
-                "dividends_net": dividends_dict[pt.id]["net"], 
+                "dividends_net": dividends_net, 
         })
     return JsonResponse( l, encoder=MyDjangoJSONEncoder,     safe=False)
 
