@@ -16,6 +16,7 @@ args=parser.parse_args()
 
 if args.local==False:
     download_from_github("turulomio", "reusingcode", "python/call_by_name.py", "moneymoney/reusing")
+    download_from_github("turulomio", "reusingcode", "python/connection_pg.py", "moneymoney/reusing")
     download_from_github("turulomio", "reusingcode", "python/listdict_functions.py", "moneymoney/reusing")
     download_from_github("turulomio", "reusingcode", "django/decorators.py", "moneymoney/reusing")
     download_from_github("turulomio", "reusingcode", "python/lineal_regression.py", "moneymoney/reusing")
