@@ -29,8 +29,7 @@ from moneymoney.models import (
     Concepts, 
     Creditcards, 
     Creditcardsoperations, 
-    Dividends, 
-    EstimationsDps, 
+    Dividends,
     Investments, 
     Investmentsoperations, 
     Leverages, 
@@ -94,6 +93,15 @@ def logout(request):
     else:
         token.delete()
         return Response("Logged out")
+
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
+def AssetsReport(request):
+    from moneymoney.assetsreport import assetsreport
+    assetsreport(request)
+    return Response({'status': 'details'}, status=status.HTTP_200_OK)
+
 
 class ConceptsViewSet(viewsets.ModelViewSet):
     queryset = Concepts.objects.all()
