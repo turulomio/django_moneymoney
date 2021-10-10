@@ -1,14 +1,18 @@
-
 from django.utils.translation import ugettext as _
+from json import loads
 from moneymoney import __version__
 from unogenerator import ODT
 #from unogenerator.reusing.datetime_functions import dtnaive2string
 #from xulpymoney.objects.assets import  Assets
 #from xulpymoney.objects.annualtarget import  AnnualTarget
+from unogenerator.reusing.currency import  Currency
 from unogenerator.reusing.percentage import  Percentage
 
 
 def assetsreport(request):
+    c=request.local_currency
+    z=request.local_zone
+    
     doc=ODT('moneymoney/templates/AssetsReport.odt')
     doc.setMetadata( 
         _("Assets report"),  
@@ -38,46 +42,24 @@ def assetsreport(request):
     
     
     
-    
-    
-    
-#    doc.export_pdf('AssetsReport-{}.pdf'.format(dtnaive2string(datetime.now(), "%Y%m%d%H%M")))
-    doc.export_pdf("AssetsReport.pdf")
-    doc.close()
+        # Assets by bank
+        doc.addParagraph(_("Assets by bank"), "Heading 2")
+        
+        from moneymoney.views import BanksWithBalance
+        bankswithbalance=[(_("Bank"), _("Accounts balance"), _("Investments balance"), _("Total balance"))]
+        for o in loads(BanksWithBalance(request._request).content):
+            if o["active"]==True:
+                bankswithbalance.append((o["name"], Currency(o["balance_accounts"], c), Currency(o["balance_investments"], c), Currency(o["balance_total"], c)))
 
-#
-#
-#        
-#    def variables(self):
-#        doc.vTotalLastYear=Assets(doc.mem).saldo_total(doc.mem.data.investments,  date(date.today().year-1, 12, 31))
-#        doc.vTotal=Assets(doc.mem).saldo_total(doc.mem.data.investments,  date.today())
-#
-#    def cover(self):
-#
-#        
-#    def body(self):
-#        # About
-#        doc.header(_("About Xulpymoney"), 1)
-#        
-#        # Assets
-#        doc.header(_("Assets"), 1)
-#        doc.simpleParagraph(_("Total assets of the user are {}.").format(doc.vTotal))
-#        if doc.vTotalLastYear.isZero()==False:
-#            moreorless=_("more")
-#            if (doc.vTotal-doc.vTotalLastYear).isLTZero():
-#                moreorless=_("less")
-#            doc.simpleParagraph(_("It's a {} {} of the total assets at the end of the last year.").format(Percentage(doc.vTotal-doc.vTotalLastYear, doc.vTotalLastYear), moreorless))
-#        
-#        # Assets by bank
-#        doc.header(_("Assets by bank"), 2)
+        doc.addTableParagraph(bankswithbalance, columnssize_percentages=[40, 20, 20, ],  size=8, style="3D")
 #        doc.mem.frmMain.on_actionBanks_triggered()
 #        
 #        model=doc.mem.frmMain.w.mqtwBanks.officegeneratorModel()
 #        model.removeColumns([1,])
 #        model.odt_table(self, 10,  8 )
 #
-#        doc.simpleParagraph(_("Sum of all bank balances is {}").format(doc.mem.frmMain.w.banks.balance()))
-#        doc.pageBreak(True)
+#        doc.addParagraph(_("Sum of all bank balances is {}").format(doc.mem.frmMain.w.banks.balance()))
+        doc.pageBreak()
 #
 #        # Assests current year
 #        doc.header(_("Assets current year evolution"), 2)
@@ -249,3 +231,10 @@ def assetsreport(request):
 #        dieTime= QTime.currentTime().addSecs(seconds);
 #        while (QTime.currentTime() < dieTime):
 #            QCoreApplication.processEvents(QEventLoop.AllEvents, 100)
+
+    
+    
+    
+#    doc.export_pdf('AssetsReport-{}.pdf'.format(dtnaive2string(datetime.now(), "%Y%m%d%H%M")))
+    doc.export_pdf("AssetsReport.pdf")
+    doc.close()
