@@ -13,7 +13,7 @@ router.register(r'creditcards', money_views.CreditcardsViewSet)
 router.register(r'creditcardsoperations', money_views.CreditcardsoperationsViewSet)
 router.register(r'concepts', money_views.ConceptsViewSet)
 router.register(r'dividends', money_views.DividendsViewSet)
-router.register(r'estimations_dps', money_views.EstimationsDpsViewSet)
+#router.register(r'estimations_dps', money_views.EstimationsDpsViewSet)
 router.register(r'investments', money_views.InvestmentsViewSet)
 router.register(r'investmentsoperations', money_views.InvestmentsoperationsViewSet)
 router.register(r'leverages', money_views.LeveragesViewSet)
@@ -39,6 +39,9 @@ urlpatterns=[
     path('creditcardsoperations/withbalance/', money_views.CreditcardsoperationsWithBalance, name='CreditcardsoperationsWithBalance'),
     path('creditcardsoperations/payment/<int:pk>/', money_views.CreditcardsoperationsPayment, name='CreditcardsoperationsPayment'),
     path('banks/withbalance/', money_views.BanksWithBalance, name='BanksWithBalance'),
+    
+    
+    path('estimations/dps/add/', money_views.EstimationsDps_add, name='EstimationsDps_add'),
     path('investments/classes/', money_views.InvestmentsClasses, name='InvestmentsClasses'),
     path('investments/withbalance/', money_views.InvestmentsWithBalance, name='InvestmentsWithBalance'),
     path('investmentsoperations/full/', money_views.InvestmentsoperationsFull, name='InvestmentsoperationsFull'),

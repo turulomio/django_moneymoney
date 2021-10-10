@@ -6,7 +6,6 @@ from  moneymoney.models import (
     Creditcards, 
     Creditcardsoperations, 
     Dividends, 
-    EstimationsDps, 
     Investments, 
     Investmentsoperations, 
     Leverages, 
@@ -46,18 +45,18 @@ class DividendsSerializer(serializers.HyperlinkedModelSerializer):
         updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
         updated.update_associated_account_operation()
         return updated
-        
-class EstimationsDpsSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = EstimationsDps
-        fields = ('year','estimation', 'date_estimation', 'source','manual','products')
-        
-        
-    def create(self, validated_data):
-        print(validated_data)
-        created=serializers.HyperlinkedModelSerializer.create(self,  validated_data)
-        created.update_associated_account_operation()
-        return created
+#        
+#class EstimationsDpsSerializer(serializers.HyperlinkedModelSerializer):
+#    class Meta:
+#        model = EstimationsDps
+#        fields = ('year','estimation', 'date_estimation', 'source','manual','products')
+#        
+#        
+#    def create(self, validated_data):
+#        print(validated_data)
+#        created=serializers.HyperlinkedModelSerializer.create(self,  validated_data)
+#        created.update_associated_account_operation()
+#        return created
 
 class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
     fullname = serializers.SerializerMethodField()

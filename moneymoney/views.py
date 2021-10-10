@@ -208,10 +208,10 @@ def StrategiesWithBalance(request):
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
-class EstimationsDpsViewSet(viewsets.ModelViewSet):
-    queryset = EstimationsDps.objects.all()
-    serializer_class = serializers.EstimationsDpsSerializer
-    permission_classes = [permissions.IsAuthenticated]  
+#class EstimationsDpsViewSet(viewsets.ModelViewSet):
+#    queryset = EstimationsDps.objects.all()
+#    serializer_class = serializers.EstimationsDpsSerializer
+#    permission_classes = [permissions.IsAuthenticated]  
 
 @timeit
 @csrf_exempt
@@ -1329,7 +1329,7 @@ def ReportDividends(request):
         
         
         d={
-            "products_id": inv.products_id, 
+            "product": request.build_absolute_uri(reverse('products-detail', args=(inv.products.id, ))), 
             "name":  inv.fullName(), 
             "current_price": quotes[inv.products_id]["last"], 
             "dps": dps, 
@@ -1531,6 +1531,31 @@ def Settings(request):
             return JsonResponse(True, safe=False)
         return JsonResponse(False, safe=False)
 
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated, ])
+@transaction.atomic
+def EstimationsDps_add(request):
+    print(request.data)
+    year=RequestInteger(request, 'year')
+    estimation=RequestDecimal(request, 'estimation')
+    product=RequestUrl(request, 'product')
+    print(year, estimation, product)
+    if year is not None and estimation is not None  and product is not None:
+        print("AHORA")
+        qs=EstimationsDps.objects.filter(products=product, year=year)
+        print(qs)
+        qs.delete()
+        s=EstimationsDps()
+        s.date_estimation=date.today()
+        s.year=year
+        s.estimation=estimation
+        s.source="Internet"
+        s.products=product
+        s.save()
+        return JsonResponse(True, safe=False)
+    return JsonResponse(False, safe=False)
+
 class StockmarketsViewSet(viewsets.ModelViewSet):
     queryset = Stockmarkets.objects.all()
     serializer_class = serializers.StockmarketsSerializer
@@ -1577,6 +1602,12 @@ def RequestGetInteger(request, field, default=None):
 def RequestPostInteger(request, field, default=None):
     try:
         r = int(request.POST.get(field))
+    except:
+        r=default
+    return r
+def RequestInteger(request, field, default=None):
+    try:
+        r = int(request.data.get(field))
     except:
         r=default
     return r
@@ -1629,6 +1660,12 @@ def RequestPostDecimal(request, field, default=None):
     except:
         r=default
     return r
+def RequestDecimal(request, field, default=None):
+    try:
+        r = Decimal(request.data.get(field))
+    except:
+        r=default
+    return r
 
 
 def obj_from_url(request, url):
@@ -1656,6 +1693,14 @@ def RequestPostUrl(request, field,  default=None):
 def RequestGetUrl(request, field,  default=None):
     try:
         r = obj_from_url(request, request.GET.get(field))
+    except:
+        r=default
+    return r
+ 
+## Returns a model obect
+def RequestUrl(request, field,  default=None):
+    try:
+        r = obj_from_url(request, request.data.get(field))
     except:
         r=default
     return r
