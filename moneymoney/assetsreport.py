@@ -169,15 +169,15 @@ def assetsreport(request):
     else:
         doc.addParagraph(_("There aren't invested assets"), "Standard")
 
-        ### Current Investment Operations list
-        doc.addParagraph(_("Current investment operations"),"Heading 2")
+    ## Current Investment Operations list
+    doc.addParagraph(_("Current investment operations"),"Heading 2")
 #        doc.mem.frmMain.on_actionInvestmentsOperations_triggered()
 #        model=doc.mem.frmMain.w.mqtwCurrent.officegeneratorModel(_("CurrentInvestmentOperations"))
 #        model.removeColumns([8, 9, 11])        
 #        model.odt_table(self, 26,  6)       
 #        doc.pageBreak(True)
 #        
-        ### Graphics wdgInvestments clases
+    ### Graphics wdgInvestments clases
 #        doc.mem.frmMain.on_actionInvestmentsClasses_triggered()
 #        doc.mem.frmMain.w.open_all_tabs()#Load tabs to finish animations
 #        doc.mem.frmMain.w.viewTPC.on_actionShowData_triggered()
@@ -187,7 +187,7 @@ def assetsreport(request):
 #        doc.mem.frmMain.w.viewCountry.on_actionShowData_triggered()
 #        doc.mem.frmMain.w.viewPCI.on_actionShowData_triggered()
 #        
-        doc.addParagraph(_("Investments group by variable percentage"), "Heading 2")
+    doc.addParagraph(_("Investments group by variable percentage"), "Heading 2")
 #        savefile="{}/wdgInvestmentsClasses_canvasTPC_legend.png".format(doc.dir)
 #        doc.mem.frmMain.w.tab.setCurrentIndex(0)
 #        doc.sleep(2)
@@ -196,7 +196,7 @@ def assetsreport(request):
 #        doc.illustration([savefile, ], 25, 13, savefile)
 #        doc.pageBreak(True)
 #        
-        doc.addParagraph(_("Investments group by investment type"), "Heading 2")
+    doc.addParagraph(_("Investments group by investment type"), "Heading 2")
 #        savefile="{}/wdgInvestmentsClasses_canvasTipo_legend.png".format(doc.dir)
 #        doc.mem.frmMain.w.tab.setCurrentIndex(2)
 #        doc.sleep(2)
@@ -205,7 +205,7 @@ def assetsreport(request):
 #        doc.illustration([savefile, ], 25, 13, savefile)
 #        doc.pageBreak(True)
 #        
-        doc.addParagraph(_("Investments group by leverage"), "Heading 2")        
+    doc.addParagraph(_("Investments group by leverage"), "Heading 2")        
 #        savefile="{}/wdgInvestmentsClasses_canvasApalancado_legend.png".format(doc.dir)
 #        doc.mem.frmMain.w.tab.setCurrentIndex(3)
 #        doc.sleep(2)
@@ -214,7 +214,7 @@ def assetsreport(request):
 #        doc.illustration([savefile, ], 25, 13, savefile)
 #        doc.pageBreak(True)
 #        
-        doc.addParagraph(_("Investments group by investment product"), "Heading 2")
+    doc.addParagraph(_("Investments group by investment product"), "Heading 2")
 #        savefile="{}/wdgInvestmentsClasses_canvasProduct_legend.png".format(doc.dir)
 #        doc.mem.frmMain.w.tab.setCurrentIndex(5)
 #        doc.sleep(2)
@@ -223,7 +223,7 @@ def assetsreport(request):
 #        doc.illustration([savefile, ], 25, 13, savefile)
 #        doc.pageBreak(True)
 #        
-        doc.addParagraph(_("Investments group by country"), "Heading 2")
+    doc.addParagraph(_("Investments group by country"), "Heading 2")
 #        savefile="{}/wdgInvestmentsClasses_canvasCountry_legend.png".format(doc.dir)
 #        doc.mem.frmMain.w.tab.setCurrentIndex(4)
 #        doc.sleep(2)
@@ -232,7 +232,7 @@ def assetsreport(request):
 #        doc.illustration([savefile, ], 25, 13, savefile)
 #        doc.pageBreak(True)
 #        
-        doc.addParagraph(_("Investments group by Call/Put/Inline"), "Heading 2")
+    doc.addParagraph(_("Investments group by Call/Put/Inline"), "Heading 2")
 #        savefile="{}/wdgInvestmentsClasses_canvasPCI_legend.png".format(doc.dir)
 #        doc.mem.frmMain.w.tab.setCurrentIndex(1)
 #        doc.sleep(2)
@@ -241,32 +241,64 @@ def assetsreport(request):
 #        doc.illustration([savefile, ], 25, 13, savefile)
 #        
 #        doc.mem.frmMain.showMaximized()
-        doc.pageBreak()
-        
-        #Orders report
-        doc.addParagraph(_("Investments orders"), "Heading 1")
-#        doc.mem.frmMain.on_actionOrders_triggered()        
-#        doc.simpleParagraph(_("These are the current investment orders that have been set in your banks"))
-#        model=doc.mem.frmMain.w.mqtwOrders.officegeneratorModel("mqtwOrders")
-#        model.odt_table(self, 26, 8)
-        doc.pageBreak()
-        
-        #Dividend report
-        doc.addParagraph(_("Dividend estimations report"), "Heading 1")
-#        doc.mem.frmMain.on_actionDividendsReport_triggered()
-#        model=doc.mem.frmMain.w.mqtw.officegeneratorModel("mqtwDividendsReport")
-#        model.odt_table(self, 26, 8)
-#        doc.simpleParagraph(_("If I keep this investment during a year, I'll get {0}").format(Assets(doc.mem).dividends_estimated()))
-        doc.pageBreak()
-        
-        # Ranking de investments
-        doc.addParagraph(_("Historical investments ranking"), "Heading 1")    
-#        doc.mem.frmMain.on_actionInvestmentRanking_triggered()
-#        model=doc.mem.frmMain.w.mqtwCurrentOperations.officegeneratorModel("mqtwCurrentOperations")
-#        model.vh=list(range(1, len(model.data)+1))
-#        model.odt_table(self, 26, 8)        
+    doc.pageBreak("Landscape")
     
-#    doc.export_pdf('AssetsReport-{}.pdf'.format(dtnaive2string(datetime.now(), "%Y%m%d%H%M")))
+    #Orders report
+    doc.addParagraph(_("Investments orders"), "Heading 1")
+    dict_orders_list=request_get(request._request.build_absolute_uri(reverse('OrdersList'))+"?active=true", authorization)
+    orders_list=[( _("Date"), _("Expiration"), _("Investment"), _("Shares"), _("Price"), _("Amount"), _("% from current price"))]
+    for o in dict_orders_list:
+        print(o)
+        orders_list.append((
+            o["date"], 
+            o["expiration"], 
+            o["investmentsname"], 
+            o["shares"], 
+            Currency(o["price"], o["currency"]), 
+            Currency(o["amount"], o["currency"]), 
+            Percentage(o["percentage_from_price"], 1)
+        ))
+
+    doc.addTableParagraph(orders_list, columnssize_percentages=[40, 20, 20, ],  size=8, style="3D")
+    doc.pageBreak("Landscape")
+    
+    #Dividend report
+    doc.addParagraph(_("Dividend estimations report"), "Heading 1")
+    from moneymoney.views import ReportDividends
+    dict_reportdividends=loads(ReportDividends(request._request).content)
+    reportdividends=[( _("Name"), _("Current price"), _("DPS"), _("Shares"), _("Estimated"), _("% Annual"))]
+    for o in dict_reportdividends:
+        reportdividends.append((
+            o["name"], 
+            Currency(o["current_price"], o["currency"]), 
+            Currency(o["dps"], o["currency"]), 
+            o["shares"], 
+            Currency(o["estimated"], o["currency"]), 
+            Percentage(o["percentage"], 1)
+        ))
+
+    doc.addTableParagraph(reportdividends, columnssize_percentages=[40, 20, 20, ],  size=8, style="3D")
+    doc.addParagraph(_(f"If I keep this investment during a year, I'll get {Currency(listdict_sum(dict_reportdividends,'estimated'),c)}"), "Standard")
+    doc.pageBreak()
+    
+    # Ranking de investments
+    doc.addParagraph(_("Historical investments ranking"), "Heading 1")    
+    from moneymoney.views import ReportRanking
+    dict_reportranking=loads(ReportRanking(request._request).content)
+    reportranking=[(_("Ranking"), _("Name"), _("Current net gains"), _("Historical net gains"), _("Dividend"), _("Total"))]
+    for o in dict_reportranking:
+        reportranking.append((
+            o["ranking"], 
+            o["name"], 
+            Currency(o["current_net_gains"], c), 
+            Currency(o["historical_net_gains"], c), 
+            Currency(o["dividends"], c), 
+            Currency(o["total"], c), 
+        ))
+
+    doc.addTableParagraph(reportranking, columnssize_percentages=[40, 20, 20, ],  size=7, style="3D")
+
+#    filenamee='AssetsReport-{}.pdf'.format(dtnaive2string(datetime.now(), "%Y%m%d%H%M")
     filename="AssetsReport.pdf"
     doc.export_pdf(filename)
     doc.close()
