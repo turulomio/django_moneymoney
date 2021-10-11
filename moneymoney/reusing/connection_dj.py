@@ -25,7 +25,13 @@ def cursor_rows_as_dict(key, sql,  params=[]):
     return d
     
 def cursor_one_row(sql, params=[]):
-    return cursor_rows(sql, params)[0]
+    with connection.cursor() as cursor:
+        cursor.execute(sql, params)
+#        print(cursor.cursor.rowcount)
+        if cursor.cursor.rowcount==0:
+            return None
+        row = dictfetchall(cursor)
+    return row[0]
 
 def cursor_one_column(sql, params=[]):
     r=[]

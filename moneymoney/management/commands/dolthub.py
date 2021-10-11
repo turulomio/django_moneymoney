@@ -17,19 +17,23 @@ class Command(BaseCommand):
 
         res = requests.get('https://dolthub.com/api/v1alpha1/{}/{}/{}/'.format(owner, repo, branch), params={'q': 'select count(id) as count from products'})
         numberjson=int(res.json()["rows"][0]["count"])
-        print(numberjson)
+        print("Productos en dolthub",  numberjson)
         execute("update products set obsolete=true where id>0")
 
         #Load all json data in json list
         json=[]
         for i in tqdm(range (math.ceil(numberjson/200))):
             res = requests.get('https://dolthub.com/api/v1alpha1/{}/{}/{}/'.format(owner, repo, branch), params={'q': f'select * from products order by id desc limit 200 offset {i*200}'})
+            
+            print("Offset", i*200, "Hay",  len(res.json()["rows"]))
             for j in res.json()["rows"]:
                 json.append(j)
         print(len(json), "Must be the number before")
+        insert, update=0, 0
         for j in tqdm(json):
             row=cursor_one_row("select * from products where id = %s", (j["id"],))
             if row is None:
+                insert=insert+1
                 execute("""
                     INSERT INTO 
                         PRODUCTS
@@ -76,6 +80,7 @@ class Command(BaseCommand):
                     j["id"],
                 ))
             else:
+                update=update+1
                 execute("""
                     UPDATE 
                         PRODUCTS
@@ -121,3 +126,4 @@ class Command(BaseCommand):
                     j["decimals"],
                     j["id"],
                 ))
+        print("Updated:",  update,  "Inserted",  insert)
