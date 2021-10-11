@@ -2,7 +2,7 @@
   "header": {
     "comment": "eric project file for project django_moneymoney",
     "copyright": "Copyright (C) 2021 , ",
-    "saved": "2021-10-09, 10:28:19"
+    "saved": "2021-10-11, 06:51:19"
   },
   "project": {
     "AUTHOR": "",
@@ -100,7 +100,6 @@
       "moneymoney/reusing/call_by_name.py",
       "moneymoney/migrations/__init__.py",
       "moneymoney/management/commands/permissions.py",
-      "moneymoney/management/commands/npm_update.py",
       "moneymoney/management/commands/doxygen.py",
       "moneymoney/management/commands/migrate_from_xulpymoney.py",
       "moneymoney/management/commands/makedbmessages.py",
@@ -111,7 +110,8 @@
       "moneymoney/productrange.py",
       "moneymoney/reusing/libmanagers.py",
       "moneymoney/management/commands/sync_quotes.py",
-      "moneymoney/reusing/connection_pg.py"
+      "moneymoney/reusing/connection_pg.py",
+      "moneymoney/assetsreport.py"
     ],
     "SPELLEXCLUDES": "",
     "SPELLLANGUAGE": "en_US",
