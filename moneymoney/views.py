@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse, resolve
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from django.http import JsonResponse, HttpResponse, FileResponse
+from django.http import JsonResponse, HttpResponse
 from moneymoney.investmentsoperations import IOC, InvestmentsOperations_from_investment,  InvestmentsOperationsManager_from_investment_queryset, InvestmentsOperationsTotals_from_investment, InvestmentsOperationsTotalsManager_from_all_investments, InvestmentsOperationsTotalsManager_from_investment_queryset, Simulate_InvestmentsOperations_from_investment
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict
 from moneymoney.reusing.casts import str2bool, string2list_of_integers
@@ -98,11 +98,11 @@ def logout(request):
 @api_view(['GET', ])    
 def AssetsReport(request):
     from moneymoney.assetsreport import assetsreport
+    from base64 import b64encode
     filename=assetsreport(request)
     with open(filename, "rb") as pdf:
-        response = HttpResponse(pdf, content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
-        return response
+        encoded_string = b64encode(pdf.read())
+        return HttpResponse(encoded_string)
 
 class ConceptsViewSet(viewsets.ModelViewSet):
     queryset = Concepts.objects.all()

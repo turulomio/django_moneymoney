@@ -6,6 +6,7 @@ from json import loads
 from moneymoney import __version__
 from moneymoney.reusing.connection_dj import cursor_one_field
 from moneymoney.reusing.currency import  Currency
+from moneymoney.reusing.decorators import timeit
 #from moneymoney.reusing.datetime_functions import days2string
 from moneymoney.reusing.listdict_functions import listdict_sum, listdict_sum_negatives, listdict_sum_positives
 from moneymoney.reusing.percentage import  Percentage
@@ -15,6 +16,7 @@ def request_get(absolute_url, authorization):
     a=get(absolute_url, headers={'Authorization': f'Token {authorization}'})
     return loads(a.content)
 
+@timeit
 def assetsreport(request):
     authorization=cursor_one_field("select * from authtoken_token where user_id=%s", (request.user.id, ))
     c=request.local_currency
@@ -248,7 +250,6 @@ def assetsreport(request):
     dict_orders_list=request_get(request._request.build_absolute_uri(reverse('OrdersList'))+"?active=true", authorization)
     orders_list=[( _("Date"), _("Expiration"), _("Investment"), _("Shares"), _("Price"), _("Amount"), _("% from current price"))]
     for o in dict_orders_list:
-        print(o)
         orders_list.append((
             o["date"], 
             o["expiration"], 
