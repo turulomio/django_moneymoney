@@ -97,11 +97,12 @@ def logout(request):
 @csrf_exempt
 @api_view(['GET', ])    
 def AssetsReport(request):
-    from moneymoney.assetsreport import assetsreport
+    from moneymoney.assetsreport import generate_assets_report
     from base64 import b64encode
-    filename=assetsreport(request)
+    filename=generate_assets_report(request)
     with open(filename, "rb") as pdf:
         encoded_string = b64encode(pdf.read())
+        print(encoded_string[:100])
         return HttpResponse(encoded_string)
 
 class ConceptsViewSet(viewsets.ModelViewSet):

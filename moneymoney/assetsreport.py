@@ -6,24 +6,22 @@ from json import loads
 from moneymoney import __version__
 from moneymoney.reusing.connection_dj import cursor_one_field
 from moneymoney.reusing.currency import  Currency
-from moneymoney.reusing.decorators import timeit
-#from moneymoney.reusing.datetime_functions import days2string
 from moneymoney.reusing.listdict_functions import listdict_sum, listdict_sum_negatives, listdict_sum_positives
 from moneymoney.reusing.percentage import  Percentage
 from os import path
+from tempfile import gettempdir, _get_candidate_names
 from unogenerator import ODT
 
 def request_get(absolute_url, authorization):
     a=get(absolute_url, headers={'Authorization': f'Token {authorization}'})
     return loads(a.content)
 
-@timeit
-def assetsreport(request):
+def generate_assets_report(request):
     authorization=cursor_one_field("select * from authtoken_token where user_id=%s", (request.user.id, ))
     c=request.local_currency
     z=request.local_zone
     year=date.today().year
-    template=f"{path.dirname(__file__)}/../moneymoney/templates/AssetsReport.odt"
+    template=f"{path.dirname(__file__)}/templates/AssetsReport.odt"
     print(template)
     doc=ODT(template)
     doc.setMetadata( 
@@ -98,6 +96,15 @@ def assetsreport(request):
 
         doc.addTableParagraph(report_annual, columnssize_percentages=[10, 18, 18, 118, 18, 18 ],  size=7, name="TableReportAnnual")
 
+        # Assests current year incomes
+        from moneymoney.views import ReportAnnualIncome
+        doc.addParagraph(_("Assets current year detail"), "Heading 2")
+        dict_report_annual_income=loads(ReportAnnualIncome(request._request, year).content)
+        report_annual_income=[(_("Month"), _("Incomes"), _("Expenses"), _("Gains"), _("Dividends"), _("Total"))]
+        for o in dict_report_annual_income:
+            report_annual_income.append((o["month"], Currency(o["incomes"], c), Currency(o["expenses"], c), Currency(o["gains"], c), Currency(o["dividends"], c), Currency(o["total"], c)))
+
+        doc.addTableParagraph(report_annual_income, columnssize_percentages=[40, 20, 20, 20],  size=8)
                 
         ## Target
         target=Percentage(4,100)#AnnualTarget(doc.mem).init__from_db(date.today().year)
@@ -304,10 +311,11 @@ def assetsreport(request):
             Currency(o["total"], c), 
         ))
 
-    doc.addTableParagraph(reportranking, columnssize_percentages=[8, 42, 12.5, 12.5, 12.5, 12.5 ],  size=6)
+    doc.addTableParagraph(reportranking, columnssize_percentages=[6, 44, 12.5, 12.5, 12.5, 12.5 ],  size=6)
+    filename=path.join(gettempdir(), "assets_report_" + next(_get_candidate_names())+".pdf")
+    print(filename)
 
 #    filenamee='AssetsReport-{}.pdf'.format(dtnaive2string(datetime.now(), "%Y%m%d%H%M")
-    filename="/tmp/AssetsReport.pdf"
     doc.save(filename+".odt")
     doc.export_pdf(filename)
     doc.close()
