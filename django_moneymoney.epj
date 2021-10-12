@@ -2,7 +2,7 @@
   "header": {
     "comment": "eric project file for project django_moneymoney",
     "copyright": "Copyright (C) 2021 , ",
-    "saved": "2021-10-11, 06:51:19"
+    "saved": "2021-10-11, 16:44:21"
   },
   "project": {
     "AUTHOR": "",
@@ -111,7 +111,8 @@
       "moneymoney/reusing/libmanagers.py",
       "moneymoney/management/commands/sync_quotes.py",
       "moneymoney/reusing/connection_pg.py",
-      "moneymoney/assetsreport.py"
+      "moneymoney/assetsreport.py",
+      "moneymoney/management/commands/dolthub.py"
     ],
     "SPELLEXCLUDES": "",
     "SPELLLANGUAGE": "en_US",

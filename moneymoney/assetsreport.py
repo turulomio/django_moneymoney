@@ -56,10 +56,15 @@ def assetsreport(request):
     doc.addParagraph(_("About Xulpymoney"), "Heading 1")
     doc.pageBreak()
     
-    # Assets
-    doc.addParagraph(_("Assets"), "Heading 1")
+    #Personal settings
+    
+    doc.addParagraph(_("Personal settings"), "Heading 1")
     doc.addParagraph(_(f"Your user currency is set to {c}."),  "Standard")
     doc.addParagraph(_(f"Your local time zone is set to {z}."),  "Standard")
+    doc.pageBreak()
+    
+    # Assets
+    doc.addParagraph(_("Assets"), "Heading 1")
     doc.addParagraph(_(f"Total assets of the user are {vTotal}."),  "Standard")
     if vTotalLastYear.amount>=0:
         moreorless=_("more")
@@ -79,7 +84,7 @@ def assetsreport(request):
             if o["active"]==True:
                 bankswithbalance.append((o["name"], Currency(o["balance_accounts"], c), Currency(o["balance_investments"], c), Currency(o["balance_total"], c)))
 
-        doc.addTableParagraph(bankswithbalance, columnssize_percentages=[40, 20, 20, ],  size=8, style="3D")
+        doc.addTableParagraph(bankswithbalance, columnssize_percentages=[40, 20, 20, 20],  size=8)
         doc.addParagraph(_(f"Sum of all bank balances is {Currency(listdict_sum(dict_bankswithbalance, 'balance_total'), c)}"), "Standard")
 
         # Assests current year
@@ -89,7 +94,7 @@ def assetsreport(request):
         for o in dict_report_annual["data"]:
             report_annual.append([o["month"], Currency(o["account_balance"], c), Currency(o["investment_balance"], c), Currency(o["total"], c), Percentage(o["percentage_year"], 1), Currency(o["diff_lastmonth"], c)])
 
-        doc.addTableParagraph(report_annual, columnssize_percentages=[40, 20, 20, ],  size=7, style="3D")
+        doc.addTableParagraph(report_annual, columnssize_percentages=[10, 18, 18, 118, 18, 18 ],  size=7, name="TableReportAnnual")
 
                 
         ## Target
@@ -109,7 +114,7 @@ def assetsreport(request):
         
         ### Current year investment gains by product type
         doc.addParagraph(_("Current year investment gains group by product type"), "Heading 2")
-        report_annual_gainsbyproductstypes=[(_("Name"), _("Gross gains"), _("Gross dividends"), _("Net gains"), _("Net divid"))]
+        report_annual_gainsbyproductstypes=[(_("Name"), _("Gross gains"), _("Gross dividends"), _("Net gains"), _("Net dividends"))]
         for o in dict_report_annual_gainsbyproductstypes:
             report_annual_gainsbyproductstypes.append((
                 o["name"], 
@@ -119,7 +124,7 @@ def assetsreport(request):
                 Currency(o["dividends_net"], c), 
             ))
 
-        doc.addTableParagraph(report_annual_gainsbyproductstypes, columnssize_percentages=[40, 20, 20, ],  size=8, style="3D")
+        doc.addTableParagraph(report_annual_gainsbyproductstypes,  size=8)
         
         doc.addParagraph(_(f"Gross gains + Gross dividends = {vTotal_gains_dividends_gross}."),  "Standard")
         doc.addParagraph(_(f"Net gains + Net dividends = {vTotal_gains_dividends_net}."),  "Standard")
@@ -140,7 +145,7 @@ def assetsreport(request):
             ))
     vTotal_accounts_local=listdict_sum(dict_accountswithbalance, "balance_user")
 
-    doc.addTableParagraph(accountswithbalance, columnssize_percentages=[40, 20, 20, ],  size=8, style="3D")
+    doc.addTableParagraph(accountswithbalance, columnssize_percentages=[37, 33, 15, 15],  size=8)
     doc.addParagraph(_(f"Sum of all account balances is {vTotal_accounts_local}"), "Standard")
     doc.pageBreak("Landscape")
         
@@ -159,7 +164,7 @@ def assetsreport(request):
             Percentage(o["percentage_invested"], 1), 
             Percentage(o["percentage_selling_point"], 1), 
         ))
-    doc.addTableParagraph(investmentswithbalance, columnssize_percentages=[40, 20, 20, ],  size=8, style="3D")
+    doc.addTableParagraph(investmentswithbalance, columnssize_percentages=[52, 12, 12, 12, 12],  size=8)
     invested_user=Currency(listdict_sum(dict_investmentswithbalance, "invested_user"), c)
     gains_positives=Currency(listdict_sum_positives(dict_investmentswithbalance, "gains_user"), c)
     gains_negatives=Currency(listdict_sum_negatives(dict_investmentswithbalance, "gains_user"), c)
@@ -260,7 +265,7 @@ def assetsreport(request):
             Percentage(o["percentage_from_price"], 1)
         ))
 
-    doc.addTableParagraph(orders_list, columnssize_percentages=[40, 20, 20, ],  size=8, style="3D")
+    doc.addTableParagraph(orders_list, columnssize_percentages=[8, 8, 44, 10, 10, 10, 10 ],  size=8)
     doc.pageBreak("Landscape")
     
     #Dividend report
@@ -278,7 +283,7 @@ def assetsreport(request):
             Percentage(o["percentage"], 1)
         ))
 
-    doc.addTableParagraph(reportdividends, columnssize_percentages=[40, 20, 20, ],  size=8, style="3D")
+    doc.addTableParagraph(reportdividends, columnssize_percentages=[50, 10, 10, 10, 10, 10 ],  size=8)
     doc.addParagraph(_(f"If I keep this investment during a year, I'll get {Currency(listdict_sum(dict_reportdividends,'estimated'),c)}"), "Standard")
     doc.pageBreak()
     
@@ -297,10 +302,11 @@ def assetsreport(request):
             Currency(o["total"], c), 
         ))
 
-    doc.addTableParagraph(reportranking, columnssize_percentages=[40, 20, 20, ],  size=7, style="3D")
+    doc.addTableParagraph(reportranking, columnssize_percentages=[8, 42, 12.5, 12.5, 12.5, 12.5 ],  size=6)
 
 #    filenamee='AssetsReport-{}.pdf'.format(dtnaive2string(datetime.now(), "%Y%m%d%H%M")
     filename="AssetsReport.pdf"
+    doc.save(filename+".odt")
     doc.export_pdf(filename)
     doc.close()
     return filename
