@@ -100,8 +100,23 @@ def listdict_has_key(listdict, key):
         return False
     return key in listdict[0]
 
-def listdict_order_by(ld, key, reverse=False):
-    return sorted(ld,  key=lambda item: item[key], reverse=reverse)
+
+## Order data columns. None values are set at the beginning
+def listdict_order_by(ld, key, reverse=False, none_at_top=True):
+    nonull=[]
+    null=[]
+    for o in ld:
+        com=o[key]
+        if com is None:
+            null.append(o)
+        else:
+            nonull.append(o)
+    nonull=sorted(nonull, key=lambda item: item[key], reverse=reverse)
+    if none_at_top==True:#Set None at top of the list
+        return null+nonull
+    else:
+        return nonull+null
+
 
 
 def listdict_print(listdict):

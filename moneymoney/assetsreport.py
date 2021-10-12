@@ -6,7 +6,7 @@ from json import loads
 from moneymoney import __version__
 from moneymoney.reusing.connection_dj import cursor_one_field
 from moneymoney.reusing.currency import  Currency
-from moneymoney.reusing.listdict_functions import listdict_sum, listdict_sum_negatives, listdict_sum_positives
+from moneymoney.reusing.listdict_functions import listdict_sum, listdict_sum_negatives, listdict_sum_positives, listdict_order_by
 from moneymoney.reusing.percentage import  Percentage
 from os import path
 from tempfile import gettempdir, _get_candidate_names
@@ -164,6 +164,7 @@ def generate_assets_report(request):
     doc.addParagraph(_("Investments list"), "Heading 2")
     doc.addParagraph(_("Next list is sorted by the distance in percent to the selling point."), "Standard")
     dict_investmentswithbalance=request_get(request._request.build_absolute_uri(reverse('InvestmentsWithBalance'))+"?active=true", authorization)
+    dict_investmentswithbalance=listdict_order_by(dict_investmentswithbalance, "percentage_selling_point")
     investmentswithbalance=[(_("Name"), _("Balance"), _("Gains"), _("% invested"), _("% selling point"))]
     for o in dict_investmentswithbalance:
         investmentswithbalance.append((
@@ -262,6 +263,7 @@ def generate_assets_report(request):
     #Orders report
     doc.addParagraph(_("Investments orders"), "Heading 1")
     dict_orders_list=request_get(request._request.build_absolute_uri(reverse('OrdersList'))+"?active=true", authorization)
+    dict_orders_list=listdict_order_by(dict_orders_list, "percentage_from_price", reverse=True)
     orders_list=[( _("Date"), _("Expiration"), _("Investment"), _("Shares"), _("Price"), _("Amount"), _("% from current price"))]
     for o in dict_orders_list:
         orders_list.append((
