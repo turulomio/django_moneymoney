@@ -10,6 +10,7 @@ from moneymoney.reusing.decorators import timeit
 #from moneymoney.reusing.datetime_functions import days2string
 from moneymoney.reusing.listdict_functions import listdict_sum, listdict_sum_negatives, listdict_sum_positives
 from moneymoney.reusing.percentage import  Percentage
+from os import path
 from unogenerator import ODT
 
 def request_get(absolute_url, authorization):
@@ -22,8 +23,9 @@ def assetsreport(request):
     c=request.local_currency
     z=request.local_zone
     year=date.today().year
-    
-    doc=ODT('./moneymoney/templates/AssetsReport.odt')
+    template=f"{path.dirname(__file__)}/../moneymoney/templates/AssetsReport.odt"
+    print(template)
+    doc=ODT(template)
     doc.setMetadata( 
         _("Assets report"),  
         _("This is an automatic generated report from Money Money"), 
@@ -53,7 +55,7 @@ def assetsreport(request):
     vTarget_amount=Currency(vTotalLastYear.amount*vTarget_percentage.value, c)
 
     # About
-    doc.addParagraph(_("About Xulpymoney"), "Heading 1")
+    doc.addParagraph(_("About Money Money"), "Heading 1")
     doc.pageBreak()
     
     #Personal settings
@@ -305,7 +307,7 @@ def assetsreport(request):
     doc.addTableParagraph(reportranking, columnssize_percentages=[8, 42, 12.5, 12.5, 12.5, 12.5 ],  size=6)
 
 #    filenamee='AssetsReport-{}.pdf'.format(dtnaive2string(datetime.now(), "%Y%m%d%H%M")
-    filename="AssetsReport.pdf"
+    filename="/tmp/AssetsReport.pdf"
     doc.save(filename+".odt")
     doc.export_pdf(filename)
     doc.close()
