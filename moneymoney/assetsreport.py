@@ -13,7 +13,8 @@ from tempfile import gettempdir, _get_candidate_names
 from unogenerator import ODT
 
 def request_get(absolute_url, authorization):
-    a=get(absolute_url, headers={'Authorization': f'Token {authorization}'})
+    ## verify should be changed
+    a=get(absolute_url, headers={'Authorization': f'Token {authorization}'}, verify=False)
     return loads(a.content)
 
 def generate_assets_report(request):
