@@ -9,8 +9,11 @@ from moneymoney.reusing.currency import  Currency
 from moneymoney.reusing.listdict_functions import listdict_sum, listdict_sum_negatives, listdict_sum_positives, listdict_order_by
 from moneymoney.reusing.percentage import  Percentage
 from os import path
+from pkg_resources import resource_filename
 from tempfile import gettempdir, _get_candidate_names
+from uno import systemPathToFileUrl
 from unogenerator import ODT
+
 
 def request_get(absolute_url, authorization):
     ## verify should be changed
@@ -25,6 +28,8 @@ def generate_assets_report(request):
     template=f"{path.dirname(__file__)}/templates/AssetsReport.odt"
     print(template)
     doc=ODT(template)
+    doc.document.StyleFamilies.loadStylesFromURL(systemPathToFileUrl(resource_filename('unogenerator', 'templates/additionalstyles.odt')), doc.document.StyleFamilies.StyleLoaderOptions)
+
     doc.setMetadata( 
         _("Assets report"),  
         _("This is an automatic generated report from Money Money"), 
@@ -60,18 +65,18 @@ def generate_assets_report(request):
     #Personal settings
     
     doc.addParagraph(_("Personal settings"), "Heading 1")
-    doc.addParagraph(_(f"Your user currency is set to {c}."),  "Standard")
-    doc.addParagraph(_(f"Your local time zone is set to {z}."),  "Standard")
+    doc.addParagraph(_(f"Your user currency is set to {c}."),  "MyStandard")
+    doc.addParagraph(_(f"Your local time zone is set to {z}."),  "MyStandard")
     doc.pageBreak()
     
     # Assets
     doc.addParagraph(_("Assets"), "Heading 1")
-    doc.addParagraph(_(f"Total assets of the user are {vTotal}."),  "Standard")
+    doc.addParagraph(_(f"Total assets of the user are {vTotal}."),  "MyStandard")
     if vTotalLastYear.amount>=0:
         moreorless=_("more")
         if (vTotal-vTotalLastYear).amount<0:
             moreorless=_("less")
-        doc.addParagraph(_(f"At last year end you had {vTotalLastYear}, so it's a {Percentage(vTotal-vTotalLastYear, vTotalLastYear)} {moreorless} of the total assets at the end of the last year."), "Standard")
+        doc.addParagraph(_(f"At last year end you had {vTotalLastYear}, so it's a {Percentage(vTotal-vTotalLastYear, vTotalLastYear)} {moreorless} of the total assets at the end of the last year."), "MyStandard")
     
     
     
@@ -84,9 +89,8 @@ def generate_assets_report(request):
         for o in dict_bankswithbalance:
             if o["active"]==True:
                 bankswithbalance.append((o["name"], Currency(o["balance_accounts"], c), Currency(o["balance_investments"], c), Currency(o["balance_total"], c)))
-
-        doc.addTableParagraph(bankswithbalance, columnssize_percentages=[40, 20, 20, 20],  size=8)
-        doc.addParagraph(_(f"Sum of all bank balances is {Currency(listdict_sum(dict_bankswithbalance, 'balance_total'), c)}"), "Standard")
+        bankswithbalance.append([_("Total"), Currency(listdict_sum(dict_bankswithbalance, "balance_accounts"), c), Currency(listdict_sum(dict_bankswithbalance, "balance_investments"), c), Currency(listdict_sum(dict_bankswithbalance, "balance_total"), c)])
+        doc.addTableParagraph(bankswithbalance, columnssize_percentages=[40, 20, 20, 20],  size=8, style="Table1Total")
 
         # Assests current year
         doc.addParagraph(_("Assets current year evolution"), "Heading 2")
@@ -94,8 +98,9 @@ def generate_assets_report(request):
         report_annual=[(_("Month"), _("Accounts balance"), _("Investments balance"), _("Total"),  _("Annual percentage"), _("Month diff"))]
         for o in dict_report_annual["data"]:
             report_annual.append([o["month"], Currency(o["account_balance"], c), Currency(o["investment_balance"], c), Currency(o["total"], c), Percentage(o["percentage_year"], 1), Currency(o["diff_lastmonth"], c)])
+        report_annual.append([_("Total"), "", "", "", "", Currency(listdict_sum(dict_report_annual["data"], "diff_lastmonth"), c)])
 
-        doc.addTableParagraph(report_annual, columnssize_percentages=[10, 18, 18, 118, 18, 18 ],  size=7, name="TableReportAnnual")
+        doc.addTableParagraph(report_annual, columnssize_percentages=[10, 18, 18, 18, 18, 18 ],  size=7, name="TableReportAnnual", style="Table1Total")
 
         # Assests current year incomes
         from moneymoney.views import ReportAnnualIncome
@@ -113,7 +118,7 @@ def generate_assets_report(request):
                 _(f"The investment system has established a {target} year target.")+" " +
                 _(f"With this target you should gain {vTarget_amount} at the end of the year.") +" " +
                 _(f"Up to date you have got {vTotal_gains_dividends_net} (net gains + net dividends) what represents a {Percentage(vTotal_gains_dividends_net, vTarget_amount)} of the target."), 
-                "Standard"
+                "MyStandard"
         )
         doc.pageBreak("Landscape")
         
@@ -136,8 +141,8 @@ def generate_assets_report(request):
 
         doc.addTableParagraph(report_annual_gainsbyproductstypes,  size=8)
         
-        doc.addParagraph(_(f"Gross gains + Gross dividends = {vTotal_gains_dividends_gross}."),  "Standard")
-        doc.addParagraph(_(f"Net gains + Net dividends = {vTotal_gains_dividends_net}."),  "Standard")
+        doc.addParagraph(_(f"Gross gains + Gross dividends = {vTotal_gains_dividends_gross}."),  "MyStandard")
+        doc.addParagraph(_(f"Net gains + Net dividends = {vTotal_gains_dividends_net}."),  "MyStandard")
         doc.pageBreak()
 
     ## Accounts
@@ -156,14 +161,14 @@ def generate_assets_report(request):
     vTotal_accounts_local=listdict_sum(dict_accountswithbalance, "balance_user")
 
     doc.addTableParagraph(accountswithbalance, columnssize_percentages=[37, 33, 15, 15],  size=8)
-    doc.addParagraph(_(f"Sum of all account balances is {vTotal_accounts_local}"), "Standard")
+    doc.addParagraph(_(f"Sum of all account balances is {vTotal_accounts_local}"), "MyStandard")
     doc.pageBreak("Landscape")
         
     ## Investments
     doc.addParagraph(_("Current investments"), "Heading 1")
     
     doc.addParagraph(_("Investments list"), "Heading 2")
-    doc.addParagraph(_("Next list is sorted by the distance in percent to the selling point."), "Standard")
+    doc.addParagraph(_("Next list is sorted by the distance in percent to the selling point."), "MyStandard")
     dict_investmentswithbalance=request_get(request._request.build_absolute_uri(reverse('InvestmentsWithBalance'))+"?active=true", authorization)
     dict_investmentswithbalance=listdict_order_by(dict_investmentswithbalance, "percentage_selling_point")
     investmentswithbalance=[(_("Name"), _("Balance"), _("Gains"), _("% invested"), _("% selling point"))]
@@ -181,11 +186,11 @@ def generate_assets_report(request):
     gains_negatives=Currency(listdict_sum_negatives(dict_investmentswithbalance, "gains_user"), c)
     gains=gains_positives+gains_negatives
     if invested_user.isZero()==False:
-        doc.addParagraph(_(f"Sum of all invested assets is {invested_user}."), "Standard")
-        doc.addParagraph(_(f"Investment gains (positive minus negative results): {gains_positives} - {-gains_negatives} are {gains}, what represents a {Percentage(gains, invested_user)} of total assets."), "Standard")
-#        doc.addParagraph(_(" Assets average age: {}").format(  days2string(doc.mem.data.investments_active().average_age())), "Standard")
+        doc.addParagraph(_(f"Sum of all invested assets is {invested_user}."), "MyStandard")
+        doc.addParagraph(_(f"Investment gains (positive minus negative results): {gains_positives} - {-gains_negatives} are {gains}, what represents a {Percentage(gains, invested_user)} of total assets."), "MyStandard")
+#        doc.addParagraph(_(" Assets average age: {}").format(  days2string(doc.mem.data.investments_active().average_age())), "MyStandard")
     else:
-        doc.addParagraph(_("There aren't invested assets"), "Standard")
+        doc.addParagraph(_("There aren't invested assets"), "MyStandard")
 
     ## Current Investment Operations list
     doc.addParagraph(_("Current investment operations"),"Heading 2")
@@ -296,7 +301,7 @@ def generate_assets_report(request):
         ))
 
     doc.addTableParagraph(reportdividends, columnssize_percentages=[50, 10, 10, 10, 10, 10 ],  size=8)
-    doc.addParagraph(_(f"If I keep this investment during a year, I'll get {Currency(listdict_sum(dict_reportdividends,'estimated'),c)}"), "Standard")
+    doc.addParagraph(_(f"If I keep this investment during a year, I'll get {Currency(listdict_sum(dict_reportdividends,'estimated'),c)}"), "MyStandard")
     doc.pageBreak()
     
     # Ranking de investments
