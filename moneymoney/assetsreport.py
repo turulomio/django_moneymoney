@@ -109,8 +109,16 @@ def generate_assets_report(request):
         report_annual_income=[(_("Month"), _("Incomes"), _("Expenses"), _("Gains"), _("Dividends"), _("Total"))]
         for o in dict_report_annual_income:
             report_annual_income.append((o["month"], Currency(o["incomes"], c), Currency(o["expenses"], c), Currency(o["gains"], c), Currency(o["dividends"], c), Currency(o["total"], c)))
+        report_annual_income.append([
+            _("Total"), 
+            Currency(listdict_sum(dict_report_annual_income, "incomes"), c), 
+            Currency(listdict_sum(dict_report_annual_income, "expenses"), c), 
+            Currency(listdict_sum(dict_report_annual_income, "gains"), c), 
+            Currency(listdict_sum(dict_report_annual_income, "dividends"), c), 
+            Currency(listdict_sum(dict_report_annual_income, "total"), c), 
+        ])
 
-        doc.addTableParagraph(report_annual_income, columnssize_percentages=[40, 20, 20, 20],  size=8)
+        doc.addTableParagraph(report_annual_income, columnssize_percentages=[40, 20, 20, 20],  size=8, style="Table1Total")
                 
         ## Target
         target=Percentage(4,100)#AnnualTarget(doc.mem).init__from_db(date.today().year)
@@ -138,8 +146,14 @@ def generate_assets_report(request):
                 Currency(o["gains_net"], c), 
                 Currency(o["dividends_net"], c), 
             ))
-
-        doc.addTableParagraph(report_annual_gainsbyproductstypes,  size=8)
+        report_annual_gainsbyproductstypes.append([
+            _("Total"), 
+            Currency(listdict_sum(dict_report_annual_gainsbyproductstypes, "gains_gross"), c), 
+            Currency(listdict_sum(dict_report_annual_gainsbyproductstypes, "dividends_gross"), c), 
+            Currency(listdict_sum(dict_report_annual_gainsbyproductstypes, "gains_net"), c), 
+            Currency(listdict_sum(dict_report_annual_gainsbyproductstypes, "dividends_net"), c), 
+        ])
+        doc.addTableParagraph(report_annual_gainsbyproductstypes,  size=8, style="Table1Total")
         
         doc.addParagraph(_(f"Gross gains + Gross dividends = {vTotal_gains_dividends_gross}."),  "MyStandard")
         doc.addParagraph(_(f"Net gains + Net dividends = {vTotal_gains_dividends_net}."),  "MyStandard")
@@ -155,13 +169,16 @@ def generate_assets_report(request):
             accountswithbalance.append((
                 o["name"], 
                 o["number"], 
-                Currency(o["balance_account"], c), 
+                Currency(o["balance_account"], o["currency"]), 
                 Currency(o["balance_user"], c), 
             ))
-    vTotal_accounts_local=listdict_sum(dict_accountswithbalance, "balance_user")
-
-    doc.addTableParagraph(accountswithbalance, columnssize_percentages=[37, 33, 15, 15],  size=8)
-    doc.addParagraph(_(f"Sum of all account balances is {vTotal_accounts_local}"), "MyStandard")
+    accountswithbalance.append([
+        _("Total"), 
+        "", 
+        "", 
+        Currency(listdict_sum(dict_accountswithbalance, "balance_user"), c), 
+    ])
+    doc.addTableParagraph(accountswithbalance, columnssize_percentages=[37, 33, 15, 15],  size=8, style="Table1Total")
     doc.pageBreak("Landscape")
         
     ## Investments
@@ -171,26 +188,35 @@ def generate_assets_report(request):
     doc.addParagraph(_("Next list is sorted by the distance in percent to the selling point."), "MyStandard")
     dict_investmentswithbalance=request_get(request._request.build_absolute_uri(reverse('InvestmentsWithBalance'))+"?active=true", authorization)
     dict_investmentswithbalance=listdict_order_by(dict_investmentswithbalance, "percentage_selling_point")
-    investmentswithbalance=[(_("Name"), _("Balance"), _("Gains"), _("% invested"), _("% selling point"))]
+    investmentswithbalance=[(_("Name"), _("Invested"),  _("Balance"), _("Gains"), _("% invested"), _("% selling point"))]
     for o in dict_investmentswithbalance:
         investmentswithbalance.append((
             o["fullname"], 
+            Currency(o["invested_user"], o['currency']), 
             Currency(o["balance_user"], o['currency']), 
             Currency(o["gains_user"], o['currency']), 
             Percentage(o["percentage_invested"], 1), 
             Percentage(o["percentage_selling_point"], 1), 
-        ))
-    doc.addTableParagraph(investmentswithbalance, columnssize_percentages=[52, 12, 12, 12, 12],  size=8)
+        ))  
+        invested_user=Currency(listdict_sum(dict_investmentswithbalance, "invested_user"), c)
+        gains_positives=Currency(listdict_sum_positives(dict_investmentswithbalance, "gains_user"), c)
+        gains_negatives=Currency(listdict_sum_negatives(dict_investmentswithbalance, "gains_user"), c)
+        gains=gains_positives+gains_negatives
+    investmentswithbalance.append([
+        _("Total"), 
+        invested_user, 
+        Currency(listdict_sum(dict_investmentswithbalance, "balance_user"), c), 
+        gains, 
+        Percentage(gains.amount, invested_user.amount), 
+        "", 
+    ])
+    doc.addTableParagraph(investmentswithbalance, columnssize_percentages=[50, 10, 10, 10, 10, 10],  size=8, style="Table1Total")
     invested_user=Currency(listdict_sum(dict_investmentswithbalance, "invested_user"), c)
     gains_positives=Currency(listdict_sum_positives(dict_investmentswithbalance, "gains_user"), c)
     gains_negatives=Currency(listdict_sum_negatives(dict_investmentswithbalance, "gains_user"), c)
     gains=gains_positives+gains_negatives
     if invested_user.isZero()==False:
-        doc.addParagraph(_(f"Sum of all invested assets is {invested_user}."), "MyStandard")
-        doc.addParagraph(_(f"Investment gains (positive minus negative results): {gains_positives} - {-gains_negatives} are {gains}, what represents a {Percentage(gains, invested_user)} of total assets."), "MyStandard")
-#        doc.addParagraph(_(" Assets average age: {}").format(  days2string(doc.mem.data.investments_active().average_age())), "MyStandard")
-    else:
-        doc.addParagraph(_("There aren't invested assets"), "MyStandard")
+        doc.addParagraph(_(f"Investment gains (positive minus negative results): {gains_positives} - {-gains_negatives} are {gains}."), "MyStandard")
 
     ## Current Investment Operations list
     doc.addParagraph(_("Current investment operations"),"Heading 2")
@@ -282,7 +308,7 @@ def generate_assets_report(request):
             Percentage(o["percentage_from_price"], 1)
         ))
 
-    doc.addTableParagraph(orders_list, columnssize_percentages=[8, 8, 44, 10, 10, 10, 10 ],  size=8)
+    doc.addTableParagraph(orders_list, columnssize_percentages=[8, 8, 44, 10, 10, 10, 10 ],  size=8, style="Table0")
     doc.pageBreak("Landscape")
     
     #Dividend report
@@ -300,7 +326,15 @@ def generate_assets_report(request):
             Percentage(o["percentage"], 1)
         ))
 
-    doc.addTableParagraph(reportdividends, columnssize_percentages=[50, 10, 10, 10, 10, 10 ],  size=8)
+    reportdividends.append([
+        _("Total"), 
+        "", 
+        "", 
+        "", 
+        Currency(listdict_sum(dict_reportdividends, "estimated"), c), 
+        "", 
+    ])
+    doc.addTableParagraph(reportdividends, columnssize_percentages=[50, 10, 10, 10, 10, 10 ],  size=8, style="Table1Total")
     doc.addParagraph(_(f"If I keep this investment during a year, I'll get {Currency(listdict_sum(dict_reportdividends,'estimated'),c)}"), "MyStandard")
     doc.pageBreak()
     
@@ -319,7 +353,15 @@ def generate_assets_report(request):
             Currency(o["total"], c), 
         ))
 
-    doc.addTableParagraph(reportranking, columnssize_percentages=[6, 44, 12.5, 12.5, 12.5, 12.5 ],  size=6)
+    reportranking.append([
+        _("Total"), 
+        "", 
+        Currency(listdict_sum(dict_reportranking, "current_net_gains"), c), 
+        Currency(listdict_sum(dict_reportranking, "historical_net_gains"), c), 
+        Currency(listdict_sum(dict_reportranking, "dividends"), c), 
+        Currency(listdict_sum(dict_reportranking, "total"), c), 
+    ])
+    doc.addTableParagraph(reportranking, columnssize_percentages=[7, 43, 12.5, 12.5, 12.5, 12.5 ],  size=6, style="Table1Total")
     filename=path.join(gettempdir(), "assets_report_" + next(_get_candidate_names())+".pdf")
     print(filename)
 
