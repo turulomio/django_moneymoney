@@ -132,6 +132,7 @@ def generate_assets_report(request):
         
         ### Assets evolution graphic
         doc.addParagraph(_("Assets graphical evolution"), "Heading 2")
+        doc.addImageParagraph(["/tmp/evolution_assets.png", ], 26, 14, "Illustration")
         doc.pageBreak()
         
         
