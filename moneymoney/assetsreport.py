@@ -231,9 +231,9 @@ def generate_assets_report(request):
     doc.addParagraph(_("Investments group by variable percentage"), "Heading 2")
 
   
-    width=25
-    height=13
-    doc.addImageParagraph(["/tmp/by_percentage.png", ], width, height, "Illustration")
+    width=28
+    height=14.2
+    doc.addImageParagraph(["/tmp/by_percentage.png", ], width, height-1, "Illustration")
 
     doc.addParagraph(_("Investments group by investment type"), "Heading 2")
     doc.addImageParagraph(["/tmp/by_producttype.png", ], width, height, "Illustration")
