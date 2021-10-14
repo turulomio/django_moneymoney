@@ -3,6 +3,7 @@ from requests import get
 from django.urls import reverse
 from django.utils.translation import ugettext as _
 from json import loads
+from matplotlib import pyplot as plt
 from moneymoney import __version__
 from moneymoney.reusing.connection_dj import cursor_one_field
 from moneymoney.reusing.currency import  Currency
@@ -19,6 +20,46 @@ def request_get(absolute_url, authorization):
     ## verify should be changed
     a=get(absolute_url, headers={'Authorization': f'Token {authorization}'}, verify=False)
     return loads(a.content)
+        
+def pie(dict_investments_classes, key, balance_or_invested):
+        # Pie chart, where the slices will be ordered and plotted counter-clockwise:
+        labels, data=[], []
+        for d in dict_investments_classes[key]:
+            if d[balance_or_invested]!=0:
+                labels.append(d["name"])
+                data.append(d[balance_or_invested])
+        colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b"]
+#        explode = (0, 0.1, 0, 0)  # only "explode" the 2nd slice (i.e. 'Hogs')
+        fig1, ax1 = plt.subplots( figsize=(10, 10))
+        ax1.pie(data, labels=labels, radius=1.2,  startangle=90, colors=colors)
+#        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        imgname=f'/tmp/{key}_{balance_or_invested}.png'
+        plt.title(balance_or_invested.upper(), bbox={'facecolor':'0.8', 'pad':5})
+        plt.savefig(imgname, dpi=600)
+        return imgname
+
+def plotlyy_pie(dict_investments_classes, key, balance_or_invested):
+    ##NEEDS KALEIDO O ORCA
+    import plotly.express as px
+    import plotly.io as pio
+    fig = px.pie(dict_investments_classes[key], values='balance', names='name', title=balance_or_invested.upper())
+    imgname=f'/tmp/{key}_{balance_or_invested}.png'
+    
+    fig.write_image(imgname)
+    img_bytes = pio.to_image(fig, format="png")
+    print(img_bytes)
+
+#    import plotly.graph_objects as go
+#    labels, data=[], []
+#    for d in dict_investments_classes[key]:
+#        if d[balance_or_invested]!=0:
+#            labels.append(d["name"])
+#            data.append(d[balance_or_invested])
+#
+#    fig = go.Figure(data=[go.Pie(labels=labels, values=data)])
+#    imgname=f'/tmp/{key}_{balance_or_invested}.png'
+#    fig.to_image(format="png", engine="orca")
+#    fig.write_image(imgname)
 
 def generate_assets_report(request):
     authorization=cursor_one_field("select * from authtoken_token where user_id=%s", (request.user.id, ))
@@ -226,70 +267,30 @@ def generate_assets_report(request):
 #        model.odt_table(self, 26,  6)       
 #        doc.pageBreak(True)
 #        
-    ### Graphics wdgInvestments clases
-#        doc.mem.frmMain.on_actionInvestmentsClasses_triggered()
-#        doc.mem.frmMain.w.open_all_tabs()#Load tabs to finish animations
-#        doc.mem.frmMain.w.viewTPC.on_actionShowData_triggered()
-#        doc.mem.frmMain.w.viewTipo.on_actionShowData_triggered()
-#        doc.mem.frmMain.w.viewApalancado.on_actionShowData_triggered()
-#        doc.mem.frmMain.w.viewProduct.on_actionShowData_triggered()
-#        doc.mem.frmMain.w.viewCountry.on_actionShowData_triggered()
-#        doc.mem.frmMain.w.viewPCI.on_actionShowData_triggered()
-#        
+    ### Graphics wdgInvestments clases        
     doc.addParagraph(_("Investments group by variable percentage"), "Heading 2")
-#        savefile="{}/wdgInvestmentsClasses_canvasTPC_legend.png".format(doc.dir)
-#        doc.mem.frmMain.w.tab.setCurrentIndex(0)
-#        doc.sleep(2)
-#        doc.mem.frmMain.w.viewTPC.pie.save(savefile)
-#        doc.addImage(savefile, savefile)
-#        doc.illustration([savefile, ], 25, 13, savefile)
-#        doc.pageBreak(True)
-#        
+    from moneymoney.views import InvestmentsClasses
+    dict_investments_classes=loads(InvestmentsClasses(request._request).content)
+
+    images=(pie(dict_investments_classes, "by_percentage", "balance"), pie(dict_investments_classes, "by_percentage", "invested"))
+    doc.addImageParagraph(images, 9, 6, "Illustration")
+
     doc.addParagraph(_("Investments group by investment type"), "Heading 2")
-#        savefile="{}/wdgInvestmentsClasses_canvasTipo_legend.png".format(doc.dir)
-#        doc.mem.frmMain.w.tab.setCurrentIndex(2)
-#        doc.sleep(2)
-#        doc.mem.frmMain.w.viewTipo.pie.save(savefile)
-#        doc.addImage(savefile, savefile)
-#        doc.illustration([savefile, ], 25, 13, savefile)
-#        doc.pageBreak(True)
-#        
+    images=(pie(dict_investments_classes, "by_producttype", "balance"), pie(dict_investments_classes, "by_producttype", "invested"))
+    doc.addImageParagraph(images, 9, 6, "Illustration")
+
     doc.addParagraph(_("Investments group by leverage"), "Heading 2")        
-#        savefile="{}/wdgInvestmentsClasses_canvasApalancado_legend.png".format(doc.dir)
-#        doc.mem.frmMain.w.tab.setCurrentIndex(3)
-#        doc.sleep(2)
-#        doc.mem.frmMain.w.viewApalancado.pie.save(savefile)
-#        doc.addImage(savefile, savefile)
-#        doc.illustration([savefile, ], 25, 13, savefile)
-#        doc.pageBreak(True)
-#        
+    images=(pie(dict_investments_classes, "by_leverage", "balance"), pie(dict_investments_classes, "by_leverage", "invested"))
+    doc.addImageParagraph(images, 9, 6, "Illustration")
+
     doc.addParagraph(_("Investments group by investment product"), "Heading 2")
-#        savefile="{}/wdgInvestmentsClasses_canvasProduct_legend.png".format(doc.dir)
-#        doc.mem.frmMain.w.tab.setCurrentIndex(5)
-#        doc.sleep(2)
-#        doc.mem.frmMain.w.viewProduct.pie.save(savefile)
-#        doc.addImage(savefile, savefile)
-#        doc.illustration([savefile, ], 25, 13, savefile)
-#        doc.pageBreak(True)
-#        
-    doc.addParagraph(_("Investments group by country"), "Heading 2")
-#        savefile="{}/wdgInvestmentsClasses_canvasCountry_legend.png".format(doc.dir)
-#        doc.mem.frmMain.w.tab.setCurrentIndex(4)
-#        doc.sleep(2)
-#        doc.mem.frmMain.w.viewCountry.pie.save(savefile)
-#        doc.addImage(savefile, savefile)
-#        doc.illustration([savefile, ], 25, 13, savefile)
-#        doc.pageBreak(True)
-#        
+    images=(pie(dict_investments_classes, "by_product", "balance"), pie(dict_investments_classes, "by_product", "invested"))
+    doc.addImageParagraph(images, 9, 6, "Illustration")
+
     doc.addParagraph(_("Investments group by Call/Put/Inline"), "Heading 2")
-#        savefile="{}/wdgInvestmentsClasses_canvasPCI_legend.png".format(doc.dir)
-#        doc.mem.frmMain.w.tab.setCurrentIndex(1)
-#        doc.sleep(2)
-#        doc.mem.frmMain.w.viewPCI.pie.save(savefile)
-#        doc.addImage(savefile, savefile)
-#        doc.illustration([savefile, ], 25, 13, savefile)
-#        
-#        doc.mem.frmMain.showMaximized()
+    images=(pie(dict_investments_classes, "by_pci", "balance"), pie(dict_investments_classes, "by_pci", "invested"))
+    doc.addImageParagraph(images, 9, 6, "Illustration")
+    
     doc.pageBreak("Landscape")
     
     #Orders report

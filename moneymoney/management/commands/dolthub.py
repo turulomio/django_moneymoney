@@ -10,8 +10,7 @@ def valueornull(value):
     return value
 class Command(BaseCommand):
     help = 'Sync products table from dolthub'
-
-
+        
     def handle(self, *args, **options):
         owner, repo, branch = 'turulomio', 'dolthub_money', 'master'
 
@@ -22,10 +21,12 @@ class Command(BaseCommand):
 
         #Load all json data in json list
         json=[]
-        for i in tqdm(range (math.ceil(numberjson/200))):
-            res = requests.get('https://dolthub.com/api/v1alpha1/{}/{}/{}/'.format(owner, repo, branch), params={'q': f'select * from products order by id desc limit 200 offset {i*200}'})
+        blocks=200
+        for i in tqdm(range (math.ceil(numberjson/blocks))):
+            sql=f'select * from products order by id desc limit {blocks} offset {i*blocks}'
+            res = requests.get('https://dolthub.com/api/v1alpha1/{}/{}/{}/'.format(owner, repo, branch), params={'q': sql})
             
-            print("Offset", i*200, "Hay",  len(res.json()["rows"]))
+            print("Offset", i*blocks, "Hay",  len(res.json()["rows"]))
             for j in res.json()["rows"]:
                 json.append(j)
         print(len(json), "Must be the number before")
