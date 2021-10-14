@@ -1,4 +1,5 @@
 import urllib.parse
+from base64 import b64decode, b64encode
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, timedelta
 from decimal import Decimal
@@ -98,7 +99,6 @@ def logout(request):
 @api_view(['GET', ])    
 def AssetsReport(request):
     from moneymoney.assetsreport import generate_assets_report
-    from base64 import b64encode
     filename=generate_assets_report(request)
     with open(filename, "rb") as pdf:
         encoded_string = b64encode(pdf.read())
@@ -1544,6 +1544,18 @@ def Settings(request):
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated, ])
+def ECharts_to_file(request):
+    data=RequestString(request, "data").replace("data:image/png;base64,", "")
+    filename=RequestString(request, "filename")
+    f=open(f"/tmp/{filename}", "wb")
+    f.write(b64decode(data))
+    f.close()
+    return JsonResponse(True, safe=False)
+    
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
 def EstimationsDps_add(request):
     print(request.data)
@@ -1665,6 +1677,12 @@ def RequestPostDecimal(request, field, default=None):
 def RequestDecimal(request, field, default=None):
     try:
         r = Decimal(request.data.get(field))
+    except:
+        r=default
+    return r
+def RequestString(request, field, default=None):
+    try:
+        r = str(request.data.get(field))
     except:
         r=default
     return r
