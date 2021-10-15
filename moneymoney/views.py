@@ -1478,6 +1478,36 @@ def ReportsInvestmentsLastOperation(request):
                 "percentage_sellingpoint": ioc_last.percentage_sellingpoint().value,   
             })
     return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
+    
+    
+@timeit
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def ReportCurrentInvestmentsOperations(request):
+    ld=[]
+    investments=Investments.objects.filter(active=True).select_related("accounts").select_related("products")
+    iom=InvestmentsOperationsManager_from_investment_queryset(investments, timezone.now(), request)
+    
+    for io in iom:
+        for o in io.io_current:
+            ioc=IOC(io.investment, o )
+            ld.append({
+                "id": io.investment.id, 
+                "name": io.investment.fullName(), 
+                "operationstypes":ioc.d["operationstypes"], 
+                "datetime": ioc.d["datetime"], 
+                "shares": ioc.d['shares'], 
+                "price_user": ioc.d['price_user'], 
+                "invested_user": ioc.d['invested_user'], 
+                "balance_user": ioc.d["balance_user"], 
+                "gains_gross_user": ioc.d['gains_gross_user'], 
+                "percentage_annual_user": ioc.percentage_annual_user().value, 
+                "percentage_apr_user": ioc.percentage_apr_user().value, 
+                "percentage_total_user": ioc.percentage_total_user().value,   
+            })
+    return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
+
 @timeit
 @csrf_exempt
 @api_view(['GET', ])    

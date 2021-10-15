@@ -6,6 +6,7 @@ from json import loads
 from moneymoney import __version__
 from moneymoney.reusing.connection_dj import cursor_one_field
 from moneymoney.reusing.currency import  Currency
+from moneymoney.reusing.datetime_functions import dtaware2string, string2dtaware
 from moneymoney.reusing.listdict_functions import listdict_sum, listdict_sum_negatives, listdict_sum_positives, listdict_order_by
 from moneymoney.reusing.percentage import  Percentage
 from os import path
@@ -221,12 +222,37 @@ def generate_assets_report(request):
 
     ## Current Investment Operations list
     doc.addParagraph(_("Current investment operations"),"Heading 2")
-#        doc.mem.frmMain.on_actionInvestmentsOperations_triggered()
-#        model=doc.mem.frmMain.w.mqtwCurrent.officegeneratorModel(_("CurrentInvestmentOperations"))
-#        model.removeColumns([8, 9, 11])        
-#        model.odt_table(self, 26,  6)       
-#        doc.pageBreak(True)
-#        
+    from moneymoney.views import ReportCurrentInvestmentsOperations, obj_from_url
+    dict_report_current_investmentsoperations=loads(ReportCurrentInvestmentsOperations(request._request).content)
+    report_current_investmentsoperations=[(_("Date and time"), _("Name"), _("Operation type"), _("Shares"), _("Price"), _("Invested"), _("Balance"), _("Gross gains"), _("% total"))]
+    for o in dict_report_current_investmentsoperations:
+        report_current_investmentsoperations.append((
+           dtaware2string(string2dtaware(o["datetime"], "JsUtcIso"), "%Y-%m-%d %H:%M:%S"), 
+            o["name"],
+            obj_from_url(request, o['operationstypes']).name, 
+            o['shares'], 
+            Currency(o["price_user"], c), 
+            Currency(o["invested_user"], c), 
+            Currency(o["balance_user"], c), 
+            Currency(o["gains_gross_user"], c), 
+            Percentage(o["percentage_total_user"], 1)))
+    report_current_investmentsoperations.append([
+        _("Total"), 
+        "", 
+        "", 
+        "", 
+        "", 
+        Currency(listdict_sum(dict_report_current_investmentsoperations, "invested_user"), c), 
+        Currency(listdict_sum(dict_report_current_investmentsoperations, "balance_user"), c), 
+        Currency(listdict_sum(dict_report_current_investmentsoperations, "gains_gross_user"), c), 
+        "", 
+    ])
+
+    doc.addTableParagraph(report_current_investmentsoperations, columnssize_percentages=[10, 32, 10, 8, 8, 8, 8, 8, 8,],  size=6, style="Table1Total")
+                
+
+   
+    doc.pageBreak("Landscape")
     ### Graphics wdgInvestments clases        
     doc.addParagraph(_("Investments group by variable percentage"), "Heading 2")
 

@@ -50,6 +50,19 @@ class IOC:
         if self.d["shares"]>0:
             return Percentage(self.investment.products.basic_results()["last"]-lastyear, lastyear)
         else:
+            return Percentage(-(self.investment.products.basic_results()["last"]-lastyear), lastyear)        
+                
+    def percentage_annual_user(self):
+        if self.d["datetime"].year==date.today().year:
+            lastyear=self.d["price_user"] #Product value, self.money_price(type) not needed.
+        else:
+            lastyear=self.investment.products.basic_results()["lastyear"]
+        if self.investment.products.basic_results()["lastyear"] is None or lastyear is None:
+            return Percentage()
+
+        if self.d["shares"]>0:
+            return Percentage(self.investment.products.basic_results()["last"]-lastyear, lastyear)
+        else:
             return Percentage(-(self.investment.products.basic_results()["last"]-lastyear), lastyear)
 
     def age(self):
@@ -60,12 +73,23 @@ class IOC:
             if dias==0:
                 dias=1
             return Percentage(self.percentage_total_investment()*365,  dias)
+            
+    def percentage_apr_user(self):
+            dias=self.age()
+            if dias==0:
+                dias=1
+            return Percentage(self.percentage_total_user()*365,  dias)
 
 
     def percentage_total_investment(self):
         if self.d["invested_investment"] is None:#initiating xulpymoney
             return Percentage()
         return Percentage(self.d['gains_gross_investment'], self.d["invested_investment"])
+        
+    def percentage_total_user(self):
+        if self.d["invested_user"] is None:#initiating xulpymoney
+            return Percentage()
+        return Percentage(self.d['gains_gross_user'], self.d["invested_user"])
         
     def percentage_sellingpoint(self):
         if self.investment.selling_price is None or self.investment.selling_price==0:
