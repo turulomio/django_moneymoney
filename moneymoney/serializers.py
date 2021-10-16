@@ -152,14 +152,10 @@ class QuotesSerializer(serializers.HyperlinkedModelSerializer):
         created=serializers.HyperlinkedModelSerializer.create(self,  validated_data)
         return created
 
-
-
-
 class StockmarketsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Stockmarkets
-        fields = ('url', 'id', 'name')
-
+        fields = ('url', 'id', 'name', 'country', 'starts', 'closes', 'starts_futures',  'closes_futures', 'zone')
 
 class StrategiesSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
