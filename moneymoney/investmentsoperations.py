@@ -39,6 +39,19 @@ class IOC:
         self.d=d_ioc
         
                 
+    def percentage_annual_account(self):
+        if self.d["datetime"].year==date.today().year:
+            lastyear=self.d["price_accou nt"] #Product value, self.money_price(type) not needed.
+        else:
+            lastyear=self.investment.products.basic_results()["lastyear"]
+        if self.investment.products.basic_results()["lastyear"] is None or lastyear is None:
+            return Percentage()
+
+        if self.d["shares"]>0:
+            return Percentage(self.investment.products.basic_results()["last"]-lastyear, lastyear)
+        else:
+            return Percentage(-(self.investment.products.basic_results()["last"]-lastyear), lastyear)                   
+
     def percentage_annual_investment(self):
         if self.d["datetime"].year==date.today().year:
             lastyear=self.d["price_investment"] #Product value, self.money_price(type) not needed.
@@ -68,6 +81,12 @@ class IOC:
     def age(self):
             return (date.today()-self.d["datetime"].date()).days
 
+    def percentage_apr_account(self):
+            dias=self.age()
+            if dias==0:
+                dias=1
+            return Percentage(self.percentage_total_account()*365,  dias)
+
     def percentage_apr_investment(self):
             dias=self.age()
             if dias==0:
@@ -80,6 +99,11 @@ class IOC:
                 dias=1
             return Percentage(self.percentage_total_user()*365,  dias)
 
+
+    def percentage_total_account(self):
+        if self.d["invested_account"] is None:#initiating xulpymoney
+            return Percentage()
+        return Percentage(self.d['gains_gross_account'], self.d["invested_account"])
 
     def percentage_total_investment(self):
         if self.d["invested_investment"] is None:#initiating xulpymoney
@@ -115,8 +139,12 @@ class InvestmentsOperations:
             
         self.io_current=eval(str_ld_io_current)
         for o in self.io_current:
+            ioc=IOC(self.investment, o )
             o["datetime"]=postgres_datetime_string_2_dtaware(o["datetime"])
             o["operationstypes"]=self.request.build_absolute_uri(reverse('operationstypes-detail', args=(o["operationstypes_id"],  )))
+            o["percentage_total_investment"]=ioc.percentage_total_investment().value, 
+            o["percentage_apr_investment"]=ioc.percentage_apr_investment().value, 
+            o["percentage_annual_investment"]= ioc.percentage_annual_investment().value,   
            
         self.io_historical=eval(str_ld_io_historical)
         for index, o in enumerate(self.io_historical):

@@ -1447,6 +1447,10 @@ def ReportEvolutionInvested(request, from_year):
         list_.append(d)
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
 
+
+
+
+
 @timeit
 @csrf_exempt
 @api_view(['GET', ])    
