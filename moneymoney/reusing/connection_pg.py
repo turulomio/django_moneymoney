@@ -101,6 +101,8 @@ class Connection:
         cur=self._con.cursor()
         s=self.mogrify(sql,arr)
         cur.execute(s)
+        if cur.rowcount==0:
+            return None
         row=cur.fetchone()[0]
         cur.close()
         return row
