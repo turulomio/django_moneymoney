@@ -16,5 +16,5 @@ CREATE TABLE public.productspairs (
 
 
 ALTER TABLE ONLY public.productspairs ADD CONSTRAINT productspairs_pk PRIMARY KEY (id);
-ALTER TABLE public.productspairs ADD CONSTRAINT productspairs_fk_a FOREIGN KEY (a) REFERENCES public.products(id) ON DELETE RESTRICT;
-ALTER TABLE public.productspairs ADD CONSTRAINT productspairs_fk_b FOREIGN KEY (b) REFERENCES public.products(id) ON DELETE RESTRICT;
+ALTER TABLE public.productspairs ADD CONSTRAINT productspairs_fk_a FOREIGN KEY (a_id) REFERENCES public.products(id) ON DELETE RESTRICT;
+ALTER TABLE public.productspairs ADD CONSTRAINT productspairs_fk_b FOREIGN KEY (b_id) REFERENCES public.products(id) ON DELETE RESTRICT;

@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION _final_median(numeric[])
+CREATE OR REPLACE FUNCTION public._final_median(numeric[])
    RETURNS numeric AS
 $$
    SELECT AVG(val)
@@ -12,9 +12,9 @@ $$
 $$
 LANGUAGE 'sql' IMMUTABLE;
 
-CREATE AGGREGATE median(numeric) (
+CREATE AGGREGATE public.median(numeric) (
   SFUNC=array_append,
   STYPE=numeric[],
-  FINALFUNC=_final_median,
+  FINALFUNC=public._final_median,
   INITCOND='{}'
 );

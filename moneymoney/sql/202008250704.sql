@@ -3,6 +3,9 @@
 -- Name: account_balance(integer, timestamp with time zone, text); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
+DROP FUNCTION public.investment_operations_current;
+
+
 CREATE FUNCTION public.account_balance(INOUT account_id integer, INOUT at_datetime timestamp with time zone, OUT balance_account_currency numeric, OUT balance_user_currency numeric, INOUT user_currency text) RETURNS record
     LANGUAGE plpgsql
     AS $$

@@ -6,4 +6,4 @@ ALTER TABLE public.opercuentasdeoperinversiones RENAME TO investmentsaccountsope
 ALTER TABLE public.investmentsaccountsoperations RENAME COLUMN id_operinversiones TO investmentsoperations_id;
 ALTER TABLE public.investmentsaccountsoperations RENAME COLUMN id_inversiones TO investments_id;
 ALTER TABLE public.investmentsaccountsoperations RENAME CONSTRAINT opercuentasdeoperinversiones_pk TO investmentsaccountsoperations_pk;
-DROP SEQUENCE seq_operinversioneshistoricas ;
+-- DROP SEQUENCE seq_operinversioneshistoricas ;
