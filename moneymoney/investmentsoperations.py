@@ -723,6 +723,6 @@ def Simulate_InvestmentsOperations_from_investment(request,  investments, dt, lo
         
         for row in cursor_rows(f"select * from {temporaltable}"):
             print(row)
-        row_io= cursor_one_row("select * from investment_operations(%s,%s,%s,%s)", (investments[0].pk, dt, local_currency, temporaltable))
-        r=InvestmentsOperations(request, investments[0],  row_io["io"], row_io['io_current'],  row_io['io_historical'], temporaltable, len(listdict))
+    row_io= cursor_one_row("select * from investment_operations(%s,%s,%s,%s)", (investments[0].pk, dt, local_currency, temporaltable))
+    r=InvestmentsOperations(request, investments[0],  row_io["io"], row_io['io_current'],  row_io['io_historical'], temporaltable, len(listdict))
     return r
