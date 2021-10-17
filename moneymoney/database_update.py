@@ -2,11 +2,12 @@
 ## DO NOT UPDATE IT IN YOUR CODE IT WILL BE REPLACED USING FUNCTION IN README
 
 
-from .package_resources import package_listdir, package_filename
-from .datetime_functions import string2dtnaive
-from .casts import str2bool, list2string, string2list_of_integers, string2list_of_strings
+#from .package_resources import package_listdir, package_filename
+from moneymoney.reusing.datetime_functions import string2dtnaive
+from moneymoney.reusing.casts import str2bool, list2string, string2list_of_integers, string2list_of_strings
 from decimal import Decimal
 from logging import debug
+from pkg_resources import resource_listdir, resource_filename
 from sys import exit
 _=str
 
@@ -123,7 +124,7 @@ class SettingsDB:
 ## @param environment can be "Qt","Console"
 def database_update(con, package, software_version, environment="Console"):
     sqls=[]
-    for name in package_listdir(package, 'sql'):
+    for name in resource_listdir(package, 'sql'):
         if name[-3:]=="sql":
             sqls.append(int(name[:-4]))
     sqls.sort()
@@ -136,7 +137,7 @@ def database_update(con, package, software_version, environment="Console"):
             database_version=0
 
         if database_version<sql:
-            con.load_script(package_filename(package,  "sql/{}.sql".format(sql)))
+            con.load_script(resource_filename(package,  "sql/{}.sql".format(sql)))
             con.cursor_one_field("update public.globals set value=%s where global='Version' returning global",(sql,))
             con.commit()
             print("  + Updated database version from {} to {}".format(database_version, sql))
