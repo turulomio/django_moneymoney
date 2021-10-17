@@ -24,5 +24,5 @@ class MoneyMiddleware:
         request.globals={}
         for g in globals:
             request.globals[g.global_field.replace("/", ("__"))]=g.value
-        request.local_currency=request.globals["mem__localcurrency"]
-        request.local_zone=request.globals["mem__localzone"]
+        request.local_currency=request.globals.get("mem__localcurrency", "EUR")
+        request.local_zone=request.globals.get("mem__localzone",  "Europe/Madrid")
