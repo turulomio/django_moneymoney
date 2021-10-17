@@ -6,7 +6,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         print("""To release a new version:
-  * Change version and version date in books.__init__.py
+  * Check if everything works in an empty database. New installation script
+  
+  Change version and version date in books.__init__.py
   * Add release changelog en README.md
   * python manage.py makemessages
   * linguist
