@@ -23,7 +23,7 @@ con.port=settings.DATABASES['default']['PORT']
 con.server=settings.DATABASES['default']['HOST']
 con.user=settings.DATABASES['default']['USER']
 con.connect()
-database_update(con, 'moneymoney', __versiondatetime__,"Console")
+database_update(con, 'moneymoney', __versiondatetime__)
 con.disconnect()
 
 application = get_wsgi_application()

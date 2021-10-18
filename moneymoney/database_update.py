@@ -122,7 +122,7 @@ class SettingsDB:
 ## @param package string with the name of the package where sql directory is
 ## @param software_version Datetime naive with the software version
 ## @param environment can be "Qt","Console"
-def database_update(con, package, software_version, environment="Console"):
+def database_update(con, package, software_version):
     sqls=[]
     for name in resource_listdir(package, 'sql'):
         if name[-3:]=="sql":
@@ -146,9 +146,5 @@ def database_update(con, package, software_version, environment="Console"):
     database_version=string2dtnaive(con.cursor_one_field("select value from public.globals where global='Version'"),"%Y%m%d%H%M")
     if software_version<database_version:
         s="Your software version '{}' is older than your database version '{}'. You must update it".format(software_version,database_version)
-        if environment=="Console":
-            print(s)
-        elif environment=="Qt":
-            from .ui.myqwidgets import qmessagebox
-            qmessagebox(s)
+        print(s)
         exit(1)
