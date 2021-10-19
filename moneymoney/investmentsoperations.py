@@ -369,7 +369,7 @@ class InvestmentsOperations:
         }
 
 def InvestmentsOperations_from_investment(request,  investment, dt, local_currency):
-    row_io= cursor_one_row("select * from investment_operations(%s,%s,%s)", (investment.pk, dt, local_currency))
+    row_io= cursor_one_row("select * from investment_operations(%s,%s,%s,%s)", (investment.pk, dt, local_currency, "investmentsoperations"))
     r=InvestmentsOperations(request, investment,  row_io["io"], row_io['io_current'],  row_io['io_historical'])
     return r
 
@@ -494,7 +494,7 @@ def InvestmentsOperationsManager_from_investment_queryset(qs_investments, dt, re
     
     r=InvestmentsOperationsManager(request)
     if len(ids)>0:
-        rows=cursor_rows_as_dict("id","select id, t.* from investments, investment_operations(investments.id, %s, %s ) as t where investments.id in %s;", (dt, request.local_currency, ids))
+        rows=cursor_rows_as_dict("id","select id, t.* from investments, investment_operations(investments.id, %s, %s, %s ) as t where investments.id in %s;", (dt, request.local_currency, "investmentsoperations", ids))
         for investment in qs_investments:  
             row=rows[investment.id]
             r.append(InvestmentsOperations(request, investment,  row["io"], row['io_current'],  row['io_historical']))
@@ -706,6 +706,7 @@ def InvestmentsOperationsTotalsManager_from_all_investments(request, dt):
 ## @param listdict list of operations with first investment.id as new investment
 def Simulate_InvestmentsOperations_from_investment(request,  investments, dt, local_currency,  listdict, temporaltable=None):
     from uuid import uuid4
+    from moneymoney.models import Investments,  Banks, Accounts
     if temporaltable is None: #New simultaion
         temporaltable="tt"+str(uuid4()).replace("-", "")
         ids=[]
@@ -720,9 +721,76 @@ def Simulate_InvestmentsOperations_from_investment(request,  investments, dt, lo
     for d in listdict:
         execute(f"insert into {temporaltable}(id, datetime,  shares,  price, commission,  taxes, operationstypes_id, currency_conversion, investments_id) values((select max(id)+1 from {temporaltable}), %s, %s, %s, %s, %s, %s, %s, %s)", 
         (d["datetime"], d["shares"], d["price"], d["commission"], d["taxes"], d["operationstypes_id"], d["currency_conversion"], d["investments_id"]))
-        
+            
         for row in cursor_rows(f"select * from {temporaltable}"):
             print(row)
-    row_io= cursor_one_row("select * from investment_operations(%s,%s,%s,%s)", (investments[0].pk, dt, local_currency, temporaltable))
-    r=InvestmentsOperations(request, investments[0],  row_io["io"], row_io['io_current'],  row_io['io_historical'], temporaltable, len(listdict))
+            
+    bank=Banks()
+    bank.name="Merging bank"
+    bank.active=True
+    bank.id=-1
+    account=Accounts()
+    account.name="Merging account"
+    account.banks=bank
+    account.active=True
+    account.currency=request.local_currency
+    account.id=-1
+    investment=Investments()
+    investment.name=f"Merging {investments[0].products.name}"
+    investment.accounts=account
+    investment.products=investments[0].products
+    investment.id=-1
+            
+    row_io= cursor_one_row("select * from investment_operations(%s,%s,%s,%s,%s)", (investments[0].id, dt, account.currency, local_currency, temporaltable))
+    r=InvestmentsOperations(request, investment,  row_io["io"], row_io['io_current'],  row_io['io_historical'], temporaltable, len(listdict))
+    return r
+
+
+def InvestmentsOperation_merging_current_operations_with_same_product(request, product, dt):
+    #We need to convert investmentsoperationscurrent to investmentsoperations
+    from moneymoney.models import Investments, Banks, Accounts
+    ld=[]
+    investments=Investments.objects.filter(active=True, products=product).select_related("accounts").select_related("products")
+    iom=InvestmentsOperationsManager_from_investment_queryset(investments, dt, request)   
+    bank=Banks()
+    bank.name="Merging bank"
+    bank.active=True
+    bank.id=-1
+    account=Accounts()
+    account.name="Merging account"
+    account.banks=bank
+    account.active=True
+    account.currency=request.local_currency
+    account.id=-1
+    investment=Investments()
+    investment.name=f"Merging {investments[0].products.name}"
+    investment.accounts=account
+    investment.products=product
+    investment.id=-1
+    for io in iom:
+        for o in io.io_current:
+            print(o)
+            ld.append({
+                "datetime": o["datetime"], 
+                "shares": o ["shares"], 
+                "price": o ["price_investment"], 
+                "commission": o ["commissions_account"], 
+                "taxes": o ["taxes_account"], 
+                "operationstypes_id": o ["operationstypes_id"], 
+                "currency_conversion": o ["investment2account"], 
+                "investments_id": -1, 
+            })
+            
+    r=Simulate_InvestmentsOperations_from_investment(request, [investment, ],  dt,  request.local_currency,  ld)
+    return r
+
+def InvestmentsOperationsManager_merging_all_current_operations_of_active_investments(request, dt):
+    #We need to convert investmentsoperationscurrent to investmentsoperations
+    from moneymoney.models import Products
+    r=InvestmentsOperationsManager(request)
+    distinct_products=Products.qs_products_of_active_investments()
+    for product in distinct_products:
+        io=InvestmentsOperation_merging_current_operations_with_same_product(request, product,  dt)
+        print(io.current_shares())
+        r.append(io)
     return r

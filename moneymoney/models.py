@@ -978,7 +978,7 @@ class Products(models.Model):
         
     @staticmethod
     def qs_products_of_active_investments():
-        return Products.objects.filter(id__in=RawSQL('select products.id from products, investments where products.id=investments.products_id and investments.active is true', ()))
+        return Products.objects.filter(id__in=RawSQL('select distinct(products.id) from products, investments where products.id=investments.products_id and investments.active is true', ()))
 
 
     def highest_investment_operation_price(self):
