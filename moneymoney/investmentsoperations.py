@@ -7,7 +7,7 @@ from math import ceil
 from moneymoney.reusing.connection_dj import cursor_one_row, cursor_rows_as_dict, execute, cursor_rows
 from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.datetime_functions import string2dtnaive, dtaware
-from moneymoney.reusing.listdict_functions import listdict_sum, listdict_print_first
+from moneymoney.reusing.listdict_functions import listdict_sum, listdict_print_first, listdict_order_by
 from moneymoney.reusing.percentage import Percentage, percentage_between
 
 Decimal
@@ -704,9 +704,11 @@ def InvestmentsOperationsTotalsManager_from_all_investments(request, dt):
 
 ##  @param investments list of investments
 ## @param listdict list of operations with first investment.id as new investment
+## OJO OJO ESTA FUNCION CONSIDERA QUE TODAS LAS INVERSIONES  TIENEN LA MISMA ACCOUNT_CURRENCY QUE
+## SINO FUERA ASI ESTARÏA MAL
+## SI ES UNA SIMULACION DE VIRTUAL PONER EN investments SOLOL A VIRTUAL
 def Simulate_InvestmentsOperations_from_investment(request,  investments, dt, local_currency,  listdict, temporaltable=None):
     from uuid import uuid4
-    from moneymoney.models import Investments,  Banks, Accounts
     if temporaltable is None: #New simultaion
         temporaltable="tt"+str(uuid4()).replace("-", "")
         ids=[]
@@ -724,28 +726,13 @@ def Simulate_InvestmentsOperations_from_investment(request,  investments, dt, lo
             
         for row in cursor_rows(f"select * from {temporaltable}"):
             print(row)
-            
-    bank=Banks()
-    bank.name="Merging bank"
-    bank.active=True
-    bank.id=-1
-    account=Accounts()
-    account.name="Merging account"
-    account.banks=bank
-    account.active=True
-    account.currency=request.local_currency
-    account.id=-1
-    investment=Investments()
-    investment.name=f"Merging {investments[0].products.name}"
-    investment.accounts=account
-    investment.products=investments[0].products
-    investment.id=-1
-            
-    row_io= cursor_one_row("select * from investment_operations(%s,%s,%s,%s,%s)", (investments[0].id, dt, account.currency, local_currency, temporaltable))
-    r=InvestmentsOperations(request, investment,  row_io["io"], row_io['io_current'],  row_io['io_historical'], temporaltable, len(listdict))
+
+    row_io= cursor_one_row("select * from investment_operations(%s,%s,%s,%s,%s)", (investments[0].id, dt, investments[0].accounts.currency, local_currency, temporaltable))
+    r=InvestmentsOperations(request, investments[0],  row_io["io"], row_io['io_current'],  row_io['io_historical'], temporaltable, len(listdict))
     return r
 
-
+## OJO OJO ESTA FUNCION CONSIDERA QUE TODAS LAS INVERSIONES  TIENEN LA MISMA ACCOUNT_CURRENCY
+## SINO FUERA ASI ESTARÏA MAL
 def InvestmentsOperation_merging_current_operations_with_same_product(request, product, dt):
     #We need to convert investmentsoperationscurrent to investmentsoperations
     from moneymoney.models import Investments, Banks, Accounts
@@ -780,7 +767,7 @@ def InvestmentsOperation_merging_current_operations_with_same_product(request, p
                 "currency_conversion": o ["investment2account"], 
                 "investments_id": -1, 
             })
-            
+    ld=listdict_order_by(ld, "datetime")
     r=Simulate_InvestmentsOperations_from_investment(request, [investment, ],  dt,  request.local_currency,  ld)
     return r
 
