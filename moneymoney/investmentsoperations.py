@@ -136,7 +136,7 @@ class InvestmentsOperations:
             o ["url"]=self.request.build_absolute_uri(reverse('investmentsoperations-detail', args=(o["id"], )))
             o["investments"]=self.request.build_absolute_uri(reverse('investments-detail', args=(self.investment.id, )))
             o["operationstypes"]=self.request.build_absolute_uri(reverse('operationstypes-detail', args=(o["operationstypes_id"],  )))
-            
+
         self.io_current=eval(str_ld_io_current)
         for o in self.io_current:
             ioc=IOC(self.investment, o )
@@ -145,7 +145,7 @@ class InvestmentsOperations:
             o["percentage_total_investment"]=ioc.percentage_total_investment().value, 
             o["percentage_apr_investment"]=ioc.percentage_apr_investment().value, 
             o["percentage_annual_investment"]= ioc.percentage_annual_investment().value,   
-           
+
         self.io_historical=eval(str_ld_io_historical)
         for index, o in enumerate(self.io_historical):
             o["dt_start"]=postgres_datetime_string_2_dtaware(o["dt_start"])
@@ -369,7 +369,7 @@ class InvestmentsOperations:
         }
 
 def InvestmentsOperations_from_investment(request,  investment, dt, local_currency):
-    row_io= cursor_one_row("select * from investment_operations(%s,%s,%s,%s)", (investment.pk, dt, local_currency, "investmentsoperations"))
+    row_io= cursor_one_row("select * from investment_operations(%s,%s,%s)", (investment.pk, dt, local_currency))
     r=InvestmentsOperations(request, investment,  row_io["io"], row_io['io_current'],  row_io['io_historical'])
     return r
 
@@ -494,7 +494,7 @@ def InvestmentsOperationsManager_from_investment_queryset(qs_investments, dt, re
     
     r=InvestmentsOperationsManager(request)
     if len(ids)>0:
-        rows=cursor_rows_as_dict("id","select id, t.* from investments, investment_operations(investments.id, %s, %s, %s ) as t where investments.id in %s;", (dt, request.local_currency, "investmentsoperations", ids))
+        rows=cursor_rows_as_dict("id","select id, t.* from investments, investment_operations(investments.id, %s, %s) as t where investments.id in %s;", (dt, request.local_currency, ids))
         for investment in qs_investments:  
             row=rows[investment.id]
             r.append(InvestmentsOperations(request, investment,  row["io"], row['io_current'],  row['io_historical']))
@@ -724,10 +724,10 @@ def Simulate_InvestmentsOperations_from_investment(request,  investments, dt, lo
         execute(f"insert into {temporaltable}(id, datetime,  shares,  price, commission,  taxes, operationstypes_id, currency_conversion, investments_id) values((select max(id)+1 from {temporaltable}), %s, %s, %s, %s, %s, %s, %s, %s)", 
         (d["datetime"], d["shares"], d["price"], d["commission"], d["taxes"], d["operationstypes_id"], d["currency_conversion"], d["investments_id"]))
             
-        for row in cursor_rows(f"select * from {temporaltable}"):
-            print(row)
+#        for row in cursor_rows(f"select * from {temporaltable}"):
+#            print(row)
 
-    row_io= cursor_one_row("select * from investment_operations(%s,%s,%s,%s,%s)", (investments[0].id, dt, investments[0].accounts.currency, local_currency, temporaltable))
+    row_io= cursor_one_row("select * from investment_operations(%s,%s,%s,%s,%s,%s)", (investments[0].id, dt, local_currency, temporaltable, investments[0].accounts.currency, investments[0].products.id))
     r=InvestmentsOperations(request, investments[0],  row_io["io"], row_io['io_current'],  row_io['io_historical'], temporaltable, len(listdict))
     return r
 
@@ -756,7 +756,6 @@ def InvestmentsOperation_merging_current_operations_with_same_product(request, p
     investment.id=-1
     for io in iom:
         for o in io.io_current:
-            print(o)
             ld.append({
                 "datetime": o["datetime"], 
                 "shares": o ["shares"], 
@@ -778,6 +777,5 @@ def InvestmentsOperationsManager_merging_all_current_operations_of_active_invest
     distinct_products=Products.qs_products_of_active_investments()
     for product in distinct_products:
         io=InvestmentsOperation_merging_current_operations_with_same_product(request, product,  dt)
-        print(io.current_shares())
         r.append(io)
     return r
