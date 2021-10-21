@@ -7,7 +7,6 @@ from django.conf import settings
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.models import User
 from django.db import transaction
-from django.shortcuts import get_object_or_404
 from django.urls import reverse, resolve
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
@@ -687,26 +686,21 @@ def investments_same_product_change_selling_price(request, products_id):
                 print(form.cleaned_data)
                 print(inv)
                 inv.save()
-            
-    ## DEBE HACERSE DESPUES DEL POST O SALEN MAS LSO DATOS
-    ## Adds all active investments to iom of the same product_benchmark
-    product=get_object_or_404(Products, pk=products_id)
-    qs_investments=Investments.objects.filter(products_id=products_id, active=True)
-    iom=InvestmentsOperationsManager_from_investment_queryset(qs_investments, timezone.now(), request)
-    data=[]
-    for io in iom.list:
-        data.append({
-            "id": io.investment.id, 
-            "name":io.investment.fullName(), 
-            "shares":io.current_shares(), 
-            "average_price":io.current_average_price_investment().amount, 
-            "balance_investment": io.current_balance_investment(), 
-            "invested": io.current_invested_user(),  
-            "selling_price": io.investment.selling_price,
-            "selling_expiration":io.investment.selling_expiration,  
-        })
-    json_data=listdict2json(data)
-    return render(request, 'investments_same_product_change_selling_price.html', locals())
+@csrf_exempt
+@transaction.atomic
+@timeit
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def investmentsoperationsManager_investments_same_product(request):
+    product=RequestGetUrl(request, "product")
+    if product is not None:
+        qs_investments=Investments.objects.filter(products=product, active=True)
+        iom=InvestmentsOperationsManager_from_investment_queryset(qs_investments, timezone.now(), request)
+        data=[]
+        for io in iom.list:
+            data.append(io.json())    
+        return JsonResponse( data, encoder=MyDjangoJSONEncoder,     safe=False)
+    return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
 
 class LeveragesViewSet(viewsets.ModelViewSet):
     queryset = Leverages.objects.all()
