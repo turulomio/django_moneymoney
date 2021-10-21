@@ -1610,8 +1610,8 @@ def EstimationsDps_add(request):
     print(year, estimation, product)
     if year is not None and estimation is not None  and product is not None:
         execute("delete from estimations_dps where products_id=%s and year=%s", (product.id, year))
-        execute("insert into estimations_dps (date_estimation,year,estimation,source,products_id) values(%s,%s,%s,%s,%s)", (
-            date.today(), year, estimation, "Internet", product.id))
+        execute("insert into estimations_dps (date_estimation,year,estimation,source,manual,products_id) values(%s,%s,%s,%s,%s,%s)", (
+            date.today(), year, estimation, "Internet", True, product.id))
         return JsonResponse(True, safe=False)
     return JsonResponse(False, safe=False)
 
