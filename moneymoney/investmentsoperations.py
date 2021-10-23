@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from math import ceil
-from moneymoney.reusing.connection_dj import cursor_one_row, cursor_rows_as_dict, execute, cursor_rows
+from moneymoney.reusing.connection_dj import cursor_one_row, cursor_rows_as_dict, execute
 from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.datetime_functions import string2dtnaive, dtaware
 from moneymoney.reusing.listdict_functions import listdict_sum, listdict_print_first, listdict_order_by
@@ -159,8 +159,6 @@ class InvestmentsOperations:
             "name": self.investment.name, 
             "selling_price": self.investment.selling_price, 
             "fullName": self.investment.fullName(), 
-            "leverage_multiplier": self.investment.products.leverages.multiplier, 
-            "leverage_real_multiplier": self.investment.products.real_leveraged_multiplier(), 
             "gains_at_sellingpoint": self.current_gains_gross_investment_at_selling_price(), 
             "url": self.request.build_absolute_uri(reverse('investments-detail', args=(self.investment.id, ))), 
             "average_price_investment": self.current_average_price_investment(), 
@@ -169,6 +167,10 @@ class InvestmentsOperations:
             "name": self.investment.products.name, 
             "currency": self.investment.products.currency, 
             "url": self.request.build_absolute_uri(reverse('products-detail', args=(self.investment.products.id, ))), 
+            "leverage_multiplier": self.investment.products.leverages.multiplier, 
+            "leverage_real_multiplier": self.investment.products.real_leveraged_multiplier(), 
+            "last": self.investment.products.basic_results()["last"], 
+            "decimals": self.investment.products.decimals, 
         }
         r["io"]=self.io
         r["io_current"]=self.io_current
@@ -511,7 +513,8 @@ def InvestmentsOperationsManager_from_investment_queryset(qs_investments, dt, re
 ## select investment_operations_totals.* from investments, investment_operations_totals(investments.id,now(),'EUR' ) as investment_operations_totals where investments.id in (1,2,3);
 ## Manage output of  investment_operation_totals on one row
 class InvestmentsOperationsTotals:
-    def __init__(self, investment, str_d_io_total, str_d_io_current_total, str_d_io_historical_total):
+    def __init__(self, request, investment, str_d_io_total, str_d_io_current_total, str_d_io_historical_total):
+        self.request=request
         self.investment=investment
         self.io_total=eval(str_d_io_total)
         self.io_total_current=eval(str_d_io_current_total)
@@ -523,10 +526,33 @@ class InvestmentsOperationsTotals:
                 return (basic_quotes['last']-basic_quotes['penultimate'])*self.io_total_current["shares"]*self.investment.products.real_leveraged_multiplier()
             except:
                 return 0
+    
+    def json(self):
+        r={}
+        r["investment"]={
+            "id": self.investment.id, 
+            "name": self.investment.name, 
+            "selling_price": self.investment.selling_price, 
+            "selling_expiration": self.investment.selling_expiration, 
+            "fullName": self.investment.fullName(), 
+            "leverage_multiplier": self.investment.products.leverages.multiplier, 
+            "leverage_real_multiplier": self.investment.products.real_leveraged_multiplier(), 
+            "url": self.request.build_absolute_uri(reverse('investments-detail', args=(self.investment.id, ))), 
+        }
+        r["product"]={
+            "name": self.investment.products.name, 
+            "currency": self.investment.products.currency, 
+            "url": self.request.build_absolute_uri(reverse('products-detail', args=(self.investment.products.id, ))), 
+        }
+        r["io"]=self.io_total
+        r["io_current"]=self.io_total_current
+        r["io_historical"]=self.io_total_historical
+#        r["tablename"]=self.tablename
+        return r
 
-def InvestmentsOperationsTotals_from_investment( investment, dt, local_currency):
+def InvestmentsOperationsTotals_from_investment(request,  investment, dt, local_currency):
     row_io= cursor_one_row("select * from investment_operations_totals(%s,%s,%s)", (investment.pk, dt, local_currency))
-    r=InvestmentsOperationsTotals(investment,  row_io["io"], row_io['io_current'],  row_io['io_historical'])
+    r=InvestmentsOperationsTotals(request, investment,  row_io["io"], row_io['io_current'],  row_io['io_historical'])
     return r
         
 ## Manage several rows of investment_operation_totals in several rows (list)
@@ -595,6 +621,14 @@ class InvestmentsOperationsTotalsManager:
         for iot in self.list:
             r.add(iot.investment.products)
         return list(r)
+        
+    ## Returns a json 
+    def json(self):
+        r=[]
+        for iot in self.list:
+            r.append(iot.json())
+        return r
+        
         
     def json_classes_by_pci(self):
         from moneymoney.models import Accounts, accounts_balance_user_currency
@@ -693,7 +727,7 @@ def InvestmentsOperationsTotalsManager_from_investment_queryset(qs_investments, 
         rows=cursor_rows_as_dict("id","select id, investment_operations_totals.* from investments, investment_operations_totals(investments.id, %s, %s ) as investment_operations_totals where investments.id in %s;", (dt, request.local_currency, ids))
         for investment in qs_investments:  
             row=rows[investment.id]
-            r.append(InvestmentsOperationsTotals(investment,  row["io"], row['io_current'],  row['io_historical']))
+            r.append(InvestmentsOperationsTotals(request, investment,  row["io"], row['io_current'],  row['io_historical']))
     return r
     
 def InvestmentsOperationsTotalsManager_from_all_investments(request, dt):

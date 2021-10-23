@@ -43,10 +43,11 @@ urlpatterns=[
     path('echarts/to/file/', money_views.ECharts_to_file, name='ECharts_to_file'),
     path('investments/classes/', money_views.InvestmentsClasses, name='InvestmentsClasses'),
     path('investments/withbalance/', money_views.InvestmentsWithBalance, name='InvestmentsWithBalance'),
+    path('investments/sameproduct/changesellingprice/', money_views.InvestmentsSameProductChangeSellingPrice, name='InvestmentsSameProductChangeSellingPrice'),
     path('investmentsoperations/full/', money_views.InvestmentsoperationsFull, name='InvestmentsoperationsFull'),
     path('investmentsoperations/full/simulation/', money_views.InvestmentsoperationsFullSimulation, name='InvestmentsoperationsFullSimulation'),
     path('investmentsoperations/evolutionchart/', money_views.InvestmentsoperationsEvolutionChart, name='InvestmentsoperationsEvolutionChart'),
-    path('investmentsoperations/investments/sameproduct/', money_views.investmentsoperationsManager_investments_same_product, name='investmentsoperationsManager_investments_same_product'),
+    path('investmentsoperationstotalmanager/investments/sameproduct/', money_views.InvestmentsOperationsTotalManager_investments_same_product, name='InvestmentsOperationsTotalManager_investments_same_product'),
     
     
     path('orders/list/', money_views.OrdersList, name='OrdersList'),

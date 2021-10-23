@@ -23,7 +23,7 @@ from moneymoney.investmentsoperations import (
 )
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict
 from moneymoney.reusing.casts import str2bool, string2list_of_integers
-from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date
+from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date, string2date
 from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average
 from moneymoney.reusing.decorators import timeit
 from moneymoney.reusing.currency import Currency
@@ -595,7 +595,7 @@ def InvestmentsWithBalance(request):
             
     r=[]
     for o in qs:
-        iot=InvestmentsOperationsTotals_from_investment(o, timezone.now(), request.local_currency)
+        iot=InvestmentsOperationsTotals_from_investment(request, o, timezone.now(), request.local_currency)
         percentage_invested=None if iot.io_total_current["invested_user"]==0 else  iot.io_total_current["gains_gross_user"]/iot.io_total_current["invested_user"]
 
         r.append({
@@ -673,33 +673,30 @@ def InvestmentsoperationsEvolutionChart(request):
 @timeit
 @api_view(['POST', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-def investments_same_product_change_selling_price(request, products_id):
+def InvestmentsSameProductChangeSellingPrice(request):
+    selling_price=RequestDecimal(request, "selling_price")
+    selling_expiration=RequestDate(request, "selling_expiration")
+    investments=RequestListUrl(request, "investments")
+    if selling_expiration is not None and selling_price is not None and investments is not None:
+        for inv in investments:
+            inv.selling_price=selling_price
+            inv.selling_expiration=selling_expiration
+            inv.save()
+        return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
+    return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
 
-    if request.method == 'POST':
-        form = None
-        print(form)
-        if form.is_valid():
-            for investment_id in string2list_of_integers(form.cleaned_data['investments']):
-                inv=Investments.objects.get( pk=investment_id)
-                inv.selling_price=form.cleaned_data["selling_price"]
-                inv.selling_expiration=form.cleaned_data["selling_expiration"]
-                print(form.cleaned_data)
-                print(inv)
-                inv.save()
+
 @csrf_exempt
 @transaction.atomic
 @timeit
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-def investmentsoperationsManager_investments_same_product(request):
+def InvestmentsOperationsTotalManager_investments_same_product(request):
     product=RequestGetUrl(request, "product")
     if product is not None:
         qs_investments=Investments.objects.filter(products=product, active=True)
-        iom=InvestmentsOperationsManager_from_investment_queryset(qs_investments, timezone.now(), request)
-        data=[]
-        for io in iom.list:
-            data.append(io.json())    
-        return JsonResponse( data, encoder=MyDjangoJSONEncoder,     safe=False)
+        iotm=InvestmentsOperationsTotalsManager_from_investment_queryset(qs_investments,  timezone.now(), request)
+        return JsonResponse( iotm.json(), encoder=MyDjangoJSONEncoder,     safe=False)
     return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
 
 class LeveragesViewSet(viewsets.ModelViewSet):
@@ -1760,6 +1757,22 @@ def RequestGetUrl(request, field,  default=None):
 def RequestUrl(request, field,  default=None):
     try:
         r = obj_from_url(request, request.data.get(field))
+    except:
+        r=default
+    return r 
+## Returns a model obect
+def RequestListUrl(request, field,  default=None):
+    try:
+        r=[]
+        for f in request.data.get(field):
+            r.append(obj_from_url(request, f))
+    except:
+        r=default
+    return r
+
+def RequestDate(request, field, default=None):
+    try:
+        r = string2date(request.data.get(field))
     except:
         r=default
     return r
