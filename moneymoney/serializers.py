@@ -1,3 +1,4 @@
+
 from  moneymoney.models import (
     Accounts, 
     Accountsoperations, 
@@ -75,13 +76,18 @@ class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     
     def create(self, validated_data):
         created=serializers.HyperlinkedModelSerializer.create(self,  validated_data)
+        created.save()
+        created.investments.set_attributes_after_investmentsoperations_crud()
         created.update_associated_account_operation(self.context.get("request"))
         return created
     
     def update(self, instance, validated_data):
         updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
+        updated.save()
+        updated.investments.set_attributes_after_investmentsoperations_crud()
         updated.update_associated_account_operation(self.context.get("request"))
         return updated
+
         
 
 

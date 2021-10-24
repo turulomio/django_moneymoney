@@ -711,7 +711,23 @@ class Investments(models.Model):
         preserved = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(ids)])
         queryset = Investments.objects.select_related('accounts').filter(pk__in=ids).order_by(preserved)
         return queryset
-
+        
+    def shares_from_db_investmentsoperations(self):
+        r=cursor_one_field(" select sum(shares) from investmentsoperations where investments_id=%s", (self.id, ))
+        if r is None:
+            return 0
+        return r
+        
+    def set_attributes_after_investmentsoperations_crud(self):      
+#        print("setting investment attributes")
+        # Always activeive after investmentsoperations CRUD
+        if self.active is False:
+            self.active=True
+        # Changes selling expiration after investmentsoperations CRUD y 0 shares
+        if self.selling_expiration>=date.today() and self.shares_from_db_investmentsoperations()==0:
+            self.selling_expiration=date.today()-timedelta(days=1)
+        self.save()
+        
 class Investmentsoperations(models.Model):
     operationstypes = models.ForeignKey('Operationstypes', models.DO_NOTHING, blank=False, null=False)
     investments = models.ForeignKey(Investments, models.DO_NOTHING, blank=False, null=False)

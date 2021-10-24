@@ -158,10 +158,14 @@ class InvestmentsOperations:
         r["investment"]={
             "name": self.investment.name, 
             "selling_price": self.investment.selling_price, 
+            "selling_expiration": self.investment.selling_expiration, 
             "fullName": self.investment.fullName(), 
             "gains_at_sellingpoint": self.current_gains_gross_investment_at_selling_price(), 
             "url": self.request.build_absolute_uri(reverse('investments-detail', args=(self.investment.id, ))), 
             "average_price_investment": self.current_average_price_investment(), 
+            "active": self.investment.active, 
+            "id":self.investment.id, 
+            "daily_adjustment":self.investment.daily_adjustment, 
         }
         r["product"]={
             "name": self.investment.products.name, 

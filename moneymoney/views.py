@@ -149,7 +149,6 @@ class DividendsViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         investments_ids=RequestGetListOfIntegers(self.request, 'investments')
         datetime=RequestGetDtaware(self.request, 'from')
-        print(investments_ids,  datetime)
         if investments_ids is not None and datetime is None:
             return self.queryset.filter(investments__in=investments_ids).order_by("datetime")
         elif investments_ids is not None and datetime is not None:
@@ -278,6 +277,12 @@ class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
     queryset = Investmentsoperations.objects.all()
     serializer_class = serializers.InvestmentsoperationsSerializer
     permission_classes = [permissions.IsAuthenticated]  
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        instance.investments.set_attributes_after_investmentsoperations_crud()
+        return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
     
 @csrf_exempt
 @api_view(['POST', ])    
