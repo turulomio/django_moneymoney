@@ -344,6 +344,26 @@ def AccountTransfer(request):
             ao_commission.comment=Comment().encode(eComment.AccountTransferOriginCommission, ao_origin, ao_destiny, ao_commission)
             ao_commission.save()
         return Response({'status': 'details'}, status=status.HTTP_200_OK)
+    return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)    
+
+@csrf_exempt
+@api_view(['POST', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+@transaction.atomic
+def AccountTransferDelete(request):         
+    comment=RequestString(request, "comment")
+    if comment is not None:
+        args=Comment().getArgs(comment)#origin,destiny,commission
+        aoo=Accountsoperations.objects.get(pk=args[0])
+        aod=Accountsoperations.objects.get(pk=args[1])
+        aoc=None
+        if args[2]!=-1:
+            aoc=Accountsoperations.objects.get(pk=args[2])
+        if aoc is not None:
+            aoc.delete()
+        aoo.delete()
+        aod.delete()
+        return Response({'status': 'details'}, status=status.HTTP_200_OK)
     return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
 
 class AccountsViewSet(viewsets.ModelViewSet):
@@ -477,9 +497,11 @@ def AccountsoperationsWithBalance(request):
             "operationstypes":request.build_absolute_uri(reverse('operationstypes-detail', args=(o.operationstypes.pk, ))), 
             "amount": o.amount, 
             "balance":  initial_balance + o.amount, 
-            "comment": Comment().decode(o.comment), 
+            "comment": o.comment, 
+            "comment_decoded": Comment().decode(o.comment), 
             "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.pk, ))), 
             "currency": o.accounts.currency, 
+            "is_editable": o.is_editable(), 
         })
         initial_balance=initial_balance + o.amount
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)

@@ -33,6 +33,7 @@ urlpatterns=[
     path('logout/', money_views.logout, name="logout"), 
     path('accounts/withbalance/', money_views.AccountsWithBalance, name='AccountsWithBalance'),
     path('accounts/transfer/', money_views.AccountTransfer, name='AccountTransfer'),
+    path('accounts/transfer/delete/', money_views.AccountTransferDelete, name='AccountTransferDelete'),
     path('accountsoperations/withbalance/', money_views.AccountsoperationsWithBalance, name='AccountsoperationsWithBalance'),
     path('assets/report/', money_views.AssetsReport, name='AssetsReport'),
     path('creditcards/withbalance/', money_views.CreditcardsWithBalance, name='CreditcardsWithBalance'),

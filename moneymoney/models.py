@@ -334,6 +334,18 @@ class Accountsoperations(models.Model):
         if Comment().getCode(self.comment) in (eComment.AccountTransferOrigin, eComment.AccountTransferDestiny, eComment.AccountTransferOriginCommission):
             return False        
         return True
+
+    def is_editable(self):
+        if self.concepts==None:
+            return False
+        if self.concepts.id in (eConcept.BuyShares, eConcept.SellShares, 
+            eConcept.Dividends, eConcept.CreditCardBilling, eConcept.AssistancePremium,
+            eConcept.DividendsSaleRights, eConcept.BondsCouponRunPayment, eConcept.BondsCouponRunIncome, 
+            eConcept.BondsCoupon, eConcept.RolloverPaid, eConcept.RolloverReceived):
+            return False
+        if Comment().getCode(self.comment) in (eComment.AccountTransferOrigin, eComment.AccountTransferDestiny, eComment.AccountTransferOriginCommission):
+            return False        
+        return True
         
     def is_creditcardbilling(self):
         if self.concepts.id==eConcept.CreditCardBilling:
