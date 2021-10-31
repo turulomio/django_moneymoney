@@ -736,7 +736,7 @@ class Investments(models.Model):
         if self.active is False:
             self.active=True
         # Changes selling expiration after investmentsoperations CRUD y 0 shares
-        if self.selling_expiration>=date.today() and self.shares_from_db_investmentsoperations()==0:
+        if self.selling_expiration is not None and self.selling_expiration>=date.today() and self.shares_from_db_investmentsoperations()==0:
             self.selling_expiration=date.today()-timedelta(days=1)
         self.save()
         
@@ -1155,7 +1155,7 @@ class Strategies(models.Model):
 def percentage_to_selling_point(shares, selling_price, last_quote):       
     """Función que calcula el tpc selling_price partiendo de las el last y el valor_venta
     Necesita haber cargado mq getbasic y operinversionesactual"""
-    if selling_price==0 or selling_price==None:
+    if selling_price==0 or selling_price==None or last_quote is None:
         return Percentage()
     if shares>0:
         return Percentage(selling_price-last_quote, last_quote)
