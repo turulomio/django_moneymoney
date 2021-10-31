@@ -60,6 +60,7 @@ class DividendsSerializer(serializers.HyperlinkedModelSerializer):
 #        return created
 
 class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
+
     fullname = serializers.SerializerMethodField()
     class Meta:
         model = Investments
@@ -94,10 +95,12 @@ class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class ConceptsSerializer(serializers.HyperlinkedModelSerializer):
+    used = serializers.SerializerMethodField()
     class Meta:
         model = Concepts
-        fields = ('url', 'id', 'name',  'operationstypes', 'editable')
-
+        fields = ('url', 'id', 'name',  'operationstypes', 'editable','used')
+    def get_used(self, obj):
+        return   Creditcardsoperations.objects.filter(concepts__id=obj.id).count() + Accountsoperations.objects.filter(concepts__id=obj.id).count() + Dividends.objects.filter(concepts__id=obj.id).count()     
 class CreditcardsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Creditcards
