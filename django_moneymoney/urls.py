@@ -39,6 +39,7 @@ urlpatterns=[
     path('creditcards/withbalance/', money_views.CreditcardsWithBalance, name='CreditcardsWithBalance'),
     path('creditcardsoperations/withbalance/', money_views.CreditcardsoperationsWithBalance, name='CreditcardsoperationsWithBalance'),
     path('creditcardsoperations/payment/<int:pk>/', money_views.CreditcardsoperationsPayment, name='CreditcardsoperationsPayment'),
+    path('concepts/migration/', money_views.ConceptsMigration, name='ConceptsMigration'),
     path('banks/withbalance/', money_views.BanksWithBalance, name='BanksWithBalance'),
     path('estimations/dps/add/', money_views.EstimationsDps_add, name='EstimationsDps_add'),
     path('echarts/to/file/', money_views.ECharts_to_file, name='ECharts_to_file'),

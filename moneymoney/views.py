@@ -113,6 +113,21 @@ def AssetsReport(request):
         print(encoded_string[:100])
         return HttpResponse(encoded_string)
 
+
+@csrf_exempt
+@api_view(['POST', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+@transaction.atomic
+def ConceptsMigration(request):         
+    concept_from=RequestUrl(request, "from")
+    concept_to=RequestUrl(request, "to")
+    if concept_from is not None and concept_to is not None:
+        execute("update accountsoperations set concepts_id=%s where concepts_id=%s", (concept_to.id, concept_from.id))
+        execute("update creditcardsoperations set concepts_id=%s where concepts_id=%s", (concept_to.id, concept_from.id))
+        execute("update dividends set concepts_id=%s where concepts_id=%s", (concept_to.id, concept_from.id))
+        return Response({'status': 'details'}, status=status.HTTP_200_OK)
+    return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
+
 class ConceptsViewSet(viewsets.ModelViewSet):
     queryset = Concepts.objects.all()
     serializer_class = serializers.ConceptsSerializer
