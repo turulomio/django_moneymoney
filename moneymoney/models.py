@@ -908,25 +908,6 @@ class Orders(models.Model):
             return True
         return False
 
-    ## Used to display bank order execution alert using form cleaned_data
-    @staticmethod
-    def bank_alert(cleaned_data, warning=False):
-        if warning==True:
-            stw='<p><span class="red">' + _("Remember that is a stop loss order")+'</span></p>'
-        else:
-            stw=""
-        
-        return _(f"""<p>Order was created sucessfully.</p>
-        <p>Don't forget to set this order in your bank:</p>
-        {stw}
-        <ul>
-            <li>Expiration: {cleaned_data['expiration']}</li>
-            <li>Investment: {cleaned_data['investments'].fullName()}</li>
-            <li>Shares: {cleaned_data['shares']} </li>
-            <li>Price: {Currency(cleaned_data['price'], cleaned_data['investments'].products.currency)} </li>
-        </ul>
-        """)
-
 class Products(models.Model):
     name = models.TextField(blank=True, null=True)
     isin = models.TextField(blank=True, null=True)
