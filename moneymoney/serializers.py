@@ -20,6 +20,7 @@ from  moneymoney.models import (
     Strategies, 
 )
 from rest_framework import serializers
+from django.utils.translation import gettext as _
 
 class BanksSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -96,11 +97,15 @@ class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
 
 class ConceptsSerializer(serializers.HyperlinkedModelSerializer):
     used = serializers.SerializerMethodField()
+    localname = serializers.SerializerMethodField()
     class Meta:
         model = Concepts
-        fields = ('url', 'id', 'name',  'operationstypes', 'editable','used')
+        fields = ('url', 'id', 'name',  'operationstypes', 'editable','used', 'localname')
     def get_used(self, obj):
-        return   Creditcardsoperations.objects.filter(concepts__id=obj.id).count() + Accountsoperations.objects.filter(concepts__id=obj.id).count() + Dividends.objects.filter(concepts__id=obj.id).count()     
+        return   Creditcardsoperations.objects.filter(concepts__id=obj.id).count() + Accountsoperations.objects.filter(concepts__id=obj.id).count() + Dividends.objects.filter(concepts__id=obj.id).count()   
+    def get_localname(self, obj):
+        return  _(obj.name)
+
 class CreditcardsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Creditcards

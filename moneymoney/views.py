@@ -444,7 +444,7 @@ def BanksWithBalance(request):
         balance_investments=o.balance_investments(request)
         r.append({
             "id": o.id,  
-            "name":o.name, 
+            "name": _(o.name), 
             "active":o.active, 
             "url":request.build_absolute_uri(reverse('banks-detail', args=(o.pk, ))), 
             "balance_accounts": balance_accounts, 
@@ -470,10 +470,11 @@ def AccountsWithBalance(request):
             
     r=[]
     for o in qs:
+        print (_(o.name))
         balance_account, balance_user=o.balance(timezone.now(), request.local_currency ) 
         r.append({
             "id": o.id,  
-            "name":o.name, 
+            "name": _(o.name), 
             "active":o.active, 
             "url":request.build_absolute_uri(reverse('accounts-detail', args=(o.pk, ))), 
             "number": o.number, 
