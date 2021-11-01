@@ -667,17 +667,6 @@ class Investments(models.Model):
     def fullName(self):
         return "{} ({})".format(self.name, self.accounts.name)
             
-    ## Used to display bank order execution alert using form cleaned_data
-    @staticmethod
-    def bank_alert(cleaned_data):
-        return _(f"""<p>Investment was updated sucessfully.</p>
-        <p>Don't forget to set this information to your bank if neccessary:</p>
-        <ul>
-            <li>Selling price: {Currency(cleaned_data['selling_price'], cleaned_data["products"].currency)}</li>
-            <li>Expiration selling order: {cleaned_data['selling_expiration']}</li>
-        </ul>
-        """)
-        
     def operations(self, request, local_currency):
         if hasattr(self, "_operations") is False:
             from moneymoney.investmentsoperations import InvestmentsOperations_from_investment
