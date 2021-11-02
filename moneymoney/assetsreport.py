@@ -19,7 +19,7 @@ def request_get(absolute_url, authorization):
     a=get(absolute_url, headers={'Authorization': f'Token {authorization}'}, verify=False)
     return loads(a.content)
 
-def generate_assets_report(request):
+def generate_assets_report(request, format):
     authorization=cursor_one_field("select * from authtoken_token where user_id=%s", (request.user.id, ))
     c=request.local_currency
     z=request.local_zone
@@ -348,7 +348,7 @@ def generate_assets_report(request):
     print(filename)
 
 #    filenamee='AssetsReport-{}.pdf'.format(dtnaive2string(datetime.now(), "%Y%m%d%H%M")
-    doc.save(filename+".odt")
     doc.export_pdf(filename)
+    doc.save(filename+".odt")
     doc.close()
     return filename

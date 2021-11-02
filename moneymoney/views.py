@@ -106,8 +106,9 @@ def logout(request):
 @csrf_exempt
 @api_view(['GET', ])    
 def AssetsReport(request):
+    format_=RequestGetString(request, "format", "pdf")
     from moneymoney.assetsreport import generate_assets_report
-    filename=generate_assets_report(request)
+    filename=generate_assets_report(request, format_)
     with open(filename, "rb") as pdf:
         encoded_string = b64encode(pdf.read())
         print(encoded_string[:100])
@@ -1352,8 +1353,8 @@ def ReportDividends(request):
     shares=cursor_rows_as_dict("investments_id", """
         select 
             investments.id as investments_id ,
-            sum(shares) as shares
-            from investments, investmentsoperations where active=true and investments.id=investmentsoperations.investments_id group by investments.id""")
+            coalesce(sum(shares),0) as shares
+            from investments left join investmentsoperations on investments.id=investmentsoperations.investments_id group by investments.id""")
     estimations=cursor_rows_as_dict("products_id",  """
         select 
             distinct(products.id) as products_id, 
@@ -1369,6 +1370,8 @@ def ReportDividends(request):
             from products, investments where investments.products_id=products.id and investments.active=true""")
     ld_report=[]
     for inv in qs_investments:        
+        if shares[inv.id] is None: #Left join
+            shares[inv.id]=0
         if inv.products_id in estimations:
             dps=estimations[inv.products_id]["estimation"]
             date_estimation=estimations[inv.products_id]["date_estimation"]
@@ -1555,6 +1558,7 @@ def ReportCurrentInvestmentsOperations(request):
                 "percentage_apr_user": ioc.percentage_apr_user().value, 
                 "percentage_total_user": ioc.percentage_total_user().value,   
             })
+    ld=listdict_order_by(ld, "datetime")
     return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
 
 @timeit
