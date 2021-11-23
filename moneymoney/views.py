@@ -214,6 +214,7 @@ def StrategiesWithBalance(request):
         gains_current_net_user=io_in_strategy.current_gains_net_user() 
         gains_historical_net_user=io_in_strategy.historical_gains_net_user_between_dt(o.dt_from, o.dt_to_for_comparations())
         dividends_net_user=Dividends.net_gains_baduser_between_datetimes_for_some_investments(investments_ids, o.dt_from, o.dt_to_for_comparations())
+        print(investments_ids)
         r.append({
             "id": o.id,  
             "url": request.build_absolute_uri(reverse('strategies-detail', args=(o.pk, ))), 
@@ -225,7 +226,7 @@ def StrategiesWithBalance(request):
             "gains_historical_net_user": gains_historical_net_user, 
             "dividends_net_user": dividends_net_user, 
             "total_net_user":gains_current_net_user + gains_historical_net_user + dividends_net_user, 
-            "investments":o.investments, 
+            "investments":investments_ids, 
             "type": o.type, 
             "comment": o.comment, 
             "additional1": o.additional1, 
@@ -900,11 +901,15 @@ def ProductsRanges(request):
         percentage_gains=percentage_gains/1000
     amount_to_invest=RequestGetInteger(request, "amount_to_invest")
     recomendation_methods=RequestGetInteger(request, "recomendation_methods")
-    account=RequestGetUrl(request, "account")
+    investments=request.GET.getlist("investments[]", [])
+    if investments is not None:
+        qs_investments=Investments.objects.filter(id__in=investments)
+    else:
+        qs_investments=Investments.objects.none()
     if not (product is None or only_first is None or percentage_between_ranges is None or percentage_gains is None or amount_to_invest is None or recomendation_methods is None):
         from moneymoney.productrange import ProductRangeManager
         
-        prm=ProductRangeManager(request, product, percentage_between_ranges, percentage_gains, only_first,  account, decimals=product.decimals)
+        prm=ProductRangeManager(request, product, percentage_between_ranges, percentage_gains, only_first,  qs_investments=qs_investments, decimals=product.decimals)
         prm.setInvestRecomendation(recomendation_methods)
 
         return JsonResponse( prm.json(), encoder=MyDjangoJSONEncoder, safe=False)

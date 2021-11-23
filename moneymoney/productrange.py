@@ -2,12 +2,12 @@ from datetime import date
 from django.urls import reverse
 from django.utils import timezone
 from moneymoney.reusing.libmanagers import ObjectManager, DatetimeValueManager
-from moneymoney.models import Investments, Orders
+from moneymoney.models import Orders
 from moneymoney.reusing.percentage import Percentage
 from moneymoney.investmentsoperations import InvestmentsOperationsManager_from_investment_queryset
 
 class ProductRange():
-    def __init__(self, request,  id=None,  product=None,  value=None, percentage_down=None,  percentage_up=None, only_first=True, only_account=None, decimals=2):
+    def __init__(self, request,  id=None,  product=None,  value=None, percentage_down=None,  percentage_up=None, only_first=True, decimals=2):
         self.request=request
         self.id=id
         self.product=product
@@ -15,7 +15,6 @@ class ProductRange():
         self.percentage_down=percentage_down
         self.percentage_up=percentage_up
         self.only_first=only_first
-        self.only_account=only_account
         self.decimals=decimals
         self.recomendation_invest=False
         self.recomendation_reinvest=False
@@ -52,15 +51,11 @@ class ProductRange():
     def getInvestmentsOperationsInsideJson(self, iom):
         r=[]
         for io in iom.list:
-            if self.only_account is not None:#If different account continues
-                if io.investment.accounts.id != self.only_account.id:
-                    continue
-            
             for op in io.io_current:
                 if self.only_first is True:#Only first when neccesary
                     if io.io_current.index(op)!=0:
                         continue
-                if self.isInside(op["price_investment"])==True:
+                if self.isInside(op["price_investment"]) is True:
                     r.append({
                         "url":self.request.build_absolute_uri(reverse('investments-detail', args=(io.investment.pk, ))), 
                         "id": io.investment.pk, 
@@ -81,34 +76,30 @@ class ProductRange():
     def getOrdersInsideJson(self, orders): 
         r=[]
         for o in orders:
-            if self.only_account is not None:#If different account continues
-                if o.investments.accounts.id != self.only_account.id:
-                    continue
             if o.investments.products.id==self.product.id and self.isInside(o.price)==True:
                 r.append({
-#                    "url": reverse('order_update',  args=(o.id, )), 
                     "name": o.investments.fullName(), 
                     "amount": o.currency_amount().amount, 
                 })
         return r
-      
+
+## @param is a queryset of investments
 ## @param additional_ranges. Number ranges to show over and down calculated limits
+
 class ProductRangeManager(ObjectManager):
-    def __init__(self, request, product, percentage_down, percentage_up, only_first=True, only_account=None, decimals=2, additional_ranges=3):
+    def __init__(self, request, product, percentage_down, percentage_up, only_first=True, decimals=2, qs_investments=[], additional_ranges=3):
         ObjectManager.__init__(self)
         self.only_first=only_first
-        self.only_account=only_account
         self.request=request
         self.product=product
+        self.qs_investments=qs_investments
         self.percentage_down=Percentage(percentage_down, 100)
         self.percentage_up=Percentage(percentage_up, 100)
         self.decimals=decimals
         self.method=0
         
-        
-        self.qs_investments=Investments.objects.select_related("accounts").filter(active=True, products_id=self.product.id)
         self.iom=InvestmentsOperationsManager_from_investment_queryset(self.qs_investments, timezone.now(), self.request)
-        self.orders=Orders.objects.select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__leverages").select_related("investments__products__productstypes").filter(executed=None, expiration__gte=date.today())
+        self.orders=Orders.objects.select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__leverages").select_related("investments__products__productstypes").filter(investments__in=self.qs_investments, executed=None, expiration__gte=date.today())
 
         self.tmp=[]
         self.highest_range_value=10000000
@@ -116,11 +107,9 @@ class ProductRangeManager(ObjectManager):
         i=0
         range_lowest=0.000001
         while current_value>range_lowest:
-            self.tmp.append(ProductRange(self.request,  i, self.product,current_value, self.percentage_down, percentage_up, self.only_first, self.only_account))
+            self.tmp.append(ProductRange(self.request,  i, self.product,current_value, self.percentage_down, percentage_up, self.only_first))
             current_value=current_value*(1-self.percentage_down.value)
             i=i+1
-
-        print("RANGOS TMP", len(self.tmp))
         
         #Calculate max_ price and min_price. last price and orders is valorated too 
         max_=self.iom.current_highest_price()
@@ -130,9 +119,6 @@ class ProductRangeManager(ObjectManager):
         if product.basic_results()["last"]< min_:
             min_=product.basic_results()["last"]
         for o in self.orders:
-            if self.only_account is not None:#If different account continues
-                if o.investments.accounts.id != self.only_account.id:
-                    continue
             if o.investments.products.id==self.product.id:
                 if o.price>max_:
                     max_=o.price
@@ -147,12 +133,7 @@ class ProductRangeManager(ObjectManager):
             current_index=self.getTmpIndexOfValue(self.product.basic_results()["last"])
             top_index=current_index-additional_ranges-1
             bottom_index=current_index+additional_ranges+1
-
-        print(max_, top_index)
-        print(min_,  bottom_index)
-        
         self.arr=self.tmp[top_index:bottom_index]
-        print("ARR",  len(self.arr))
 
     def getTmpIndexOfValue(self, value):
         for index,  pr in enumerate(self.tmp):
