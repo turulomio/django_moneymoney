@@ -1512,6 +1512,14 @@ def ReportsInvestmentsLastOperation(request):
         
     for io in iom:
         last=io.current_last_operation_excluding_additions()
+        investments_urls=[]
+        if method==0:
+                investments_urls.append(request.build_absolute_uri(reverse('investments-detail', args=(io.investment.pk, ))), )
+        if method==1:
+            investments_same_product=Investments.objects.filter(active=True, products=io.investment.products).select_related("accounts").select_related("products")
+            for inv in investments_same_product:
+                investments_urls.append(request.build_absolute_uri(reverse('investments-detail', args=(inv.pk, ))), )
+            
         if last is None:
             continue
         ioc_last=IOC(io.investment, last )
@@ -1528,6 +1536,7 @@ def ReportsInvestmentsLastOperation(request):
             "percentage_last": ioc_last.percentage_total_investment().value, 
             "percentage_invested": io.current_percentage_invested_user().value, 
             "percentage_sellingpoint": ioc_last.percentage_sellingpoint().value,   
+            "investments_urls": investments_urls, 
         })
     return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
     
