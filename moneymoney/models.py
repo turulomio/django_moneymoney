@@ -1343,7 +1343,6 @@ class Comment:
                 if not self.validateLength(2, code, args): return string
                 creditcard=Creditcards.objects.get(pk=args[0])
                 operaccount=Accountsoperations.objects.get(pk=args[1])
-                print(operaccount)
                 return {"creditcard":creditcard, "operaccount":operaccount}
 
             elif code==eComment.CreditCardRefund:#Devolución de tarjeta

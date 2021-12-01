@@ -111,7 +111,6 @@ def AssetsReport(request):
     filename=generate_assets_report(request, format_)
     with open(filename, "rb") as pdf:
         encoded_string = b64encode(pdf.read())
-        print(encoded_string[:100])
         return HttpResponse(encoded_string)
 
 
@@ -214,7 +213,6 @@ def StrategiesWithBalance(request):
         gains_current_net_user=io_in_strategy.current_gains_net_user() 
         gains_historical_net_user=io_in_strategy.historical_gains_net_user_between_dt(o.dt_from, o.dt_to_for_comparations())
         dividends_net_user=Dividends.net_gains_baduser_between_datetimes_for_some_investments(investments_ids, o.dt_from, o.dt_to_for_comparations())
-        print(investments_ids)
         r.append({
             "id": o.id,  
             "url": request.build_absolute_uri(reverse('strategies-detail', args=(o.pk, ))), 
@@ -311,7 +309,6 @@ def AccountTransfer(request):
     datetime=RequestPostDtaware(request, 'datetime')
     amount=RequestPostDecimal(request, 'amount')
     commission=RequestPostDecimal(request, 'commission',  0)
-    print(origin, destiny, datetime, amount,  commission)
     if (
         destiny is not None and
         origin is not None and
@@ -472,7 +469,6 @@ def AccountsWithBalance(request):
             
     r=[]
     for o in qs:
-        print (_(o.name))
         balance_account, balance_user=o.balance(timezone.now(), request.local_currency ) 
         r.append({
             "id": o.id,  
@@ -484,7 +480,6 @@ def AccountsWithBalance(request):
             "balance_user": balance_user, 
             "is_deletable": o.is_deletable(), 
             "currency": o.currency, 
-            "banks__name": o.banks.name,  
             "banks":request.build_absolute_uri(reverse('banks-detail', args=(o.banks.pk, ))), 
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
@@ -901,7 +896,7 @@ def ProductsRanges(request):
         percentage_gains=percentage_gains/1000
     amount_to_invest=RequestGetInteger(request, "amount_to_invest")
     recomendation_methods=RequestGetInteger(request, "recomendation_methods")
-    investments=request.GET.getlist("investments[]", [])
+    investments=request.GET.getlist("investments[]", []) 
     if investments is not None:
         qs_investments=Investments.objects.filter(id__in=investments)
     else:
