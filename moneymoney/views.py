@@ -684,7 +684,6 @@ def InvestmentsoperationsFull(request):
 @timeit
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsoperationsFullSimulation(request):
-    print(request.data)
     investments=[]
     for url in request.data["investments"]:
         investments.append(obj_from_url(request, url))## Como todas deben ser iguales uso la primera
