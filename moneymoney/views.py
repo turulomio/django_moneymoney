@@ -1649,17 +1649,43 @@ def ECharts_to_file(request):
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
 def EstimationsDps_add(request):
-    print(request.data)
     year=RequestInteger(request, 'year')
     estimation=RequestDecimal(request, 'estimation')
     product=RequestUrl(request, 'product')
-    print(year, estimation, product)
     if year is not None and estimation is not None  and product is not None:
         execute("delete from estimations_dps where products_id=%s and year=%s", (product.id, year))
         execute("insert into estimations_dps (date_estimation,year,estimation,source,manual,products_id) values(%s,%s,%s,%s,%s,%s)", (
             date.today(), year, estimation, "Internet", True, product.id))
         return JsonResponse(True, safe=False)
-    return JsonResponse(False, safe=False)
+    return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
+    
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated, ])
+@transaction.atomic
+def EstimationsDps_delete(request):
+    year=RequestInteger(request, 'year')
+    product=RequestUrl(request, 'product')
+    print(year, product)
+    if year is not None and product is not None:
+        execute("delete from estimations_dps where products_id=%s and year=%s", (product.id, year))
+        return JsonResponse(True, safe=False)
+    return Response({'status': "EstimationDPS wasn't deleted"}, status=status.HTTP_404_NOT_FOUND)
+    
+@csrf_exempt
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated, ])
+@transaction.atomic
+def EstimationsDps_list(request): 
+    product=RequestGetUrl(request, "product")
+    if product is not None:
+        rows=cursor_rows("select * from estimations_dps where products_id=%s order by year", (product.id, ))
+
+        for row in rows:
+            row["product"]=request.build_absolute_uri(reverse('products-detail', args=(row["products_id"], )))
+        return JsonResponse(rows, safe=False)
+    return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
 
 class StockmarketsViewSet(viewsets.ModelViewSet):
     queryset = Stockmarkets.objects.all()
