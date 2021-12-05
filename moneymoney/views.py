@@ -955,6 +955,14 @@ class QuotesViewSet(viewsets.ModelViewSet):
     queryset = Quotes.objects.all()
     serializer_class = serializers.QuotesSerializer
     permission_classes = [permissions.IsAuthenticated]  
+    
+    def get_queryset(self):
+        product=RequestGetUrl(self.request, 'product')
+        if product is not None:
+            return self.queryset.filter(products=product).order_by("datetime")
+            
+        else:
+            return self.queryset.order_by("datetime")
 
 @timeit
 @csrf_exempt
@@ -1667,7 +1675,6 @@ def EstimationsDps_add(request):
 def EstimationsDps_delete(request):
     year=RequestInteger(request, 'year')
     product=RequestUrl(request, 'product')
-    print(year, product)
     if year is not None and product is not None:
         execute("delete from estimations_dps where products_id=%s and year=%s", (product.id, year))
         return JsonResponse(True, safe=False)
