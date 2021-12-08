@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from django.db import transaction
 from django.urls import reverse, resolve
 from django.utils import timezone
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse, HttpResponse
 from moneymoney.investmentsoperations import (
     IOC, 

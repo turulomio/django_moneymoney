@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from math import ceil
 from moneymoney.reusing.connection_dj import cursor_one_row, cursor_rows_as_dict, execute
 from moneymoney.reusing.currency import Currency
