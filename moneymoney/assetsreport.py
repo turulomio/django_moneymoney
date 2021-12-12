@@ -55,8 +55,6 @@ def generate_assets_report(request, format):
     vTotal_dividends_gross=Currency(listdict_sum(dict_report_annual_gainsbyproductstypes, "dividends_gross"), c)
     vTotal_gains_dividends_net=vTotal_gains_net+vTotal_dividends_net
     vTotal_gains_dividends_gross=vTotal_gains_gross+vTotal_dividends_gross
-    vTarget_percentage=Percentage(4, 100)#Set in database
-    vTarget_amount=Currency(vTotalLastYear.amount*vTarget_percentage.value, c)
 
     # About
     doc.addParagraph(_("About Money Money"), "Heading 1")
@@ -121,13 +119,12 @@ def generate_assets_report(request, format):
         doc.addTableParagraph(report_annual_income, columnssize_percentages=[40, 20, 20, 20],  size=8, style="Table1Total")
                 
         ## Target
-        target=Percentage(4,100)#AnnualTarget(doc.mem).init__from_db(date.today().year)
         doc.addParagraph(
-                _(f"The investment system has established a {target} year target.")+" " +
-                _(f"With this target you should gain {vTarget_amount} at the end of the year.") +" " +
-                _(f"Up to date you have got {vTotal_gains_dividends_net} (net gains + net dividends) what represents a {Percentage(vTotal_gains_dividends_net, vTarget_amount)} of the target."), 
-                "MyStandard"
+            _(f"Up to date you have got {vTotal_gains_dividends_net} (net gains + net dividends) what represents a {Percentage(vTotal_gains_dividends_net, vTotalLastYear)} of the total assets at the end of the last year."), 
+            "MyStandard"
         )
+        
+        
         doc.pageBreak("Landscape")
         
         ### Assets evolution graphic
