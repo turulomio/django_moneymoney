@@ -23,14 +23,22 @@ from rest_framework import serializers
 from django.utils.translation import gettext as _
 
 class BanksSerializer(serializers.HyperlinkedModelSerializer):
+    localname = serializers.SerializerMethodField()
     class Meta:
         model = Banks
-        fields = ('url', 'name', 'active', 'id')
+        fields = ('url', 'name', 'active', 'id', 'localname')
+
+    def get_localname(self, obj):
+        return  _(obj.name)
 
 class AccountsSerializer(serializers.HyperlinkedModelSerializer):
+    localname = serializers.SerializerMethodField()
     class Meta:
         model = Accounts
-        fields = ('url', 'id','name', 'active', 'number','currency','banks')
+        fields = ('url', 'id','name', 'active', 'number','currency','banks', 'localname')
+
+    def get_localname(self, obj):
+        return  _(obj.name)
         
 class DividendsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -47,18 +55,6 @@ class DividendsSerializer(serializers.HyperlinkedModelSerializer):
         updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
         updated.update_associated_account_operation()
         return updated
-#        
-#class EstimationsDpsSerializer(serializers.HyperlinkedModelSerializer):
-#    class Meta:
-#        model = EstimationsDps
-#        fields = ('year','estimation', 'date_estimation', 'source','manual','products')
-#        
-#        
-#    def create(self, validated_data):
-#        print(validated_data)
-#        created=serializers.HyperlinkedModelSerializer.create(self,  validated_data)
-#        created.update_associated_account_operation()
-#        return created
 
 class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
 
@@ -90,11 +86,6 @@ class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
         updated.update_associated_account_operation(self.context.get("request"))
         return updated
 
-        
-
-
-
-
 class ConceptsSerializer(serializers.HyperlinkedModelSerializer):
     used = serializers.SerializerMethodField()
     localname = serializers.SerializerMethodField()
@@ -117,9 +108,13 @@ class CreditcardsoperationsSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','creditcards', 'paid','paid_datetime')
 
 class OperationstypesSerializer(serializers.HyperlinkedModelSerializer):
+    localname = serializers.SerializerMethodField()
     class Meta:
         model = Operationstypes
-        fields = ('url', 'id', 'name')
+        fields = ('url', 'id', 'name', 'localname')
+
+    def get_localname(self, obj):
+        return  _(obj.name)
         
 class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     currency = serializers.SerializerMethodField()
@@ -130,9 +125,14 @@ class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
         return obj.accounts.currency
                 
 class LeveragesSerializer(serializers.HyperlinkedModelSerializer):
+    localname = serializers.SerializerMethodField()
     class Meta:
         model = Leverages
-        fields = ('url', 'id', 'name', 'multiplier')
+        fields = ('url', 'id', 'name', 'multiplier', 'localname')
+
+    def get_localname(self, obj):
+        return  _(obj.name)
+
 class OrdersSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Orders
@@ -149,9 +149,13 @@ class ProductspairsSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('url', 'name', 'a',  'b')
 
 class ProductstypesSerializer(serializers.HyperlinkedModelSerializer):
+    localname = serializers.SerializerMethodField()
     class Meta:
         model = Productstypes
-        fields = ('url', 'id', 'name')        
+        fields = ('url', 'id', 'name', 'localname')
+
+    def get_localname(self, obj):
+        return  _(obj.name)
 
 class QuotesSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:

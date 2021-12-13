@@ -443,13 +443,14 @@ def BanksWithBalance(request):
         balance_investments=o.balance_investments(request)
         r.append({
             "id": o.id,  
-            "name": _(o.name), 
+            "name": o.name, 
             "active":o.active, 
             "url":request.build_absolute_uri(reverse('banks-detail', args=(o.pk, ))), 
             "balance_accounts": balance_accounts, 
             "balance_investments": balance_investments, 
             "balance_total": balance_accounts+balance_investments, 
-            "is_deletable": o.is_deletable()
+            "is_deletable": o.is_deletable(), 
+            "localname": _(o.name), 
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
         
@@ -472,7 +473,7 @@ def AccountsWithBalance(request):
         balance_account, balance_user=o.balance(timezone.now(), request.local_currency ) 
         r.append({
             "id": o.id,  
-            "name": _(o.name), 
+            "name": o.name, 
             "active":o.active, 
             "url":request.build_absolute_uri(reverse('accounts-detail', args=(o.pk, ))), 
             "number": o.number, 
@@ -481,6 +482,7 @@ def AccountsWithBalance(request):
             "is_deletable": o.is_deletable(), 
             "currency": o.currency, 
             "banks":request.build_absolute_uri(reverse('banks-detail', args=(o.banks.pk, ))), 
+            "localname": _(o.name), 
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
