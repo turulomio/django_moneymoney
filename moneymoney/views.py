@@ -1104,7 +1104,7 @@ def ReportAnnualIncomeDetails(request, year, month):
         balance=0
         for currency in currencies_in_accounts():
             for op in cursor_rows("""
-                select datetime,concepts_id, amount, comment
+                select datetime,concepts_id, amount, comment, accounts.id as accounts_id
                 from 
                     accountsoperations,
                     accounts
@@ -1115,7 +1115,7 @@ def ReportAnnualIncomeDetails(request, year, month):
                     accounts.currency=%s and
                     accounts.id=accountsoperations.accounts_id   
             union all 
-                select datetime,concepts_id, amount, comment
+                select datetime,concepts_id, amount, comment, accounts.id as accounts_id
                 from 
                     creditcardsoperations ,
                     creditcards,
@@ -1137,6 +1137,7 @@ def ReportAnnualIncomeDetails(request, year, month):
                         "balance": balance,
                         "comment":Comment().decode(op["comment"]), 
                         "currency": currency, 
+                        "account": request.build_absolute_uri(reverse('accounts-detail', args=(op["accounts_id"], ))), 
                     })
                 else:
                     print("TODO")
