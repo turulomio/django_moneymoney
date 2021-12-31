@@ -186,6 +186,13 @@ class StrategiesViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.StrategiesSerializer
     permission_classes = [permissions.IsAuthenticated]  
 
+    def get_queryset(self):
+        active=RequestGetBool(self.request, "active")
+        investment=RequestGetUrl(self.request, "investment")
+        type=RequestGetInteger(self.request, "type")
+        if active is not None and investment is not None:
+            return self.queryset.filter(dt_to__isnull=active,  investments__contains=investment.id, type=type)
+        return self.queryset.all() #We need to rerun all(), because it cached results after CRUD operations
 
 @csrf_exempt
 @api_view(['GET', ])    
@@ -637,6 +644,7 @@ def InvestmentsWithBalance(request):
             "active":o.active, 
             "url":request.build_absolute_uri(reverse('investments-detail', args=(o.pk, ))), 
             "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.id, ))), 
+            "product": request.build_absolute_uri(reverse('products-detail', args=(o.products.id, ))), 
             "products":request.build_absolute_uri(reverse('products-detail', args=(o.products.id, ))), 
             "last_datetime": o.products.basic_results()['last_datetime'], 
             "last": o.products.basic_results()['last'], 
@@ -704,17 +712,18 @@ def InvestmentsoperationsEvolutionChart(request):
 @timeit
 @api_view(['POST', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-def InvestmentsSameProductChangeSellingPrice(request):
+def InvestmentstChangeSellingPrice(request):
     selling_price=RequestDecimal(request, "selling_price")
     selling_expiration=RequestDate(request, "selling_expiration")
     investments=RequestListUrl(request, "investments")
-    if selling_expiration is not None and selling_price is not None and investments is not None:
+    
+    if investments is not None and selling_price is not None: #Pricce 
         for inv in investments:
             inv.selling_price=selling_price
             inv.selling_expiration=selling_expiration
             inv.save()
         return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
-    return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
+    return Response({'status': 'Investment or selling_price is None'}, status=status.HTTP_404_NOT_FOUND)
 
 
 @csrf_exempt

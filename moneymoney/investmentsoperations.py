@@ -542,6 +542,7 @@ class InvestmentsOperationsTotals:
             "leverage_multiplier": self.investment.products.leverages.multiplier, 
             "leverage_real_multiplier": self.investment.products.real_leveraged_multiplier(), 
             "url": self.request.build_absolute_uri(reverse('investments-detail', args=(self.investment.id, ))), 
+            "product": self.request.build_absolute_uri(reverse('products-detail', args=(self.investment.products.id, ))), 
         }
         r["product"]={
             "name": self.investment.products.name, 
