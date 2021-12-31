@@ -240,11 +240,6 @@ def StrategiesWithBalance(request):
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
-#class EstimationsDpsViewSet(viewsets.ModelViewSet):
-#    queryset = EstimationsDps.objects.all()
-#    serializer_class = serializers.EstimationsDpsSerializer
-#    permission_classes = [permissions.IsAuthenticated]  
-
 @timeit
 @csrf_exempt
 @api_view(['GET', ])    
@@ -897,6 +892,7 @@ def ProductsRanges(request):
         qs_investments=Investments.objects.filter(id__in=investments)
     else:
         qs_investments=Investments.objects.none()
+        
     if not (product is None or only_first is None or percentage_between_ranges is None or percentage_gains is None or amount_to_invest is None or recomendation_methods is None):
         from moneymoney.productrange import ProductRangeManager
         

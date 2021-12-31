@@ -12,7 +12,6 @@ Decimal()#Internal eval
 from django.db import models, transaction
 from django.db.models import Case, When
 from django.db.models.expressions import RawSQL
-from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from django.utils import timezone
 
@@ -1104,18 +1103,7 @@ class Strategies(models.Model):
         db_table = 'strategies'
         ordering = ['name']
 
-    ## Generates the url of details. I got errors in template reversing
-    def url_details(self):
-        if self.type==StrategiesTypes.PairsInSameAccount:
-            if self.additional1 is not None and self.additional2 is not None or self.additional3 is not None:
-                return reverse_lazy('investment_pairs',args=(self.additional1, self.additional2, self.additional3))
-            else:
-                return ""
-            
-            #additional1=products_id, additional2=percentage_between_ranges*1000, additional3=percentage_gains*1000, additional4=amount,additional5=recomendationmethod,additional6=onlyfirst,additional7=accounts_id}
-        elif self.type==StrategiesTypes.Ranges:
-            return reverse_lazy('product_ranges')+f"?product={self.additional1}&percentagebetween={self.additional2}&percentagegains={self.additional3}&amount={self.additional4}&method={self.additional5}&onlyfirst={self.additional6}&account={self.additional7}"
-        
+
     ## Replaces None for dt_to and sets a very big datetine
     def dt_to_for_comparations(self):
         if self.dt_to is None:
