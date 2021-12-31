@@ -148,7 +148,7 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
         elif active is not None:
             return self.queryset.filter(active=active)
         else:
-            return self.queryset
+            return self.queryset.all()
 
 
 class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
@@ -279,13 +279,13 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
         bank_id=RequestGetInteger(self.request,"bank")
 
         if bank_id is None and active is None:
-            return self.queryset
+            return self.queryset.all()
         elif bank_id is not None:
             return self.queryset.filter(accounts__banks__id=bank_id,  active=True)
         elif active is not None:
             return self.queryset.filter(active=active)
         else:
-            return self.queryset
+            return self.queryset.all()
 
 
 class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
@@ -395,7 +395,7 @@ class AccountsViewSet(viewsets.ModelViewSet):
         elif active is not None:
             return self.queryset.filter(active=active)
         else:
-            return self.queryset
+            return self.queryset.all()
 
 class AccountsoperationsViewSet(viewsets.ModelViewSet):
     queryset = Accountsoperations.objects.all()
@@ -409,7 +409,7 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
         if search is not None:
             return self.queryset.filter(comment__icontains=search)
         else:
-            return self.queryset
+            return self.queryset.all()
             
 class BanksViewSet(viewsets.ModelViewSet):
     queryset = Banks.objects.all()
@@ -417,15 +417,10 @@ class BanksViewSet(viewsets.ModelViewSet):
     serializer_class =  serializers.BanksSerializer
 
     def get_queryset(self):
-        try:
-            active = str2bool(self.request.GET.get('active'))
-        except:
-            active=None
-        if active is None:
-            return self.queryset
-        else:
+        active=RequestGetBool(self.request, "active")
+        if active is not None:
             return self.queryset.filter(active=active)
-
+        return self.queryset.all() #We need to rerun all(), because it cached results after CRUD operations
 
 @csrf_exempt
 @api_view(['GET', ])    
