@@ -87,13 +87,10 @@ class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
         return updated
 
 class ConceptsSerializer(serializers.HyperlinkedModelSerializer):
-    used = serializers.SerializerMethodField()
     localname = serializers.SerializerMethodField()
     class Meta:
         model = Concepts
-        fields = ('url', 'id', 'name',  'operationstypes', 'editable','used', 'localname')
-    def get_used(self, obj):
-        return   Creditcardsoperations.objects.filter(concepts__id=obj.id).count() + Accountsoperations.objects.filter(concepts__id=obj.id).count() + Dividends.objects.filter(concepts__id=obj.id).count()   
+        fields = ('url', 'id', 'name',  'operationstypes', 'editable', 'localname')
     def get_localname(self, obj):
         return  _(obj.name)
 

@@ -461,6 +461,11 @@ class Concepts(models.Model):
         preserved = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(ids)])
         queryset = Concepts.objects.select_related('operationstypes').filter(pk__in=ids).order_by(preserved)
         return queryset
+        
+    
+    def get_used(self):
+        return   Creditcardsoperations.objects.filter(concepts__id=self.id).count() + Accountsoperations.objects.filter(concepts__id=self.id).count() + Dividends.objects.filter(concepts__id=self.id).count()   
+
 
 
 class Creditcards(models.Model):
