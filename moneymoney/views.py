@@ -25,7 +25,6 @@ from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_r
 from moneymoney.reusing.casts import str2bool, string2list_of_integers
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date, string2date
 from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average
-from moneymoney.reusing.decorators import timeit
 from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.percentage import Percentage,  percentage_between
 
@@ -64,6 +63,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework import viewsets, permissions, status
 from django.core.serializers.json import DjangoJSONEncoder
+from zoneinfo import available_timezones
 
 class MyDjangoJSONEncoder(DjangoJSONEncoder):    
     def default(self, o):
@@ -102,7 +102,7 @@ def logout(request):
         token.delete()
         return Response("Logged out")
 
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 def AssetsReport(request):
@@ -247,13 +247,13 @@ def StrategiesWithBalance(request):
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 def home(request):
     return JsonResponse( True,  encoder=MyDjangoJSONEncoder,     safe=False)
 
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -262,13 +262,14 @@ def InvestmentsClasses(request):
     iotm=InvestmentsOperationsTotalsManager_from_investment_queryset(qs_investments_active, timezone.now(), request)
     return JsonResponse( iotm.json_classes(), encoder=MyDjangoJSONEncoder,     safe=False)
 
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def Timezones(request):
-    from pytz import all_timezones
-    return JsonResponse( all_timezones, encoder=MyDjangoJSONEncoder,     safe=False)
+    r=list(available_timezones())
+    r.sort()
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
 class InvestmentsViewSet(viewsets.ModelViewSet):
     queryset = Investments.objects.select_related("accounts").all()
@@ -581,7 +582,7 @@ def CreditcardsoperationsWithBalance(request):
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -616,7 +617,7 @@ def CreditcardsWithBalance(request):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -668,7 +669,7 @@ def InvestmentsWithBalance(request):
 
 
 
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -681,7 +682,7 @@ def InvestmentsoperationsFull(request):
 
 @csrf_exempt
 @api_view(['POST', ])    
-@timeit
+
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsoperationsFullSimulation(request):
     investments=[]
@@ -698,7 +699,7 @@ def InvestmentsoperationsFullSimulation(request):
     r=Simulate_InvestmentsOperations_from_investment(request, investments,  dt,  local_currency,  listdict,  temporaltable).json()
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -709,7 +710,7 @@ def InvestmentsoperationsEvolutionChart(request):
 
 @csrf_exempt
 @transaction.atomic
-@timeit
+
 @api_view(['POST', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentstChangeSellingPrice(request):
@@ -728,7 +729,7 @@ def InvestmentstChangeSellingPrice(request):
 
 @csrf_exempt
 @transaction.atomic
-@timeit
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsOperationsTotalManager_investments_same_product(request):
@@ -744,7 +745,7 @@ class LeveragesViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.LeveragesSerializer
     permission_classes = [permissions.IsAuthenticated]  
 
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -783,7 +784,7 @@ def OrdersList(request):
     
  
 @csrf_exempt
-@timeit
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsPairs(request):
@@ -870,7 +871,7 @@ def ProductsPairs(request):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 @csrf_exempt
-@timeit
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsQuotesOHCL(request):
@@ -882,7 +883,7 @@ def ProductsQuotesOHCL(request):
     return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
 
 @csrf_exempt
-@timeit
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsRanges(request):
@@ -954,19 +955,23 @@ def ProductsUpdate(request):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
  
 class QuotesViewSet(viewsets.ModelViewSet):
-    queryset = Quotes.objects.all()
+    queryset = Quotes.objects.all().select_related("products")
     serializer_class = serializers.QuotesSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
     def get_queryset(self):
         product=RequestGetUrl(self.request, 'product')
+        future=RequestGetBool(self.request, 'future')
+        
+        if future is True:
+            return Quotes.objects.all().filter(datetime__gte=timezone.now()).select_related("products").order_by("datetime")
+        
         if product is not None:
-            return self.queryset.filter(products=product).order_by("datetime")
+            return Quotes.objects.all().filter(products=product).select_related("products").order_by("datetime")
             
-        else:
-            return self.queryset.order_by("datetime")
+        return self.queryset
 
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -1023,7 +1028,7 @@ def ReportAnnual(request, year):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
  
  
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -1093,7 +1098,7 @@ def ReportAnnualIncome(request, year):
     list_= sorted(list_, key=lambda item: item["month_number"])
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
     
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -1177,7 +1182,7 @@ def ReportAnnualIncomeDetails(request, year, month):
 
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
     
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -1236,7 +1241,7 @@ group by productstypes_id""", (year, ))
         })
     return JsonResponse( l, encoder=MyDjangoJSONEncoder,     safe=False)
 
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -1314,7 +1319,7 @@ group by
 
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -1354,7 +1359,7 @@ def ReportConceptsHistorical(request):
     
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
     
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -1408,7 +1413,7 @@ def ReportDividends(request):
         ld_report.append(d)
     return JsonResponse( ld_report, encoder=MyDjangoJSONEncoder,     safe=False)
 
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -1440,7 +1445,7 @@ def ReportEvolutionAssets(request, from_year):
 
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
     
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -1476,7 +1481,7 @@ def ReportEvolutionAssetsChart(request):
         })
     return JsonResponse( l, encoder=MyDjangoJSONEncoder,     safe=False)
     
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -1507,7 +1512,7 @@ def ReportEvolutionInvested(request, from_year):
 
 
 
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -1551,7 +1556,7 @@ def ReportsInvestmentsLastOperation(request):
     return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
     
     
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -1580,7 +1585,7 @@ def ReportCurrentInvestmentsOperations(request):
     ld=listdict_order_by(ld, "datetime")
     return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
 
-@timeit
+
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])

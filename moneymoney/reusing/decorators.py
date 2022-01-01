@@ -7,7 +7,7 @@ from logging import error, debug, warning
 from platform import system as platform_system
 from sys import exit
 
-## allows you to measure the execution time of the method/function by just adding the @timeit decorator on the method.
+## allows you to measure the execution time of the method/function by just adding the  decorator on the method.
 ## @param method
 def timeit(method):
     def timed(*args, **kw):
@@ -68,7 +68,7 @@ def testing_decorators1():
     for i in range(10):
         print(i)
 
-@timeit
+
 def testing_decorators2():
     for i in range(10):
         print(i)

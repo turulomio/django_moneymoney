@@ -163,10 +163,19 @@ class ProductstypesSerializer(serializers.HyperlinkedModelSerializer):
         return  _(obj.name)
 
 class QuotesSerializer(serializers.HyperlinkedModelSerializer):
+    name = serializers.SerializerMethodField()
+    decimals = serializers.SerializerMethodField()
+    currency = serializers.SerializerMethodField()
     class Meta:
         model = Quotes
-        fields = ('url', 'id', 'datetime', 'quote',  'products')      
+        fields = ('url', 'id', 'datetime', 'quote',  'products', 'name', 'decimals', 'currency')      
 
+    def get_name(self, obj):
+        return  obj.products.name
+    def get_decimals(self, obj):
+        return  obj.products.decimals
+    def get_currency(self, obj):
+        return  obj.products.currency
     
     def create(self, validated_data):
         quotes=Quotes.objects.all().filter(datetime=validated_data['datetime'], products=validated_data['products'])
