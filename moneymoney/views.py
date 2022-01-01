@@ -7,6 +7,7 @@ from django.conf import settings
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.models import User
 from django.db import transaction
+from django.db.models import prefetch_related_objects
 from django.urls import reverse, resolve
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -962,9 +963,34 @@ class QuotesViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         product=RequestGetUrl(self.request, 'product')
         future=RequestGetBool(self.request, 'future')
+        last=RequestGetBool(self.request, 'last')
         
         if future is True:
             return Quotes.objects.all().filter(datetime__gte=timezone.now()).select_related("products").order_by("datetime")
+                
+        ## Search last quote of al linvestments
+        if last is True:
+            qs=Quotes.objects.raw("""
+                select 
+                    id, 
+                    quotes.products_id, 
+                    quotes.datetime, 
+                    quote 
+                from 
+                    quotes, 
+                    (select max(datetime) as datetime, products_id from quotes group by products_id) as maxdt 
+                where 
+                    quotes.products_id=maxdt.products_id and 
+                    quotes.datetime=maxdt.datetime 
+                order by 
+                    quotes.datetime desc
+            """)
+            #Querysets with raw sql can use select_related, but with one more query you can use this
+            prefetch_related_objects(qs, 'products')
+            return qs
+
+#            from django.db.models import Max
+#            return Quotes.objects.all().values("id", "quote", "products_id", "products__name").aggregate(max_datetime=Max("datetime")).select_related("products").order_by("datetime")
         
         if product is not None:
             return Quotes.objects.all().filter(products=product).select_related("products").order_by("datetime")
