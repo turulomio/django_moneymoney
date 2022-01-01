@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from requests import get
 from django.urls import reverse
 from django.utils.translation import gettext as _
@@ -7,11 +7,10 @@ from moneymoney import __version__
 from moneymoney.reusing.casts import f
 from moneymoney.reusing.connection_dj import cursor_one_field
 from moneymoney.reusing.currency import  Currency
-from moneymoney.reusing.datetime_functions import dtaware2string, string2dtaware
+from moneymoney.reusing.datetime_functions import dtaware2string, string2dtaware, dtnaive2string
 from moneymoney.reusing.listdict_functions import listdict_sum, listdict_sum_negatives, listdict_sum_positives, listdict_order_by
 from moneymoney.reusing.percentage import  Percentage
 from os import path
-from tempfile import gettempdir, _get_candidate_names
 from unogenerator import ODT
 
 
@@ -341,13 +340,16 @@ def generate_assets_report(request, format):
         Currency(listdict_sum(dict_reportranking, "dividends"), c), 
         Currency(listdict_sum(dict_reportranking, "total"), c), 
     ])
-    doc.addTableParagraph(reportranking, columnssize_percentages=[7, 43, 12.5, 12.5, 12.5, 12.5 ],  size=6, style="Table1Total")
-    filename=path.join(gettempdir(), "assets_report_" + next(_get_candidate_names())+".pdf")
-    print(filename)
-
-#    filenamee='AssetsReport-{}.pdf'.format(dtnaive2string(datetime.now(), "%Y%m%d%H%M")
-    doc.export_pdf(filename)
-    doc.save(filename+".odt")
+    doc.addTableParagraph(reportranking, columnssize_percentages=[7, 43, 12.5, 12.5, 12.5, 12.5 ],  size=5, style="Table1Total")
+    filename='/tmp/AssetsReport-{}.pdf'.format(dtnaive2string(datetime.now(), "%Y%m%d%H%M"))
+    if format=="pdf":
+        doc.export_pdf(filename)
+    elif format=="odt":
+        filename=filename[:-4]+".odt"
+        doc.save(filename)
+    elif format=="docx":
+        filename=filename[:-4]+".docx"
+        doc.export_docx(filename)
     doc.close()
     return filename
 

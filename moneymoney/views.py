@@ -11,7 +11,7 @@ from django.db.models import prefetch_related_objects
 from django.urls import reverse, resolve
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
 from moneymoney.investmentsoperations import (
     IOC, 
     InvestmentsOperations_from_investment,  
@@ -58,6 +58,7 @@ from moneymoney.models import (
     eOperationType, 
 )
 from moneymoney import serializers
+from os import path
 from rest_framework.decorators import api_view, permission_classes
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.authtoken.models import Token
@@ -107,12 +108,24 @@ def logout(request):
 @csrf_exempt
 @api_view(['GET', ])    
 def AssetsReport(request):
-    format_=RequestGetString(request, "format", "pdf")
+    format_=RequestGetString(request, "outputformat", "pdf")
+    
+    print("AHORA", format_)
+    if format_=="pdf":
+        mime="application/pdf"
+    elif format_=="odt":
+        mime="application/vnd.oasis.opendocument.text"
+    elif format_=="docx":
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    else:
+        return Response({'status': 'Bad Format '}, status=status.HTTP_400_BAD_REQUEST)
+
     from moneymoney.assetsreport import generate_assets_report
     filename=generate_assets_report(request, format_)
     with open(filename, "rb") as pdf:
         encoded_string = b64encode(pdf.read())
-        return HttpResponse(encoded_string)
+        r={"filename":path.basename(filename),  "format": format_,  "data":encoded_string.decode("UTF-8"), "mime":mime}
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 
 @csrf_exempt
@@ -1786,7 +1799,7 @@ def RequestInteger(request, field, default=None):
     
 def RequestGetString(request, field, default=None):
     try:
-        r = request.GET.get(field)
+        r = request.GET.get(field, default)
     except:
         r=default
     return r
