@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-12-13 06:28+0000\n"
+"POT-Creation-Date: 2022-01-01 15:38+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -640,99 +640,99 @@ msgstr ""
 msgid "Insuficient data"
 msgstr ""
 
-#: moneymoney/models.py:171
+#: moneymoney/models.py:170
 msgid "None"
 msgstr ""
 
-#: moneymoney/models.py:172
+#: moneymoney/models.py:171
 msgid "All"
 msgstr ""
 
-#: moneymoney/models.py:173
+#: moneymoney/models.py:172
 msgid "SMA 10, 50, 200"
 msgstr ""
 
-#: moneymoney/models.py:174
+#: moneymoney/models.py:173
 msgid "SMA 100"
 msgstr ""
 
-#: moneymoney/models.py:175
+#: moneymoney/models.py:174
 msgid "Strict SMA 10, 50, 200"
 msgstr ""
 
-#: moneymoney/models.py:176
+#: moneymoney/models.py:175
 msgid "Strict SMA 100"
 msgstr ""
 
-#: moneymoney/models.py:177
+#: moneymoney/models.py:176
 msgid "Strict SMA 10, 100"
 msgstr ""
 
-#: moneymoney/models.py:180
+#: moneymoney/models.py:179
 msgid "Call"
 msgstr ""
 
-#: moneymoney/models.py:181
+#: moneymoney/models.py:180
 msgid "Put"
 msgstr ""
 
-#: moneymoney/models.py:182 moneymoney/models.py:187
+#: moneymoney/models.py:181 moneymoney/models.py:186
 msgid "Inline"
 msgstr ""
 
-#: moneymoney/models.py:185
+#: moneymoney/models.py:184
 msgid "EURO"
 msgstr ""
 
-#: moneymoney/models.py:186
+#: moneymoney/models.py:185
 msgid "USA Dolar"
 msgstr ""
 
-#: moneymoney/models.py:1080
+#: moneymoney/models.py:1084
 msgid "Pairs in same account"
 msgstr ""
 
-#: moneymoney/models.py:1081
+#: moneymoney/models.py:1085
 msgid "Product ranges"
 msgstr ""
 
-#: moneymoney/models.py:1082
-msgid "Genéric"
+#: moneymoney/models.py:1086
+msgid "Generic"
 msgstr ""
 
-#: moneymoney/models.py:1273
+#: moneymoney/models.py:1266
 msgid "{}: {} shares. Amount: {}. Comission: {}. Taxes: {}"
 msgstr ""
 
-#: moneymoney/models.py:1280
+#: moneymoney/models.py:1273
 msgid "Transfer to {}"
 msgstr ""
 
-#: moneymoney/models.py:1286
+#: moneymoney/models.py:1279
 msgid "Transfer received from {}"
 msgstr ""
 
-#: moneymoney/models.py:1292
+#: moneymoney/models.py:1285
 msgid "Comission transfering {} from {} to {}"
 msgstr ""
 
-#: moneymoney/models.py:1297
+#: moneymoney/models.py:1290
 msgid "From {}. Gross {}. Net {}."
 msgstr ""
 
-#: moneymoney/models.py:1298
+#: moneymoney/models.py:1291
 msgid "Error decoding dividend comment"
 msgstr ""
 
-#: moneymoney/models.py:1304
+#: moneymoney/models.py:1297
 msgid "Billing {} movements of {}"
 msgstr ""
 
-#: moneymoney/models.py:1305
+#: moneymoney/models.py:1298
 msgid "Error decoding credit card billing comment"
 msgstr ""
 
-#: moneymoney/models.py:1311 moneymoney/models.py:1352
+#: moneymoney/models.py:1304 moneymoney/models.py:1345
 msgid "Refund of {} payment of which had an amount of {}"
 msgstr ""
 
@@ -776,66 +776,66 @@ msgstr ""
 msgid "Press a key to continue..."
 msgstr ""
 
-#: moneymoney/views.py:988 moneymoney/views.py:1064
+#: moneymoney/views.py:1019 moneymoney/views.py:1095
 msgid "January"
 msgstr ""
 
-#: moneymoney/views.py:989 moneymoney/views.py:1065
+#: moneymoney/views.py:1020 moneymoney/views.py:1096
 msgid "February"
 msgstr ""
 
-#: moneymoney/views.py:990 moneymoney/views.py:1066
+#: moneymoney/views.py:1021 moneymoney/views.py:1097
 msgid "March"
 msgstr ""
 
-#: moneymoney/views.py:991 moneymoney/views.py:1067
+#: moneymoney/views.py:1022 moneymoney/views.py:1098
 msgid "April"
 msgstr ""
 
-#: moneymoney/views.py:992 moneymoney/views.py:1068
+#: moneymoney/views.py:1023 moneymoney/views.py:1099
 msgid "May"
 msgstr ""
 
-#: moneymoney/views.py:993 moneymoney/views.py:1069
+#: moneymoney/views.py:1024 moneymoney/views.py:1100
 msgid "June"
 msgstr ""
 
-#: moneymoney/views.py:994 moneymoney/views.py:1070
+#: moneymoney/views.py:1025 moneymoney/views.py:1101
 msgid "July"
 msgstr ""
 
-#: moneymoney/views.py:995 moneymoney/views.py:1071
+#: moneymoney/views.py:1026 moneymoney/views.py:1102
 msgid "August"
 msgstr ""
 
-#: moneymoney/views.py:996 moneymoney/views.py:1072
+#: moneymoney/views.py:1027 moneymoney/views.py:1103
 msgid "September"
 msgstr ""
 
-#: moneymoney/views.py:997 moneymoney/views.py:1073
+#: moneymoney/views.py:1028 moneymoney/views.py:1104
 msgid "October"
 msgstr ""
 
-#: moneymoney/views.py:998 moneymoney/views.py:1074
+#: moneymoney/views.py:1029 moneymoney/views.py:1105
 msgid "November"
 msgstr ""
 
-#: moneymoney/views.py:999 moneymoney/views.py:1075
+#: moneymoney/views.py:1030 moneymoney/views.py:1106
 msgid "December"
 msgstr ""
 
-#: moneymoney/views.py:1622
+#: moneymoney/views.py:1654
 msgid "Accounts"
 msgstr ""
 
-#: moneymoney/views.py:1622
+#: moneymoney/views.py:1654
 msgid "Accounts operations"
 msgstr ""
 
-#: moneymoney/views.py:1622
+#: moneymoney/views.py:1654
 msgid "Banks"
 msgstr ""
 
-#: moneymoney/views.py:1622
+#: moneymoney/views.py:1654
 msgid "Concept"
 msgstr ""

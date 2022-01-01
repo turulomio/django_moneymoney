@@ -1083,7 +1083,7 @@ class Splits(models.Model):
 class StrategiesTypes(models.IntegerChoices):
     PairsInSameAccount = 1, _('Pairs in same account') #additional {"worse":_, "better":_ "account" }
     Ranges = 2,  _('Product ranges')
-    Generic = 3, _('Genéric') #additional { }
+    Generic = 3, _('Generic') #additional { }
 
 class Strategies(models.Model):
     name = models.TextField()

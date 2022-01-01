@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-12-13 06:28+0000\n"
+"POT-Creation-Date: 2022-01-01 15:38+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -45,12 +45,12 @@ msgstr "Preferencias personales"
 #: moneymoney/assetsreport.py:66
 #, python-brace-format
 msgid "Your user currency is set to {c}."
-msgstr ""
+msgstr "Tu divisa se ha establecido a {c}."
 
 #: moneymoney/assetsreport.py:67
 #, python-brace-format
 msgid "Your local time zone is set to {z}."
-msgstr ""
+msgstr "Tu zona horaria se ha establecido a {z}."
 
 #: moneymoney/assetsreport.py:71
 msgid "Assets"
@@ -75,6 +75,9 @@ msgid ""
 "vTotalLastYear, vTotalLastYear)} {moreorless} of the total assets at the end "
 "of the last year."
 msgstr ""
+"Al final del año pasado tenías {vTotalLastYear}, lo que es un "
+"{Percentage(vTotal-vTotalLastYear, vTotalLastYear)} {moreorless} de lo que "
+"tenías en ese momento"
 
 #: moneymoney/assetsreport.py:82
 msgid "Assets by bank"
@@ -106,10 +109,8 @@ msgid "Total"
 msgstr "Total"
 
 #: moneymoney/assetsreport.py:94
-#, fuzzy
-#| msgid "Get income report"
 msgid "Assets current year evolution"
-msgstr "Obtener el informe de ingresos"
+msgstr "Evolución patrimonial del año actual"
 
 #: moneymoney/assetsreport.py:96 moneymoney/assetsreport.py:107
 msgid "Month"
@@ -120,14 +121,12 @@ msgid "Annual percentage"
 msgstr "Porcentaje anual"
 
 #: moneymoney/assetsreport.py:96
-#, fuzzy
-#| msgid "Last month diff"
 msgid "Month diff"
-msgstr "Diferencia del último mes"
+msgstr "Diferencia mensual"
 
 #: moneymoney/assetsreport.py:105
 msgid "Assets current year detail"
-msgstr ""
+msgstr "Detalle del año actual del patrimonio"
 
 #: moneymoney/assetsreport.py:107
 msgid "Incomes"
@@ -158,7 +157,7 @@ msgstr "Gráfica de la evolución del patrimonio"
 
 #: moneymoney/assetsreport.py:137
 msgid "Current year investment gains group by product type"
-msgstr ""
+msgstr "Ganancias de inversión del año actual agrupadas por tipo de producto"
 
 #: moneymoney/assetsreport.py:138 moneymoney/assetsreport.py:164
 #: moneymoney/assetsreport.py:189 moneymoney/assetsreport.py:223
@@ -201,22 +200,16 @@ msgid "Number"
 msgstr "Número"
 
 #: moneymoney/assetsreport.py:164
-#, fuzzy
-#| msgid "Add a new account operation"
 msgid "Balance account"
-msgstr "Añadir una nueva operación de cuenta"
+msgstr "Saldo de las cuentas"
 
 #: moneymoney/assetsreport.py:164
-#, fuzzy
-#| msgid "Investment currency"
 msgid "Balance user currency"
-msgstr "Divisa de la inversión"
+msgstr "Saldo en la divisa de usuario"
 
 #: moneymoney/assetsreport.py:183
-#, fuzzy
-#| msgid "Current investment operations"
 msgid "Current investments"
-msgstr "Operaciones de inversión actuales"
+msgstr "Inversiones actuales"
 
 #: moneymoney/assetsreport.py:185
 msgid "Investments list"
@@ -224,7 +217,7 @@ msgstr "Listado de inversiones"
 
 #: moneymoney/assetsreport.py:186
 msgid "Next list is sorted by the distance in percent to the selling point."
-msgstr ""
+msgstr "La lista siguiente está ordenada por la distancia en porcentage al punto de venta."
 
 #: moneymoney/assetsreport.py:189 moneymoney/assetsreport.py:223
 msgid "Invested"
@@ -235,10 +228,9 @@ msgid "Balance"
 msgstr "Saldo"
 
 #: moneymoney/assetsreport.py:189
-#, fuzzy, python-format
-#| msgid "% invested"
+#, python-format
 msgid "% invested"
-msgstr "% Invertido"
+msgstr "% invertido"
 
 #: moneymoney/assetsreport.py:189
 #, fuzzy, python-format
@@ -278,34 +270,24 @@ msgid "% total"
 msgstr "% total"
 
 #: moneymoney/assetsreport.py:253
-#, fuzzy
-#| msgid "Variable leverage"
 msgid "Investments group by variable percentage"
-msgstr "Apalancamiento variable"
+msgstr "Inversiones agrupadas por el porcentaje variable"
 
 #: moneymoney/assetsreport.py:260
-#, fuzzy
-#| msgid "Investment details of '%(investment)s'"
 msgid "Investments group by investment type"
-msgstr "Detalles de la inversión '%(investment)s'"
+msgstr "Inversiones agrupadas por el tipo de inversión"
 
 #: moneymoney/assetsreport.py:263
-#, fuzzy
-#| msgid "Investments balance"
 msgid "Investments group by leverage"
-msgstr "Saldo de las inversiones"
+msgstr "Inversiones agrupadas por el apalancamiento"
 
 #: moneymoney/assetsreport.py:266
-#, fuzzy
-#| msgid "Sale investment product"
 msgid "Investments group by investment product"
-msgstr "Venta de producto de inversión"
+msgstr "Inversiones agrupadas por el producto de inversión"
 
 #: moneymoney/assetsreport.py:269
-#, fuzzy
-#| msgid "Investments ranking"
 msgid "Investments group by Call/Put/Inline"
-msgstr "Ranking de inversiones"
+msgstr "Inversiones agrupadas por Call/Put/Inline"
 
 #: moneymoney/assetsreport.py:275
 msgid "Investments orders"
@@ -329,15 +311,13 @@ msgstr "Cantidad"
 
 #: moneymoney/assetsreport.py:278
 #, fuzzy, python-format
-#| msgid "Current balance"
+#| msgid "% from current price"
 msgid "% from current price"
-msgstr "Saldo actual"
+msgstr "% desde el precio actual"
 
 #: moneymoney/assetsreport.py:294
-#, fuzzy
-#| msgid "Dividends report"
 msgid "Dividend estimations report"
-msgstr "Informe de dividendos"
+msgstr "Informe de estimaciones de dividendos"
 
 #: moneymoney/assetsreport.py:297
 msgid "Current price"
@@ -665,109 +645,106 @@ msgstr "Añadiendo cotizaciones desde la cartera de Investing.com"
 msgid "Insuficient data"
 msgstr "Datos insuficientes"
 
-#: moneymoney/models.py:171
+#: moneymoney/models.py:170
 msgid "None"
 msgstr "Ninguno"
 
-#: moneymoney/models.py:172
+#: moneymoney/models.py:171
 msgid "All"
 msgstr "Todos"
 
-#: moneymoney/models.py:173
-#, fuzzy
-#| msgid "SMA 100"
+#: moneymoney/models.py:172
 msgid "SMA 10, 50, 200"
-msgstr "MMS 100"
+msgstr "MMS 10, 50, 200"
 
-#: moneymoney/models.py:174
+#: moneymoney/models.py:173
 msgid "SMA 100"
 msgstr "MMS 100"
 
-#: moneymoney/models.py:175
+#: moneymoney/models.py:174
 msgid "Strict SMA 10, 50, 200"
-msgstr ""
+msgstr "MMS 10, 50, 200 (Estricta)"
+
+#: moneymoney/models.py:175
+msgid "Strict SMA 100"
+msgstr "MMS 100 (Estricta)"
 
 #: moneymoney/models.py:176
-#, fuzzy
-#| msgid "Strict three SMA"
-msgid "Strict SMA 100"
-msgstr "Tres MMS estrictas"
-
-#: moneymoney/models.py:177
 msgid "Strict SMA 10, 100"
-msgstr ""
+msgstr "MMS 10, 100 (Estricta)"
 
-#: moneymoney/models.py:180
+#: moneymoney/models.py:179
 msgid "Call"
 msgstr "Call"
 
-#: moneymoney/models.py:181
+#: moneymoney/models.py:180
 msgid "Put"
 msgstr "Put"
 
-#: moneymoney/models.py:182 moneymoney/models.py:187
+#: moneymoney/models.py:181 moneymoney/models.py:186
 msgid "Inline"
 msgstr "Inline"
 
-#: moneymoney/models.py:185
+#: moneymoney/models.py:184
 msgid "EURO"
 msgstr "EURO"
 
-#: moneymoney/models.py:186
+#: moneymoney/models.py:185
 msgid "USA Dolar"
 msgstr "Dolar americano"
 
-#: moneymoney/models.py:1080
+#: moneymoney/models.py:1084
 msgid "Pairs in same account"
 msgstr "Pares en la misma cuenta"
 
-#: moneymoney/models.py:1081
+#: moneymoney/models.py:1085
 msgid "Product ranges"
 msgstr "Rangos de productos"
 
-#: moneymoney/models.py:1082
-msgid "Genéric"
-msgstr ""
+#: moneymoney/models.py:1086
+msgid "Generic"
+msgstr "Genérico"
+
+#: moneymoney/models.py:1266
+msgid "{}: {} shares. Amount: {}. Comission: {}. Taxes: {}"
+msgstr "{}: {} acciones. Importe: {}. Comisión: {}. Impuestos: {}"
 
 #: moneymoney/models.py:1273
-msgid "{}: {} shares. Amount: {}. Comission: {}. Taxes: {}"
-msgstr ""
-
-#: moneymoney/models.py:1280
 msgid "Transfer to {}"
 msgstr "Transferencia a {}"
 
-#: moneymoney/models.py:1286
+#: moneymoney/models.py:1279
 msgid "Transfer received from {}"
 msgstr "Transferencia recibida de {}"
 
-#: moneymoney/models.py:1292
+#: moneymoney/models.py:1285
 msgid "Comission transfering {} from {} to {}"
 msgstr "Comisión al transferir {} de {} a {}"
 
-#: moneymoney/models.py:1297
+#: moneymoney/models.py:1290
 msgid "From {}. Gross {}. Net {}."
-msgstr ""
+msgstr "Desde {}. Bruto {}. Neto {}."
 
-#: moneymoney/models.py:1298
+#: moneymoney/models.py:1291
 msgid "Error decoding dividend comment"
-msgstr ""
+msgstr "Error al decodificar el comentario del dividendo"
 
-#: moneymoney/models.py:1304
+#: moneymoney/models.py:1297
 msgid "Billing {} movements of {}"
 msgstr "Facturando {} movimientos de {}"
 
-#: moneymoney/models.py:1305
+#: moneymoney/models.py:1298
 msgid "Error decoding credit card billing comment"
 msgstr ""
+"Error al decodificar el comentario de la facturación de la tarjeta de crédito"
 
-#: moneymoney/models.py:1311 moneymoney/models.py:1352
+#: moneymoney/models.py:1304 moneymoney/models.py:1345
 msgid "Refund of {} payment of which had an amount of {}"
-msgstr ""
+msgstr "Devolución de {} pagos con un importe de {}"
 
 #: moneymoney/reusing/connection_pg.py:176
 msgid "Write the password for {}"
-msgstr ""
+msgstr "Escriba la contraseña para {}"
 
 #: moneymoney/reusing/connection_pg.py:251
 msgid "Postgres database connection parameters"
@@ -805,66 +782,66 @@ msgstr "Por favor introduzca '{}' o '{}'"
 msgid "Press a key to continue..."
 msgstr "Pulse una tecla para continuar..."
 
-#: moneymoney/views.py:988 moneymoney/views.py:1064
+#: moneymoney/views.py:1019 moneymoney/views.py:1095
 msgid "January"
 msgstr "Enero"
 
-#: moneymoney/views.py:989 moneymoney/views.py:1065
+#: moneymoney/views.py:1020 moneymoney/views.py:1096
 msgid "February"
 msgstr "Febrero"
 
-#: moneymoney/views.py:990 moneymoney/views.py:1066
+#: moneymoney/views.py:1021 moneymoney/views.py:1097
 msgid "March"
 msgstr "Marzo"
 
-#: moneymoney/views.py:991 moneymoney/views.py:1067
+#: moneymoney/views.py:1022 moneymoney/views.py:1098
 msgid "April"
 msgstr "Abril"
 
-#: moneymoney/views.py:992 moneymoney/views.py:1068
+#: moneymoney/views.py:1023 moneymoney/views.py:1099
 msgid "May"
 msgstr "Mayo"
 
-#: moneymoney/views.py:993 moneymoney/views.py:1069
+#: moneymoney/views.py:1024 moneymoney/views.py:1100
 msgid "June"
 msgstr "Junio"
 
-#: moneymoney/views.py:994 moneymoney/views.py:1070
+#: moneymoney/views.py:1025 moneymoney/views.py:1101
 msgid "July"
 msgstr "Julio"
 
-#: moneymoney/views.py:995 moneymoney/views.py:1071
+#: moneymoney/views.py:1026 moneymoney/views.py:1102
 msgid "August"
 msgstr "Agosto"
 
-#: moneymoney/views.py:996 moneymoney/views.py:1072
+#: moneymoney/views.py:1027 moneymoney/views.py:1103
 msgid "September"
 msgstr "Septiembre"
 
-#: moneymoney/views.py:997 moneymoney/views.py:1073
+#: moneymoney/views.py:1028 moneymoney/views.py:1104
 msgid "October"
 msgstr "Octubre"
 
-#: moneymoney/views.py:998 moneymoney/views.py:1074
+#: moneymoney/views.py:1029 moneymoney/views.py:1105
 msgid "November"
 msgstr "Noviembre"
 
-#: moneymoney/views.py:999 moneymoney/views.py:1075
+#: moneymoney/views.py:1030 moneymoney/views.py:1106
 msgid "December"
 msgstr "Diciembre"
 
-#: moneymoney/views.py:1622
+#: moneymoney/views.py:1654
 msgid "Accounts"
 msgstr "Cuentas"
 
-#: moneymoney/views.py:1622
+#: moneymoney/views.py:1654
 msgid "Accounts operations"
 msgstr "Operaciones de cuentas"
 
-#: moneymoney/views.py:1622
+#: moneymoney/views.py:1654
 msgid "Banks"
 msgstr "Bancos"
 
-#: moneymoney/views.py:1622
+#: moneymoney/views.py:1654
 msgid "Concept"
 msgstr "Concepto"

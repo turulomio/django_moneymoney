@@ -714,7 +714,7 @@ def InvestmentsoperationsEvolutionChart(request):
 
 @api_view(['POST', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-def InvestmentstChangeSellingPrice(request):
+def InvestmentsChangeSellingPrice(request):
     selling_price=RequestDecimal(request, "selling_price")
     selling_expiration=RequestDate(request, "selling_expiration")
     investments=RequestListUrl(request, "investments")
