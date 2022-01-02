@@ -883,8 +883,81 @@ def OrdersList(request):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
     
  
+ 
+ 
+ 
 @csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def ProductsInformation(request):
+    first_year=RequestGetInteger(request, "first_year",  2005)
+    product=RequestGetUrl(request, "product")
+     #Calculo 1 mes antes
+    rows_month=cursor_rows("""
+WITH quotes as (
+	SELECT 
+		dates::date - interval '1 day' date, 
+		(select quote from quote(%s, dates - interval '1 day')), 
+		lag((select quote from quote(%s, dates - interval '1 day')),1) over(order by dates::date) 
+	from 
+		generate_series('%s-01-01'::date - interval '1 day','%s-01-01'::date, '1 month') dates
+)
+select date,lag, quote, percentage(lag,quote)  from quotes;
+""", (product.id, product.id, first_year, date.today().year+1))
+    rows_month.pop(0)
+    
+    #Calculo 1 año antes
+    rows_year=cursor_rows("""
+WITH quotes as (
+	SELECT 
+		dates::date - interval '1 day' date, 
+		(select quote from quote(%s, dates - interval '1 day')), 
+		lag((select quote from quote(%s, dates - interval '1 day')),1) over(order by dates::date) 
+	from 
+		generate_series('%s-01-01'::date - interval '1 day','%s-01-02'::date, '1 year') dates
+)
+select date, lag, quote, percentage(lag,quote)  from quotes;
+""", (product.id, product.id, first_year, date.today().year+1))
+    rows_year.pop(0)
+#    ld_print(rows_month)
+#    ld_print(rows_year)
+    #PERCENTAGES
+    ld_percentage=[]
+    d={ 'm1': 0, 'm2': 0, 'm3': 0, 'm4': 0, 'm5': 0, 'm6': 0, 'm7': 0, 'm8': 0, 'm9': 0, 'm10': 0, 'm11': 0, 'm12': 0}
+    for i in range(0, len(rows_month)):
+        month=(i % 12 )+1
+        d[f"m{month}"]=Percentage(rows_month[i]["percentage"], 100)
+        if month==12:
+            ld_percentage.append(d)
+            d={ 'm1': 0, 'm2': 0, 'm3': 0, 'm4': 0, 'm5': 0, 'm6': 0, 'm7': 0, 'm8': 0, 'm9': 0, 'm10': 0, 'm11': 0, 'm12': 0}
 
+    if month!=12:
+        ld_percentage.append(d)
+
+    for i in range(0, len(rows_year)):
+        ld_percentage[i]["year"]=first_year+i 
+        ld_percentage[i]['m13']=Percentage(rows_year[i]["percentage"], 100)
+        
+    #QUOTES
+    ld_quotes=[]
+    d={ 'm1': 0, 'm2': 0, 'm3': 0, 'm4': 0, 'm5': 0, 'm6': 0, 'm7': 0, 'm8': 0, 'm9': 0, 'm10': 0, 'm11': 0, 'm12': 0}
+    for i in range(0, len(rows_month)):
+        month=(i % 12 )+1
+        d[f"m{month}"]=rows_month[i]["quote"]
+        if month==12:
+            ld_quotes.append(d)
+            d={ 'm1': 0, 'm2': 0, 'm3': 0, 'm4': 0, 'm5': 0, 'm6': 0, 'm7': 0, 'm8': 0, 'm9': 0, 'm10': 0, 'm11': 0, 'm12': 0}
+    if month!=12:
+        ld_quotes.append(d)
+
+    for i in range(0, len(rows_year)):
+        ld_quotes[i]["year"]=first_year+i 
+
+    r={"quotes":ld_quotes, "percentages":ld_percentage}
+    
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+
+@csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsPairs(request):

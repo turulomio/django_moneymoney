@@ -56,6 +56,7 @@ urlpatterns=[
     path('investmentsoperations/evolutionchart/', money_views.InvestmentsoperationsEvolutionChart, name='InvestmentsoperationsEvolutionChart'),
     path('investmentsoperationstotalmanager/investments/sameproduct/', money_views.InvestmentsOperationsTotalManager_investments_same_product, name='InvestmentsOperationsTotalManager_investments_same_product'),
     path('orders/list/', money_views.OrdersList, name='OrdersList'),
+    path('products/information/', money_views.ProductsInformation, name='ProductsInformation'),
     path('products/pairs/', money_views.ProductsPairs,  name='ProductsPairs'),
     path('products/ranges/', money_views.ProductsRanges, name='ProductsRanges'),
     path('products/update/', money_views.ProductsUpdate, name='ProductsUpdate'),
