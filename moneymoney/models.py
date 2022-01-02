@@ -892,7 +892,7 @@ class Products(models.Model):
         return self.fullName()
         
     def fullName(self):
-        return "{} ({})".format(self.name, self.id)
+        return "{} ({})".format(self.name, _(self.stockmarkets.name))
         
     def currency_symbol(self):
         return currency_symbol(self.currency)

@@ -948,7 +948,7 @@ def ProductsRanges(request):
     
     
 class ProductsViewSet(viewsets.ModelViewSet):
-    queryset = Products.objects.all().select_related("productstypes").select_related("leverages")
+    queryset = Products.objects.all().select_related("productstypes").select_related("leverages").select_related("stockmarkets")
     serializer_class = serializers.ProductsSerializer
     permission_classes = [permissions.IsAuthenticated]  
 

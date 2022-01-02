@@ -15,6 +15,8 @@ class Command(BaseCommand):
             strings.append("_('{}')".format(row["name"]))
         for row in cursor_rows("select name from operationstypes order by name"):
             strings.append("_('{}')".format(row["name"]))
+        for row in cursor_rows("select name from stockmarkets order by name"):
+            strings.append("_('{}')".format(row["name"]))
         for row in cursor_rows("select name from banks where id=3"):
             strings.append("_('{}')".format(row["name"]))
         for row in cursor_rows("select name from accounts where id=4"):

@@ -137,13 +137,17 @@ class OrdersSerializer(serializers.HyperlinkedModelSerializer):
         
 class ProductsSerializer(serializers.HyperlinkedModelSerializer):
     real_leveraged_multiplier = serializers.SerializerMethodField()
+    fullname=serializers.SerializerMethodField()
+
     class Meta:
         model = Products
-        fields = ('url', 'id', 'name',  'isin', 'currency','productstypes','agrupations', 'web', 'address', 'phone', 'mail', 'percentage', 'pci', 'leverages', 'stockmarkets', 'comment',  'obsolete', 'tickers', 'high_low', 'decimals', 'real_leveraged_multiplier')
-        
+        fields = ('url', 'id', 'name',  'isin', 'currency','productstypes','agrupations', 'web', 'address', 'phone', 'mail', 'percentage', 'pci', 'leverages', 'stockmarkets', 'comment',  'obsolete', 'tickers', 'high_low', 'decimals', 'real_leveraged_multiplier', 'fullname')
 
     def get_real_leveraged_multiplier(self, obj):
         return  obj.real_leveraged_multiplier()
+
+    def get_fullname(self, obj):
+        return  obj.fullName()
         
 class ProductspairsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
