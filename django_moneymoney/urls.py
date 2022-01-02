@@ -40,6 +40,7 @@ urlpatterns=[
     path('creditcardsoperations/withbalance/', money_views.CreditcardsoperationsWithBalance, name='CreditcardsoperationsWithBalance'),
     path('creditcardsoperations/payment/<int:pk>/', money_views.CreditcardsoperationsPayment, name='CreditcardsoperationsPayment'),
     path('concepts/migration/', money_views.ConceptsMigration, name='ConceptsMigration'),
+    path('concepts/used/', money_views.ConceptsUsed, name='ConceptsUsed'),
     path('banks/withbalance/', money_views.BanksWithBalance, name='BanksWithBalance'),
     path('estimations/dps/add/', money_views.EstimationsDps_add, name='EstimationsDps_add'),
     path('estimations/dps/delete/', money_views.EstimationsDps_delete, name='EstimationsDps_delete'),
@@ -52,8 +53,6 @@ urlpatterns=[
     path('investmentsoperations/full/simulation/', money_views.InvestmentsoperationsFullSimulation, name='InvestmentsoperationsFullSimulation'),
     path('investmentsoperations/evolutionchart/', money_views.InvestmentsoperationsEvolutionChart, name='InvestmentsoperationsEvolutionChart'),
     path('investmentsoperationstotalmanager/investments/sameproduct/', money_views.InvestmentsOperationsTotalManager_investments_same_product, name='InvestmentsOperationsTotalManager_investments_same_product'),
-    
-    
     path('orders/list/', money_views.OrdersList, name='OrdersList'),
     path('products/pairs/', money_views.ProductsPairs,  name='ProductsPairs'),
     path('products/ranges/', money_views.ProductsRanges, name='ProductsRanges'),
@@ -77,8 +76,8 @@ urlpatterns=[
     path('strategies/withbalance/', money_views.StrategiesWithBalance, name='StrategiesWithBalance'),
     path('timezones/', money_views.Timezones, name='Timezones'),
 ]
+
 urlpatterns=urlpatterns+ i18n_patterns(
     path('i18n/setlang/',  set_language, name="set_language"), 
-
 )
 

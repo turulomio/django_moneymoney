@@ -142,6 +142,25 @@ def ConceptsMigration(request):
         return Response({'status': 'details'}, status=status.HTTP_200_OK)
     return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
 
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def ConceptsUsed(request): 
+    qs=Concepts.objects.all() 
+    r=[]
+    for o in qs:
+        r.append({
+            "id": o.id, 
+            "name": o.name, 
+            "url": request.build_absolute_uri(reverse('concepts-detail', args=(o.pk, ))), 
+            "localname": _(o.name), 
+            "editable": o.editable, 
+            "used": o.get_used(), 
+            "operationstypes": request.build_absolute_uri(reverse('operationstypes-detail', args=(o.operationstypes.pk, ))), 
+            "migrable": o.is_migrable(), 
+        })
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+
 class ConceptsViewSet(viewsets.ModelViewSet):
     queryset = Concepts.objects.all()
     serializer_class = serializers.ConceptsSerializer

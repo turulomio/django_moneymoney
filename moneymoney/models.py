@@ -424,49 +424,16 @@ class Concepts(models.Model):
         
     def fullName(self):
         return "{} - {}".format(_(self.name), _(self.operationstypes.name))
-        
-    @staticmethod
-    def dictionary():
-        d={}
-        for o in Concepts.objects.all():
-            d[o.id]=o.fullName()
-        return d
-        
-    def queryset_order_by_fullname():
-        ids=[]
-        for concept in sorted(Concepts.objects.select_related("operationstypes").all(), key=lambda o: o.fullName()):
-            ids.append(concept.id)
-        preserved = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(ids)])
-        queryset = Concepts.objects.select_related("operationstypes").filter(pk__in=ids).order_by(preserved)
-        return queryset
-        
-    ## Esta función fue optimizada de 23 queries y 8.43 ms a 7 queries en 4.79ms
-    def queryset_for_dividends_order_by_fullname():
-        ids=[]
-        for concept in sorted(Concepts.objects.select_related('operationstypes').filter(pk__in=(
-        eConcept.Dividends, eConcept.AssistancePremium,  eConcept.DividendsSaleRights, eConcept.RolloverPaid, eConcept.RolloverReceived, eConcept.BondsCouponRunPayment, eConcept.BondsCouponRunIncome, eConcept.BondsCoupon)), key=lambda o: o.fullName()):
-            ids.append(concept.id)
-        preserved = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(ids)])
-        queryset = Concepts.objects.select_related('operationstypes').filter(pk__in=ids).order_by(preserved)
-        return queryset    
-
-    def queryset_for_accountsoperations_order_by_fullname():
-        ids=[]
-        for concept in sorted(Concepts.objects.select_related('operationstypes').filter(operationstypes_id__in=(
-            eOperationType.Income,  
-            eOperationType.Expense,  
-            eOperationType.DerivativeManagement
-        )), key=lambda o: o.fullName()):
-            ids.append(concept.id)
-        preserved = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(ids)])
-        queryset = Concepts.objects.select_related('operationstypes').filter(pk__in=ids).order_by(preserved)
-        return queryset
-        
     
     def get_used(self):
         return   Creditcardsoperations.objects.filter(concepts__id=self.id).count() + Accountsoperations.objects.filter(concepts__id=self.id).count() + Dividends.objects.filter(concepts__id=self.id).count()   
 
-
+    def is_migrable(self):
+        r=False
+        # With data and includes expenses and incomes
+        if self.operationstypes.id in [1,2] and self.id not in [1, 6, 37, 38,39,59,62,63,65,66, 67, 72, 75, 76, 77]:
+           r= True
+        return r
 
 class Creditcards(models.Model):
     name = models.TextField()
