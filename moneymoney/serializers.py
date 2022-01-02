@@ -33,12 +33,18 @@ class BanksSerializer(serializers.HyperlinkedModelSerializer):
 
 class AccountsSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()
+    fullname = serializers.SerializerMethodField()
     class Meta:
         model = Accounts
-        fields = ('url', 'id','name', 'active', 'number','currency','banks', 'localname')
+        fields = ('url', 'id','name', 'active', 'number','currency','banks', 'localname', 'fullname')
 
     def get_localname(self, obj):
         return  _(obj.name)
+        
+        
+    def get_fullname(self, obj):
+        return  obj.fullName()
+        
         
 class DividendsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -100,9 +106,15 @@ class CreditcardsSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('url', 'id', 'name',  'number', 'accounts', 'maximumbalance', 'deferred', 'active')
         
 class CreditcardsoperationsSerializer(serializers.HyperlinkedModelSerializer):
+    currency = serializers.SerializerMethodField()
+    
     class Meta:
         model = Creditcardsoperations
-        fields = ('url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','creditcards', 'paid','paid_datetime')
+        fields = ('url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','creditcards', 'paid','paid_datetime', 'currency')
+    def get_currency(self, obj):
+        return  obj.creditcards.accounts.currency
+        
+        
 
 class OperationstypesSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()

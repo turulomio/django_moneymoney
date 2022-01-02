@@ -197,7 +197,7 @@ class Accounts(models.Model):
         return self.fullName()
         
     def fullName(self):
-        return "{} ({})".format(self.name, self.banks.name)
+        return "{} ({})".format(_(self.name), _(self.banks.name))
         
     def is_deletable(self):
         """Función que devuelve un booleano si una cuenta es borrable, es decir, que no tenga registros dependientes."""

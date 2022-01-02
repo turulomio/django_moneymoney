@@ -162,6 +162,41 @@ def ConceptsUsed(request):
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
+
+
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def CreditcardsPayments(request): 
+    creditcard=RequestGetUrl(request, "creditcard")
+    
+    if creditcard is not None:
+    
+        r=cursor_rows("""
+            select 
+                count(accountsoperations.id), 
+                accountsoperations.id as accountsoperations_id, 
+                accountsoperations.amount, 
+                accountsoperations.datetime 
+            from 
+                accountsoperations, 
+                creditcardsoperations 
+            where 
+                creditcardsoperations.accountsoperations_id=accountsoperations.id and 
+                creditcards_id=%s and 
+                accountsoperations.concepts_id=40 
+            group by 
+                accountsoperations.id, 
+                accountsoperations.amount, 
+                accountsoperations.datetime
+            order by 
+                accountsoperations.datetime
+            """, (creditcard.id, ))
+    else:
+        return Response({'status': 'Credit card not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+
 class ConceptsViewSet(viewsets.ModelViewSet):
     queryset = Concepts.objects.all()
     serializer_class = serializers.ConceptsSerializer
@@ -186,9 +221,21 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
 
 
 class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
-    queryset = Creditcardsoperations.objects.all()
+    queryset = Creditcardsoperations.objects.all().select_related("creditcards").select_related("creditcards__accounts")
     serializer_class = serializers.CreditcardsoperationsSerializer
     permission_classes = [permissions.IsAuthenticated]  
+    
+        
+    def get_queryset(self):
+        ##Saca los pagos hechos en esta operación de cuenta
+        accountsoperations_id=RequestGetInteger(self.request, 'accountsoperations_id')
+        
+        print(accountsoperations_id)
+
+        if accountsoperations_id is not None:
+            return self.queryset.filter(accountsoperations__id=accountsoperations_id)
+        else:
+            return self.queryset.all()
 
 class DividendsViewSet(viewsets.ModelViewSet):
     queryset = Dividends.objects.all()
@@ -557,7 +604,7 @@ def AccountsoperationsWithBalance(request):
 @api_view(['POST', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
-def CreditcardsoperationsPayment(request, pk):
+def CreditcardsoperationsPayments(request, pk):
     creditcard=Creditcards.objects.get(pk=pk)
     dt_payment=RequestPostDtaware(request, "dt_payment")
     cco_ids=RequestPostListOfIntegers(request, "cco")
@@ -585,6 +632,25 @@ def CreditcardsoperationsPayment(request, pk):
             o.paid=True
             o.accountsoperations_id=c.id
             o.save()
+        return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
+    return JsonResponse( False, encoder=MyDjangoJSONEncoder,     safe=False)
+    
+
+@csrf_exempt
+@api_view(['POST', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+@transaction.atomic
+def CreditcardsoperationsPaymentsRefund(request):
+    
+    accountsoperations_id=RequestInteger(request, 'accountsoperations_id')
+    print(accountsoperations_id)
+    if accountsoperations_id is not None:
+        ao=Accountsoperations.objects.get(pk=accountsoperations_id)
+    
+    if ao is not None:
+        Creditcardsoperations.objects.filter(accountsoperations_id=ao.id).update(paid_datetime=None,  paid=False, accountsoperations_id=None)
+        ao.delete() #Must be at the end due to middle queries
+
         return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
     return JsonResponse( False, encoder=MyDjangoJSONEncoder,     safe=False)
     
