@@ -167,23 +167,18 @@ class eInvestmentTypePosition:
 
 
 RANGE_RECOMENDATION_CHOICES =( 
-    (0, _("None")), 
-    (1, _("All")), 
-    (2, _("SMA 10, 50, 200")), 
-    (3, _("SMA 100")), 
-    (4, _("Strict SMA 10, 50, 200")), 
-    (5, _("Strict SMA 100")), 
-    (6, _("Strict SMA 10, 100")), 
+    (1, "All"), 
+    (2, "SMA 10, 50, 200"), 
+    (3, "SMA 100"), 
+    (4, "Strict SMA 10, 50, 200"), 
+    (5, "Strict SMA 100"), 
+    (6, "Strict SMA 10, 100"), 
+    (7, "None"), 
 )
 PCI_CHOICES =( 
     ('c', _("Call")), 
     ('p', _("Put")), 
     ('i', _("Inline")), 
-)
-CURRENCY_CHOICES =( 
-    ('EUR', _("EURO")), 
-    ('USD', _("USA Dolar")), 
-    ('GBP', _("Inline")), 
 )
 
 class Accounts(models.Model):

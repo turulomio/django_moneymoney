@@ -56,6 +56,7 @@ from moneymoney.models import (
     eComment, 
     eConcept, 
     eOperationType, 
+    RANGE_RECOMENDATION_CHOICES, 
 )
 from moneymoney import serializers
 from os import path
@@ -1029,6 +1030,18 @@ class QuotesViewSet(viewsets.ModelViewSet):
             
         return self.queryset
 
+@csrf_exempt
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def RecomendationMethods(request): 
+    r=[]
+    for id, name in RANGE_RECOMENDATION_CHOICES:
+        r.append({
+            "id":id, 
+            "name":name, 
+            "localname": _(name), 
+        })
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 @csrf_exempt
 @api_view(['GET', ])    
