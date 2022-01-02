@@ -8,7 +8,7 @@ from django.contrib.auth.hashers import check_password
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import prefetch_related_objects
-from django.urls import reverse, resolve
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
@@ -892,6 +892,10 @@ def OrdersList(request):
 def ProductsInformation(request):
     first_year=RequestGetInteger(request, "first_year",  2005)
     product=RequestGetUrl(request, "product")
+    
+    if product is None:
+        return Response({'status': "Product wan't found"}, status=status.HTTP_404_NOT_FOUND)
+    
      #Calculo 1 mes antes
     rows_month=cursor_rows("""
 WITH quotes as (
@@ -936,7 +940,7 @@ select date, lag, quote, percentage(lag,quote)  from quotes;
 
     for i in range(0, len(rows_year)):
         ld_percentage[i]["year"]=first_year+i 
-        ld_percentage[i]['m13']=Percentage(rows_year[i]["percentage"], 100)
+        ld_percentage[i]['m13']=Percentage(rows_year[i]["percentage"], 100) 
         
     #QUOTES
     ld_quotes=[]
@@ -2031,18 +2035,46 @@ def RequestString(request, field, default=None):
 
 
 def obj_from_url(request, url):
-    path = urllib.parse.urlparse(url).path
-    resolved_func, unused_args, resolved_kwargs = resolve(path)
-    class_=resolved_func.cls()
-    class_.request=request
-    return class_.get_queryset().get(pk=int(resolved_kwargs['pk']))
+    ## FALLA EN APACHE
+#    path = urllib.parse.urlparse(url).path
+#    print(path)
+#    resolved_func, unused_args, resolved_kwargs = resolve(path)
+#    print("RESOLVED", resolved_func, unused_args, resolved_kwargs)
+#    class_=resolved_func.cls()
+#    print("CLASS", class_)
+#    class_.request=request
+#    return class_.get_queryset().get(pk=int(resolved_kwargs['pk']))
+
+    parts = urllib.parse.urlparse(url).path.split("/")
+    type=parts[len(parts)-3]
+    id=parts[len(parts)-2]
+    if type =="products":
+        class_=Products
+    elif type =="investments":
+        class_=Investments
+    elif type =="accounts":
+        class_=Accounts
+    elif type =="concepts":
+        class_=Concepts
+    elif type =="creditcards":
+        class_=Creditcards
+    elif type =="operationstypes":
+        class_=Operationstypes
+    else:
+        print("obj_from_url not found", url)
+    return class_.objects.get(pk=id)
+    
 def id_from_url(request, url):
+    ## FALLA EN APACHE
+#    path = urllib.parse.urlparse(url).path
+#    resolved_func, unused_args, resolved_kwargs = resolve(path)
+#    class_=resolved_func.cls()
+#    class_.request=request
+#    return int(resolved_kwargs['pk'])
     path = urllib.parse.urlparse(url).path
-    resolved_func, unused_args, resolved_kwargs = resolve(path)
-    class_=resolved_func.cls()
-    class_.request=request
-    return int(resolved_kwargs['pk'])
- 
+    parts=path.split("/")
+    return int(parts[len(parts)-2])
+
 ## Returns a model obect
 def RequestPostUrl(request, field,  default=None):
     try:
