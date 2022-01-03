@@ -13,12 +13,20 @@ from moneymoney.reusing.datetime_functions import dtaware, string2date, string2d
 #from monemoney.models import eTickerPosition
 
 class InvestingCom:
-    def __init__(self, request, filename_in_memory, product=None):
-        self.filename_in_memory=filename_in_memory
+    def __init__(self, request,  product=None):
         self.request=request
         self.product=product
-        self.columns=self.get_number_of_csv_columns()
         self.log=[]
+    
+    def load_from_filename_in_memory(self, filename_in_memory):
+        self.filename_in_memory=filename_in_memory
+        self.filename_in_memory.seek(0)
+        self.csv_object=reader(StringIO(self.filename_in_memory.read().decode('utf-8')))
+        self.columns=self.get_number_of_csv_columns()
+
+    def load_from_filename_in_disk(self, filename_in_disk):
+        self.csv_object=reader(open(filename_in_disk, mode="r", encoding="utf-8"))
+        self.columns=self.get_number_of_csv_columns()
         
     def get(self):
         if self.product==None: #Several products
@@ -35,13 +43,9 @@ class InvestingCom:
 #            messages.info(self.request, "append_from_historical")
             return self.append_from_historical()
             
-    def get_csv_object_seeking(self):
-        self.filename_in_memory.seek(0)
-        csv_object=reader(StringIO(self.filename_in_memory.read().decode('utf-8')))
-        return csv_object
 
     def get_number_of_csv_columns(self):
-        for row in self.get_csv_object_seeking():
+        for row in self.csv_object:
             return len(row)
         return -1
         
@@ -111,7 +115,7 @@ class InvestingCom:
         r=[]
         line_count = 0
         quotes_count = 0
-        for row in self.get_csv_object_seeking():
+        for row in self.csv_object:
             if line_count >0:#Ignores headers line
                 if row[2]=="":
                     products=Products.objects.raw('SELECT products.* FROM products where tickers[5]=%s', (f"{row[1]}", ))

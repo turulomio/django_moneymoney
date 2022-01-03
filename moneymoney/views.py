@@ -59,7 +59,7 @@ from moneymoney.models import (
     RANGE_RECOMENDATION_CHOICES, 
 )
 from moneymoney import serializers
-from os import path
+from os import path, system
 from rest_framework.decorators import api_view, permission_classes
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.authtoken.models import Token
@@ -1109,24 +1109,56 @@ class ProductstypesViewSet(viewsets.ModelViewSet):
 @api_view(['POST', ])
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsUpdate(request):
-    # if not GET, then proceed
-    if "csv_file1" not in request.FILES:
-        print("You must upload a file")
-        return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
-    else:
-        csv_file = request.FILES["csv_file1"]
-        
-    if not csv_file.name.endswith('.csv'):
-        print('File is not CSV type')
-        return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
-
-    #if file is too large, return
-    if csv_file.multiple_chunks():
-        print("Uploaded file is too big ({} MB).".format(csv_file.size/(1000*1000),))
-        return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
-
     from moneymoney.investing_com import InvestingCom
-    ic=InvestingCom(request, csv_file, product=None)
+    print(request.data)
+    auto=RequestBool(request, "auto", False) ## Uses automatic request with settings globals investing.com
+    print(auto)
+    
+    if auto is True:
+        
+        system(f"""wget --header="Host: es.investing.com" \
+--header="User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:92.0) Gecko/20100101 Firefox/92.0" \
+--header="Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8" \
+--header="Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3" \
+--header="Accept-Encoding: gzip, deflate, br" \
+--header="Alt-Used: es.investing.com" \
+--header="Connection: keep-alive" \
+--referer="{request.globals.get('investing_com_referer', '')}" \
+--header="{request.globals.get('investing_com_cookie', '')}" \
+--header="Upgrade-Insecure-Requests: 1" \
+--header="Sec-Fetch-Dest: document" \
+--header="Sec-Fetch-Mode: navigate" \
+--header="Sec-Fetch-Site: same-origin" \
+--header="Sec-Fetch-User: ?1" \
+--header="Pragma: no-cache" \
+--header="Cache-Control: no-cache" \
+--header="TE: trailers" \
+"{request.globals.get('investing_com_url', '')}" -O /tmp/prueba.csv
+
+        
+        """)
+        ic=InvestingCom(request, product=None)
+        ic.load_from_filename_in_disk("/tmp/prueba.csv")
+    else:
+        
+        # if not GET, then proceed
+        if "csv_file1" not in request.FILES:
+            print("You must upload a file")
+            return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            csv_file = request.FILES["csv_file1"]
+            
+        if not csv_file.name.endswith('.csv'):
+            print('File is not CSV type')
+            return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
+
+        #if file is too large, return
+        if csv_file.multiple_chunks():
+            print("Uploaded file is too big ({} MB).".format(csv_file.size/(1000*1000),))
+            return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
+
+        ic=InvestingCom(request, product=None)
+        ic.load_from_filename_in_memory(csv_file)
     r=ic.get()
     
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
@@ -1852,15 +1884,27 @@ def Settings(request):
         r={}
         r['local_zone']=request.local_zone
         r['local_currency']=request.local_currency
+        r['investing_com_referer']=request.globals.get("investing_com_referer", "")
+        r['investing_com_cookie']=request.globals.get("investing_com_cookie", "")
+        r['investing_com_url']=request.globals.get("investing_com_url", "")
         return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
     elif request.method == 'POST':
-        local_currency=RequestPostString(request,"local_currency")
-        local_zone=RequestPostString(request,"local_zone")
+        #Personal settings
+        local_currency=RequestString(request,"local_currency")
+        local_zone=RequestString(request,"local_zone")
         if local_currency is not None and local_zone is not None:
             setGlobal("mem/localcurrency", local_currency)
             setGlobal("mem/localzone", local_zone)
-            return JsonResponse(True, safe=False)
-        return JsonResponse(False, safe=False)
+            
+        # Investing.com
+        investing_com_referer=RequestString(request, "investing_com_referer")
+        investing_com_cookie=RequestString(request, "investing_com_cookie")
+        investing_com_url=RequestString(request, "investing_com_url")
+        if investing_com_referer is not None and investing_com_cookie is not None and investing_com_url is not None:
+            setGlobal("investing_com_url", investing_com_url)
+            setGlobal("investing_com_cookie", investing_com_cookie)
+            setGlobal("investing_com_referer", investing_com_referer)
+        return JsonResponse(True, safe=False)
 
 @csrf_exempt
 @api_view(['POST'])
@@ -1940,6 +1984,12 @@ def getGlobal(key, default, type="str"):
     except:
         return default
     
+def RequestBool(request, field, default=None):
+    try:
+        r = str2bool(str(request.data.get(field)))
+    except:
+        r=default
+    return r        
 def RequestGetBool(request, field, default=None):
     try:
         r = str2bool(request.GET.get(field))
