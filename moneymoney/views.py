@@ -388,11 +388,11 @@ class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
 def AccountTransfer(request): 
-    origin=RequestPostUrl(request, 'origin')#Returns an account object
-    destiny=RequestPostUrl(request, 'destiny')
-    datetime=RequestPostDtaware(request, 'datetime')
-    amount=RequestPostDecimal(request, 'amount')
-    commission=RequestPostDecimal(request, 'commission',  0)
+    origin=RequestUrl(request, 'origin')#Returns an account object
+    destiny=RequestUrl(request, 'destiny')
+    datetime=RequestDtaware(request, 'datetime')
+    amount=RequestDecimal(request, 'amount')
+    commission=RequestDecimal(request, 'commission',  0)
     if (
         destiny is not None and
         origin is not None and
@@ -606,8 +606,9 @@ def AccountsoperationsWithBalance(request):
 @transaction.atomic
 def CreditcardsoperationsPayments(request, pk):
     creditcard=Creditcards.objects.get(pk=pk)
-    dt_payment=RequestPostDtaware(request, "dt_payment")
-    cco_ids=RequestPostListOfIntegers(request, "cco")
+    dt_payment=RequestDtaware(request, "dt_payment")
+    cco_ids=RequestListOfIntegers(request, "cco")
+    print(dt_payment, cco_ids)
     
     if creditcard is not None and dt_payment is not None and cco_ids is not None:
         qs_cco=Creditcardsoperations.objects.all().filter(pk__in=(cco_ids))
@@ -1110,10 +1111,7 @@ class ProductstypesViewSet(viewsets.ModelViewSet):
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsUpdate(request):
     from moneymoney.investing_com import InvestingCom
-    print(request.data)
-    auto=RequestBool(request, "auto", False) ## Uses automatic request with settings globals investing.com
-    print(auto)
-    
+    auto=RequestBool(request, "auto", False) ## Uses automatic request with settings globals investing.com   
     if auto is True:
         
         system(f"""wget --header="Host: es.investing.com" \
@@ -1995,23 +1993,11 @@ def RequestGetBool(request, field, default=None):
         r = str2bool(request.GET.get(field))
     except:
         r=default
-    return r    
-def RequestPostBool(request, field, default=None):
-    try:
-        r = str2bool(request.POST.get(field))
-    except:
-        r=default
-    return r    
+    return r
 
 def RequestGetInteger(request, field, default=None):
     try:
         r = int(request.GET.get(field))
-    except:
-        r=default
-    return r
-def RequestPostInteger(request, field, default=None):
-    try:
-        r = int(request.POST.get(field))
     except:
         r=default
     return r
@@ -2029,13 +2015,6 @@ def RequestGetString(request, field, default=None):
         r=default
     return r
 
-def RequestPostString(request, field, default=None):
-    try:
-        r = request.POST.get(field)
-    except:
-        r=default
-    return r
-
 def RequestGetListOfIntegers(request, field, default=None, separator=","):    
     try:
         r = string2list_of_integers(request.GET.get(field), separator)
@@ -2043,9 +2022,10 @@ def RequestGetListOfIntegers(request, field, default=None, separator=","):
         r=default
     return r
 
-def RequestPostListOfIntegers(request, field, default=None,  separator=","):
+def RequestListOfIntegers(request, field, default=None,  separator=","):
+    print(request.data,  request.data.get("cco").__class__)
     try:
-        r = string2list_of_integers(request.POST.get(field), separator)
+        r = string2list_of_integers(str(request.data.get(field))[1:-1], separator)
     except:
         r=default
     return r
@@ -2057,19 +2037,13 @@ def RequestGetDtaware(request, field, default=None):
         r=default
     return r
 
-def RequestPostDtaware(request, field, default=None):
+def RequestDtaware(request, field, default=None):
     try:
-        r = string2dtaware(request.POST.get(field), "JsUtcIso", request.local_zone)
+        r = string2dtaware(request.data.get(field), "JsUtcIso", request.local_zone)
     except:
         r=default
     return r
 
-def RequestPostDecimal(request, field, default=None):
-    try:
-        r = Decimal(request.POST.get(field))
-    except:
-        r=default
-    return r
 def RequestDecimal(request, field, default=None):
     try:
         r = Decimal(request.data.get(field))
@@ -2125,14 +2099,6 @@ def id_from_url(request, url):
     parts=path.split("/")
     return int(parts[len(parts)-2])
 
-## Returns a model obect
-def RequestPostUrl(request, field,  default=None):
-    try:
-        r = obj_from_url(request, request.POST.get(field))
-    except:
-        r=default
-    return r
- 
 ## Returns a model obect
 def RequestGetUrl(request, field,  default=None):
     try:
