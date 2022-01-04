@@ -95,7 +95,7 @@ DATABASES = {
     }
 }
 
-CONCURRENCY_DB_CONNECTIONS_BY_USER=4
+CONCURRENCY_DB_CONNECTIONS_BY_USER=8
 
 ## Locale paths in source distribution
 LOCALE_PATHS = (

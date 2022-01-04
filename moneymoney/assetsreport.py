@@ -20,6 +20,7 @@ def request_get(absolute_url, authorization):
     return loads(a.content)
 
 def generate_assets_report(request, format):
+    from moneymoney.views import ReportAnnual, getGlobalBytes_from_base64
     authorization=cursor_one_field("select * from authtoken_token where user_id=%s", (request.user.id, ))
     c=request.local_currency
     
@@ -42,7 +43,6 @@ def generate_assets_report(request, format):
     doc.paragraphBreak()
     doc.pageBreak()
     
-    from moneymoney.views import ReportAnnual
     dict_report_annual=loads(ReportAnnual(request._request, year ).content)
     vTotalLastYear=Currency(dict_report_annual["last_year_balance"], c)
     vTotal=Currency(dict_report_annual["data"][11]["total"], c)
@@ -129,7 +129,8 @@ def generate_assets_report(request, format):
         
         ### Assets evolution graphic
         doc.addParagraph(_("Assets graphical evolution"), "Heading 2")
-        doc.addImageParagraph(["/tmp/evolution_assets.png", ], 26, 14, "Illustration")
+        
+        doc.addImageParagraph([getGlobalBytes_from_base64(request,"base64_assetsreport_evolution.png"), ], 26, 14, "Illustration")
         doc.pageBreak()
         
         
@@ -255,19 +256,19 @@ def generate_assets_report(request, format):
   
     width=28
     height=14.2
-    doc.addImageParagraph(["/tmp/by_percentage.png", ], width, height-1, "Illustration")
+    doc.addImageParagraph([getGlobalBytes_from_base64(request, "base64_assetsreport_classes_by_percentage.png"), ], width, height-1, "Illustration")
 
     doc.addParagraph(_("Investments group by investment type"), "Heading 2")
-    doc.addImageParagraph(["/tmp/by_producttype.png", ], width, height, "Illustration")
+    doc.addImageParagraph([getGlobalBytes_from_base64(request, "base64_assetsreport_classes_by_producttype.png"), ], width, height, "Illustration")
 
     doc.addParagraph(_("Investments group by leverage"), "Heading 2")        
-    doc.addImageParagraph(["/tmp/by_leverage.png", ], width, height, "Illustration")
+    doc.addImageParagraph([getGlobalBytes_from_base64(request, "base64_assetsreport_classes_by_leverage.png"), ], width, height, "Illustration")
 
     doc.addParagraph(_("Investments group by investment product"), "Heading 2")
-    doc.addImageParagraph(["/tmp/by_product.png", ], width, height, "Illustration")
+    doc.addImageParagraph([getGlobalBytes_from_base64(request, "base64_assetsreport_classes_by_product.png"), ], width, height, "Illustration")
 
     doc.addParagraph(_("Investments group by Call/Put/Inline"), "Heading 2")
-    doc.addImageParagraph(["/tmp/by_pci.png", ], width, height, "Illustration")
+    doc.addImageParagraph([getGlobalBytes_from_base64(request, "base64_assetsreport_classes_by_pci.png"), ], width, height, "Illustration")
     
     doc.pageBreak("Landscape")
     

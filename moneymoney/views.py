@@ -1,5 +1,5 @@
 import urllib.parse
-from base64 import b64decode, b64encode
+from base64 import  b64encode, b64decode
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, timedelta
 from decimal import Decimal
@@ -27,6 +27,7 @@ from moneymoney.reusing.casts import str2bool, string2list_of_integers
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date, string2date
 from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average
 from moneymoney.reusing.currency import Currency
+from moneymoney.reusing.decorators import timeit
 from moneymoney.reusing.percentage import Percentage,  percentage_between
 
 from moneymoney.models import (
@@ -110,8 +111,6 @@ def logout(request):
 @api_view(['GET', ])    
 def AssetsReport(request):
     format_=RequestGetString(request, "outputformat", "pdf")
-    
-    print("AHORA", format_)
     if format_=="pdf":
         mime="application/pdf"
     elif format_=="odt":
@@ -1689,7 +1688,7 @@ def ReportEvolutionAssets(request, from_year):
 
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
     
-
+@timeit
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -1907,14 +1906,20 @@ def Settings(request):
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated, ])
-def ECharts_to_file(request):
-    data=RequestString(request, "data").replace("data:image/png;base64,", "")
-    filename=RequestString(request, "filename")
-    f=open(f"/tmp/{filename}", "wb")
-    f.write(b64decode(data))
-    f.close()
-    return JsonResponse(True, safe=False)
-    
+## Stores a filename encoded to base64 in a global variable
+## Global: base64_{name}.{extension}
+## @param only binary data, don't have to include data:image/png;base64 or similar
+## Para guardarlo a ficheros se puede hacer
+##    f=open(f"/tmp/{filename}", "wb")
+##    f.write(b64decode(data))
+##    f.close()
+### @global_ For Example: base64_assetsreport_report_annual_chart.png
+def Binary2Global(request):
+    data=RequestString(request, "data")
+    global_=RequestString(request, "global")
+    if data is not None  and global_ is not None:
+        setGlobal(global_, data)
+    return JsonResponse(True, safe=False)  
 
 @csrf_exempt
 @api_view(['POST'])
@@ -1972,13 +1977,16 @@ def setGlobal(key, value):
         execute("update globals set value=%s where global=%s", (value,  key))
     
 ## @param type Type to cast str, int, float,...
-def getGlobal(key, default, type="str"):
+def getGlobalBytes(request, key, default=None):
     try:
-        r=cursor_one_field("select value from globals where global=%s", (key, ))
-        if type=="int":
-            return int(r)
-        else:
-            return r
+        r=request.globals.get(key, default)
+        return bytes(r)
+    except:
+        return default
+## @param type Type to cast str, int, float,...
+def getGlobalBytes_from_base64(request, key, default=None):
+    try:
+        return b64decode(request.globals.get(key, default))
     except:
         return default
     
