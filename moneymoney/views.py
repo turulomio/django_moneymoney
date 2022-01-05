@@ -1275,36 +1275,27 @@ def ReportAnnual(request, year):
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-def ReportAnnualIncome(request, year):
-    def qs_investments_netgains_usercurrency_in_year_month(qs_investments, year, month, local_currency, local_zone):
-        r =0
-        #Git investments with investmentsoperations in this year, month
-        dt_year_month=dtaware_month_end(year, month, local_zone)
-        for investment in Investments.objects.raw("select distinct(investments.*) from investmentsoperations, investments where date_part('year', datetime)=%s and date_part('month', datetime)=%s and investments.id=investmentsoperations.investments_id", (year, month)):
-            investments_operations=InvestmentsOperations_from_investment(request, investment, dt_year_month, local_currency)
-            for ioh in investments_operations.io_historical:
-                if ioh['dt_end'].year==year and ioh['dt_end'].month==month:
-                        r=r+ioh['gains_net_user']
-        return r
-    
+def ReportAnnualIncome(request, year):   
     def month_results(year,  month, month_name):
         dividends=Dividends.netgains_dividends(year, month)
         incomes=balance_user_by_operationstypes(year,  month,  eOperationType.Income, local_currency, local_zone)-dividends
         expenses=balance_user_by_operationstypes(year,  month,  eOperationType.Expense, local_currency, local_zone)
-
-        gains=qs_investments_netgains_usercurrency_in_year_month(qs_investments, year, month, local_currency, local_zone)
-        #print("Loading list netgains opt took {} (CUELLO BOTELLA UNICO)".format(timezone.now()-start))        
         
+        
+        dt_from=dtaware_month_start(year, month,  request.local_zone)
+        dt_to=dtaware_month_end(year, month,  request.local_zone)
+        gains=iom.historical_gains_net_user_between_dt(dt_from, dt_to)
         total=incomes+gains+expenses+dividends
-        
         return month_name, month,  year,  incomes, expenses, gains, dividends, total
     
     list_=[]
     futures=[]
     local_zone=request.local_zone
     local_currency=request.local_currency
-    qs_investments=Investments.objects.all()
-    
+    #IOManager de final de año para luego calcular gains entre fechas
+    dt_year_to=dtaware_year_end(year, request.local_zone)
+    iom=InvestmentsOperationsManager_from_investment_queryset(Investments.objects.all(), dt_year_to, request)
+
     
     # HA MEJORADO UNOS 3 segundos de 16 a 13
     with ThreadPoolExecutor(max_workers=settings.CONCURRENCY_DB_CONNECTIONS_BY_USER) as executor:
@@ -1325,7 +1316,6 @@ def ReportAnnualIncome(request, year):
             futures.append(executor.submit(month_results, year, month, month_name))
         
         for future in as_completed(futures):
-            #print(future, future.result())
             month_name, month,  year,  incomes, expenses, gains, dividends, total = future.result()
             list_.append({
                 "id": f"{year}/{month}/", 
@@ -1670,17 +1660,19 @@ def ReportEvolutionAssets(request, from_year):
     for year in range(from_year, date.today().year+1): 
         dt_from=dtaware_year_start(year, request.local_zone)
         dt_to=dtaware_year_end(year, request.local_zone)
+        
+        iom=InvestmentsOperationsManager_from_investment_queryset(Investments.objects.all(), dt_to, request)
         dividends=Dividends.net_gains_baduser_between_datetimes(dt_from, dt_to)
-        incomes=0
-        gains=0
-        expenses=0
+        incomes=balance_user_by_operationstypes(year, None,  eOperationType.Income, request.local_currency, request.local_zone)-dividends
+        expenses=balance_user_by_operationstypes(year, None,  eOperationType.Expense, request.local_currency, request.local_zone)
+        gains=iom.historical_gains_net_user_between_dt(dt_from, dt_to)
         list_.append({
             "year": year, 
             "balance_start": tb[year-1]["total_user"], 
             "balance_end": tb[year]["total_user"],  
             "diff": tb[year]["total_user"]-tb[year-1]["total_user"], 
             "incomes":incomes, 
-            "gains_net":gains, 
+            "gains_net": gains, 
             "dividends_net":dividends, 
             "expenses":expenses, 
             "total":incomes+gains+dividends+expenses, 

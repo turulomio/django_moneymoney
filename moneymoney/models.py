@@ -1099,11 +1099,19 @@ def money_convert(dt, amount, from_,  to_):
         return amount
     return cursor_one_field("select * from money_convert(%s, %s, %s, %s)", (dt, amount, from_,  to_))
 
-## This method should take care of diffrent currencies
+## This method should take care of diffrent currenciesç
+## @param month can be None to calculate all year
 def balance_user_by_operationstypes(year,  month,  operationstypes_id, local_currency, local_zone):
+    
+    strmonth="" if month is None else "date_part('month',datetime)=%s and "
+    
     r=0
     for currency in currencies_in_accounts():
-        for row in cursor_rows("""
+        if month is  None:
+            parameters=(operationstypes_id, year,  currency, operationstypes_id, year,  currency)
+        else:
+            parameters=(operationstypes_id, year, month,  currency, operationstypes_id, year, month,  currency)
+        for row in cursor_rows(f"""
             select sum(amount) as amount 
             from 
                 accountsoperations,
@@ -1111,7 +1119,7 @@ def balance_user_by_operationstypes(year,  month,  operationstypes_id, local_cur
             where 
                 operationstypes_id=%s and 
                 date_part('year',datetime)=%s and
-                date_part('month',datetime)=%s and
+                {strmonth}
                 accounts.currency=%s and
                 accounts.id=accountsoperations.accounts_id   
         union all 
@@ -1123,16 +1131,19 @@ def balance_user_by_operationstypes(year,  month,  operationstypes_id, local_cur
             where 
                 operationstypes_id=%s and 
                 date_part('year',datetime)=%s and
-                date_part('month',datetime)=%s and
+                {strmonth}
                 accounts.currency=%s and
                 accounts.id=creditcards.accounts_id and
-                creditcards.id=creditcardsoperations.creditcards_id""", (operationstypes_id, year, month,  currency, operationstypes_id, year, month,  currency)):
+                creditcards.id=creditcardsoperations.creditcards_id""", parameters):
 
             if row['amount'] is not None:
                 if local_currency==currency:
                     r=r+row['amount']
                 else:
-                    r=r+money_convert(dtaware_month_end(year, month, local_zone), row['amount'], currency, local_currency)
+                    if month is None:                      
+                        r=r+money_convert(dtaware_month_end(year, 12, local_zone), row['amount'], currency, local_currency)
+                    else:
+                        r=r+money_convert(dtaware_month_end(year, month, local_zone), row['amount'], currency, local_currency)
     return r
 
 def accounts_balance_user_currency(qs, dt):
