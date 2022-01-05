@@ -68,6 +68,7 @@ from rest_framework.response import Response
 from rest_framework import viewsets, permissions, status
 from django.core.serializers.json import DjangoJSONEncoder
 from zoneinfo import available_timezones
+from tempfile import TemporaryDirectory
 
 class MyDjangoJSONEncoder(DjangoJSONEncoder):    
     def default(self, o):
@@ -1112,30 +1113,27 @@ def ProductsUpdate(request):
     from moneymoney.investing_com import InvestingCom
     auto=RequestBool(request, "auto", False) ## Uses automatic request with settings globals investing.com   
     if auto is True:
-        
-        system(f"""wget --header="Host: es.investing.com" \
---header="User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:92.0) Gecko/20100101 Firefox/92.0" \
---header="Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8" \
---header="Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3" \
---header="Accept-Encoding: gzip, deflate, br" \
---header="Alt-Used: es.investing.com" \
---header="Connection: keep-alive" \
---referer="{request.globals.get('investing_com_referer', '')}" \
---header="{request.globals.get('investing_com_cookie', '')}" \
---header="Upgrade-Insecure-Requests: 1" \
---header="Sec-Fetch-Dest: document" \
---header="Sec-Fetch-Mode: navigate" \
---header="Sec-Fetch-Site: same-origin" \
---header="Sec-Fetch-User: ?1" \
---header="Pragma: no-cache" \
---header="Cache-Control: no-cache" \
---header="TE: trailers" \
-"{request.globals.get('investing_com_url', '')}" -O /tmp/prueba.csv
-
-        
-        """)
-        ic=InvestingCom(request, product=None)
-        ic.load_from_filename_in_disk("/tmp/prueba.csv")
+        with TemporaryDirectory() as tmp:
+            system(f"""wget --header="Host: es.investing.com" \
+    --header="User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:92.0) Gecko/20100101 Firefox/92.0" \
+    --header="Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8" \
+    --header="Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3" \
+    --header="Accept-Encoding: gzip, deflate, br" \
+    --header="Alt-Used: es.investing.com" \
+    --header="Connection: keep-alive" \
+    --referer="{request.globals.get('investing_com_referer', '')}" \
+    --header="{request.globals.get('investing_com_cookie', '')}" \
+    --header="Upgrade-Insecure-Requests: 1" \
+    --header="Sec-Fetch-Dest: document" \
+    --header="Sec-Fetch-Mode: navigate" \
+    --header="Sec-Fetch-Site: same-origin" \
+    --header="Sec-Fetch-User: ?1" \
+    --header="Pragma: no-cache" \
+    --header="Cache-Control: no-cache" \
+    --header="TE: trailers" \
+    "{request.globals.get('investing_com_url', '')}" -O {tmp}/portfolio.csv""")
+            ic=InvestingCom(request, product=None)
+            ic.load_from_filename_in_disk(f"{tmp}/portfolio.csv")
     else:
         
         # if not GET, then proceed
