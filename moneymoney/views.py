@@ -811,7 +811,6 @@ def InvestmentsoperationsEvolutionChart(request):
 
 @csrf_exempt
 @transaction.atomic
-
 @api_view(['POST', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsChangeSellingPrice(request):
@@ -884,8 +883,21 @@ def OrdersList(request):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
     
  
- 
- 
+@csrf_exempt
+@transaction.atomic
+@api_view(['POST', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def ProductsFavorites(request):
+    product=RequestUrl(request, "product")
+    favorites=getGlobalListOfIntegers(request, "favorites")
+    if product is not None:
+        if product.id in favorites:
+            favorites.remove(product.id)
+        else:
+            favorites.append(product.id)
+        setGlobal("favorites", str(favorites)[1:-1])
+    return JsonResponse( favorites, encoder=MyDjangoJSONEncoder,     safe=False)
+
  
 @csrf_exempt
 @api_view(['GET', ])    
@@ -1966,19 +1978,22 @@ def setGlobal(key, value):
     else:
         execute("update globals set value=%s where global=%s", (value,  key))
     
-## @param type Type to cast str, int, float,...
-def getGlobalBytes(request, key, default=None):
-    try:
-        r=request.globals.get(key, default)
-        return bytes(r)
-    except:
-        return default
+
 ## @param type Type to cast str, int, float,...
 def getGlobalBytes_from_base64(request, key, default=None):
     try:
         return b64decode(request.globals.get(key, default))
     except:
         return default
+    
+    
+def getGlobalListOfIntegers(request, key, default=[], separator=","):    
+    try:
+        r = string2list_of_integers(request.globals.GET.get(key), separator)
+    except:
+        r=default
+    return r
+    
     
 def RequestBool(request, field, default=None):
     try:
