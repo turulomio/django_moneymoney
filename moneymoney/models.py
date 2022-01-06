@@ -880,7 +880,6 @@ class Products(models.Model):
     comment = models.TextField(blank=True, null=True)
     obsolete = models.BooleanField()
     tickers = models.TextField(blank=True, null=True)  # This field type is a guess.
-    high_low = models.BooleanField(blank=True, null=True)
     decimals = models.IntegerField(blank=True, null=True)
 
     class Meta:
