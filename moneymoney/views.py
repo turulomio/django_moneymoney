@@ -1383,7 +1383,7 @@ def ReportAnnualIncomeDetails(request, year, month):
                         "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(op["concepts_id"], ))), 
                         "amount":op['amount'], 
                         "balance": balance,
-                        "comment":Comment().decode(op["comment"]), 
+                        "comment_decoded":Comment().decode(op["comment"]), 
                         "currency": currency, 
                         "account": request.build_absolute_uri(reverse('accounts-detail', args=(op["accounts_id"], ))), 
                     })
