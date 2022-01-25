@@ -1636,10 +1636,10 @@ def ReportDividends(request):
             percentage=Percentage(dps, quotes[inv.products_id]["last"])
             estimated=shares[inv.id]["shares"]*dps*inv.products.real_leveraged_multiplier()
         else:
-            dps= 0
-            date_estimation=date(date.today().year-1, 12, 31)
-            percentage=0
-            estimated=0
+            dps= None
+            date_estimation=None
+            percentage=Percentage()
+            estimated=None
         
         
         d={
