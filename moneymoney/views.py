@@ -229,9 +229,6 @@ class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         ##Saca los pagos hechos en esta operación de cuenta
         accountsoperations_id=RequestGetInteger(self.request, 'accountsoperations_id')
-        
-        print(accountsoperations_id)
-
         if accountsoperations_id is not None:
             return self.queryset.filter(accountsoperations__id=accountsoperations_id)
         else:
@@ -242,12 +239,16 @@ class DividendsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.DividendsSerializer
     permission_classes = [permissions.IsAuthenticated] 
     
+    
+    ## To use this methos use axios 
+    ##            var headers={...this.myheaders(),params:{investments: [1,2,3],otra:"OTTRA"}}
+    ##            return axios.get(`${this.$store.state.apiroot}/api/dividends/`, headers)
     def get_queryset(self):
-        investments_ids=RequestGetListOfIntegers(self.request, 'investments')
+        investments_ids=RequestGetArrayOfIntegers(self.request,"investments[]") 
         datetime=RequestGetDtaware(self.request, 'from')
-        if investments_ids is not None and datetime is None:
+        if len(investments_ids)>0 and datetime is None:
             return self.queryset.filter(investments__in=investments_ids).order_by("datetime")
-        elif investments_ids is not None and datetime is not None:
+        elif len(investments_ids)>0 and datetime is not None:
             return self.queryset.filter(investments__in=investments_ids,  datetime__gte=datetime).order_by("datetime")
         else:
             return self.queryset.order_by("datetime")
@@ -782,8 +783,7 @@ def InvestmentsoperationsFull(request):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
 @csrf_exempt
-@api_view(['POST', ])    
-
+@api_view(['POST', ]) 
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsoperationsFullSimulation(request):
     investments=[]
@@ -799,6 +799,26 @@ def InvestmentsoperationsFullSimulation(request):
         d["operationstypes_id"]=id_from_url(request, d["operationstypes"])
     r=Simulate_InvestmentsOperations_from_investment(request, investments,  dt,  local_currency,  listdict,  temporaltable).json()
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+
+@csrf_exempt
+@api_view(['GET', ]) 
+@permission_classes([permissions.IsAuthenticated, ])
+def StrategiesSimulation(request):
+    investments_ids=RequestGetArrayOfIntegers(request, "investments[]")
+    investments=Investments.objects.filter(id__in=investments_ids)
+    print(investments_ids, investments)
+    dt=RequestGetDtaware(request, "dt")
+    print(dt)
+    local_currency=RequestGetString(request,"local_currency")
+    temporaltable=RequestGetString(request, "temporaltable")
+    listdict=[]
+#    listdict=request.data["operations"]
+#    for d in listdict:
+#        d["datetime"]=string2dtaware(d["datetime"],  "JsUtcIso", request.local_zone)
+#        d["investments_id"]=investments_ids[0]
+#        d["operationstypes_id"]=id_from_url(request, d["operationstypes"])
+    r=Simulate_InvestmentsOperations_from_investment(request, investments,  dt,  local_currency,  listdict,  temporaltable).json()
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder,  safe=False)
 
 
 @csrf_exempt
@@ -1061,19 +1081,16 @@ def ProductsPairs(request):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 @csrf_exempt
-
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsQuotesOHCL(request):
     product=RequestGetUrl(request, "product")
-    print(product)
     if product is not None:
         ld_ohcl=product.ohclDailyBeforeSplits()         
         return JsonResponse( ld_ohcl, encoder=MyDjangoJSONEncoder, safe=False)
     return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
 
 @csrf_exempt
-
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsRanges(request):
@@ -1087,9 +1104,9 @@ def ProductsRanges(request):
         percentage_gains=percentage_gains/1000
     amount_to_invest=RequestGetInteger(request, "amount_to_invest")
     recomendation_methods=RequestGetInteger(request, "recomendation_methods")
-    investments=request.GET.getlist("investments[]", []) 
-    if investments is not None:
-        qs_investments=Investments.objects.filter(id__in=investments)
+    investments_ids=RequestGetArrayOfIntegers(request,"investments[]") 
+    if len(investments_ids)>0:
+        qs_investments=Investments.objects.filter(id__in=investments_ids)
     else:
         qs_investments=Investments.objects.none()
         
@@ -2031,6 +2048,23 @@ def RequestGetString(request, field, default=None):
 def RequestGetListOfIntegers(request, field, default=None, separator=","):    
     try:
         r = string2list_of_integers(request.GET.get(field), separator)
+    except:
+        r=default
+    return r
+    
+    
+## Used to get array in this situation calls when investments is an array of integers
+    ## To use this methos use axios 
+    ##            var headers={...this.myheaders(),params:{investments:this.strategy.investments,otra:"OTTRA"}}
+    ##            return axios.get(`${this.$store.state.apiroot}/api/dividends/`, headers)
+    ## request.GET returns <QueryDict: {'investments[]': ['428', '447'], 'otra': ['OTRA']}>
+
+def RequestGetArrayOfIntegers(request, field, default=[]):    
+    try:
+        r=[]
+        items=request.GET.getlist(field, [])
+        for i in items:
+            r.append(int(i))
     except:
         r=default
     return r
