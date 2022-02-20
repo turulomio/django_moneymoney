@@ -1,2 +1,2 @@
 # Entity Relationship Schema
-[![](mylibrary_er.png)](mylibrary.html)
+[![](xulpymoney_er.png)](xulpymoney.html)

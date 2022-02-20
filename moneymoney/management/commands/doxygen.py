@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from os import system, chdir
-from books.__init__ import __version__
+from moneymoney.__init__ import __version__
 
 class Command(BaseCommand):
     help = 'Create doxygen documentation'

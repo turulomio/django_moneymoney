@@ -9,15 +9,14 @@ class Command(BaseCommand):
         print(f"Updating versions of moneymoney frontend project to {__version__} and {__versiondatetime__}")
         d=__versiondatetime__
         system (f"""sed -i '3s/.*/  "version": "{__version__}",/' ../moneymoney/package.json""")
-        system (f"""sed -i '19s/.*/        version: "{__version__}",/' ../moneymoney/src/main.js""")
-        system (f"""sed -i '20s/.*/        versiondate: new Date({d.year}, {d.month-1}, {d.day}, {d.hour}, {d.minute}),/' ../moneymoney/src/main.js""")
+        system (f"""sed -i '13s/.*/        version: "{__version__}",/' ../moneymoney/src/store.js""")
+        system (f"""sed -i '14s/.*/        versiondate: new Date({d.year}, {d.month-1}, {d.day}, {d.hour}, {d.minute}),/' ../moneymoney/src/store.js""")
 
         print()
         print(f"""To release a new version:
 DJANGO_MONEYMONEY
-  * Change version and version date in moneymoney/__init__.py
+  * Change version and version datetime in moneymoney/__init__.py
   * python manage.py procedure
-  * Add release changelog en README.md
   * python manage.py makemessages --all
   * mcedit moneymoney/locale/es/LC_MESSAGES/django.po
   * python manage.py compilemessages
