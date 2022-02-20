@@ -188,9 +188,6 @@ class InvestmentsOperations:
         for d in listdict:
             execute(f"insert into {temporaltable}(id, datetime,  shares,  price, commission,  taxes, operationstypes_id, currency_conversion, investments_id) values((select max(id)+1 from {temporaltable}), %s, %s, %s, %s, %s, %s, %s, %s)", 
             (d["datetime"], d["shares"], d["price"], d["commission"], d["taxes"], d["operationstypes_id"], d["currency_conversion"], d["investments_id"]))
-                
-    #        for row in cursor_rows(f"select * from {temporaltable}"):
-    #            print(row)
 
         row_io= cursor_one_row("select * from investment_operations(%s,%s,%s,%s,%s,%s)", (investments[0].id, dt, local_currency, temporaltable, investments[0].accounts.currency, investments[0].products.id))
         r=cls(request, investments[0],  row_io["io"], row_io['io_current'],  row_io['io_historical'], temporaltable, len(listdict))
@@ -468,7 +465,6 @@ class InvestmentsOperationsManager:
     ## Generate object from and ids list
     @classmethod
     def from_investment_queryset(cls, qs_investments, dt, request):
-        print(qs_investments, dt, request)
         ids=tuple(qs_investments.values_list('pk',flat=True))
         
         r=cls(request)

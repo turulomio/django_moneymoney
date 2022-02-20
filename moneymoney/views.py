@@ -594,7 +594,6 @@ def CreditcardsoperationsPayments(request, pk):
     creditcard=Creditcards.objects.get(pk=pk)
     dt_payment=RequestDtaware(request, "dt_payment")
     cco_ids=RequestListOfIntegers(request, "cco")
-    print(dt_payment, cco_ids)
     
     if creditcard is not None and dt_payment is not None and cco_ids is not None:
         qs_cco=Creditcardsoperations.objects.all().filter(pk__in=(cco_ids))
@@ -630,7 +629,6 @@ def CreditcardsoperationsPayments(request, pk):
 def CreditcardsoperationsPaymentsRefund(request):
     
     accountsoperations_id=RequestInteger(request, 'accountsoperations_id')
-    print(accountsoperations_id)
     if accountsoperations_id is not None:
         ao=Accountsoperations.objects.get(pk=accountsoperations_id)
     
@@ -1145,19 +1143,17 @@ def ProductsUpdate(request):
         
         # if not GET, then proceed
         if "csv_file1" not in request.FILES:
-            print("You must upload a file")
-            return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'status': 'You must upload a file'}, status=status.HTTP_404_NOT_FOUND)
         else:
             csv_file = request.FILES["csv_file1"]
             
         if not csv_file.name.endswith('.csv'):
-            print('File is not CSV type')
-            return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'status': 'File is not CSV type'}, status=status.HTTP_404_NOT_FOUND)
 
         #if file is too large, return
         if csv_file.multiple_chunks():
-            print("Uploaded file is too big ({} MB).".format(csv_file.size/(1000*1000),))
-            return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
+            print()
+            return Response({'status': "Uploaded file is too big ({} MB).".format(csv_file.size/(1000*1000),)}, status=status.HTTP_404_NOT_FOUND)
 
         ic=InvestingCom(request, product=None)
         ic.load_from_filename_in_memory(csv_file)
@@ -1269,8 +1265,6 @@ def ReportAnnual(request, year):
             "diff_lastmonth": total['total_user']-last_month, 
         })
         last_month=total['total_user']
-#    for d in list_:
-#        print(d["total"],  last_year_balance)
         
     r={"last_year_balance": last_year_balance,  "dtaware_last_year": dtaware_last_year,  "data": list_}
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
@@ -2048,7 +2042,6 @@ def RequestGetArrayOfIntegers(request, field, default=[]):
     return r
 
 def RequestListOfIntegers(request, field, default=None,  separator=","):
-    print(request.data,  request.data.get("cco").__class__)
     try:
         r = string2list_of_integers(str(request.data.get(field))[1:-1], separator)
     except:
