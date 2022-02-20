@@ -129,5 +129,6 @@ dmypy.json
 .eric6project/
 *.e4p
 
+doc/html
 node_modules/
 django_moneymoney/presettings.py
