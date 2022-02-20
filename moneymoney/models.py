@@ -12,12 +12,13 @@ Decimal()#Internal eval
 from django.db import models, transaction
 from django.db.models import Case, When
 from django.db.models.expressions import RawSQL
+from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
 
 from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_column, cursor_one_row, cursor_rows, execute
 
-from moneymoney.investmentsoperations import InvestmentsOperations_from_investment
+from moneymoney.investmentsoperations import InvestmentsOperations
 from moneymoney.reusing.casts import string2list_of_integers
 from moneymoney.reusing.currency import Currency, currency_symbol
 from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string
@@ -629,14 +630,16 @@ class Investments(models.Model):
 
     def __str__(self):
         return self.fullName()
+        
+    def url(self, request):
+        return request.build_absolute_uri(reverse('investments-detail', args=(self.id, )))
 
     def fullName(self):
         return "{} ({})".format(self.name, self.accounts.name)
             
     def operations(self, request, local_currency):
         if hasattr(self, "_operations") is False:
-            from moneymoney.investmentsoperations import InvestmentsOperations_from_investment
-            self._operations=InvestmentsOperations_from_investment(request, self, timezone.now(), local_currency)
+            self._operations=InvestmentsOperations.from_investment(request, self, timezone.now(), local_currency)
         return self._operations
 
     ## Función que devuelve un booleano si una cuenta es borrable, es decir, que no tenga registros dependientes.
@@ -729,7 +732,7 @@ class Investmentsoperations(models.Model):
         #/Borra de la tabla investmentsaccountsoperations los de la operinversión pasada como parámetro
         execute("delete from investmentsaccountsoperations where investmentsoperations_id=%s",(self.id, )) 
 
-        investment_operations=InvestmentsOperations_from_investment(request, self.investments, timezone.now(), request.local_currency)
+        investment_operations=InvestmentsOperations.from_investment(request, self.investments, timezone.now(), request.local_currency)
         io=investment_operations.o_find_by_id(self.id)
         
         if self.investments.daily_adjustment is True: #Because it uses adjustment information
@@ -1068,6 +1071,22 @@ class Strategies(models.Model):
         managed = False
         db_table = 'strategies'
         ordering = ['name']
+        
+    ## Returns a list with investments ids, due to self.investments is a text string
+    def investments_ids(self):
+        return string2list_of_integers(self.investments)
+        
+    ## Returns a queryset with the investments of the strategy, due to self.investments is a text strings
+    def investments_queryset(self):
+        if hasattr(self, "_investments_queryset") is False:
+            self._investments_queryset=Investments.objects.filter(id__in=self.investments_ids())
+        return self._investments_queryset
+        
+    def investments_urls(self, request):
+        r=[]
+        for id in self.investments_ids():
+            r.append(request.build_absolute_uri(reverse('strategies-detail', args=(id, ))))
+        return r
 
 
     ## Replaces None for dt_to and sets a very big datetine

@@ -12,16 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
-from moneymoney.investmentsoperations import (
-    IOC, 
-    InvestmentsOperations_from_investment,  
-    InvestmentsOperationsManager_from_investment_queryset, 
-    InvestmentsOperationsTotals_from_investment, 
-    InvestmentsOperationsTotalsManager_from_all_investments, 
-    InvestmentsOperationsTotalsManager_from_investment_queryset, 
-    Simulate_InvestmentsOperations_from_investment, 
-    InvestmentsOperationsManager_merging_all_current_operations_of_active_investments, 
-)
+from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotals, InvestmentsOperationsTotalsManager, Strategy
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict
 from moneymoney.reusing.casts import str2bool, string2list_of_integers
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date, string2date
@@ -297,7 +288,7 @@ def StrategiesWithBalance(request):
         
         investments_ids=string2list_of_integers(o.investments)
         qs_investments_in_strategy=Investments.objects.filter(id__in=(investments_ids))
-        io_in_strategy=InvestmentsOperationsManager_from_investment_queryset(qs_investments_in_strategy, timezone.now(), request)
+        io_in_strategy=InvestmentsOperationsManager.from_investment_queryset(qs_investments_in_strategy, timezone.now(), request)
         
         gains_current_net_user=io_in_strategy.current_gains_net_user() 
         gains_historical_net_user=io_in_strategy.historical_gains_net_user_between_dt(o.dt_from, o.dt_to_for_comparations())
@@ -341,7 +332,7 @@ def home(request):
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsClasses(request):
     qs_investments_active=Investments.objects.filter(active=True).select_related("products").select_related("products__productstypes").select_related("accounts").select_related("products__leverages")
-    iotm=InvestmentsOperationsTotalsManager_from_investment_queryset(qs_investments_active, timezone.now(), request)
+    iotm=InvestmentsOperationsTotalsManager.from_investment_queryset(qs_investments_active, timezone.now(), request)
     return JsonResponse( iotm.json_classes(), encoder=MyDjangoJSONEncoder,     safe=False)
 
 
@@ -737,7 +728,7 @@ def InvestmentsWithBalance(request):
             
     r=[]
     for o in qs:
-        iot=InvestmentsOperationsTotals_from_investment(request, o, timezone.now(), request.local_currency)
+        iot=InvestmentsOperationsTotals.from_investment(request, o, timezone.now(), request.local_currency)
         percentage_invested=None if iot.io_total_current["invested_user"]==0 else  iot.io_total_current["gains_gross_user"]/iot.io_total_current["invested_user"]
 
         r.append({
@@ -779,7 +770,7 @@ def InvestmentsoperationsFull(request):
     ids=RequestGetListOfIntegers(request, "investments")
     r=[]
     for o in Investments.objects.filter(id__in=ids):
-        r.append(InvestmentsOperations_from_investment(request, o, timezone.now(), request.local_currency).json())
+        r.append(InvestmentsOperations.from_investment(request, o, timezone.now(), request.local_currency).json())
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
 @csrf_exempt
@@ -797,28 +788,21 @@ def InvestmentsoperationsFullSimulation(request):
         d["datetime"]=string2dtaware(d["datetime"],  "JsUtcIso", request.local_zone)
         d["investments_id"]=investments[0].id
         d["operationstypes_id"]=id_from_url(request, d["operationstypes"])
-    r=Simulate_InvestmentsOperations_from_investment(request, investments,  dt,  local_currency,  listdict,  temporaltable).json()
+    r=InvestmentsOperations.from_investment_simulation(request, investments,  dt,  local_currency,  listdict,  temporaltable).json()
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
 @csrf_exempt
 @api_view(['GET', ]) 
 @permission_classes([permissions.IsAuthenticated, ])
 def StrategiesSimulation(request):
-    investments_ids=RequestGetArrayOfIntegers(request, "investments[]")
-    investments=Investments.objects.filter(id__in=investments_ids)
-    print(investments_ids, investments)
+    strategy=RequestGetUrl(request, "strategy")
     dt=RequestGetDtaware(request, "dt")
-    print(dt)
-    local_currency=RequestGetString(request,"local_currency")
     temporaltable=RequestGetString(request, "temporaltable")
-    listdict=[]
-#    listdict=request.data["operations"]
-#    for d in listdict:
-#        d["datetime"]=string2dtaware(d["datetime"],  "JsUtcIso", request.local_zone)
-#        d["investments_id"]=investments_ids[0]
-#        d["operationstypes_id"]=id_from_url(request, d["operationstypes"])
-    r=Simulate_InvestmentsOperations_from_investment(request, investments,  dt,  local_currency,  listdict,  temporaltable).json()
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder,  safe=False)
+    simulated_operations=[]
+    if strategy is not None and dt is not None:
+        s=Strategy(request, strategy, dt, simulated_operations, temporaltable)
+        return JsonResponse( s.json(), encoder=MyDjangoJSONEncoder,  safe=False)
+    return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
 
 
 @csrf_exempt
@@ -826,7 +810,7 @@ def StrategiesSimulation(request):
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsoperationsEvolutionChart(request):
     id=RequestGetInteger(request, "investment")
-    io=InvestmentsOperations_from_investment(request, Investments.objects.get(pk=id), timezone.now(), request.local_currency)
+    io=InvestmentsOperations.from_investment(request, Investments.objects.get(pk=id), timezone.now(), request.local_currency)
     return JsonResponse( io.chart_evolution(), encoder=MyDjangoJSONEncoder,     safe=False)
 
 @csrf_exempt
@@ -856,7 +840,7 @@ def InvestmentsOperationsTotalManager_investments_same_product(request):
     product=RequestGetUrl(request, "product")
     if product is not None:
         qs_investments=Investments.objects.filter(products=product, active=True)
-        iotm=InvestmentsOperationsTotalsManager_from_investment_queryset(qs_investments,  timezone.now(), request)
+        iotm=InvestmentsOperationsTotalsManager.from_investment_queryset(qs_investments,  timezone.now(), request)
         return JsonResponse( iotm.json(), encoder=MyDjangoJSONEncoder,     safe=False)
     return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -1321,7 +1305,7 @@ def ReportAnnualIncome(request, year):
     local_currency=request.local_currency
     #IOManager de final de año para luego calcular gains entre fechas
     dt_year_to=dtaware_year_end(year, request.local_zone)
-    iom=InvestmentsOperationsManager_from_investment_queryset(Investments.objects.all(), dt_year_to, request)
+    iom=InvestmentsOperationsManager.from_investment_queryset(Investments.objects.all(), dt_year_to, request)
 
     
     # HA MEJORADO UNOS 3 segundos de 16 a 13
@@ -1421,7 +1405,7 @@ def ReportAnnualIncomeDetails(request, year, month):
         dt_year_month=dtaware_month_end(year, month, local_zone)
         ioh_id=0#To avoid vue.js warnings
         for investment in Investments.objects.raw("select distinct(investments.*) from investmentsoperations, investments where date_part('year', datetime)=%s and date_part('month', datetime)=%s and investments.id=investmentsoperations.investments_id", (year, month)):
-            investments_operations=InvestmentsOperations_from_investment(request, investment, dt_year_month, local_currency)
+            investments_operations=InvestmentsOperations.from_investment(request, investment, dt_year_month, local_currency)
             
             for ioh in investments_operations.io_historical:
                 if ioh['dt_end'].year==year and ioh['dt_end'].month==month:
@@ -1688,7 +1672,7 @@ def ReportEvolutionAssets(request, from_year):
         dt_from=dtaware_year_start(year, request.local_zone)
         dt_to=dtaware_year_end(year, request.local_zone)
         
-        iom=InvestmentsOperationsManager_from_investment_queryset(Investments.objects.all(), dt_to, request)
+        iom=InvestmentsOperationsManager.from_investment_queryset(Investments.objects.all(), dt_to, request)
         dividends=Dividends.net_gains_baduser_between_datetimes(dt_from, dt_to)
         incomes=balance_user_by_operationstypes(year, None,  eOperationType.Income, request.local_currency, request.local_zone)-dividends
         expenses=balance_user_by_operationstypes(year, None,  eOperationType.Expense, request.local_currency, request.local_zone)
@@ -1751,7 +1735,7 @@ def ReportEvolutionInvested(request, from_year):
     list_=[]
     qs=Investments.objects.all()
     for year in range(from_year, date.today().year+1): 
-        iom=InvestmentsOperationsManager_from_investment_queryset(qs, dtaware_month_end(year, 12, request.local_zone), request)
+        iom=InvestmentsOperationsManager.from_investment_queryset(qs, dtaware_month_end(year, 12, request.local_zone), request)
         dt_from=dtaware_year_start(year, request.local_zone)
         dt_to=dtaware_year_end(year, request.local_zone)
         
@@ -1783,9 +1767,9 @@ def ReportsInvestmentsLastOperation(request):
     ld=[]
     if method==0:
         investments=Investments.objects.filter(active=True).select_related("accounts").select_related("products")
-        iom=InvestmentsOperationsManager_from_investment_queryset(investments, timezone.now(), request)
+        iom=InvestmentsOperationsManager.from_investment_queryset(investments, timezone.now(), request)
     elif method==1:#Merginc current operations
-        iom=InvestmentsOperationsManager_merging_all_current_operations_of_active_investments(request, timezone.now())
+        iom=InvestmentsOperationsManager.merging_all_current_operations_of_active_investments(request, timezone.now())
         
     for io in iom:
         last=io.current_last_operation_excluding_additions()
@@ -1825,7 +1809,7 @@ def ReportsInvestmentsLastOperation(request):
 def ReportCurrentInvestmentsOperations(request):
     ld=[]
     investments=Investments.objects.filter(active=True).select_related("accounts").select_related("products")
-    iom=InvestmentsOperationsManager_from_investment_queryset(investments, timezone.now(), request)
+    iom=InvestmentsOperationsManager.from_investment_queryset(investments, timezone.now(), request)
     
     for io in iom:
         for o in io.io_current:
@@ -1852,7 +1836,7 @@ def ReportCurrentInvestmentsOperations(request):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportRanking(request):
-    iotm=InvestmentsOperationsTotalsManager_from_all_investments(request, timezone.now())
+    iotm=InvestmentsOperationsTotalsManager.from_all_investments(request, timezone.now())
     products_ids=cursor_one_column('select distinct(products_id) from investments')
     products=Products.objects.all().filter(id__in=products_ids)
     ld=[]
@@ -2131,6 +2115,8 @@ def obj_from_url(request, url):
         class_=Creditcards
     elif type =="operationstypes":
         class_=Operationstypes
+    elif type =="strategies":
+        class_=Strategies
     else:
         print("obj_from_url not found", url)
     return class_.objects.get(pk=id)
