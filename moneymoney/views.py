@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
-from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotals, InvestmentsOperationsTotalsManager, Strategy
+from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotals, InvestmentsOperationsTotalsManager, StrategyIO
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict
 from moneymoney.reusing.casts import str2bool, string2list_of_integers
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date, string2date
@@ -281,42 +281,36 @@ def StrategiesWithBalance(request):
             qs=Strategies.objects.filter(dt_to__isnull=False)
 
     r=[]
-    for o in qs:
-        gains_current_net_user=0
-        gains_historical_net_user=0
+    for strategy in qs:
         dividends_net_user=0
-        
-        investments_ids=string2list_of_integers(o.investments)
-        qs_investments_in_strategy=Investments.objects.filter(id__in=(investments_ids))
-        io_in_strategy=InvestmentsOperationsManager.from_investment_queryset(qs_investments_in_strategy, timezone.now(), request)
-        
-        gains_current_net_user=io_in_strategy.current_gains_net_user() 
-        gains_historical_net_user=io_in_strategy.historical_gains_net_user_between_dt(o.dt_from, o.dt_to_for_comparations())
-        dividends_net_user=Dividends.net_gains_baduser_between_datetimes_for_some_investments(investments_ids, o.dt_from, o.dt_to_for_comparations())
+        s=StrategyIO(request, strategy)
+        gains_current_net_user=s.current_gains_net_user() 
+        gains_historical_net_user=s.historical_gains_net_user()
+        dividends_net_user=Dividends.net_gains_baduser_between_datetimes_for_some_investments(strategy.investments_ids(), strategy.dt_from, strategy.dt_to_for_comparations())
         r.append({
-            "id": o.id,  
-            "url": request.build_absolute_uri(reverse('strategies-detail', args=(o.pk, ))), 
-            "name":o.name, 
-            "dt_from": o.dt_from, 
-            "dt_to": o.dt_to, 
-            "invested": io_in_strategy.current_invested_user(), 
+            "id": strategy.id,  
+            "url": request.build_absolute_uri(reverse('strategies-detail', args=(strategy.pk, ))), 
+            "name":strategy.name, 
+            "dt_from": strategy.dt_from, 
+            "dt_to": strategy.dt_to, 
+            "invested": s.current_invested_user(), 
             "gains_current_net_user":  gains_current_net_user,  
             "gains_historical_net_user": gains_historical_net_user, 
             "dividends_net_user": dividends_net_user, 
             "total_net_user":gains_current_net_user + gains_historical_net_user + dividends_net_user, 
-            "investments":investments_ids, 
-            "type": o.type, 
-            "comment": o.comment, 
-            "additional1": o.additional1, 
-            "additional2": o.additional2, 
-            "additional3": o.additional3, 
-            "additional4": o.additional4, 
-            "additional5": o.additional5, 
-            "additional6": o.additional6, 
-            "additional7": o.additional7, 
-            "additional8": o.additional8, 
-            "additional9": o.additional9, 
-            "additional10": o.additional10, 
+            "investments":strategy.investments_ids(), 
+            "type": strategy.type, 
+            "comment": strategy.comment, 
+            "additional1": strategy.additional1, 
+            "additional2": strategy.additional2, 
+            "additional3": strategy.additional3, 
+            "additional4": strategy.additional4, 
+            "additional5": strategy.additional5, 
+            "additional6": strategy.additional6, 
+            "additional7": strategy.additional7, 
+            "additional8": strategy.additional8, 
+            "additional9": strategy.additional9, 
+            "additional10": strategy.additional10, 
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
@@ -800,7 +794,7 @@ def StrategiesSimulation(request):
     temporaltable=RequestGetString(request, "temporaltable")
     simulated_operations=[]
     if strategy is not None and dt is not None:
-        s=Strategy(request, strategy, dt, simulated_operations, temporaltable)
+        s=StrategyIO(request, strategy, dt, simulated_operations, temporaltable)
         return JsonResponse( s.json(), encoder=MyDjangoJSONEncoder,  safe=False)
     return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
 

@@ -842,7 +842,7 @@ class InvestmentsOperationsTotalsManager:
 
 ## Class to work with investmentsoperations inside a strategy_model
 ## It's not a merging. It must work with heterogeneous mode
-class Strategy:
+class StrategyIO:
     ## @param strategy. It's a strategy model object
     ## @param dt. Be careful due to strategy has its from to end dt
     def __init__(self, request, strategy, dt=timezone.now(), simulated_operations=[], temporaltable=None):
@@ -882,6 +882,18 @@ class Strategy:
                         r.append(o)
             self._io_historical=r
         return self._io_historical
+        
+    def current_invested_user(self):
+        return self.iom.current_invested_user()
+    def current_gains_net_user(self):
+        return self.iom.current_gains_net_user()
+        
+    def historical_gains_net_user(self):
+        r=0
+        for o in self.io_historical():
+            r=r + o["gains_net_user"]
+        return r   
+        
         
     def json(self):
         from moneymoney.models import Products, StrategiesTypes
@@ -924,6 +936,6 @@ class Strategy:
         r["temporaltable"]=self.temporaltable
         return r
         
-class StrategyManager:
+class StrategyIOManager:
     def __init__(self, request):
         pass
