@@ -133,7 +133,7 @@ class InvestmentsOperations:
         self.io=eval(str_ld_io)
         
         
-        investment_url=request.build_absolute_uri(reverse('investments-detail', args=(self.id, )))
+        investment_url=request.build_absolute_uri(reverse('investments-detail', args=(self.investment.id, )))
         for o in self.io:
             o["datetime"]=postgres_datetime_string_2_dtaware(o["datetime"])
             o ["url"]=self.request.build_absolute_uri(reverse('investmentsoperations-detail', args=(o["id"], )))
