@@ -630,9 +630,6 @@ class Investments(models.Model):
 
     def __str__(self):
         return self.fullName()
-        
-    def url(self, request):
-        return request.build_absolute_uri(reverse('investments-detail', args=(self.id, )))
 
     def fullName(self):
         return "{} ({})".format(self.name, self.accounts.name)

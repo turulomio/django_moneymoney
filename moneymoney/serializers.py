@@ -63,7 +63,6 @@ class DividendsSerializer(serializers.HyperlinkedModelSerializer):
         return updated
 
 class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
-
     fullname = serializers.SerializerMethodField()
     class Meta:
         model = Investments

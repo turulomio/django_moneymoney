@@ -133,10 +133,11 @@ class InvestmentsOperations:
         self.io=eval(str_ld_io)
         
         
+        investment_url=request.build_absolute_uri(reverse('investments-detail', args=(self.id, )))
         for o in self.io:
             o["datetime"]=postgres_datetime_string_2_dtaware(o["datetime"])
             o ["url"]=self.request.build_absolute_uri(reverse('investmentsoperations-detail', args=(o["id"], )))
-            o["investments"]=self.investment.url(request)
+            o["investments"]=investment_url
             o["operationstypes"]=self.request.build_absolute_uri(reverse('operationstypes-detail', args=(o["operationstypes_id"],  )))
 
         self.io_current=eval(str_ld_io_current)
@@ -147,11 +148,11 @@ class InvestmentsOperations:
             o["percentage_total_investment"]=ioc.percentage_total_investment().value, 
             o["percentage_apr_investment"]=ioc.percentage_apr_investment().value, 
             o["percentage_annual_investment"]= ioc.percentage_annual_investment().value,   
-            o["investments"]=self.investment.url(request)
+            o["investments"]=investment_url
 
         self.io_historical=eval(str_ld_io_historical)
         for index, o in enumerate(self.io_historical):
-            o["investments"]=self.investment.url(request)
+            o["investments"]=investment_url
             o["dt_start"]=postgres_datetime_string_2_dtaware(o["dt_start"])
             o["dt_end"]=postgres_datetime_string_2_dtaware(o["dt_end"])
             o["operationstypes"]=self.request.build_absolute_uri(reverse('operationstypes-detail', args=(o["operationstypes_id"],  )))        
