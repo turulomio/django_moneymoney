@@ -4,7 +4,7 @@ from django.utils import timezone
 from moneymoney.reusing.libmanagers import ObjectManager, DatetimeValueManager
 from moneymoney.models import Orders
 from moneymoney.reusing.percentage import Percentage
-from moneymoney.investmentsoperations import InvestmentsOperationsManager_from_investment_queryset
+from moneymoney.investmentsoperations import InvestmentsOperationsManager
 
 class ProductRange():
     def __init__(self, request,  id=None,  product=None,  value=None, percentage_down=None,  percentage_up=None, only_first=True, decimals=2):
@@ -98,7 +98,7 @@ class ProductRangeManager(ObjectManager):
         self.decimals=decimals
         self.method=0
         
-        self.iom=InvestmentsOperationsManager_from_investment_queryset(self.qs_investments, timezone.now(), self.request)
+        self.iom=InvestmentsOperationsManager.from_investment_queryset(self.qs_investments, timezone.now(), self.request)
         self.orders=Orders.objects.select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__leverages").select_related("investments__products__productstypes").filter(investments__in=self.qs_investments, executed=None, expiration__gte=date.today())
 
         self.tmp=[]
