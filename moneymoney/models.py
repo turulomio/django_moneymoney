@@ -383,9 +383,9 @@ class Banks(models.Model):
         return self._balance_accounts
 
     def balance_investments(self, request):
-        from moneymoney.investmentsoperations import InvestmentsOperationsTotalsManager_from_investment_queryset
+        from moneymoney.investmentsoperations import InvestmentsOperationsTotalsManager
         if hasattr(self, "_balance_investments") is False:
-            iotm=InvestmentsOperationsTotalsManager_from_investment_queryset(self.investments(active=True), timezone.now(), request)
+            iotm=InvestmentsOperationsTotalsManager.from_investment_queryset(self.investments(active=True), timezone.now(), request)
             self._balance_investments=iotm.current_balance_user()
         return self._balance_investments
         
