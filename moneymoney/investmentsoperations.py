@@ -131,10 +131,13 @@ class InvestmentsOperations:
 
         self.name=name
         self.io=eval(str_ld_io)
+        
+        
+        investment_url=request.build_absolute_uri(reverse('investments-detail', args=(self.investment.id, )))
         for o in self.io:
             o["datetime"]=postgres_datetime_string_2_dtaware(o["datetime"])
             o ["url"]=self.request.build_absolute_uri(reverse('investmentsoperations-detail', args=(o["id"], )))
-            o["investments"]=self.request.build_absolute_uri(reverse('investments-detail', args=(self.investment.id, )))
+            o["investments"]=investment_url
             o["operationstypes"]=self.request.build_absolute_uri(reverse('operationstypes-detail', args=(o["operationstypes_id"],  )))
 
         self.io_current=eval(str_ld_io_current)
@@ -145,14 +148,93 @@ class InvestmentsOperations:
             o["percentage_total_investment"]=ioc.percentage_total_investment().value, 
             o["percentage_apr_investment"]=ioc.percentage_apr_investment().value, 
             o["percentage_annual_investment"]= ioc.percentage_annual_investment().value,   
+            o["investments"]=investment_url
 
         self.io_historical=eval(str_ld_io_historical)
         for index, o in enumerate(self.io_historical):
+            o["investments"]=investment_url
             o["dt_start"]=postgres_datetime_string_2_dtaware(o["dt_start"])
             o["dt_end"]=postgres_datetime_string_2_dtaware(o["dt_end"])
             o["operationstypes"]=self.request.build_absolute_uri(reverse('operationstypes-detail', args=(o["operationstypes_id"],  )))        
             o["years"]=round(Decimal((o["dt_end"]-o["dt_start"]).days/365), 2)
-            
+
+    @classmethod
+    def from_investment(cls, request,  investment, dt, local_currency):
+        row_io= cursor_one_row("select * from investment_operations(%s,%s,%s)", (investment.pk, dt, local_currency))
+        r=cls(request, investment,  row_io["io"], row_io['io_current'],  row_io['io_historical'])
+        return r
+
+
+
+
+    ##  @param investments list of investments
+    ## @param listdict list of operations with first investment.id as new investment
+    ## OJO OJO ESTA FUNCION CONSIDERA QUE TODAS LAS INVERSIONES  TIENEN LA MISMA ACCOUNT_CURRENCY QUE
+    ## SINO FUERA ASI ESTARÏA MAL
+    ## SI ES UNA SIMULACION DE VIRTUAL PONER EN investments SOLOL A VIRTUAL
+    @classmethod
+    def from_investment_simulation(cls, request,  investments, dt, local_currency,  listdict, temporaltable=None):
+        from uuid import uuid4
+        if temporaltable is None: #New simultaion
+            temporaltable="tt"+str(uuid4()).replace("-", "")
+            ids=[]
+            for inv in investments:
+                ids.append(inv.id)
+            execute(f"""
+        create temporary table  {temporaltable}
+        as 
+            select * from investmentsoperations where investments_id in %s and datetime<=%s;
+        """, (tuple(ids), dt))
+
+        for d in listdict:
+            execute(f"insert into {temporaltable}(id, datetime,  shares,  price, commission,  taxes, operationstypes_id, currency_conversion, investments_id) values((select max(id)+1 from {temporaltable}), %s, %s, %s, %s, %s, %s, %s, %s)", 
+            (d["datetime"], d["shares"], d["price"], d["commission"], d["taxes"], d["operationstypes_id"], d["currency_conversion"], d["investments_id"]))
+
+        row_io= cursor_one_row("select * from investment_operations(%s,%s,%s,%s,%s,%s)", (investments[0].id, dt, local_currency, temporaltable, investments[0].accounts.currency, investments[0].products.id))
+        r=cls(request, investments[0],  row_io["io"], row_io['io_current'],  row_io['io_historical'], temporaltable, len(listdict))
+        return r
+
+
+
+    ## OJO OJO ESTA FUNCION CONSIDERA QUE TODAS LAS INVERSIONES  TIENEN LA MISMA ACCOUNT_CURRENCY
+    ## SINO FUERA ASI ESTARÏA MAL
+    @classmethod
+    def from_merging_current_operations_with_same_product(cls, request, product, dt):
+        #We need to convert investmentsoperationscurrent to investmentsoperations
+        from moneymoney.models import Investments, Banks, Accounts
+        ld=[]
+        investments=Investments.objects.filter(active=True, products=product).select_related("accounts").select_related("products")
+        iom=InvestmentsOperationsManager.from_investment_queryset(investments, dt, request)   
+        bank=Banks()
+        bank.name="Merging bank"
+        bank.active=True
+        bank.id=-1
+        account=Accounts()
+        account.name="Merging account"
+        account.banks=bank
+        account.active=True
+        account.currency=request.local_currency
+        account.id=-1
+        investment=Investments()
+        investment.name=f"Merging {investments[0].products.name}"
+        investment.accounts=account
+        investment.products=product
+        investment.id=-1
+        for io in iom:
+            for o in io.io_current:
+                ld.append({
+                    "datetime": o["datetime"], 
+                    "shares": o ["shares"], 
+                    "price": o ["price_investment"], 
+                    "commission": o ["commissions_account"], 
+                    "taxes": o ["taxes_account"], 
+                    "operationstypes_id": o ["operationstypes_id"], 
+                    "currency_conversion": o ["investment2account"], 
+                    "investments_id": -1, 
+                })
+        ld=listdict_order_by(ld, "datetime")
+        r=InvestmentsOperations.from_investment_simulation(request, [investment, ],  dt,  request.local_currency,  ld)
+        return r
     def json(self):
         r={}
         r["investment"]={
@@ -352,7 +434,7 @@ class InvestmentsOperations:
         
         for i, dt in enumerate(datetimes_list):
 #            str_datetimes_list.append(str(dt.date()))
-            oper_dt=InvestmentsOperations_from_investment(self.request, self.investment, dt, self.request.local_currency)
+            oper_dt=InvestmentsOperations.from_investment(self.request, self.investment, dt, self.request.local_currency)
             #Calculate dividends in datetime
             dividend_net=0
             for dividend in qs_dividends:
@@ -374,16 +456,37 @@ class InvestmentsOperations:
             "gains": gains, 
         }
 
-def InvestmentsOperations_from_investment(request,  investment, dt, local_currency):
-    row_io= cursor_one_row("select * from investment_operations(%s,%s,%s)", (investment.pk, dt, local_currency))
-    r=InvestmentsOperations(request, investment,  row_io["io"], row_io['io_current'],  row_io['io_historical'])
-    return r
-
 ## Set of InvestmentsOperations
 class InvestmentsOperationsManager:
     def __init__(self, request):
         self.request=request
         self.list=[]
+
+
+    ## Generate object from and ids list
+    @classmethod
+    def from_investment_queryset(cls, qs_investments, dt, request):
+        ids=tuple(qs_investments.values_list('pk',flat=True))
+        
+        r=cls(request)
+        if len(ids)>0:
+            rows=cursor_rows_as_dict("id","select id, t.* from investments, investment_operations(investments.id, %s, %s) as t where investments.id in %s;", (dt, request.local_currency, ids))
+            for investment in qs_investments:  
+                row=rows[investment.id]
+                r.append(InvestmentsOperations(request, investment,  row["io"], row['io_current'],  row['io_historical']))
+        return r
+        
+
+    @classmethod
+    def merging_all_current_operations_of_active_investments(cls, request, dt):
+        #We need to convert investmentsoperationscurrent to investmentsoperations
+        from moneymoney.models import Products
+        r=cls(request)
+        distinct_products=Products.qs_products_of_active_investments()
+        for product in distinct_products:
+            io=InvestmentsOperations.from_merging_current_operations_with_same_product(request, product,  dt)
+            r.append(io)
+        return r
 
     def __iter__(self):
         return iter(self.list)
@@ -494,18 +597,6 @@ class InvestmentsOperationsManager:
                 r=r + o.o_commissions_account_between_dt(dt_from, dt_to)
         return r
 
-## Generate object from and ids list
-def InvestmentsOperationsManager_from_investment_queryset(qs_investments, dt, request):
-    ids=tuple(qs_investments.values_list('pk',flat=True))
-    
-    r=InvestmentsOperationsManager(request)
-    if len(ids)>0:
-        rows=cursor_rows_as_dict("id","select id, t.* from investments, investment_operations(investments.id, %s, %s) as t where investments.id in %s;", (dt, request.local_currency, ids))
-        for investment in qs_investments:  
-            row=rows[investment.id]
-            r.append(InvestmentsOperations(request, investment,  row["io"], row['io_current'],  row['io_historical']))
-    return r
-        
 
 ##                        io                |                                                       io_current                                                        |                                           io_historical                                            
 ## ----------------------------------+-------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------
@@ -523,7 +614,13 @@ class InvestmentsOperationsTotals:
         self.io_total=eval(str_d_io_total)
         self.io_total_current=eval(str_d_io_current_total)
         self.io_total_historical=eval(str_d_io_historical_total)
-                
+
+    @classmethod
+    def from_investment(cls, request,  investment, dt, local_currency):
+        row_io= cursor_one_row("select * from investment_operations_totals(%s,%s,%s)", (investment.pk, dt, local_currency))
+        r=cls(request, investment,  row_io["io"], row_io['io_current'],  row_io['io_historical'])
+        return r
+
     def current_last_day_diff(self):
             basic_quotes=self.investment.products.basic_results()
             try:
@@ -555,16 +652,32 @@ class InvestmentsOperationsTotals:
 #        r["tablename"]=self.tablename
         return r
 
-def InvestmentsOperationsTotals_from_investment(request,  investment, dt, local_currency):
-    row_io= cursor_one_row("select * from investment_operations_totals(%s,%s,%s)", (investment.pk, dt, local_currency))
-    r=InvestmentsOperationsTotals(request, investment,  row_io["io"], row_io['io_current'],  row_io['io_historical'])
-    return r
         
 ## Manage several rows of investment_operation_totals in several rows (list)
 class InvestmentsOperationsTotalsManager:
     def __init__(self, request):
         self.request=request
         self.list=[]
+        
+
+    ## Generate object from and ids list
+    
+    @classmethod
+    def from_investment_queryset(cls, qs_investments, dt, request):
+        ids=tuple(qs_investments.values_list('pk',flat=True))
+        r=cls(request)
+        if len(ids)>0:
+            rows=cursor_rows_as_dict("id","select id, investment_operations_totals.* from investments, investment_operations_totals(investments.id, %s, %s ) as investment_operations_totals where investments.id in %s;", (dt, request.local_currency, ids))
+            for investment in qs_investments:  
+                row=rows[investment.id]
+                r.append(InvestmentsOperationsTotals(request, investment,  row["io"], row['io_current'],  row['io_historical']))
+        return r
+    
+    @classmethod
+    def from_all_investments(cls, request, dt):
+        from moneymoney.models import Investments
+        qs=Investments.objects.all().select_related("products")
+        return cls.from_investment_queryset(qs, dt, request)
         
     def __iter__(self):
         return iter(self.list)
@@ -724,97 +837,102 @@ class InvestmentsOperationsTotalsManager:
             ld.append(d)
         return ld
 
-## Generate object from and ids list
-def InvestmentsOperationsTotalsManager_from_investment_queryset(qs_investments, dt, request):
-    ids=tuple(qs_investments.values_list('pk',flat=True))
-    r=InvestmentsOperationsTotalsManager(request)
-    if len(ids)>0:
-        rows=cursor_rows_as_dict("id","select id, investment_operations_totals.* from investments, investment_operations_totals(investments.id, %s, %s ) as investment_operations_totals where investments.id in %s;", (dt, request.local_currency, ids))
-        for investment in qs_investments:  
-            row=rows[investment.id]
-            r.append(InvestmentsOperationsTotals(request, investment,  row["io"], row['io_current'],  row['io_historical']))
-    return r
-    
-def InvestmentsOperationsTotalsManager_from_all_investments(request, dt):
-    from moneymoney.models import Investments
-    qs=Investments.objects.all().select_related("products")
-    return InvestmentsOperationsTotalsManager_from_investment_queryset(qs, dt, request)
-
-
-##  @param investments list of investments
-## @param listdict list of operations with first investment.id as new investment
-## OJO OJO ESTA FUNCION CONSIDERA QUE TODAS LAS INVERSIONES  TIENEN LA MISMA ACCOUNT_CURRENCY QUE
-## SINO FUERA ASI ESTARÏA MAL
-## SI ES UNA SIMULACION DE VIRTUAL PONER EN investments SOLOL A VIRTUAL
-def Simulate_InvestmentsOperations_from_investment(request,  investments, dt, local_currency,  listdict, temporaltable=None):
-    from uuid import uuid4
-    if temporaltable is None: #New simultaion
-        temporaltable="tt"+str(uuid4()).replace("-", "")
-        ids=[]
-        for inv in investments:
-            ids.append(inv.id)
-        execute(f"""
-    create temporary table  {temporaltable}
-    as 
-        select * from investmentsoperations where investments_id in %s and datetime<=%s;
-    """, (tuple(ids), dt))
-
-    for d in listdict:
-        execute(f"insert into {temporaltable}(id, datetime,  shares,  price, commission,  taxes, operationstypes_id, currency_conversion, investments_id) values((select max(id)+1 from {temporaltable}), %s, %s, %s, %s, %s, %s, %s, %s)", 
-        (d["datetime"], d["shares"], d["price"], d["commission"], d["taxes"], d["operationstypes_id"], d["currency_conversion"], d["investments_id"]))
-            
-#        for row in cursor_rows(f"select * from {temporaltable}"):
-#            print(row)
-
-    row_io= cursor_one_row("select * from investment_operations(%s,%s,%s,%s,%s,%s)", (investments[0].id, dt, local_currency, temporaltable, investments[0].accounts.currency, investments[0].products.id))
-    r=InvestmentsOperations(request, investments[0],  row_io["io"], row_io['io_current'],  row_io['io_historical'], temporaltable, len(listdict))
-    return r
-
-## OJO OJO ESTA FUNCION CONSIDERA QUE TODAS LAS INVERSIONES  TIENEN LA MISMA ACCOUNT_CURRENCY
-## SINO FUERA ASI ESTARÏA MAL
-def InvestmentsOperation_merging_current_operations_with_same_product(request, product, dt):
-    #We need to convert investmentsoperationscurrent to investmentsoperations
-    from moneymoney.models import Investments, Banks, Accounts
-    ld=[]
-    investments=Investments.objects.filter(active=True, products=product).select_related("accounts").select_related("products")
-    iom=InvestmentsOperationsManager_from_investment_queryset(investments, dt, request)   
-    bank=Banks()
-    bank.name="Merging bank"
-    bank.active=True
-    bank.id=-1
-    account=Accounts()
-    account.name="Merging account"
-    account.banks=bank
-    account.active=True
-    account.currency=request.local_currency
-    account.id=-1
-    investment=Investments()
-    investment.name=f"Merging {investments[0].products.name}"
-    investment.accounts=account
-    investment.products=product
-    investment.id=-1
-    for io in iom:
-        for o in io.io_current:
-            ld.append({
-                "datetime": o["datetime"], 
-                "shares": o ["shares"], 
-                "price": o ["price_investment"], 
-                "commission": o ["commissions_account"], 
-                "taxes": o ["taxes_account"], 
-                "operationstypes_id": o ["operationstypes_id"], 
-                "currency_conversion": o ["investment2account"], 
-                "investments_id": -1, 
-            })
-    ld=listdict_order_by(ld, "datetime")
-    r=Simulate_InvestmentsOperations_from_investment(request, [investment, ],  dt,  request.local_currency,  ld)
-    return r
-
-def InvestmentsOperationsManager_merging_all_current_operations_of_active_investments(request, dt):
-    #We need to convert investmentsoperationscurrent to investmentsoperations
-    from moneymoney.models import Products
-    r=InvestmentsOperationsManager(request)
-    distinct_products=Products.qs_products_of_active_investments()
-    for product in distinct_products:
-        io=InvestmentsOperation_merging_current_operations_with_same_product(request, product,  dt)
-        r.append(io)
-    return r
+## Class to work with investmentsoperations inside a strategy_model
+## It's not a merging. It must work with heterogeneous mode
+class StrategyIO:
+    ## @param strategy. It's a strategy model object
+    ## @param dt. Be careful due to strategy has its from to end dt
+    def __init__(self, request, strategy, dt=timezone.now(), simulated_operations=[], temporaltable=None):
+        self.request=request
+        self.strategy=strategy
+        self.simulated_operations=simulated_operations
+        self.temporaltable=temporaltable
+        self.dt=dt
+        self.iom=InvestmentsOperationsManager.from_investment_queryset(self.strategy.investments_queryset(), self.dt, self.request)
+        
+        
+        
+    def io(self):
+        if hasattr(self, "_io") is False:
+            r=[]
+            for io in self.iom:
+                for o in io.io:
+                    r.append(o)
+            self._io=r
+        return self._io
+        
+    def io_current(self):
+        if hasattr(self, "_io_current") is False:
+            r=[]
+            for io in self.iom:
+                for o in io.io_current:
+                    r.append(o)
+            self._io_current= r
+        return self._io_current
+        
+    def io_historical(self):
+        if hasattr(self, "_io_historical") is False:
+            r=[]
+            for io in self.iom:
+                for o in io.io_historical:
+                    if self.strategy.dt_from<o["dt_end"] and o["dt_end"]<self.strategy.dt_to_for_comparations():
+                        r.append(o)
+            self._io_historical=r
+        return self._io_historical
+        
+    def current_invested_user(self):
+        return self.iom.current_invested_user()
+    def current_gains_net_user(self):
+        return self.iom.current_gains_net_user()
+        
+    def historical_gains_net_user(self):
+        r=0
+        for o in self.io_historical():
+            r=r + o["gains_net_user"]
+        return r   
+        
+        
+    def json(self):
+        from moneymoney.models import Products, StrategiesTypes
+        
+        r={}
+        r["strategy"]={
+            "id": self.strategy.id,  
+            "url": self.request.build_absolute_uri(reverse('strategies-detail', args=(self.strategy.pk, ))), 
+            "name":self.strategy.name, 
+            "dt_from": self.strategy.dt_from, 
+            "dt_to": self.strategy.dt_to, 
+            "investments":self.strategy.investments_urls(self.request), 
+            "type": self.strategy.type, 
+            "comment": self.strategy.comment, 
+            "additional1": self.strategy.additional1, 
+            "additional2": self.strategy.additional2, 
+            "additional3": self.strategy.additional3, 
+            "additional4": self.strategy.additional4, 
+            "additional5": self.strategy.additional5, 
+            "additional6": self.strategy.additional6, 
+            "additional7": self.strategy.additional7, 
+            "additional8": self.strategy.additional8, 
+            "additional9": self.strategy.additional9, 
+            "additional10": self.strategy.additional10, 
+        }
+        if self.strategy.type in (StrategiesTypes.Ranges, ):
+            product=Products.objects.get(pk=self.strategy.additional1)
+            r["product"]={
+                "name": product.name, 
+                "currency": product.currency, 
+                "url": self.request.build_absolute_uri(reverse('products-detail', args=(product.id, ))), 
+                "leverage_multiplier": product.leverages.multiplier, 
+                "leverage_real_multiplier": product.real_leveraged_multiplier(), 
+                "last": product.basic_results()["last"], 
+                "decimals": product.decimals, 
+            }
+        r["io"]=self.io()
+        r["io_current"]=self.io_current()
+        r["io_historical"]=self.io_historical()
+        r["temporaltable"]=self.temporaltable
+        return r
+        
+class StrategyIOManager:
+    def __init__(self, request):
+        pass
