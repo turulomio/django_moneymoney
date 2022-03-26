@@ -791,7 +791,7 @@ def StrategiesSimulation(request):
     dt=RequestGetDtaware(request, "dt")
     temporaltable=RequestGetString(request, "temporaltable")
     simulated_operations=[]
-    if strategy is not None and dt is not None:
+    if strategy is not None:
         s=StrategyIO(request, strategy, dt, simulated_operations, temporaltable)
         return JsonResponse( s.json(), encoder=MyDjangoJSONEncoder,  safe=False)
     return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)

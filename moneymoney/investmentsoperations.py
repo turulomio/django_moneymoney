@@ -842,12 +842,14 @@ class InvestmentsOperationsTotalsManager:
 class StrategyIO:
     ## @param strategy. It's a strategy model object
     ## @param dt. Be careful due to strategy has its from to end dt
-    def __init__(self, request, strategy, dt=timezone.now(), simulated_operations=[], temporaltable=None):
+    def __init__(self, request, strategy, dt=None, simulated_operations=[], temporaltable=None):
         self.request=request
         self.strategy=strategy
         self.simulated_operations=simulated_operations
         self.temporaltable=temporaltable
         self.dt=dt
+        if dt is None:
+            self.dt=self.strategy.dt_to_for_comparations()
         self.iom=InvestmentsOperationsManager.from_investment_queryset(self.strategy.investments_queryset(), self.dt, self.request)
         
         
@@ -875,13 +877,14 @@ class StrategyIO:
             r=[]
             for io in self.iom:
                 for o in io.io_historical:
-                    if self.strategy.dt_from<o["dt_end"] and o["dt_end"]<self.strategy.dt_to_for_comparations():
+                    if self.strategy.dt_from<=o["dt_end"] and o["dt_end"]<=self.strategy.dt_to_for_comparations():
                         r.append(o)
             self._io_historical=r
         return self._io_historical
         
     def current_invested_user(self):
         return self.iom.current_invested_user()
+        
     def current_gains_net_user(self):
         return self.iom.current_gains_net_user()
         
