@@ -1,8 +1,8 @@
 {
   "header": {
     "comment": "eric project file for project django_moneymoney",
-    "copyright": "Copyright (C) 2021 , ",
-    "saved": "2021-11-01, 07:50:42"
+    "copyright": "Copyright (C) 2022 , ",
+    "saved": "2022-03-28, 11:18:43"
   },
   "project": {
     "AUTHOR": "",
@@ -52,7 +52,6 @@
       "README.md",
       "doc/entity_relationship.md",
       "doc/javascript.md",
-      "doc/permissions.md",
       "doc/structure.md"
     ],
     "OTHERTOOLSPARMS": {},
@@ -108,7 +107,8 @@
       "moneymoney/reusing/libmanagers.py",
       "moneymoney/management/commands/sync_quotes.py",
       "moneymoney/reusing/connection_pg.py",
-      "moneymoney/assetsreport.py"
+      "moneymoney/assetsreport.py",
+      "moneymoney/database_update.py"
     ],
     "SPELLEXCLUDES": "",
     "SPELLLANGUAGE": "en_US",

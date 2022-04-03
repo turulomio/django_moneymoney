@@ -72,9 +72,10 @@ class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
         return obj.fullName()
 
 class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
+    currency = serializers.SerializerMethodField()
     class Meta:
         model = Investmentsoperations
-        fields = ('url', 'id','operationstypes', 'investments','shares', 'taxes', 'commission',  'price', 'datetime', 'comment', 'show_in_ranges', 'currency_conversion')
+        fields = ('url', 'id','operationstypes', 'investments','shares', 'taxes', 'commission',  'price', 'datetime', 'comment', 'show_in_ranges', 'currency_conversion', 'currency')
 
     
     def create(self, validated_data):
@@ -90,6 +91,10 @@ class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
         updated.investments.set_attributes_after_investmentsoperations_crud()
         updated.update_associated_account_operation(self.context.get("request"))
         return updated
+        
+
+    def get_currency(self, obj):
+        return  _(obj.investments.products.currency)
 
 class ConceptsSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()

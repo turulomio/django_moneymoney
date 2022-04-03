@@ -359,7 +359,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
 
 
 class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
-    queryset = Investmentsoperations.objects.all()
+    queryset = Investmentsoperations.objects.select_related("investments").select_related("investments__products").all()
     serializer_class = serializers.InvestmentsoperationsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
