@@ -113,10 +113,8 @@ class InvestingCom:
     ## It has 39 columns
     def append_from_portfolio(self):
         r=[]
-        line_count = 0
         quotes_count = 0
         for row in self.csv_object:
-            if line_count >0:#Ignores headers line
                 if row[2]=="":
                     products=Products.objects.raw('SELECT products.* FROM products where tickers[5]=%s', (f"{row[1]}", ))
                     code=f"{row[1]}"
@@ -125,9 +123,8 @@ class InvestingCom:
                     code=f"{row[1]}#{row[2]}"
                     
                 if len(products)==0:
-                    d={"product":None,   "code":code,  "log": "Product wasn't found"}
-                    
-                    
+                    r.append({"product":None,   "code":code,  "log": "Product wasn't found"})
+
                 for product in products:
                     d={"product": product.fullName(),   "code":code}
                     if row[16].find(":")==-1:#It's a date
@@ -152,7 +149,7 @@ class InvestingCom:
                         except:
                             d["log"]="Error parsing hour" + str(row)
                     r.append(d)
-            line_count += 1
+        print("Products found", len(r))
         return r
 
     ## Imports data from a CSV file with this struct. It has 6 columns
