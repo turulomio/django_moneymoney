@@ -9,6 +9,7 @@ class Command(BaseCommand):
         pass
         
     def reinstall_dolt(self):
+        makedirs("dolt", exist_ok=True)
         chdir("dolt")
         if path.exists("dolt-linux-amd64.tar.gz"):
             remove("dolt-linux-amd64.tar.gz")
@@ -20,7 +21,6 @@ class Command(BaseCommand):
         
         
     def handle(self, *args, **options):
-        makedirs("dolt", exist_ok=True)
         makedirs("moneymoney/data/", exist_ok=True)
         # from whichcraft import which
         if path.exists("dolt") is True:            
