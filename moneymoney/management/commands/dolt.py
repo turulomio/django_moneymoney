@@ -32,6 +32,7 @@ class Command(BaseCommand):
         chdir("dolt/dolthub_money")
         system("../dolt-linux-amd64/bin/dolt pull")
         system("../dolt-linux-amd64/bin/dolt sql")
+        system("../dolt-linux-amd64/bin/dolt diff")
         commit_messages=input_string("If you want to make a commit, enter a comment. Empty to continue", default="")
         if commit_messages!="":
             system(f"../dolt-linux-amd64/bin/dolt commit -am '{commit_messages}'")
