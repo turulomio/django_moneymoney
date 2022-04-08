@@ -342,14 +342,14 @@ class Accountsoperations(models.Model):
             return False        
         return True
         
-    def is_creditcardbilling(self):
-        if self.concepts.id==eConcept.CreditCardBilling:
-            return True
-        return False
-    def is_transfer(self):
-        if Comment().getCode(self.comment) in (eComment.AccountTransferOrigin, eComment.AccountTransferDestiny, eComment.AccountTransferOriginCommission):
-            return True
-        return False
+#    def is_creditcardbilling(self):
+#        if self.concepts.id==eConcept.CreditCardBilling:
+#            return True
+#        return False
+#    def is_transfer(self):
+#        if Comment().getCode(self.comment) in (eComment.AccountTransferOrigin, eComment.AccountTransferDestiny, eComment.AccountTransferOriginCommission):
+#            return True
+#        return False
         
     def is_investmentoperation(self):
         if Comment().getCode(self.comment) in (eComment.InvestmentOperation, ):
@@ -1300,9 +1300,13 @@ class Comment:
 
             elif code==eComment.AccountTransferOriginCommission:#Operaccount transfer origin commission
                 if not self.validateLength(3, code, args): return string
-                aoo=Accountsoperations.objects.get(pk=args[0])
-                aod=Accountsoperations.objects.get(pk=args[1])
-                return _("Comission transfering {} from {} to {}").format(Currency(aoo.amount, aoo.accounts.currency), aoo.accounts.name, aod.accounts.name)
+                
+                try:
+                    aoo=Accountsoperations.objects.get(pk=args[0])
+                    aod=Accountsoperations.objects.get(pk=args[1])
+                    return _("Commission transfering {} from {} to {}").format(Currency(aoo.amount, aoo.accounts.currency), aoo.accounts.name, aod.accounts.name)
+                except:
+                    return _("Commission transfering error")
 
             elif code==eComment.Dividend:#Comentario de cuenta asociada al dividendo
                 dividend=self.decode_objects(string)
