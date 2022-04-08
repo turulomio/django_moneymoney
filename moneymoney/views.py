@@ -431,8 +431,9 @@ def AccountTransfer(request):
             return Response({'status': 'Something wrong adding an account transfer'}, status=status.HTTP_400_BAD_REQUEST)    
     if request.method=="PUT": #Update
         ## I use the same code deleting y posting. To avoid errors or accounts operations zombies.
-        delete(request.build_absolute_uri(), headers = {"Authorization": request.headers["Authorization"], },  data=request.data)
-        post(request.build_absolute_uri(), headers = {"Authorization": request.headers["Authorization"], },  data=request.data)
+        delete(request.build_absolute_uri(), headers = {"Authorization": request.headers["Authorization"], },  data=request.data, verify=False)
+        post(request.build_absolute_uri(), headers = {"Authorization": request.headers["Authorization"], },  data=request.data, verify=False)
+        print("This should check cert or try with drf internals")
         return JsonResponse( True,  encoder=MyDjangoJSONEncoder,     safe=False)
     if request.method=="DELETE":
         if ao_destiny is not None and ao_origin is not None:
