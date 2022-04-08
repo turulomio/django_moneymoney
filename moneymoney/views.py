@@ -1,4 +1,4 @@
-import urllib.parse
+
 from base64 import  b64encode, b64decode
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, timedelta
@@ -12,6 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
+from json import loads
 from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotals, InvestmentsOperationsTotalsManager, StrategyIO
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict
 from moneymoney.reusing.casts import str2bool, string2list_of_integers
@@ -20,6 +21,7 @@ from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_
 from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.decorators import timeit
 from moneymoney.reusing.percentage import Percentage,  percentage_between
+from urllib import parse,  request as urllib_request
 
 from moneymoney.models import (
     Banks, 
@@ -1160,6 +1162,75 @@ def ProductsUpdate(request):
     r=ic.get()
     
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+     
+@csrf_exempt
+@api_view(['POST', ])
+@permission_classes([permissions.IsAuthenticated, ])
+@transaction.atomic
+def ProductsCatalogUpdate(request):
+    ## If key desn't exist return None, if d["key"] is "" return None
+    def checks_and_sets_value(d, key):
+        if key not in d:
+            return None
+        if d[key]=="":
+            return None
+        return d[key]
+
+
+    
+    auto=RequestBool(request, "auto", False) ## Uses automatic request with settings globals investing.com   
+    if auto is True:
+        response = urllib_request. urlopen("https://raw.githubusercontent.com/turulomio/django_moneymoney/main/moneymoney/data/products.json")
+        data =  loads(response. read())
+    else:
+        # if not GET, then proceed
+        if "csv_file1" not in request.FILES:
+            return Response({'status': 'You must upload a file'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            csv_file = request.FILES["csv_file1"]
+            
+        if not csv_file.name.endswith('.json'):
+            return Response({'status': 'File has not .json extension'}, status=status.HTTP_404_NOT_FOUND)
+
+        #if file is too large, return
+        if csv_file.multiple_chunks():
+            return Response({'status': "Uploaded file is too big ({} MB).".format(csv_file.size/(1000*1000),)}, status=status.HTTP_404_NOT_FOUND)
+
+    r={}
+    r["total"]=len(data["rows"])
+    r["logs"]=[]
+    for d in data["rows"]:
+        p=Products()
+        p.pk=d["id"]
+        p.name=checks_and_sets_value(d, "name")
+        p.isin=checks_and_sets_value(d, "isin")
+        p.currency=checks_and_sets_value(d, "currency")
+        p.productstypes=Productstypes.objects.get(pk=d["productstypes_id"])
+        p.agrupations=checks_and_sets_value(d, "agrupations")
+        p.web=checks_and_sets_value(d, "web")
+        p.address=checks_and_sets_value(d, "address")
+        p.phone=checks_and_sets_value(d, "phone")
+        p.mail=checks_and_sets_value(d, "mail")
+        p.percentage=checks_and_sets_value(d, "percentage")
+        p.pci=checks_and_sets_value(d, "pci")
+        p.leverages=Leverages.objects.get(pk=d["leverages_id"])
+        p.stockmarkets=Stockmarkets.objects.get(pk=d["stockmarkets_id"])
+        p.comment=checks_and_sets_value(d, "comment")
+        p.obsolete=checks_and_sets_value(d, "obsolete")
+        p.ticker_yahoo=checks_and_sets_value(d, "ticker_yahoo")
+        p.ticker_morningstar=checks_and_sets_value(d, "ticker_morningstar")
+        p.ticker_google=checks_and_sets_value(d, "ticker_google")
+        p.ticker_quefondos=checks_and_sets_value(d, "ticker_quefondos")
+        p.ticker_investingcom=checks_and_sets_value(d, "ticker_investincom")
+        p.decimals=checks_and_sets_value(d, "obsolete")
+        before=Products.objects.get(pk=d["id"])
+        
+        if before is None:
+            r["logs"].append({"product":str(p), "log":_("Created")})
+        elif not p.is_fully_equal(before):
+            r["logs"].append({"product":str(p), "log":_("Updated")})
+        p.save()
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
  
 class QuotesViewSet(viewsets.ModelViewSet):
     queryset = Quotes.objects.all().select_related("products")
@@ -2087,7 +2158,7 @@ def obj_from_url(request, url):
 #    class_.request=request
 #    return class_.get_queryset().get(pk=int(resolved_kwargs['pk']))
 
-    parts = urllib.parse.urlparse(url).path.split("/")
+    parts = parse.urlparse(url).path.split("/")
     type=parts[len(parts)-3]
     id=parts[len(parts)-2]
     if type =="products":
@@ -2115,7 +2186,7 @@ def id_from_url(request, url):
 #    class_=resolved_func.cls()
 #    class_.request=request
 #    return int(resolved_kwargs['pk'])
-    path = urllib.parse.urlparse(url).path
+    path = parse.urlparse(url).path
     parts=path.split("/")
     return int(parts[len(parts)-2])
 

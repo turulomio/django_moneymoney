@@ -879,7 +879,11 @@ class Products(models.Model):
     stockmarkets = models.ForeignKey(Stockmarkets, models.DO_NOTHING)
     comment = models.TextField(blank=True, null=True)
     obsolete = models.BooleanField()
-    tickers = models.TextField(blank=True, null=True)  # This field type is a guess.
+    ticker_google = models.TextField(blank=True, null=True) 
+    ticker_yahoo = models.TextField(blank=True, null=True) 
+    ticker_morningstar = models.TextField(blank=True, null=True) 
+    ticker_quefondos = models.TextField(blank=True, null=True) 
+    ticker_investingcom = models.TextField(blank=True, null=True) 
     decimals = models.IntegerField(blank=True, null=True)
 
     class Meta:
@@ -889,6 +893,34 @@ class Products(models.Model):
         
     def __str__(self):
         return self.fullName()
+
+    ## Compara dos objetos products campo por campo False
+    def is_fully_equal(self, other):
+        if (
+            self.id!=other.id or
+            self.isin!=other.isin or
+            self.currency!=other.currency or
+            self.productstypes!=other.productstypes or
+            self.agrupations!=other.agrupations or
+            self.web!=other.web or
+            self.address!=other.address or
+            self.phone!=other.phone or
+            self.mail!=other.mail or
+            self.percentage!=other.percentage or
+            self.pci!=other.pci or
+            self.leverages!=other.leverages or
+            self.stockmarkets!=other.stockmarkets or
+            self.comment!=other.comment or
+            self.obsolete!=other.obsolete or
+            self.ticker_yahoo!=other.ticker_yahoo or
+            self.ticker_morningstar!=other.ticker_morningstar or
+            self.ticker_google!=other.ticker_google or
+            self.ticker_quefondos!=other.ticker_quefondos or
+            self.ticker_investingcom!=other.ticker_investingcom or
+            self.decimals!=other.decimals ):
+            return False
+        else:
+            return True
         
     def fullName(self):
         return "{} ({})".format(self.name, _(self.stockmarkets.name))

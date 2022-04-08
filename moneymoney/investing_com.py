@@ -116,10 +116,10 @@ class InvestingCom:
         quotes_count = 0
         for row in self.csv_object:
                 if row[2]=="":
-                    products=Products.objects.raw('SELECT products.* FROM products where tickers[5]=%s', (f"{row[1]}", ))
+                    products=Products.objects.raw('SELECT products.* FROM products where ticker_investingcom=%s', (f"{row[1]}", ))
                     code=f"{row[1]}"
                 else:
-                    products=Products.objects.raw('SELECT products.* FROM products where tickers[5]=%s', (f"{row[1]}#{row[2]}", ))
+                    products=Products.objects.raw('SELECT products.* FROM products where ticker_investingcom=%s', (f"{row[1]}#{row[2]}", ))
                     code=f"{row[1]}#{row[2]}"
                     
                 if len(products)==0:
