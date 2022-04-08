@@ -1218,7 +1218,7 @@ def ProductsCatalogUpdate(request):
         p.ticker_morningstar=checks_and_sets_value(d, "ticker_morningstar")
         p.ticker_google=checks_and_sets_value(d, "ticker_google")
         p.ticker_quefondos=checks_and_sets_value(d, "ticker_quefondos")
-        p.ticker_investingcom=checks_and_sets_value(d, "ticker_investincom")
+        p.ticker_investingcom=checks_and_sets_value(d, "ticker_investingcom")
         p.decimals=checks_and_sets_value(d, "obsolete")
         before=Products.objects.get(pk=d["id"])
         
