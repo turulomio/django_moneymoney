@@ -1175,8 +1175,6 @@ def ProductsCatalogUpdate(request):
         if d[key]=="":
             return None
         return d[key]
-
-
     
     auto=RequestBool(request, "auto", False) ## Uses automatic request with settings globals investing.com   
     if auto is True:
@@ -1184,17 +1182,16 @@ def ProductsCatalogUpdate(request):
         data =  loads(response. read())
     else:
         # if not GET, then proceed
-        if "csv_file1" not in request.FILES:
+        if "json_file1" not in request.FILES:
             return Response({'status': 'You must upload a file'}, status=status.HTTP_404_NOT_FOUND)
         else:
-            csv_file = request.FILES["csv_file1"]
+            json_file = request.FILES["json_file1"]
             
-        if not csv_file.name.endswith('.json'):
+        if not json_file.name.endswith('.json'):
             return Response({'status': 'File has not .json extension'}, status=status.HTTP_404_NOT_FOUND)
 
-        #if file is too large, return
-        if csv_file.multiple_chunks():
-            return Response({'status': "Uploaded file is too big ({} MB).".format(csv_file.size/(1000*1000),)}, status=status.HTTP_404_NOT_FOUND)
+        data=loads(json_file.read())
+
 
     r={}
     r["total"]=len(data["rows"])
