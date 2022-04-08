@@ -115,7 +115,6 @@ class InvestingCom:
         r=[]
         quotes_count = 0
         for row in self.csv_object:
-                print(row[1], row[2])
                 if row[2]=="":
                     products=Products.objects.raw('SELECT products.* FROM products where ticker_investingcom=%s', (f"{row[1]}", ))
                     code=f"{row[1]}"
@@ -123,7 +122,6 @@ class InvestingCom:
                     products=Products.objects.raw('SELECT products.* FROM products where ticker_investingcom=%s', (f"{row[1]}#{row[2]}", ))
                     code=f"{row[1]}#{row[2]}"
                     
-                print(len(products))
                 if len(products)==0:
                     r.append({"product":None,   "code":code,  "log": "Product wasn't found"})
 
