@@ -377,8 +377,6 @@ class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
 def AccountTransfer(request): 
-    print(request.method)
-    print(request.data)
     account_origin=RequestUrl(request, 'account_origin')#Returns an account object
     account_destiny=RequestUrl(request, 'account_destiny')
     datetime=RequestDtaware(request, 'datetime')
@@ -387,7 +385,6 @@ def AccountTransfer(request):
     ao_origin=RequestUrl(request, 'ao_origin')
     ao_destiny=RequestUrl(request, 'ao_destiny')
     ao_commission=RequestUrl(request, 'ao_commission')
-    print(datetime, account_origin, account_destiny, amount, commission, ao_origin, ao_destiny, ao_commission)
     if request.method=="POST":
         if ( account_destiny is not None and account_origin is not None and datetime is not None and amount is not None and amount >=0 and commission is not None and commission >=0 and account_destiny!=account_origin):
             if commission >0:
