@@ -977,7 +977,6 @@ def ProductsPairs(request):
     product_better=RequestGetUrl(request, "a")
     product_worse=RequestGetUrl(request, "b")
     
-    r=[]
     if product_better.currency==product_worse.currency:
         common_quotes=cursor_rows("""
             select 
@@ -1035,18 +1034,21 @@ def ProductsPairs(request):
                         product_better.id, product_better.currency,  product_worse.currency))
 #def listdict_products_pairs_evolution_from_datetime(product_worse, product_better, common_quotes, basic_results_worse,   basic_results_better):
 
+    r={}
+    r["product_a"]={"name":product_better.fullName(), "currency": product_better.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_better.id, )))}
+    r["product_b"]={"name":product_worse.fullName(), "currency": product_worse.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_worse.id, )))}
+    r["data"]=[]
     last_pr=Percentage(0, 1)
     first_pr=common_quotes[0]["b_open"]/common_quotes[0]["a_open"]
     for row in common_quotes:#a worse, b better
         pr=row["b_open"]/row["a_open"]
-        r.append({
+        r["data"].append({
             "datetime": dtaware_day_end_from_date(row["date"], request.local_zone), 
             "price_worse": row["a_open"], 
             "price_better": row["b_open"], 
             "price_ratio": pr, 
             "price_ratio_percentage_from_start": percentage_between(first_pr, pr), 
             "price_ratio_percentage_month_diff": percentage_between(last_pr, pr), 
-            'currency':  product_better.currency, 
         })
         last_pr=pr
     
