@@ -31,6 +31,7 @@ urlpatterns=[
     path('home/', money_views.home, name="home"), #La puso porque fallaba production con apache
     path('login/', money_views.login, name="login"), 
     path('logout/', money_views.logout, name="logout"), 
+    path('time/', money_views.Time, name='Time'),
     path('accounts/withbalance/', money_views.AccountsWithBalance, name='AccountsWithBalance'),
     path('accounts/transfer/', money_views.AccountTransfer, name='AccountTransfer'),
     path('accountsoperations/withbalance/', money_views.AccountsoperationsWithBalance, name='AccountsoperationsWithBalance'),

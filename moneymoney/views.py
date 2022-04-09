@@ -334,8 +334,13 @@ def InvestmentsClasses(request):
 
 
 @csrf_exempt
-@api_view(['GET', ])    
+@api_view(['GET', ])
 @permission_classes([permissions.IsAuthenticated, ])
+def Time(request):
+    return JsonResponse( timezone.now(), encoder=MyDjangoJSONEncoder,     safe=False)
+
+@csrf_exempt
+@api_view(['GET', ])    
 def Timezones(request):
     r=list(available_timezones())
     r.sort()
