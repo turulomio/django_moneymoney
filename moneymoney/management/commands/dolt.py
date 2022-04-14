@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand 
 from moneymoney.reusing.text_inputs import input_boolean, input_string
-from os import system, makedirs, chdir, remove, path
+from os import system, makedirs, chdir, path
+from shutil import rmtree
 
 class Command(BaseCommand):
     help = 'Installs dolt, launches sql console, makes commit, makes push, makes dump in moneymoney/data/'
@@ -11,20 +12,16 @@ class Command(BaseCommand):
     def reinstall_dolt(self):
         makedirs("dolt", exist_ok=True)
         chdir("dolt")
-        if path.exists("dolt-linux-amd64.tar.gz"):
-            remove("dolt-linux-amd64.tar.gz")
-            
-        system("wget https://github.com/dolthub/dolt/releases/latest/download/dolt-linux-amd64.tar.gz")
-        system("tar xvfz dolt-linux-amd64.tar.gz")
-        system("dolt-linux-amd64/bin/dolt clone turulomio/dolthub_money")
+        system("dolt clone turulomio/dolthub_money")
         chdir("..")
         
         
     def handle(self, *args, **options):
         makedirs("moneymoney/data/", exist_ok=True)
         # from whichcraft import which
-        if path.exists("dolt") is True:            
-            if input_boolean("Dolt seems to be installed. Do you want to reinstall it ?", default="F"):
+        if path.exists("dolt/dolthub_money") is True:            
+            if input_boolean("Dolt repository seems to be already cloned. Do you want to reinstall it ?", default="F"):
+                rmtree("dolt/dolthub_money")
                 self.reinstall_dolt()
         else:
             self.reinstall_dolt()
