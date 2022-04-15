@@ -2,7 +2,7 @@
   "header": {
     "comment": "eric project file for project django_moneymoney",
     "copyright": "Copyright (C) 2022 , ",
-    "saved": "2022-04-06, 21:18:23"
+    "saved": "2022-04-15, 09:58:16"
   },
   "project": {
     "AUTHOR": "",
@@ -109,7 +109,8 @@
       "moneymoney/reusing/connection_pg.py",
       "moneymoney/assetsreport.py",
       "moneymoney/database_update.py",
-      "moneymoney/management/commands/dolt.py"
+      "moneymoney/management/commands/dolt.py",
+      "moneymoney/request_casting.py"
     ],
     "SPELLEXCLUDES": "",
     "SPELLLANGUAGE": "en_US",

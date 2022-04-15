@@ -21,7 +21,7 @@ from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.decorators import timeit
 from moneymoney.reusing.percentage import Percentage,  percentage_between
 from requests import delete, post
-from moneymoney.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetArrayOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestGetListOfIntegers, RequestString, RequestListUrl, id_from_url
+from moneymoney.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetArrayOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestGetListOfIntegers, RequestString, RequestListUrl, id_from_url, all_args_are_not_none
 from urllib import request as urllib_request
 
 from moneymoney.models import (
@@ -266,7 +266,7 @@ class StrategiesViewSet(viewsets.ModelViewSet):
         active=RequestGetBool(self.request, "active")
         investment=RequestGetUrl(self.request, "investment", Investments)
         type=RequestGetInteger(self.request, "type")
-        if active is not None and investment is not None:
+        if all_args_are_not_none(active, investment):
             return self.queryset.filter(dt_to__isnull=active,  investments__contains=investment.id, type=type)
         return self.queryset.all() #We need to rerun all(), because it cached results after CRUD operations
 
@@ -560,7 +560,7 @@ def AccountsoperationsWithBalance(request):
     month=RequestGetInteger(request, 'month')
     
     
-    if accounts_id is not None and year is not None and month is not None:
+    if all_args_are_not_none(accounts_id, year, month):
         account=Accounts.objects.get(pk=accounts_id)
         dt_initial=dtaware_month_start(year, month, request.local_zone)
         initial_balance=account.balance( dt_initial, request.local_currency)[0]

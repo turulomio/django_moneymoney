@@ -140,3 +140,10 @@ def id_from_url(url):
     
 def object_from_url(url, class_):
     return class_.objects.get(pk=id_from_url(url))
+
+def all_args_are_not_none(*args):
+    for arg in args:
+        if arg is None:
+            return False
+    return True
+        
