@@ -1,4 +1,3 @@
-
 from base64 import  b64encode, b64decode
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, timedelta
@@ -15,14 +14,15 @@ from django.http import JsonResponse
 from json import loads
 from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotals, InvestmentsOperationsTotalsManager, StrategyIO
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict
-from moneymoney.reusing.casts import str2bool, string2list_of_integers
-from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date, string2date
+from moneymoney.reusing.casts import string2list_of_integers
+from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date
 from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average
 from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.decorators import timeit
 from moneymoney.reusing.percentage import Percentage,  percentage_between
 from requests import delete, post
-from urllib import parse,  request as urllib_request
+from moneymoney.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetArrayOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestGetListOfIntegers, RequestString, RequestListUrl, id_from_url
+from urllib import request as urllib_request
 
 from moneymoney.models import (
     Banks, 
@@ -128,8 +128,8 @@ def AssetsReport(request):
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
 def ConceptsMigration(request):         
-    concept_from=RequestUrl(request, "from")
-    concept_to=RequestUrl(request, "to")
+    concept_from=RequestUrl(request, "from", Concepts)
+    concept_to=RequestUrl(request, "to", Concepts)
     if concept_from is not None and concept_to is not None:
         execute("update accountsoperations set concepts_id=%s where concepts_id=%s", (concept_to.id, concept_from.id))
         execute("update creditcardsoperations set concepts_id=%s where concepts_id=%s", (concept_to.id, concept_from.id))
@@ -162,7 +162,7 @@ def ConceptsUsed(request):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def CreditcardsPayments(request): 
-    creditcard=RequestGetUrl(request, "creditcard")
+    creditcard=RequestGetUrl(request, "creditcard", Creditcards)
     
     if creditcard is not None:
     
@@ -264,7 +264,7 @@ class StrategiesViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         active=RequestGetBool(self.request, "active")
-        investment=RequestGetUrl(self.request, "investment")
+        investment=RequestGetUrl(self.request, "investment", Investments)
         type=RequestGetInteger(self.request, "type")
         if active is not None and investment is not None:
             return self.queryset.filter(dt_to__isnull=active,  investments__contains=investment.id, type=type)
@@ -382,14 +382,14 @@ class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
 def AccountTransfer(request): 
-    account_origin=RequestUrl(request, 'account_origin')#Returns an account object
-    account_destiny=RequestUrl(request, 'account_destiny')
+    account_origin=RequestUrl(request, 'account_origin', Accounts)#Returns an account object
+    account_destiny=RequestUrl(request, 'account_destiny', Accounts)
     datetime=RequestDtaware(request, 'datetime')
     amount=RequestDecimal(request, 'amount')
     commission=RequestDecimal(request, 'commission',  0)
-    ao_origin=RequestUrl(request, 'ao_origin')
-    ao_destiny=RequestUrl(request, 'ao_destiny')
-    ao_commission=RequestUrl(request, 'ao_commission')
+    ao_origin=RequestUrl(request, 'ao_origin', Accountsoperations)
+    ao_destiny=RequestUrl(request, 'ao_destiny', Accountsoperations)
+    ao_commission=RequestUrl(request, 'ao_commission', Accountsoperations)
     if request.method=="POST":
         if ( account_destiny is not None and account_origin is not None and datetime is not None and amount is not None and amount >=0 and commission is not None and commission >=0 and account_destiny!=account_origin):
             if commission >0:
@@ -770,7 +770,7 @@ def InvestmentsoperationsFull(request):
 def InvestmentsoperationsFullSimulation(request):
     investments=[]
     for url in request.data["investments"]:
-        investments.append(obj_from_url(request, url))## Como todas deben ser iguales uso la primera
+        investments.append(RequestUrl(request, url, Investments))## Como todas deben ser iguales uso la primera
     dt=string2dtaware(request.data["dt"],  "JsUtcIso", request.local_zone)
     local_currency=request.data["local_currency"]
     temporaltable=request.data["temporaltable"]
@@ -786,7 +786,7 @@ def InvestmentsoperationsFullSimulation(request):
 @api_view(['GET', ]) 
 @permission_classes([permissions.IsAuthenticated, ])
 def StrategiesSimulation(request):
-    strategy=RequestGetUrl(request, "strategy")
+    strategy=RequestGetUrl(request, "strategy", Strategies)
     dt=RequestGetDtaware(request, "dt")
     temporaltable=RequestGetString(request, "temporaltable")
     simulated_operations=[]
@@ -811,7 +811,7 @@ def InvestmentsoperationsEvolutionChart(request):
 def InvestmentsChangeSellingPrice(request):
     selling_price=RequestDecimal(request, "selling_price")
     selling_expiration=RequestDate(request, "selling_expiration")
-    investments=RequestListUrl(request, "investments")
+    investments=RequestListUrl(request, "investments", Investments)
     
     if investments is not None and selling_price is not None: #Pricce 
         for inv in investments:
@@ -828,7 +828,7 @@ def InvestmentsChangeSellingPrice(request):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsOperationsTotalManager_investments_same_product(request):
-    product=RequestGetUrl(request, "product")
+    product=RequestGetUrl(request, "product", Products)
     if product is not None:
         qs_investments=Investments.objects.filter(products=product, active=True)
         iotm=InvestmentsOperationsTotalsManager.from_investment_queryset(qs_investments,  timezone.now(), request)
@@ -883,7 +883,7 @@ def OrdersList(request):
 @api_view(['POST', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsFavorites(request):
-    product=RequestUrl(request, "product")
+    product=RequestUrl(request, "product", Products)
     favorites=getGlobalListOfIntegers(request, "favorites")
     if product is not None:
         if product.id in favorites:
@@ -899,7 +899,7 @@ def ProductsFavorites(request):
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsInformation(request):
     first_year=RequestGetInteger(request, "first_year",  2005)
-    product=RequestGetUrl(request, "product")
+    product=RequestGetUrl(request, "product", Products)
     
     if product is None:
         return Response({'status': "Product wan't found"}, status=status.HTTP_404_NOT_FOUND)
@@ -974,8 +974,8 @@ select date, lag, quote, percentage(lag,quote)  from quotes;
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsPairs(request):
     #fromyear=RequestGetInteger(request, "fromyear", date.today().year-3) 
-    product_better=RequestGetUrl(request, "a")
-    product_worse=RequestGetUrl(request, "b")
+    product_better=RequestGetUrl(request, "a", Products)
+    product_worse=RequestGetUrl(request, "b", Products)
     
     if product_better.currency==product_worse.currency:
         common_quotes=cursor_rows("""
@@ -1067,7 +1067,7 @@ def ProductsPairs(request):
 ## products/quotes/ohcl?product=url&date=2022-4-1
 def ProductsQuotesOHCL(request):
     if request.method=="GET":
-        product=RequestGetUrl(request, "product")
+        product=RequestGetUrl(request, "product", Products)
         year=RequestGetInteger(request, "year")
         month=RequestGetInteger(request, "month")
         
@@ -1084,7 +1084,7 @@ def ProductsQuotesOHCL(request):
             return JsonResponse( ld_ohcl, encoder=MyDjangoJSONEncoder, safe=False)
             
     elif request.method=="DELETE":
-        product=RequestUrl(request, "product")
+        product=RequestUrl(request, "product", Products)
         date=RequestDate(request, "date")
         if product is not None and date is not None:
             qs=Quotes.objects.filter(products=product, datetime__date=date)
@@ -1097,7 +1097,7 @@ def ProductsQuotesOHCL(request):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsRanges(request):
-    product=RequestGetUrl(request, "product")
+    product=RequestGetUrl(request, "product", Products)
     only_first=RequestGetBool(request, "only_first")
     percentage_between_ranges=RequestGetInteger(request, "percentage_between_ranges")
     if percentage_between_ranges is not None:
@@ -1266,7 +1266,7 @@ class QuotesViewSet(viewsets.ModelViewSet):
     ## api/quotes/?product=url Showss all quotes of a product
     ## api/quotes/?product=url&month=1&year=2021 Showss all quotes of a product in a month
     def get_queryset(self):
-        product=RequestGetUrl(self.request, 'product')
+        product=RequestGetUrl(self.request, 'product', Products)
         future=RequestGetBool(self.request, 'future')
         last=RequestGetBool(self.request, 'last')
         month=RequestGetInteger(self.request, 'month')
@@ -1656,7 +1656,7 @@ group by
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportConceptsHistorical(request):
-    concept=RequestGetUrl(request, "concept")
+    concept=RequestGetUrl(request, "concept", Concepts)
     if concept is None:
         return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
     r={}
@@ -2019,7 +2019,7 @@ def Binary2Global(request):
 def EstimationsDps_add(request):
     year=RequestInteger(request, 'year')
     estimation=RequestDecimal(request, 'estimation')
-    product=RequestUrl(request, 'product')
+    product=RequestUrl(request, 'product', Products)
     if year is not None and estimation is not None  and product is not None:
         execute("delete from estimations_dps where products_id=%s and year=%s", (product.id, year))
         execute("insert into estimations_dps (date_estimation,year,estimation,source,manual,products_id) values(%s,%s,%s,%s,%s,%s)", (
@@ -2034,7 +2034,7 @@ def EstimationsDps_add(request):
 @transaction.atomic
 def EstimationsDps_delete(request):
     year=RequestInteger(request, 'year')
-    product=RequestUrl(request, 'product')
+    product=RequestUrl(request, 'product', Products)
     if year is not None and product is not None:
         execute("delete from estimations_dps where products_id=%s and year=%s", (product.id, year))
         return JsonResponse(True, safe=False)
@@ -2045,7 +2045,7 @@ def EstimationsDps_delete(request):
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
 def EstimationsDps_list(request): 
-    product=RequestGetUrl(request, "product")
+    product=RequestGetUrl(request, "product", Products)
     if product is not None:
         rows=cursor_rows("select * from estimations_dps where products_id=%s order by year", (product.id, ))
 
@@ -2079,176 +2079,6 @@ def getGlobalBytes_from_base64(request, key, default=None):
 def getGlobalListOfIntegers(request, key, default=[], separator=","):    
     try:
         r = string2list_of_integers(request.globals.GET.get(key), separator)
-    except:
-        r=default
-    return r
-    
-    
-def RequestBool(request, field, default=None):
-    try:
-        r = str2bool(str(request.data.get(field)))
-    except:
-        r=default
-    return r        
-def RequestGetBool(request, field, default=None):
-    try:
-        r = str2bool(request.GET.get(field))
-    except:
-        r=default
-    return r
-
-def RequestGetInteger(request, field, default=None):
-    try:
-        r = int(request.GET.get(field))
-    except:
-        r=default
-    return r
-def RequestInteger(request, field, default=None):
-    try:
-        r = int(request.data.get(field))
-    except:
-        r=default
-    return r
-    
-def RequestGetString(request, field, default=None):
-    try:
-        r = request.GET.get(field, default)
-    except:
-        r=default
-    return r
-
-def RequestGetListOfIntegers(request, field, default=None, separator=","):    
-    try:
-        r = string2list_of_integers(request.GET.get(field), separator)
-    except:
-        r=default
-    return r
-    
-    
-## Used to get array in this situation calls when investments is an array of integers
-    ## To use this methos use axios 
-    ##            var headers={...this.myheaders(),params:{investments:this.strategy.investments,otra:"OTTRA"}}
-    ##            return axios.get(`${this.$store.state.apiroot}/api/dividends/`, headers)
-    ## request.GET returns <QueryDict: {'investments[]': ['428', '447'], 'otra': ['OTRA']}>
-
-def RequestGetArrayOfIntegers(request, field, default=[]):    
-    try:
-        r=[]
-        items=request.GET.getlist(field, [])
-        for i in items:
-            r.append(int(i))
-    except:
-        r=default
-    return r
-
-def RequestListOfIntegers(request, field, default=None,  separator=","):
-    try:
-        r = string2list_of_integers(str(request.data.get(field))[1:-1], separator)
-    except:
-        r=default
-    return r
-
-def RequestGetDtaware(request, field, default=None):
-    try:
-        r = string2dtaware(request.GET.get(field), "JsUtcIso", request.local_zone)
-    except:
-        r=default
-    return r
-
-def RequestDtaware(request, field, default=None):
-    try:
-        r = string2dtaware(request.data.get(field), "JsUtcIso", request.local_zone)
-    except:
-        r=default
-    return r
-
-def RequestDecimal(request, field, default=None):
-    try:
-        r = Decimal(request.data.get(field))
-    except:
-        r=default
-    return r
-def RequestString(request, field, default=None):
-    try:
-        r = str(request.data.get(field))
-    except:
-        r=default
-    return r
-
-
-def obj_from_url(request, url):
-    ## FALLA EN APACHE
-#    path = urllib.parse.urlparse(url).path
-#    print(path)
-#    resolved_func, unused_args, resolved_kwargs = resolve(path)
-#    print("RESOLVED", resolved_func, unused_args, resolved_kwargs)
-#    class_=resolved_func.cls()
-#    print("CLASS", class_)
-#    class_.request=request
-#    return class_.get_queryset().get(pk=int(resolved_kwargs['pk']))
-
-    parts = parse.urlparse(url).path.split("/")
-    type=parts[len(parts)-3]
-    id=parts[len(parts)-2]
-    if type =="products":
-        class_=Products
-    elif type =="investments":
-        class_=Investments
-    elif type =="accounts":
-        class_=Accounts
-    elif type =="accountsoperations":
-        class_=Accountsoperations
-    elif type =="concepts":
-        class_=Concepts
-    elif type =="creditcards":
-        class_=Creditcards
-    elif type =="operationstypes":
-        class_=Operationstypes
-    elif type =="strategies":
-        class_=Strategies
-    else:
-        print("obj_from_url not found", url)
-    return class_.objects.get(pk=id)
-    
-def id_from_url(request, url):
-    ## FALLA EN APACHE
-#    path = urllib.parse.urlparse(url).path
-#    resolved_func, unused_args, resolved_kwargs = resolve(path)
-#    class_=resolved_func.cls()
-#    class_.request=request
-#    return int(resolved_kwargs['pk'])
-    path = parse.urlparse(url).path
-    parts=path.split("/")
-    return int(parts[len(parts)-2])
-
-## Returns a model obect
-def RequestGetUrl(request, field,  default=None):
-    try:
-        r = obj_from_url(request, request.GET.get(field))
-    except:
-        r=default
-    return r
- 
-## Returns a model obect
-def RequestUrl(request, field,  default=None):
-    try:
-        r = obj_from_url(request, request.data.get(field))
-    except:
-        r=default
-    return r 
-## Returns a model obect
-def RequestListUrl(request, field,  default=None):
-    try:
-        r=[]
-        for f in request.data.get(field):
-            r.append(obj_from_url(request, f))
-    except:
-        r=default
-    return r
-
-def RequestDate(request, field, default=None):
-    try:
-        r = string2date(request.data.get(field))
     except:
         r=default
     return r

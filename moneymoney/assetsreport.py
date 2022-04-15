@@ -4,6 +4,8 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 from json import loads
 from moneymoney import __version__
+from moneymoney.models import Operationstypes
+from moneymoney.request_casting import object_from_url
 from moneymoney.reusing.casts import f
 from moneymoney.reusing.connection_dj import cursor_one_field
 from moneymoney.reusing.currency import  Currency
@@ -219,14 +221,14 @@ def generate_assets_report(request, format):
 
     ## Current Investment Operations list
     doc.addParagraph(_("Current investment operations"),"Heading 2")
-    from moneymoney.views import ReportCurrentInvestmentsOperations, obj_from_url
+    from moneymoney.views import ReportCurrentInvestmentsOperations
     dict_report_current_investmentsoperations=loads(ReportCurrentInvestmentsOperations(request._request).content)
     report_current_investmentsoperations=[(_("Date and time"), _("Name"), _("Operation type"), _("Shares"), _("Price"), _("Invested"), _("Balance"), _("Gross gains"), _("% total"))]
     for o in dict_report_current_investmentsoperations:
         report_current_investmentsoperations.append((
            dtaware2string(string2dtaware(o["datetime"], "JsUtcIso"), "%Y-%m-%d %H:%M:%S"), 
             o["name"],
-            obj_from_url(request, o['operationstypes']).name, 
+            object_from_url(o["operationstypes"], Operationstypes).name, 
             o['shares'], 
             Currency(o["price_user"], c), 
             Currency(o["invested_user"], c), 
