@@ -1058,13 +1058,39 @@ def ProductsPairs(request):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 @csrf_exempt
-@api_view(['GET', ])    
+@api_view(['GET', 'DELETE' ])    
 @permission_classes([permissions.IsAuthenticated, ])
+## GET METHODS
+## products/quotes/ohcl/?product_url To get all ohcls of a product
+## products/quotes/ohcl/?product_url&year=2022&month=4 To get ochls of a product, in a month
+## DELETE METHODS
+## products/quotes/ohcl?product=url&date=2022-4-1
 def ProductsQuotesOHCL(request):
-    product=RequestGetUrl(request, "product")
-    if product is not None:
-        ld_ohcl=product.ohclDailyBeforeSplits()         
-        return JsonResponse( ld_ohcl, encoder=MyDjangoJSONEncoder, safe=False)
+    if request.method=="GET":
+        product=RequestGetUrl(request, "product")
+        year=RequestGetInteger(request, "year")
+        month=RequestGetInteger(request, "month")
+        
+        if product is not None and year is not None and month is not None:
+            ld_ohcl=product.ohclDailyBeforeSplits()       
+            r=[] ## TODO. Add from_date in postgres function to avoid this
+            for d in ld_ohcl:
+                if d["date"].year==year and d["date"].month==month:
+                    r.append(d)
+            return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+
+        if product is not None:
+            ld_ohcl=product.ohclDailyBeforeSplits()         
+            return JsonResponse( ld_ohcl, encoder=MyDjangoJSONEncoder, safe=False)
+            
+    elif request.method=="DELETE":
+        product=RequestUrl(request, "product")
+        date=RequestDate(request, "date")
+        if product is not None and date is not None:
+            qs=Quotes.objects.filter(products=product, datetime__date=date)
+            qs.delete()
+            return JsonResponse(True, encoder=MyDjangoJSONEncoder, safe=False)
+
     return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
 
 @csrf_exempt
@@ -1233,10 +1259,18 @@ class QuotesViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.QuotesSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
+    
+    ## api/quotes/ Show all quotes of the database
+    ## api/quotes/?future=true Show all quotes with datetime in the future for debugging
+    ## api/quotes/?last=true Shows all products last Quotes
+    ## api/quotes/?product=url Showss all quotes of a product
+    ## api/quotes/?product=url&month=1&year=2021 Showss all quotes of a product in a month
     def get_queryset(self):
         product=RequestGetUrl(self.request, 'product')
         future=RequestGetBool(self.request, 'future')
         last=RequestGetBool(self.request, 'last')
+        month=RequestGetInteger(self.request, 'month')
+        year=RequestGetInteger(self.request, 'year')
         
         if future is True:
             return Quotes.objects.all().filter(datetime__gte=timezone.now()).select_related("products").order_by("datetime")
@@ -1262,9 +1296,8 @@ class QuotesViewSet(viewsets.ModelViewSet):
             prefetch_related_objects(qs, 'products')
             return qs
 
-#            from django.db.models import Max
-#            return Quotes.objects.all().values("id", "quote", "products_id", "products__name").aggregate(max_datetime=Max("datetime")).select_related("products").order_by("datetime")
-        
+        if product is not None and year is not None and month is not None:
+            return Quotes.objects.all().filter(products=product, datetime__year=year, datetime__month=month).select_related("products").order_by("datetime")
         if product is not None:
             return Quotes.objects.all().filter(products=product).select_related("products").order_by("datetime")
             
