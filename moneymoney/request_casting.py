@@ -35,6 +35,13 @@ def RequestDate(request, field, default=None):
         r=default
     return r
 
+def RequestGetDate(request, field, default=None):
+    try:
+        r = string2date(request.GET.get(field))
+    except:
+        r=default
+    return r
+
 
 def RequestBool(request, field, default=None):
     try:
