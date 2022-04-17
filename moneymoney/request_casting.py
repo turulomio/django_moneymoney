@@ -147,7 +147,6 @@ def id_from_url(url):
     return int(parts[len(parts)-2])
     
 def object_from_url(url, class_):
-    print(id_from_url(url))
     return class_.objects.get(pk=id_from_url(url))
 
 def all_args_are_not_none(*args):
@@ -155,4 +154,4 @@ def all_args_are_not_none(*args):
         if arg is None:
             return False
     return True
-        
+
