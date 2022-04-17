@@ -14,7 +14,8 @@ def RequestGetUrl(request, field, class_,  default=None):
 ## Returns a model obect
 def RequestUrl(request, field, class_,  default=None):
     try:
-        r = class_(request, request.data.get(field))
+
+        r = object_from_url(request.data.get(field), class_)
     except:
         r=default
     return r 
@@ -146,6 +147,7 @@ def id_from_url(url):
     return int(parts[len(parts)-2])
     
 def object_from_url(url, class_):
+    print(id_from_url(url))
     return class_.objects.get(pk=id_from_url(url))
 
 def all_args_are_not_none(*args):
