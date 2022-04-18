@@ -1100,6 +1100,7 @@ def ProductsRanges(request):
     product=RequestGetUrl(request, "product", Products)
     only_first=RequestGetBool(request, "only_first")
     percentage_between_ranges=RequestGetInteger(request, "percentage_between_ranges")
+
     if percentage_between_ranges is not None:
         percentage_between_ranges=percentage_between_ranges/1000
     percentage_gains=RequestGetInteger(request, "percentage_gains")
@@ -1112,8 +1113,8 @@ def ProductsRanges(request):
         qs_investments=Investments.objects.filter(id__in=investments_ids)
     else:
         qs_investments=Investments.objects.none()
-        
-    if not (product is None or only_first is None or percentage_between_ranges is None or percentage_gains is None or amount_to_invest is None or recomendation_methods is None):
+
+    if all_args_are_not_none(product, only_first,  percentage_between_ranges, percentage_gains, amount_to_invest, recomendation_methods):
         from moneymoney.productrange import ProductRangeManager
         
         prm=ProductRangeManager(request, product, percentage_between_ranges, percentage_gains, only_first,  qs_investments=qs_investments, decimals=product.decimals)

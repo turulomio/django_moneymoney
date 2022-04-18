@@ -1,6 +1,6 @@
 __pycache__/
 dist/
-.eric6project/
+.eric7project/
 *.e4p
 doc/html
 dolt

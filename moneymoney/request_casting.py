@@ -6,7 +6,7 @@ from urllib import parse
 ## Returns a model obect
 def RequestGetUrl(request, field, class_,  default=None):
     try:
-        r = class_(request, request.GET.get(field))
+        r = object_from_url(request.GET.get(field), class_)
     except:
         r=default
     return r
@@ -19,12 +19,13 @@ def RequestUrl(request, field, class_,  default=None):
     except:
         r=default
     return r 
+
 ## Returns a model obect
 def RequestListUrl(request, field, class_,  default=None):
     try:
         r=[]
         for f in request.data.get(field):
-            r.append(class_(request, f))
+            r.append(object_from_url(f, class_))
     except:
         r=default
     return r
