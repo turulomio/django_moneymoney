@@ -1,6 +1,7 @@
 from django.urls import path,  include
 from django.conf.urls.i18n import i18n_patterns, set_language 
 from django.views.generic.base import RedirectView
+from django.contrib import admin
 
 from rest_framework import routers
 
@@ -28,6 +29,7 @@ router.register(r'stockmarkets', money_views.StockmarketsViewSet)
 urlpatterns=[
     path('api/', include(router.urls)),
     path('favicon.ico', RedirectView.as_view(url='/static/images/favicon.ico')),
+    path('admin/', admin.site.urls),
     path('home/', money_views.home, name="home"), #La puso porque fallaba production con apache
     path('login/', money_views.login, name="login"), 
     path('logout/', money_views.logout, name="logout"), 
@@ -36,6 +38,7 @@ urlpatterns=[
     path('accounts/transfer/', money_views.AccountTransfer, name='AccountTransfer'),
     path('accountsoperations/withbalance/', money_views.AccountsoperationsWithBalance, name='AccountsoperationsWithBalance'),
     path('assets/report/', money_views.AssetsReport, name='AssetsReport'),
+    path('catalog_manager/', money_views.CatalogManager, name='CatalogManager'),
     path('creditcards/withbalance/', money_views.CreditcardsWithBalance, name='CreditcardsWithBalance'),
     path('creditcards/payments/', money_views.CreditcardsPayments, name='CreditcardsPayments'),
     path('creditcardsoperations/withbalance/', money_views.CreditcardsoperationsWithBalance, name='CreditcardsoperationsWithBalance'),

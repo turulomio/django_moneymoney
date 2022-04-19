@@ -103,6 +103,16 @@ def logout(request):
 
 
 @csrf_exempt
+@permission_classes([permissions.IsAuthenticated, ])
+def CatalogManager(request):
+    r=False
+    print(request.user.get_all_permissions())
+    if request.user.has_perm('catalog_manager'):
+        r=True
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+
+
+@csrf_exempt
 @api_view(['GET', ])    
 def AssetsReport(request):
     format_=RequestGetString(request, "outputformat", "pdf")

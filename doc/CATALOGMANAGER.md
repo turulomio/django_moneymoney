@@ -1,6 +1,11 @@
 To be a django_moneymoney catalog manager, you should create in your instance with django admin a permission manually called "catalogmanager" and giving it to the user.
 
-insert into auth_permission (name, content_type_id, codename) values('Allow user to manage catalogs. Only developers', 1, 'catalogmanager');
+insert into auth_permission (name, content_type_id, codename) values('Allow user to manage catalogs. Only developers', 1, 'catalog_manager');
+
+
+NOF UNCIONA
+
+CREAR GRUPO Y METER PERMISOS  DE EDICION EN TABLAS Y QUITAR DEL RESTO
 
 Look for the id of the authpermission (In my case 137) 
 
