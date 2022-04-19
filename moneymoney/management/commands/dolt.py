@@ -27,14 +27,14 @@ class Command(BaseCommand):
             self.reinstall_dolt()
             
         chdir("dolt/dolthub_money")
-        system("../dolt-linux-amd64/bin/dolt pull")
-        system("../dolt-linux-amd64/bin/dolt sql")
-        system("../dolt-linux-amd64/bin/dolt diff")
+        system("dolt pull")
+        system("dolt sql")
+        system("dolt diff")
         commit_messages=input_string("If you want to make a commit, enter a comment. Empty to continue", default="")
         if commit_messages!="":
-            system(f"../dolt-linux-amd64/bin/dolt commit -am '{commit_messages}'")
-            system("../dolt-linux-amd64/bin/dolt push")            
-        system("../dolt-linux-amd64/bin/dolt dump -r json -f --directory=../../moneymoney/data")            
+            system(f"dolt commit -am '{commit_messages}'")
+            system("dolt push")            
+        system("dolt dump -r json -f --directory=../../moneymoney/data")            
         
         chdir("../..")
 
