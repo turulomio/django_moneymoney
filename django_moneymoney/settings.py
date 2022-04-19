@@ -156,3 +156,7 @@ SESSION_SAVE_EVERY_REQUEST = True
 
 ## Expires session if browser is closed
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+## Only for developers. Activated CATALOG EDITION
+CATALOG_MANAGER = True
+
