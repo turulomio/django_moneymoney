@@ -1224,6 +1224,7 @@ def ProductsCatalogUpdate(request):
 
         data=loads(json_file.read())
 
+    print("Starting")
 
     r={}
     r["total"]=len(data["products"])
@@ -1258,7 +1259,7 @@ def ProductsCatalogUpdate(request):
             r["logs"].append({"product":str(p), "log":_("Created")})
         elif not p.is_fully_equal(before):
             r["logs"].append({"product":str(p), "log":_("Updated")})
-#        p.save()
+        p.save()
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
  
 class QuotesViewSet(viewsets.ModelViewSet):

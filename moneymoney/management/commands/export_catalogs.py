@@ -24,7 +24,7 @@ class Command(BaseCommand):
         qs_sm=Stockmarkets.objects.all().order_by("id")
         qs_leverages=Leverages.objects.all().order_by("id")
         qs_products_types=Productstypes.objects.all().order_by("id")
-        qs_products=Products.objects.all().order_by("id")
+        qs_products=Products.objects.filter(id__gt=0).order_by("id")
         
         s=f"""{{
     "stock_markets": {qs_to_json(qs_sm)}
