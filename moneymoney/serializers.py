@@ -21,6 +21,8 @@ from  moneymoney.models import (
 )
 from rest_framework import serializers
 from django.utils.translation import gettext as _
+from django.conf import settings
+from moneymoney.request_casting import id_from_url
 
 class BanksSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()
@@ -158,7 +160,28 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Products
         fields = ('url', 'id', 'name',  'isin', 'currency','productstypes','agrupations', 'web', 'address', 'phone', 'mail', 'percentage', 'pci', 'leverages', 'stockmarkets', 'comment',  'obsolete', 'ticker_yahoo', 'ticker_morningstar','ticker_google','ticker_quefondos','ticker_investingcom', 'decimals', 'real_leveraged_multiplier', 'fullname')
-
+    
+    def create(self, validated_data):
+        request=self.context.get("request")
+        if request.data["system"] is True :
+            validated_data["id"]=Products.objects.latest('id').id+1
+        else:
+            validated_data["id"]=Products.objects.earliest('id').id-1
+            
+        
+        if settings.CATALOG_MANAGER is False and validated_data["id"]>0:
+            return
+            
+        created=serializers.HyperlinkedModelSerializer.create(self,  validated_data)
+        return created
+        
+    def update(self, instance, validated_data):
+        request=self.context.get("request")
+        if settings.CATALOG_MANAGER is False and id_from_url(request.data["url"])>0:
+            return
+        updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
+        return updated
+        
     def get_real_leveraged_multiplier(self, obj):
         return  obj.real_leveraged_multiplier()
 

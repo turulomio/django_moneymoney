@@ -899,6 +899,7 @@ def ProductsFavorites(request):
         setGlobal("favorites", str(favorites)[1:-1])
     return JsonResponse( favorites, encoder=MyDjangoJSONEncoder,     safe=False)
 
+
  
 @csrf_exempt
 @api_view(['GET', ])    
@@ -1131,9 +1132,18 @@ def ProductsRanges(request):
     
     
 class ProductsViewSet(viewsets.ModelViewSet):
-    queryset = Products.objects.all().select_related("productstypes").select_related("leverages").select_related("stockmarkets")
+    queryset = Products.objects.select_related("productstypes").select_related("leverages").select_related("stockmarkets").all()
     serializer_class = serializers.ProductsSerializer
     permission_classes = [permissions.IsAuthenticated]  
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if settings.CATALOG_MANAGER is False and instance.id>0:
+            return JsonResponse( "Error delting system product", encoder=MyDjangoJSONEncoder,     safe=False)
+    
+        self.perform_destroy(instance)
+        return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
+    
 
 class ProductspairsViewSet(viewsets.ModelViewSet):
     queryset = Productspairs.objects.all()
