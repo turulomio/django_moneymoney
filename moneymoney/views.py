@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.models import User
 from django.db import transaction
-from django.db.models import prefetch_related_objects
+from django.db.models import prefetch_related_objects, Count
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -1131,8 +1131,11 @@ def ProductsRanges(request):
     return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
     
     
+## Has annotate investments__count en el queryset
+## Solo afectaría a personal products<0. Solo investments, ya que todas las demás dependen de produto y habría que borrarllas
+## Es decir si borro un producto, borraría quotes, splits, estimatiosn.....
 class ProductsViewSet(viewsets.ModelViewSet):
-    queryset = Products.objects.select_related("productstypes").select_related("leverages").select_related("stockmarkets").all()
+    queryset = Products.objects.select_related("productstypes").select_related("leverages").select_related("stockmarkets").all().annotate(uses=Count('investments', distinct=True))
     serializer_class = serializers.ProductsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
