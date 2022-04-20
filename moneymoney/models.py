@@ -236,6 +236,11 @@ class Stockmarkets(models.Model):
     def __str__(self):
         return self.fullName()
         
+    ## Returns a json string
+    def json(self):
+        return f"""{{ 'id': {jss(self.id)}, 'name': {jss(self.name)}, 'country': {jss(self.country)}, 'starts': {jss(self.starts)}, 'closes':  {jss(self.closes)}, 'starts_futures': {jss(self.starts_futures)}, 'closes_futures': {jss(self.closes_futures)} }}"""
+
+        
     def fullName(self):
         return _(self.name)
         
@@ -803,7 +808,12 @@ class Leverages(models.Model):
         return self.fullName()
         
     def fullName(self):
-        return _(self.name)
+        return _(self.name)        
+        
+    ## Returns a json string
+    def json(self):
+        return f"""{{ 'id': {jss(self.id)}, 'name': {jss(self.name)}, 'multiplier': {jss(self.multiplier)} }}"""
+
 
 class Operationstypes(models.Model):
     id = models.IntegerField(primary_key=True)
@@ -890,6 +900,9 @@ class Products(models.Model):
         managed = False
         db_table = 'products'
         ordering = ['name']
+    ## Returns a json string
+    def json(self):
+        return f"""{{ 'id': {jss(self.id)}, 'name': {jss(self.name)}, 'isin': {jss(self.isin)}, 'currency': {jss(self.currency)}, 'productstypes': {jss(self.productstypes.id)}, 'agrupations': {jss(self.agrupations)}, 'web': {jss(self.web)}, 'address': {jss(self.address)}, 'phone': {jss(self.phone)}, 'mail': {jss(self.mail)}, 'percentage': {jss(self.percentage)}, 'pci': {jss(self.pci)}, 'leverages': {jss(self.leverages.id)}, 'stockmarkets': {jss(self.stockmarkets.id)}, 'comment': {jss(self.comment)}, 'obsolete': {jss(self.obsolete)}, 'ticker_google': {jss(self.ticker_google)}, 'ticker_yahoo': {jss(self.ticker_yahoo)}, 'ticker_morningstar': {jss(self.ticker_morningstar)}, 'ticker_quefondos': {jss(self.ticker_quefondos)}, 'ticker_investingcom': {jss(self.ticker_investingcom)}, 'decimals': {jss(self.decimals)} }}"""
         
     def __str__(self):
         return self.fullName()
@@ -1023,6 +1036,9 @@ class Productstypes(models.Model):
         
     def fullName(self):
         return _(self.name)
+    ## Returns a json string
+    def json(self):
+        return f"""{{ 'id': {jss(self.id)}, 'name': {jss(self.name)} }}"""
 
 class Quotes(models.Model):
     id = models.AutoField(primary_key=True)
@@ -1367,6 +1383,24 @@ class Comment:
                 cco=Creditcardsoperations.objects.get(pk=args[0])
                 money=Currency(cco.amount, cco.creditcards.accounts.currency)
                 return _("Refund of {} payment of which had an amount of {}").format(dtaware2string(cco.datetime), money)
+
+## Converts a value to a json strings, depending its value
+## str >> "str"
+
+def jss(value):
+    if value is None:
+        return "null"
+    elif value.__class__.__name__=="str":
+        return f"'{value}'"
+    elif value.__class__.__name__ in ("int", "float", "Decimal"):
+        return f"{value}"
+    elif value.__class__.__name__=="time":
+        return f"'{value}'"
+    elif value.__class__.__name__=="bool":
+        return f"{str(value).lower()}"
+    else:
+        print(f"Rare value '{value}' ({value.__class__.__name__}) in jss")
+    
 
 #def queryset_investments_load_basic_results(qs_investments):
 #    products_ids=tuple(qs_investments.values_list('products__id',flat=True))
