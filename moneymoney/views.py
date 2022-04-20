@@ -1210,7 +1210,7 @@ def ProductsCatalogUpdate(request):
     
     auto=RequestBool(request, "auto", False) ## Uses automatic request with settings globals investing.com   
     if auto is True:
-        response = urllib_request. urlopen("https://raw.githubusercontent.com/turulomio/django_moneymoney/main/moneymoney/data/products.json")
+        response = urllib_request. urlopen("https://raw.githubusercontent.com/turulomio/django_moneymoney/main/moneymoney/data/catalogs.json")
         data =  loads(response. read())
     else:
         # if not GET, then proceed
@@ -1226,15 +1226,15 @@ def ProductsCatalogUpdate(request):
 
 
     r={}
-    r["total"]=len(data["rows"])
+    r["total"]=len(data["products"])
     r["logs"]=[]
-    for d in data["rows"]:
+    for d in data["products"]:
         p=Products()
         p.pk=d["id"]
         p.name=checks_and_sets_value(d, "name")
         p.isin=checks_and_sets_value(d, "isin")
         p.currency=checks_and_sets_value(d, "currency")
-        p.productstypes=Productstypes.objects.get(pk=d["productstypes_id"])
+        p.productstypes=Productstypes.objects.get(pk=d["productstypes"])
         p.agrupations=checks_and_sets_value(d, "agrupations")
         p.web=checks_and_sets_value(d, "web")
         p.address=checks_and_sets_value(d, "address")
@@ -1242,8 +1242,8 @@ def ProductsCatalogUpdate(request):
         p.mail=checks_and_sets_value(d, "mail")
         p.percentage=checks_and_sets_value(d, "percentage")
         p.pci=checks_and_sets_value(d, "pci")
-        p.leverages=Leverages.objects.get(pk=d["leverages_id"])
-        p.stockmarkets=Stockmarkets.objects.get(pk=d["stockmarkets_id"])
+        p.leverages=Leverages.objects.get(pk=d["leverages"])
+        p.stockmarkets=Stockmarkets.objects.get(pk=d["stockmarkets"])
         p.comment=checks_and_sets_value(d, "comment")
         p.obsolete=checks_and_sets_value(d, "obsolete")
         p.ticker_yahoo=checks_and_sets_value(d, "ticker_yahoo")
@@ -1258,7 +1258,7 @@ def ProductsCatalogUpdate(request):
             r["logs"].append({"product":str(p), "log":_("Created")})
         elif not p.is_fully_equal(before):
             r["logs"].append({"product":str(p), "log":_("Updated")})
-        p.save()
+#        p.save()
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
  
 class QuotesViewSet(viewsets.ModelViewSet):
