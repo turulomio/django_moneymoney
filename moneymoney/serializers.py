@@ -3,6 +3,7 @@ from  moneymoney.models import (
     Accounts, 
     Accountsoperations, 
     Banks, 
+    Comment, 
     Concepts, 
     Creditcards, 
     Creditcardsoperations, 
@@ -133,11 +134,15 @@ class OperationstypesSerializer(serializers.HyperlinkedModelSerializer):
         
 class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     currency = serializers.SerializerMethodField()
+    comment_decoded = serializers.SerializerMethodField()
+    
     class Meta:
         model = Accountsoperations
-        fields = ('url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','accounts',  'currency')
+        fields = ('url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','accounts',  'currency', 'comment_decoded')
     def get_currency(self, obj):
         return obj.accounts.currency
+    def get_comment_decoded(self, obj):
+        return Comment().decode(obj.comment), 
                 
 class LeveragesSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()

@@ -487,9 +487,9 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
         search=RequestGetString(self.request, 'search')
 
         if search is not None:
-            return self.queryset.filter(comment__icontains=search)
+            return self.queryset.select_related("accounts").filter(comment__icontains=search)
         else:
-            return self.queryset.all()
+            return self.queryset.select_related("accounts").all()
             
 class BanksViewSet(viewsets.ModelViewSet):
     queryset = Banks.objects.all()
