@@ -185,7 +185,7 @@ class InvestmentsOperations:
         as 
             select * from investmentsoperations where investments_id in %s and datetime<=%s;
         """, (tuple(ids), dt))
-
+        
         for d in listdict:
             execute(f"insert into {temporaltable}(id, datetime,  shares,  price, commission,  taxes, operationstypes_id, currency_conversion, investments_id) values((select max(id)+1 from {temporaltable}), %s, %s, %s, %s, %s, %s, %s, %s)", 
             (d["datetime"], d["shares"], d["price"], d["commission"], d["taxes"], d["operationstypes_id"], d["currency_conversion"], d["investments_id"]))

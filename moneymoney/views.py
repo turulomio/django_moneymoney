@@ -779,17 +779,15 @@ def InvestmentsoperationsFull(request):
 @api_view(['POST', ]) 
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsoperationsFullSimulation(request):
-    investments=[]
-    for url in request.data["investments"]:
-        investments.append(RequestUrl(request, url, Investments))## Como todas deben ser iguales uso la primera
-    dt=string2dtaware(request.data["dt"],  "JsUtcIso", request.local_zone)
-    local_currency=request.data["local_currency"]
-    temporaltable=request.data["temporaltable"]
+    investments=RequestListUrl(request, "investments", Investments)
+    dt=RequestDtaware(request, "dt")
+    local_currency=RequestString(request, "local_currency")
+    temporaltable=RequestString(request, "temporaltable")
     listdict=request.data["operations"]
     for d in listdict:
         d["datetime"]=string2dtaware(d["datetime"],  "JsUtcIso", request.local_zone)
         d["investments_id"]=investments[0].id
-        d["operationstypes_id"]=id_from_url(request, d["operationstypes"])
+        d["operationstypes_id"]=id_from_url(d["operationstypes"])
     r=InvestmentsOperations.from_investment_simulation(request, investments,  dt,  local_currency,  listdict,  temporaltable).json()
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 

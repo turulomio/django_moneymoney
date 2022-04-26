@@ -131,7 +131,7 @@ def RequestDecimal(request, field, default=None):
     return r
 def RequestString(request, field, default=None):
     try:
-        r = str(request.data.get(field))
+        r = request.data.get(field)        
     except:
         r=default
     return r
