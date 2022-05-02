@@ -33,6 +33,7 @@ from moneymoney.models import (
     Creditcards, 
     Creditcardsoperations, 
     Dividends,
+    Dps, 
     Investments, 
     Investmentsoperations, 
     Leverages, 
@@ -258,6 +259,17 @@ class DividendsViewSet(viewsets.ModelViewSet):
         else:
             return self.queryset.order_by("datetime")
     
+class DpsViewSet(viewsets.ModelViewSet):
+    queryset = Dps.objects.all()
+    serializer_class = serializers.DpsSerializer
+    permission_classes = [permissions.IsAuthenticated]      
+    
+    def get_queryset(self):
+        product=RequestGetUrl(self.request, 'product', Products)
+        if all_args_are_not_none(product):
+            return self.queryset.filter(products=product)
+        return self.queryset
+
 class OrdersViewSet(viewsets.ModelViewSet):
     queryset = Orders.objects.all()
     serializer_class = serializers.OrdersSerializer

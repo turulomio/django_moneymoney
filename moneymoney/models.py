@@ -572,10 +572,10 @@ class Dividends(models.Model):
         self.save()
 
 class Dps(models.Model):
-    date = models.DateField(blank=True, null=True)
-    gross = models.DecimalField(max_digits=18, decimal_places=6, blank=True, null=True)
-    products = models.ForeignKey('Products', models.DO_NOTHING, blank=True, null=True)
-    paydate = models.DateField()
+    date = models.DateField(blank=False, null=False)
+    gross = models.DecimalField(max_digits=18, decimal_places=6, blank=False, null=False)
+    products = models.ForeignKey('Products', models.DO_NOTHING, blank=False, null=False)
+    paydate = models.DateField(blank=False, null=False)
 
     class Meta:
         managed = False

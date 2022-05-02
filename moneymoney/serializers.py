@@ -8,6 +8,7 @@ from  moneymoney.models import (
     Creditcards, 
     Creditcardsoperations, 
     Dividends, 
+    Dps, 
     Investments, 
     Investmentsoperations, 
     Leverages, 
@@ -122,6 +123,10 @@ class CreditcardsoperationsSerializer(serializers.HyperlinkedModelSerializer):
         return  obj.creditcards.accounts.currency
         
         
+class DpsSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Dps
+        fields = ('url', 'date',  'paydate', 'gross', 'products')
 
 class OperationstypesSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()
