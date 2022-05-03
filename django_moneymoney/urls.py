@@ -6,6 +6,7 @@ from django.contrib import admin
 from rest_framework import routers
 
 from moneymoney import views as money_views
+from moneymoney import views_login as money_views_login
 router = routers.DefaultRouter()
 router.register(r'accounts', money_views.AccountsViewSet)
 router.register(r'accountsoperations', money_views.AccountsoperationsViewSet)
@@ -32,8 +33,8 @@ urlpatterns=[
     path('favicon.ico', RedirectView.as_view(url='/static/images/favicon.ico')),
     path('admin/', admin.site.urls),
     path('home/', money_views.home, name="home"), #La puso porque fallaba production con apache
-    path('login/', money_views.login, name="login"), 
-    path('logout/', money_views.logout, name="logout"), 
+    path('login/', money_views_login.login, name="login"), 
+    path('logout/', money_views_login.logout, name="logout"), 
     path('time/', money_views.Time, name='Time'),
     path('accounts/withbalance/', money_views.AccountsWithBalance, name='AccountsWithBalance'),
     path('accounts/transfer/', money_views.AccountTransfer, name='AccountTransfer'),

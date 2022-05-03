@@ -3,8 +3,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, timedelta
 from decimal import Decimal
 from django.conf import settings
-from django.contrib.auth.hashers import check_password
-from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import prefetch_related_objects, Count
 from django.urls import reverse
@@ -58,7 +56,6 @@ from moneymoney import serializers
 from os import path, system
 from rest_framework.decorators import api_view, permission_classes
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework import viewsets, permissions, status
 from django.core.serializers.json import DjangoJSONEncoder
@@ -74,38 +71,6 @@ class MyDjangoJSONEncoder(DjangoJSONEncoder):
         if isinstance(o, Currency):
             return o.amount
         return super().default(o)
-
-@api_view(['POST'])
-def login(request):
-    username=RequestString(request, "username")
-    password=RequestString(request, "password")
-    
-    if all_args_are_not_none(username, password):
-        try:
-            user=User.objects.get(username=username)
-        except User.DoesNotExist:
-            return Response("Invalid user")
-            
-        pwd_valid=check_password(password, user.password)
-        if not pwd_valid:
-            return Response("Wrong password")
-
-        if Token.objects.filter(user=user).exists():#Lo borra
-            token=Token.objects.get(user=user)
-            token.delete()
-        token=Token.objects.create(user=user)
-        return Response(token.key)
-    else:
-        return Response(_("Bad credentials"))
-    
-@api_view(['POST'])
-def logout(request):
-    token=Token.objects.get(key=request.POST.get("key"))
-    if token is None:
-        return Response("Invalid token")
-    else:
-        token.delete()
-        return Response("Logged out")
 
 
 @csrf_exempt
