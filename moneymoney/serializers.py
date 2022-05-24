@@ -165,12 +165,13 @@ class OrdersSerializer(serializers.HyperlinkedModelSerializer):
         
 class ProductsSerializer(serializers.HyperlinkedModelSerializer):
     real_leveraged_multiplier = serializers.SerializerMethodField()
+    flag=serializers.SerializerMethodField()
     fullname=serializers.SerializerMethodField()
     uses=serializers.IntegerField()
 
     class Meta:
         model = Products
-        fields = ('url', 'id', 'name',  'isin', 'currency','productstypes','agrupations', 'web', 'address', 'phone', 'mail', 'percentage', 'pci', 'leverages', 'stockmarkets', 'comment',  'obsolete', 'ticker_yahoo', 'ticker_morningstar','ticker_google','ticker_quefondos','ticker_investingcom', 'decimals', 'real_leveraged_multiplier', 'fullname', 'uses')
+        fields = ('url', 'id', 'name',  'isin', 'currency','productstypes','agrupations', 'web', 'address', 'phone', 'mail', 'percentage', 'pci', 'leverages', 'stockmarkets', 'comment',  'obsolete', 'ticker_yahoo', 'ticker_morningstar','ticker_google','ticker_quefondos','ticker_investingcom', 'decimals', 'real_leveraged_multiplier', 'fullname', 'uses', 'flag')
     
     def create(self, validated_data):
         request=self.context.get("request")
@@ -198,6 +199,9 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
 
     def get_fullname(self, obj):
         return  obj.fullName()
+
+    def get_flag(self, obj):
+        return  obj.stockmarkets.country
         
 class ProductspairsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:

@@ -699,11 +699,11 @@ def InvestmentsWithBalance(request):
     bank_id=RequestGetInteger(request, 'bank', None)
 
     if bank_id is not None:
-        qs=Investments.objects.select_related("accounts").select_related("products").select_related("products__productstypes").select_related("products__leverages").filter(accounts__banks__id=bank_id,   active=True)
+        qs=Investments.objects.select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages").filter(accounts__banks__id=bank_id,   active=True)
     elif active is not None:
-        qs=Investments.objects.select_related("accounts").select_related("products").select_related("products__productstypes").select_related("products__leverages").filter( active=active)
+        qs=Investments.objects.select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages").filter( active=active)
     else:
-        qs=Investments.objects.select_related("accounts").select_related("products").select_related("products__productstypes").select_related("products__leverages").all()
+        qs=Investments.objects.select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages").all()
             
     r=[]
     for o in qs:
@@ -736,6 +736,7 @@ def InvestmentsWithBalance(request):
             "daily_adjustment": o.daily_adjustment, 
             "selling_price": o.selling_price, 
             "is_deletable": o.is_deletable(), 
+            "flag": o.products.stockmarkets.country, 
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
