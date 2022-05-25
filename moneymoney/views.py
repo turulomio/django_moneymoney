@@ -19,7 +19,7 @@ from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.decorators import timeit
 from moneymoney.reusing.percentage import Percentage,  percentage_between
 from requests import delete, post
-from moneymoney.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetArrayOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestGetListOfIntegers, RequestString, RequestListUrl, id_from_url, all_args_are_not_none
+from moneymoney.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetArrayOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestGetListOfIntegers, RequestString, RequestListUrl, id_from_url, all_args_are_not_none,  all_args_are_not_empty
 from urllib import request as urllib_request
 
 from moneymoney.models import (
@@ -1977,14 +1977,20 @@ def Settings(request):
         r['investing_com_referer']=request.globals.get("investing_com_referer", "")
         r['investing_com_cookie']=request.globals.get("investing_com_cookie", "")
         r['investing_com_url']=request.globals.get("investing_com_url", "")
+        r['first_name']=request.user.first_name
+        r['last_name']=request.user.last_name
+        r['user_email']=request.user.email
         return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
     elif request.method == 'POST':
+        r={"local_settings":False, "investing_com":False,  "profile":False, "password":False}
+        
         #Personal settings
         local_currency=RequestString(request,"local_currency")
         local_zone=RequestString(request,"local_zone")
         if local_currency is not None and local_zone is not None:
             setGlobal("mem/localcurrency", local_currency)
             setGlobal("mem/localzone", local_zone)
+            r["local_settings"]=True
             
         # Investing.com
         investing_com_referer=RequestString(request, "investing_com_referer")
@@ -1994,7 +2000,28 @@ def Settings(request):
             setGlobal("investing_com_url", investing_com_url)
             setGlobal("investing_com_cookie", investing_com_cookie)
             setGlobal("investing_com_referer", investing_com_referer)
-        return JsonResponse(True, safe=False)
+            r["investing_com"]=True
+            
+        first_name=RequestString(request, "first_name")
+        last_name=RequestString(request, "last_name")
+        user_email=RequestString(request, "user_email")
+        newp=RequestString(request, "newp")
+        print(first_name, last_name, user_email, newp)
+        if all_args_are_not_empty(first_name, last_name, user_email):
+            request.user.first_name=first_name
+            request.user.last_name=last_name
+            request.user.email=user_email
+            request.user.save()
+            r["profile"]=True
+
+        if all_args_are_not_empty(newp):
+            request.user.set_password(newp)
+            request.user.save()
+            r["password"]=True
+            
+        
+            
+        return JsonResponse(r, safe=False)
 
 @csrf_exempt
 @api_view(['POST'])

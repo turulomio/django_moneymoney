@@ -150,9 +150,16 @@ def id_from_url(url):
 def object_from_url(url, class_):
     return class_.objects.get(pk=id_from_url(url))
 
+## Returns false if some arg is None
 def all_args_are_not_none(*args):
     for arg in args:
         if arg is None:
             return False
     return True
 
+## Returns false if some args is None or ""
+def all_args_are_not_empty(*args):
+    for arg in args:
+        if arg is None or arg=="":
+            return False
+    return True
