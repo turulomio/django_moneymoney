@@ -3,7 +3,7 @@
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.models import User
 from django.utils import timezone
-from moneymoney.request_casting import all_args_are_not_none, RequestString
+from moneymoney.reusing.request_casting import all_args_are_not_none, RequestString
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view
 from rest_framework.response import Response

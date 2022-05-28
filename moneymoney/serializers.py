@@ -24,7 +24,7 @@ from  moneymoney.models import (
 from rest_framework import serializers
 from django.utils.translation import gettext as _
 from django.conf import settings
-from moneymoney.request_casting import id_from_url
+from moneymoney.reusing.request_casting import id_from_url
 
 class BanksSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()

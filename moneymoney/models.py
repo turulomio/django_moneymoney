@@ -16,14 +16,14 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
 
-from moneymoney.connection_dj import cursor_one_field, cursor_one_column, cursor_one_row, cursor_rows, execute
+from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_column, cursor_one_row, cursor_rows, execute
 
 from moneymoney.investmentsoperations import InvestmentsOperations
 
-from moneymoney.casts import string2list_of_integers
-from moneymoney.currency import Currency, currency_symbol
+from moneymoney.reusing.casts import string2list_of_integers
+from moneymoney.reusing.currency import Currency, currency_symbol
 from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string
-from moneymoney.percentage import Percentage
+from moneymoney.reusing.percentage import Percentage
 
 
 from enum import IntEnum

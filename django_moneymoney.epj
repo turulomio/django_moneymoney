@@ -2,7 +2,7 @@
   "header": {
     "comment": "eric project file for project django_moneymoney",
     "copyright": "Copyright (C) 2022 , ",
-    "saved": "2022-05-03, 20:12:52"
+    "saved": "2022-05-28, 20:03:25"
   },
   "project": {
     "AUTHOR": "",
@@ -93,19 +93,10 @@
       "moneymoney/migrations/__init__.py",
       "moneymoney/models.py",
       "moneymoney/productrange.py",
-      "moneymoney/request_casting.py",
-      "moneymoney/reusing/call_by_name.py",
-      "moneymoney/reusing/casts.py",
-      "moneymoney/reusing/connection_dj.py",
-      "moneymoney/reusing/connection_pg.py",
-      "moneymoney/reusing/currency.py",
       "moneymoney/reusing/datetime_functions.py",
-      "moneymoney/reusing/decorators.py",
       "moneymoney/reusing/github.py",
       "moneymoney/reusing/libmanagers.py",
       "moneymoney/reusing/lineal_regression.py",
-      "moneymoney/reusing/listdict_functions.py",
-      "moneymoney/reusing/percentage.py",
       "moneymoney/reusing/text_inputs.py",
       "moneymoney/serializers.py",
       "moneymoney/tests.py",

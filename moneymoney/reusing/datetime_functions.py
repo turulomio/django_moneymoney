@@ -1,5 +1,6 @@
-## THIS IS FILE IS FROM https://github.com/turulomio/reusingcode IF YOU NEED TO UPDATE IT PLEASE MAKE A PULL REQUEST IN THAT PROJECT
-## DO NOT UPDATE IT IN YOUR CODE IT WILL BE REPLACED USING FUNCTION IN README
+## THIS IS FILE IS FROM https://github.com/turulomio/reusingcode/python/datetime_functions.py
+## IF YOU NEED TO UPDATE IT PLEASE MAKE A PULL REQUEST IN THAT PROJECT AND DOWNLOAD FROM IT
+## DO NOT UPDATE IT IN YOUR CODE
 
 ## If a function only can be used by dtaware or naive it will have its prefix dtaware_ or dtnaive_
 ## If a function can use both of them its prefix will be dt_

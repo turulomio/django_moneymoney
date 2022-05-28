@@ -1,4 +1,4 @@
-## THIS IS FILE IS FROM https://github.com/turulomio/django_moneymoney/moneymoney/connection_pg.py
+## THIS IS FILE IS FROM https://github.com/turulomio/reusingcode/python/connection_pg.py
 ## IF YOU NEED TO UPDATE IT PLEASE MAKE A PULL REQUEST IN THAT PROJECT AND DOWNLOAD FROM IT
 ## DO NOT UPDATE IT IN YOUR CODE
 

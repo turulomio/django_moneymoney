@@ -15,6 +15,14 @@ parser.add_argument('--local', help='Parses files without download', action="sto
 args=parser.parse_args()      
 
 if args.local==False:
+    download_from_github("turulomio", "reusingcode", "django/connection_dj.py", "moneymoney/reusing")
+    download_from_github("turulomio", "reusingcode", "django/request_casting.py", "moneymoney/reusing")
+    download_from_github("turulomio", "reusingcode", "python/casts.py", "moneymoney/reusing")
+    download_from_github("turulomio", "reusingcode", "python/connection_pg.py", "moneymoney/reusing")
+    download_from_github("turulomio", "reusingcode", "python/currency.py", "moneymoney/reusing")
+    download_from_github("turulomio", "reusingcode", "python/decorators.py", "moneymoney/reusing")
+    download_from_github("turulomio", "reusingcode", "python/percentage.py", "moneymoney/reusing")
+    download_from_github("turulomio", "reusingcode", "python/listdict_functions.py", "moneymoney/reusing")
     download_from_github("turulomio", "reusingcode", "python/lineal_regression.py", "moneymoney/reusing")
     download_from_github("turulomio", "reusingcode", "python/github.py", "moneymoney/reusing")
     download_from_github("turulomio", "reusingcode", "python/datetime_functions.py", "moneymoney/reusing")

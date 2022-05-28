@@ -1,6 +1,6 @@
 from decimal import Decimal
 from .casts import str2bool, string2list_of_integers
-from .reusing.datetime_functions import string2dtaware, string2date
+from .datetime_functions import string2dtaware, string2date
 from urllib import parse
 
 ## Returns a model obect

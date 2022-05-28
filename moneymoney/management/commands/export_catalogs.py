@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from moneymoney.models import Stockmarkets, Leverages, Productstypes, Products
 from tqdm import tqdm
-#from moneymoney.listdict_functions import listdict2json
+#from moneymoney.reusing.listdict_functions import listdict2json
 
 ## qs models must hava json method to convert object to string
 def qs_to_json(qs, root_tab=1, end_coma=True):

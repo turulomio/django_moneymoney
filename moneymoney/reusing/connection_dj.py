@@ -3,7 +3,6 @@
 ## DO NOT UPDATE IT IN YOUR CODE
 
 from django.db import connection
-from .casts import var2json
 
 
 def dictfetchall(cursor):
@@ -56,10 +55,15 @@ def execute(sql, params=[]):
         cursor.execute(sql, params)
 
 def sql2json(sql,  params=()):    
-    r=[]
-    for o in cursor_rows(sql, params):
-        d={}
-        for field in o.keys():
-            d[field]=var2json(o[field])
-        r.append(d)
-    return r
+    try:
+        from .casts import var2json
+        r=[]
+        for o in cursor_rows(sql, params):
+            d={}
+            for field in o.keys():
+                d[field]=var2json(o[field])
+            r.append(d)
+        return r
+    except ImportError:
+        raise NotImplementedError("You need https://github.com/turulomio/reusingcode/python/casts.py to use this function.")   
+        

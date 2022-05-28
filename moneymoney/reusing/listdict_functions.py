@@ -230,9 +230,9 @@ def listdict2list_distinct(listdict, key, sorted=False, cast=None):
 
 def listdict2json(listdict):
     try:
-        from moneymoney.casts import var2json
+        from casts import var2json
     except ImportError:
-        raise NotImplementedError("You need https://github.com/turulomio/django_moneymoney/moneymoney/casts.py to use this function.")
+        raise NotImplementedError("You need https://github.com/turulomio/reusingcode/python/casts.py to use this function.")
     
     if len(listdict)==0:
         return "[]"
@@ -288,8 +288,6 @@ if __name__ == "__main__":
     from decimal import Decimal
     ld=[]
     ld.append({"a": datetime.now(), "b": date.today(), "c": Decimal(12.32), "d": None, "e": int(12), "f":None, "g":True, "h":False})
-    print(listdict2json(ld))
-
 
     def print_lor(lor):
         print("")
