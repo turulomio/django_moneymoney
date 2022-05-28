@@ -1,5 +1,6 @@
-## THIS IS FILE IS FROM https://github.com/turulomio/reusingcode IF YOU NEED TO UPDATE IT PLEASE MAKE A PULL REQUEST IN THAT PROJECT
-## DO NOT UPDATE IT IN YOUR CODE IT WILL BE REPLACED USING FUNCTION IN README
+## THIS IS FILE IS FROM https://github.com/turulomio/django_moneymoney/monymoney/call_by_name.py
+## IF YOU NEED TO UPDATE IT PLEASE MAKE A PULL REQUEST IN THAT PROJECT AND DOWNLOAD FROM IT
+## DO NOT UPDATE IT IN YOUR CODE
 
 
 ## @param attribute str or list
@@ -22,7 +23,3 @@ def call_by_name(o, string_or_tuple):
         function=string_with_points(o, string_or_tuple[0])
         parameters=string_or_tuple[1]
         return function(*parameters)
-
-
-if __name__ == '__main__':
-    pass
