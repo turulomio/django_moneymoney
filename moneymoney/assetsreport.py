@@ -6,12 +6,12 @@ from json import loads
 from moneymoney import __version__
 from moneymoney.models import Operationstypes
 from moneymoney.request_casting import object_from_url
-from moneymoney.reusing.casts import f
-from moneymoney.reusing.connection_dj import cursor_one_field
-from moneymoney.reusing.currency import  Currency
+from moneymoney.casts import f
+from moneymoney.connection_dj import cursor_one_field
+from moneymoney.currency import  Currency
 from moneymoney.reusing.datetime_functions import dtaware2string, string2dtaware, dtnaive2string
-from moneymoney.reusing.listdict_functions import listdict_sum, listdict_sum_negatives, listdict_sum_positives, listdict_order_by
-from moneymoney.reusing.percentage import  Percentage
+from moneymoney.listdict_functions import listdict_sum, listdict_sum_negatives, listdict_sum_positives, listdict_order_by
+from moneymoney.percentage import  Percentage
 from os import path
 from unogenerator import ODT
 

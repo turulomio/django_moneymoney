@@ -4,11 +4,11 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from math import ceil
-from moneymoney.reusing.connection_dj import cursor_one_row, cursor_rows_as_dict, execute
-from moneymoney.reusing.currency import Currency
+from moneymoney.connection_dj import cursor_one_row, cursor_rows_as_dict, execute
+from moneymoney.currency import Currency
 from moneymoney.reusing.datetime_functions import string2dtnaive, dtaware
-from moneymoney.reusing.listdict_functions import listdict_sum, listdict_print_first, listdict_order_by
-from moneymoney.reusing.percentage import Percentage, percentage_between
+from moneymoney.listdict_functions import listdict_sum, listdict_print_first, listdict_order_by
+from moneymoney.percentage import Percentage, percentage_between
 
 Decimal
 listdict_print_first

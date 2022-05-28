@@ -8,7 +8,7 @@ from csv import reader
 from io import StringIO
 #from xulpymoney.objects.quote import Quote
 #from xulpymoney.objects.ohcl import  OHCLDaily
-from moneymoney.reusing.casts import string2decimal
+from moneymoney.casts import string2decimal
 from moneymoney.reusing.datetime_functions import dtaware, string2date, string2dtaware
 #from monemoney.models import eTickerPosition
 

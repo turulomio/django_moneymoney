@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.utils import timezone
 from moneymoney.reusing.libmanagers import ObjectManager, DatetimeValueManager
 from moneymoney.models import Orders
-from moneymoney.reusing.percentage import Percentage
+from moneymoney.percentage import Percentage
 from moneymoney.investmentsoperations import InvestmentsOperationsManager
 
 class ProductRange():

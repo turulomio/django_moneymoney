@@ -4,7 +4,7 @@
 
 #from .package_resources import package_listdir, package_filename
 from moneymoney.reusing.datetime_functions import string2dtnaive
-from moneymoney.reusing.casts import str2bool, list2string, string2list_of_integers, string2list_of_strings
+from moneymoney.casts import str2bool, list2string, string2list_of_integers, string2list_of_strings
 from decimal import Decimal
 from logging import debug
 from pkg_resources import resource_listdir, resource_filename

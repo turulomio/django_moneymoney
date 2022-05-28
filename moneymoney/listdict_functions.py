@@ -1,11 +1,8 @@
-## THIS IS FILE IS FROM https://github.com/turulomio/reusingcode IF YOU NEED TO UPDATE IT PLEASE MAKE A PULL REQUEST IN THAT PROJECT
-## DO NOT UPDATE IT IN YOUR CODE IT WILL BE REPLACED USING FUNCTION IN README
+## THIS IS FILE IS FROM https://github.com/turulomio/django_moneymoney/moneymoney/listdict_functions.py
+## IF YOU NEED TO UPDATE IT PLEASE MAKE A PULL REQUEST IN THAT PROJECT AND DOWNLOAD FROM IT
+## DO NOT UPDATE IT IN YOUR CODE
 
-from .casts import var2json
 from collections import OrderedDict
-
-
-
 
 ## El objetivo es crear un objeto list_dict que se almacenera en self.ld con funciones set
 ## set_from_db #Todo se carga desde base de datos con el minimo parametro posible
@@ -232,6 +229,11 @@ def listdict2list_distinct(listdict, key, sorted=False, cast=None):
 
 
 def listdict2json(listdict):
+    try:
+        from moneymoney.casts import var2json
+    except ImportError:
+        raise NotImplementedError("You need https://github.com/turulomio/django_moneymoney/moneymoney/casts.py to use this function.")
+    
     if len(listdict)==0:
         return "[]"
 

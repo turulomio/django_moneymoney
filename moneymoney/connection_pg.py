@@ -1,8 +1,7 @@
-## @brief Package to manage postgresql connection functionss
-## THIS IS FILE IS FROM https://github.com/turulomio/reusingcode IF YOU NEED TO UPDATE IT PLEASE MAKE A PULL REQUEST IN THAT PROJECT
-## DO NOT UPDATE IT IN YOUR CODE IT WILL BE REPLACED USING FUNCTION IN README
+## THIS IS FILE IS FROM https://github.com/turulomio/django_moneymoney/moneymoney/connection_pg.py
+## IF YOU NEED TO UPDATE IT PLEASE MAKE A PULL REQUEST IN THAT PROJECT AND DOWNLOAD FROM IT
+## DO NOT UPDATE IT IN YOUR CODE
 
-from .casts import b2s
 from datetime import datetime
 from logging import debug
 from psycopg2 import OperationalError
@@ -41,6 +40,10 @@ class Connection:
     ## There is a problem with '%' when is used in a field and I use sql_insert returning a string
     ## So I need to keep both parameters (sql, arr) and mogrify converts them correctly
     def sql_string(self, sql, arr):
+        try:
+            from moneymoney.casts import b2s
+        except ImportError:
+            raise NotImplementedError("You need https://github.com/turulomio/django_moneymoney/moneymoney/casts.py to use this function.")
         return b2s(self.mogrify(sql,arr))
 
     def setAutocommit(self, b):

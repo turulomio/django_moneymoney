@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/3.1/howto/deployment/wsgi/
 
 import os
 from django.conf import settings
-from moneymoney.reusing.connection_pg import Connection
+from moneymoney.connection_pg import Connection
 from moneymoney.database_update import  database_update
 from moneymoney import __versiondatetime__
 from django.core.wsgi import get_wsgi_application

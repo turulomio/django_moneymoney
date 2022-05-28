@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand
 from logging import critical, info
 from sys import exit
 from tqdm import tqdm
-from moneymoney.reusing.connection_pg import Connection
+from moneymoney.connection_pg import Connection
 
 class Command(BaseCommand):
     help = 'Sync quotes table to other databases'
