@@ -1,5 +1,6 @@
-## THIS IS FILE IS FROM https://github.com/turulomio/reusingcode IF YOU NEED TO UPDATE IT PLEASE MAKE A PULL REQUEST IN THAT PROJECT
-## DO NOT UPDATE IT IN YOUR CODE IT WILL BE REPLACED USING FUNCTION IN README
+## THIS IS FILE IS FROM https://github.com/turulomio/django_moneymoney/moneymoney/casts.py
+## IF YOU NEED TO UPDATE IT PLEASE MAKE A PULL REQUEST IN THAT PROJECT AND DOWNLOAD FROM IT
+## DO NOT UPDATE IT IN YOUR CODE
 
 from decimal import Decimal
 from json import dumps
@@ -16,7 +17,6 @@ from inspect import currentframe
 def f(s):
     frame = currentframe().f_back
     return eval(f'f"""{s}"""', frame.f_locals, frame.f_globals)
-
 
 def valueORempty(v):
     return "" if v is None else v
@@ -37,10 +37,10 @@ def list2string(lista):
             return resultado[:-2]
 
 ## Reverse function of list2string where class is a str
-def string2list_of_strings(s):
+def string2list_of_strings(s, separator=", "):
     arr=[]
     if s!="":
-        arrs=s.split(", ")
+        arrs=s.split(separator)
         for a in arrs:
             arr.append(a[1:-1])
     return arr
