@@ -1,3 +1,6 @@
+## THIS IS FILE IS FROM https://github.com/turulomio/django_moneymoney/moneymoney/connection_dj.py
+## IF YOU NEED TO UPDATE IT PLEASE MAKE A PULL REQUEST IN THAT PROJECT AND DOWNLOAD FROM IT
+## DO NOT UPDATE IT IN YOUR CODE
 
 from django.db import connection
 from .casts import var2json
