@@ -9,6 +9,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 from json import loads
 from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotals, InvestmentsOperationsTotalsManager, StrategyIO
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict
@@ -55,7 +57,6 @@ from moneymoney.models import (
 from moneymoney import serializers
 from os import path, system
 from rest_framework.decorators import api_view, permission_classes
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework.response import Response
 from rest_framework import viewsets, permissions, status
 from django.core.serializers.json import DjangoJSONEncoder
@@ -73,15 +74,24 @@ class MyDjangoJSONEncoder(DjangoJSONEncoder):
         return super().default(o)
 
 
-@csrf_exempt
+
+@api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def CatalogManager(request):
     return JsonResponse( settings.CATALOG_MANAGER, encoder=MyDjangoJSONEncoder, safe=False)
 
 
-@csrf_exempt
+@extend_schema(
+    parameters=[
+        OpenApiParameter(name='outputformat', description='Output report format', required=True, type=str, default="pdf"), 
+    ],
+)
 @api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
 def AssetsReport(request):
+    """
+        Generate user assets report
+    """
     format_=RequestGetString(request, "outputformat", "pdf")
     if format_=="pdf":
         mime="application/pdf"
@@ -100,7 +110,12 @@ def AssetsReport(request):
         return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 
-@csrf_exempt
+@extend_schema(
+    parameters=[
+        OpenApiParameter(name='from', description='Concept migration from', required=True, type=OpenApiTypes.URI), 
+        OpenApiParameter(name='to', description='Concept migration to', required=True, type=OpenApiTypes.URI), 
+    ],
+)
 @api_view(['POST', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
@@ -114,10 +129,11 @@ def ConceptsMigration(request):
         return Response({'status': 'details'}, status=status.HTTP_200_OK)
     return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ConceptsUsed(request): 
+    """Returns concepts with use  and migration information"""
     qs=Concepts.objects.all() 
     r=[]
     for o in qs:
@@ -135,10 +151,17 @@ def ConceptsUsed(request):
 
 
 
-@csrf_exempt
+@extend_schema(
+    parameters=[
+        OpenApiParameter(name='creditcard', description='Credit card to obtain historical payments', required=True, type=OpenApiTypes.URI), 
+    ],
+)
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def CreditcardsPayments(request): 
+    """
+        Returns information of historical credit card payments
+    """
     creditcard=RequestGetUrl(request, "creditcard", Creditcards)
     
     if creditcard is not None:
@@ -258,7 +281,7 @@ class StrategiesViewSet(viewsets.ModelViewSet):
             return self.queryset.filter(dt_to__isnull=active,  investments__contains=investment.id, type=type)
         return self.queryset.all() #We need to rerun all(), because it cached results after CRUD operations
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def StrategiesWithBalance(request):        
@@ -306,13 +329,13 @@ def StrategiesWithBalance(request):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 def home(request):
     return JsonResponse( True,  encoder=MyDjangoJSONEncoder,     safe=False)
 
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsClasses(request):
@@ -321,13 +344,13 @@ def InvestmentsClasses(request):
     return JsonResponse( iotm.json_classes(), encoder=MyDjangoJSONEncoder,     safe=False)
 
 
-@csrf_exempt
+
 @api_view(['GET', ])
 @permission_classes([permissions.IsAuthenticated, ])
 def Time(request):
     return JsonResponse( timezone.now(), encoder=MyDjangoJSONEncoder,     safe=False)
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 def Timezones(request):
     r=list(available_timezones())
@@ -365,7 +388,7 @@ class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
         instance.investments.set_attributes_after_investmentsoperations_crud()
         return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
     
-@csrf_exempt
+
 @api_view(['POST', 'PUT', 'DELETE' ])    
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
@@ -442,17 +465,26 @@ class AccountsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.AccountsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
-    def get_queryset(self):
-        active=RequestGetBool(self.request, 'active')
-        bank_id=RequestGetInteger(self.request, 'bank')
+        
+    @extend_schema(
+            parameters=[
+                OpenApiParameter(name='active', description='Filter by active accounts', required=False, type=bool), 
+                OpenApiParameter(name='bank', description='Filter by bank', required=False, type=int), 
+            ],
+        )
+    def list(self, request):
+        active=RequestGetBool(request, 'active')
+        bank_id=RequestGetInteger(request, 'bank')
 
         if bank_id is not None:
-            return self.queryset.filter(banks__id=bank_id,   active=True)
-            
+            self.queryset=self.queryset.filter(banks__id=bank_id,   active=True)
         elif active is not None:
-            return self.queryset.filter(active=active)
+            self.queryset=self.queryset.filter(active=active)
         else:
-            return self.queryset.all()
+            self.queryset=self.queryset.all()
+        serializer = serializers.AccountsSerializer(self.queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+        
 
 class AccountsoperationsViewSet(viewsets.ModelViewSet):
     queryset = Accountsoperations.objects.all()
@@ -479,7 +511,7 @@ class BanksViewSet(viewsets.ModelViewSet):
             return self.queryset.filter(active=active)
         return self.queryset.all() #We need to rerun all(), because it cached results after CRUD operations
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def BanksWithBalance(request):
@@ -506,7 +538,7 @@ def BanksWithBalance(request):
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
         
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def AccountsWithBalance(request):
@@ -536,17 +568,20 @@ def AccountsWithBalance(request):
             "banks":request.build_absolute_uri(reverse('banks-detail', args=(o.banks.pk, ))), 
             "localname": _(o.name), 
         })
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
-@csrf_exempt
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+
+@extend_schema(
+        parameters=[
+            OpenApiParameter(name='account', description='Filter by account', required=True, type=int), 
+            OpenApiParameter(name='year', description='Filter by year', required=True, type=int), 
+            OpenApiParameter(name='month', description='Filter by month', required=True, type=int), 
+        ],
+    )
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def AccountsoperationsWithBalance(request):    
     """
         Shows accounts operations with balance
-        
-        **  /accountsoperations/withbalance/?account=4&year=2022&month=4 **
-            
-            Muestra las operaciones de cuenta con saldo para la cuenta una del año 2022 y el mes 4
     """
     accounts_id=RequestGetInteger(request, 'account')
     year=RequestGetInteger(request, 'year')
@@ -579,7 +614,7 @@ def AccountsoperationsWithBalance(request):
         return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
     return JsonResponse( "Some parameters are missing", encoder=MyDjangoJSONEncoder, safe=False)
 
-@csrf_exempt
+
 @api_view(['POST', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
@@ -615,7 +650,7 @@ def CreditcardsoperationsPayments(request, pk):
     return JsonResponse( False, encoder=MyDjangoJSONEncoder,     safe=False)
     
 
-@csrf_exempt
+
 @api_view(['POST', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
@@ -632,7 +667,7 @@ def CreditcardsoperationsPaymentsRefund(request):
         return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
     return JsonResponse( False, encoder=MyDjangoJSONEncoder,     safe=False)
     
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def CreditcardsoperationsWithBalance(request):        
@@ -661,7 +696,7 @@ def CreditcardsoperationsWithBalance(request):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def CreditcardsWithBalance(request):        
@@ -696,7 +731,7 @@ def CreditcardsWithBalance(request):
 
 
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsWithBalance(request):
@@ -749,7 +784,7 @@ def InvestmentsWithBalance(request):
 
 
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsoperationsFull(request):
@@ -759,7 +794,7 @@ def InvestmentsoperationsFull(request):
         r.append(InvestmentsOperations.from_investment(request, o, timezone.now(), request.local_currency).json())
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
-@csrf_exempt
+
 @api_view(['POST', ]) 
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsoperationsFullSimulation(request):
@@ -775,7 +810,7 @@ def InvestmentsoperationsFullSimulation(request):
     r=InvestmentsOperations.from_investment_simulation(request, investments,  dt,  local_currency,  listdict,  temporaltable).json()
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
-@csrf_exempt
+
 @api_view(['GET', ]) 
 @permission_classes([permissions.IsAuthenticated, ])
 def StrategiesSimulation(request):
@@ -789,7 +824,7 @@ def StrategiesSimulation(request):
     return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
 
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsoperationsEvolutionChart(request):
@@ -797,7 +832,7 @@ def InvestmentsoperationsEvolutionChart(request):
     io=InvestmentsOperations.from_investment(request, Investments.objects.get(pk=id), timezone.now(), request.local_currency)
     return JsonResponse( io.chart_evolution(), encoder=MyDjangoJSONEncoder,     safe=False)
 
-@csrf_exempt
+
 @transaction.atomic
 @api_view(['POST', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -815,7 +850,7 @@ def InvestmentsChangeSellingPrice(request):
     return Response({'status': 'Investment or selling_price is None'}, status=status.HTTP_404_NOT_FOUND)
 
 
-@csrf_exempt
+
 @transaction.atomic
 
 @api_view(['GET', ])    
@@ -834,7 +869,7 @@ class LeveragesViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]  
 
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def OrdersList(request):        
@@ -871,7 +906,7 @@ def OrdersList(request):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
     
  
-@csrf_exempt
+
 @transaction.atomic
 @api_view(['POST', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -888,7 +923,7 @@ def ProductsFavorites(request):
 
 
  
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsInformation(request):
@@ -963,7 +998,7 @@ select date, lag, quote, percentage(lag,quote)  from quotes;
     
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsPairs(request):
@@ -1051,7 +1086,7 @@ def ProductsPairs(request):
     
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
-@csrf_exempt
+
 @api_view(['GET', 'DELETE' ])    
 @permission_classes([permissions.IsAuthenticated, ])
 ## GET METHODS
@@ -1087,7 +1122,7 @@ def ProductsQuotesOHCL(request):
 
     return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsRanges(request):
@@ -1145,7 +1180,7 @@ class ProductstypesViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.ProductstypesSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
-@csrf_exempt
+
 @api_view(['POST', ])
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsUpdate(request):
@@ -1195,7 +1230,7 @@ def ProductsUpdate(request):
     
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
      
-@csrf_exempt
+
 @api_view(['POST', ])
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
@@ -1311,7 +1346,7 @@ class QuotesViewSet(viewsets.ModelViewSet):
             
         return self.queryset
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def RecomendationMethods(request): 
@@ -1324,7 +1359,7 @@ def RecomendationMethods(request):
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportAnnual(request, year):
@@ -1379,7 +1414,7 @@ def ReportAnnual(request, year):
  
  
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportAnnualIncome(request, year):   
@@ -1439,7 +1474,7 @@ def ReportAnnualIncome(request, year):
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
     
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportAnnualIncomeDetails(request, year, month):
@@ -1523,7 +1558,7 @@ def ReportAnnualIncomeDetails(request, year, month):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
     
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportAnnualGainsByProductstypes(request, year):
@@ -1582,7 +1617,7 @@ group by productstypes_id""", (year, ))
     return JsonResponse( l, encoder=MyDjangoJSONEncoder,     safe=False)
 
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportConcepts(request):
@@ -1660,7 +1695,7 @@ group by
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportConceptsHistorical(request):
@@ -1700,7 +1735,7 @@ def ReportConceptsHistorical(request):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
     
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportDividends(request):
@@ -1754,7 +1789,7 @@ def ReportDividends(request):
     return JsonResponse( ld_report, encoder=MyDjangoJSONEncoder,     safe=False)
 
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportEvolutionAssets(request, from_year):
@@ -1788,7 +1823,7 @@ def ReportEvolutionAssets(request, from_year):
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
     
 @timeit
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportEvolutionAssetsChart(request):
@@ -1824,7 +1859,7 @@ def ReportEvolutionAssetsChart(request):
     return JsonResponse( l, encoder=MyDjangoJSONEncoder,     safe=False)
     
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportEvolutionInvested(request, from_year):
@@ -1855,7 +1890,7 @@ def ReportEvolutionInvested(request, from_year):
 
 
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportsInvestmentsLastOperation(request):
@@ -1899,7 +1934,7 @@ def ReportsInvestmentsLastOperation(request):
     
     
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportCurrentInvestmentsOperations(request):
@@ -1928,7 +1963,7 @@ def ReportCurrentInvestmentsOperations(request):
     return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
 
 
-@csrf_exempt
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportRanking(request):
@@ -1962,7 +1997,7 @@ def ReportRanking(request):
         ranking=ranking+1
     return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
     
-@csrf_exempt
+
 @api_view(['GET', ])
 @permission_classes([permissions.IsAuthenticated, ])
 def Statistics(request):
@@ -1971,7 +2006,7 @@ def Statistics(request):
         r.append({"name": name, "value":cls.objects.all().count()})
     return JsonResponse(r, safe=False)
 
-@csrf_exempt
+
 @api_view(['GET', 'POST'])
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
@@ -2029,7 +2064,7 @@ def Settings(request):
             
         return JsonResponse(r, safe=False)
 
-@csrf_exempt
+
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated, ])
 ## Stores a filename encoded to base64 in a global variable
@@ -2047,7 +2082,7 @@ def Binary2Global(request):
         setGlobal(global_, data)
     return JsonResponse(True, safe=False)  
 
-@csrf_exempt
+
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
@@ -2063,7 +2098,7 @@ def EstimationsDps_add(request):
     return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
     
 
-@csrf_exempt
+
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
@@ -2075,7 +2110,7 @@ def EstimationsDps_delete(request):
         return JsonResponse(True, safe=False)
     return Response({'status': "EstimationDPS wasn't deleted"}, status=status.HTTP_404_NOT_FOUND)
     
-@csrf_exempt
+
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic

@@ -11,6 +11,7 @@
 
 import os
 from django.urls import reverse_lazy
+from moneymoney import __version__
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -32,9 +33,15 @@ REST_FRAMEWORK={
         'rest_framework.authentication.TokenAuthentication', 
     ], 
     'COERCE_DECIMAL_TO_STRING': False, 
-    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema'
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
-
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Django Money Money API Documentation',
+    'DESCRIPTION': 'Interactive documentation',
+    'VERSION': __version__,
+    'SERVE_INCLUDE_SCHEMA': False,
+    # OTHER SETTINGS
+}
 
 ## Application definitions
 INSTALLED_APPS = [
@@ -46,6 +53,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework.authtoken', 
+    'drf_spectacular',
     'corsheaders', 
     'moneymoney',
 ]
