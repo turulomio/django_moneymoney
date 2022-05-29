@@ -31,8 +31,11 @@ REST_FRAMEWORK={
         'rest_framework.authentication.BasicAuthentication',  ## Uncomment to use api in url 
         'rest_framework.authentication.TokenAuthentication', 
     ], 
-    'COERCE_DECIMAL_TO_STRING': False
+    'COERCE_DECIMAL_TO_STRING': False, 
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema'
 }
+
+
 ## Application definitions
 INSTALLED_APPS = [
     'django.contrib.admin',

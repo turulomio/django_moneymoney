@@ -3,6 +3,7 @@ from django.conf.urls.i18n import i18n_patterns, set_language
 from django.views.generic.base import RedirectView
 from django.contrib import admin
 
+from rest_framework.documentation import include_docs_urls
 from rest_framework import routers
 
 from moneymoney import views as money_views
@@ -87,6 +88,8 @@ urlpatterns=[
     path('strategies/simulation/', money_views.StrategiesSimulation, name='StrategiesSimulation'),
     path('strategies/withbalance/', money_views.StrategiesWithBalance, name='StrategiesWithBalance'),
     path('timezones/', money_views.Timezones, name='Timezones'),
+    
+    path('docs/',  include_docs_urls(title="Money Money")), 
 ]
 
 urlpatterns=urlpatterns+ i18n_patterns(

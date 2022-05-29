@@ -537,12 +537,17 @@ def AccountsWithBalance(request):
             "localname": _(o.name), 
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
-
-
 @csrf_exempt
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-def AccountsoperationsWithBalance(request):        
+def AccountsoperationsWithBalance(request):    
+    """
+        Shows accounts operations with balance
+        
+        **  /accountsoperations/withbalance/?account=4&year=2022&month=4 **
+            
+            Muestra las operaciones de cuenta con saldo para la cuenta una del año 2022 y el mes 4
+    """
     accounts_id=RequestGetInteger(request, 'account')
     year=RequestGetInteger(request, 'year')
     month=RequestGetInteger(request, 'month')
@@ -554,24 +559,25 @@ def AccountsoperationsWithBalance(request):
         initial_balance=account.balance( dt_initial, request.local_currency)[0]
         qs=Accountsoperations.objects.select_related("accounts").select_related("operationstypes").select_related("concepts").filter(datetime__year=year, datetime__month=month, accounts__id=accounts_id).order_by("datetime")
 
-    r=[]
-    for o in qs:
-        r.append({
-            "id": o.id,  
-            "url": request.build_absolute_uri(reverse('accountsoperations-detail', args=(o.pk, ))), 
-            "datetime":o.datetime, 
-            "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(o.concepts.pk, ))), 
-            "operationstypes":request.build_absolute_uri(reverse('operationstypes-detail', args=(o.operationstypes.pk, ))), 
-            "amount": o.amount, 
-            "balance":  initial_balance + o.amount, 
-            "comment": o.comment, 
-            "comment_decoded": Comment().decode(o.comment), 
-            "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.pk, ))), 
-            "currency": o.accounts.currency, 
-            "is_editable": o.is_editable(), 
-        })
-        initial_balance=initial_balance + o.amount
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+        r=[]
+        for o in qs:
+            r.append({
+                "id": o.id,  
+                "url": request.build_absolute_uri(reverse('accountsoperations-detail', args=(o.pk, ))), 
+                "datetime":o.datetime, 
+                "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(o.concepts.pk, ))), 
+                "operationstypes":request.build_absolute_uri(reverse('operationstypes-detail', args=(o.operationstypes.pk, ))), 
+                "amount": o.amount, 
+                "balance":  initial_balance + o.amount, 
+                "comment": o.comment, 
+                "comment_decoded": Comment().decode(o.comment), 
+                "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.pk, ))), 
+                "currency": o.accounts.currency, 
+                "is_editable": o.is_editable(), 
+            })
+            initial_balance=initial_balance + o.amount
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+    return JsonResponse( "Some parameters are missing", encoder=MyDjangoJSONEncoder, safe=False)
 
 @csrf_exempt
 @api_view(['POST', ])    
