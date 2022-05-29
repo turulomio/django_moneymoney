@@ -277,11 +277,15 @@ class StrategiesViewSet(viewsets.ModelViewSet):
         active=RequestGetBool(self.request, "active")
         investment=RequestGetUrl(self.request, "investment", Investments)
         type=RequestGetInteger(self.request, "type")
-        if all_args_are_not_none(active, investment):
+        if all_args_are_not_none(active, investment, type):
             return self.queryset.filter(dt_to__isnull=active,  investments__contains=investment.id, type=type)
         return self.queryset.all() #We need to rerun all(), because it cached results after CRUD operations
 
-
+@extend_schema(
+        parameters=[
+            OpenApiParameter(name='active', description='Filter by active strategies', required=False, type=bool), 
+        ],
+    )
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def StrategiesWithBalance(request):        
