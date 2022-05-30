@@ -32,10 +32,8 @@ urlpatterns=[
     path('api/', include(router.urls)),
     path('favicon.ico', RedirectView.as_view(url='/static/images/favicon.ico')),
     path('admin/', admin.site.urls),
-    path('home/', money_views.home, name="home"), #La puso porque fallaba production con apache
     path('login/', money_views_login.login, name="login"), 
     path('logout/', money_views_login.logout, name="logout"), 
-    path('time/', money_views.Time, name='Time'),
     path('accounts/withbalance/', money_views.AccountsWithBalance, name='AccountsWithBalance'),
     path('accounts/transfer/', money_views.AccountTransfer, name='AccountTransfer'),
     path('accountsoperations/withbalance/', money_views.AccountsoperationsWithBalance, name='AccountsoperationsWithBalance'),
@@ -86,7 +84,8 @@ urlpatterns=[
     path('statistics/', money_views.Statistics, name='Statistics'),
     path('strategies/simulation/', money_views.StrategiesSimulation, name='StrategiesSimulation'),
     path('strategies/withbalance/', money_views.StrategiesWithBalance, name='StrategiesWithBalance'),
-    path('timezones/', money_views.Timezones, name='Timezones'),
+    path('time/', money_views.Time.as_view(), name='Time'),
+    path('timezones/', money_views.Timezones.as_view(), name='Timezones'),
     
 
     path('schema/', SpectacularAPIView.as_view(), name='schema'),

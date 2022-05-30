@@ -59,6 +59,7 @@ from os import path, system
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import viewsets, permissions, status
+from rest_framework.views import APIView
 from django.core.serializers.json import DjangoJSONEncoder
 from zoneinfo import available_timezones
 from tempfile import TemporaryDirectory
@@ -332,14 +333,6 @@ def StrategiesWithBalance(request):
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
-
-
-@api_view(['GET', ])    
-def home(request):
-    return JsonResponse( True,  encoder=MyDjangoJSONEncoder,     safe=False)
-
-
-
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsClasses(request):
@@ -348,18 +341,20 @@ def InvestmentsClasses(request):
     return JsonResponse( iotm.json_classes(), encoder=MyDjangoJSONEncoder,     safe=False)
 
 
+class Time(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    @extend_schema(request=None, responses=OpenApiTypes.DATETIME)
+    def get(self, request, *args, **kwargs):
+        return JsonResponse( timezone.now(), encoder=MyDjangoJSONEncoder,     safe=False)
 
-@api_view(['GET', ])
-@permission_classes([permissions.IsAuthenticated, ])
-def Time(request):
-    return JsonResponse( timezone.now(), encoder=MyDjangoJSONEncoder,     safe=False)
+class Timezones(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    @extend_schema(request=None, responses=OpenApiTypes.STR)
+    def get(self, request, *args, **kwargs):
+        r=list(available_timezones())
+        r.sort()
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
-
-@api_view(['GET', ])    
-def Timezones(request):
-    r=list(available_timezones())
-    r.sort()
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
 class InvestmentsViewSet(viewsets.ModelViewSet):
     queryset = Investments.objects.select_related("accounts").all()

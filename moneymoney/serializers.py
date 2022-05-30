@@ -28,6 +28,12 @@ from drf_spectacular.utils import extend_schema_field
 from drf_spectacular.types import OpenApiTypes
 from moneymoney.reusing.request_casting import id_from_url
 
+
+class SuccessSerializer(serializers.Serializer):
+    success=serializers.BooleanField()
+    detail = serializers.CharField()
+
+
 class BanksSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()
     class Meta:
