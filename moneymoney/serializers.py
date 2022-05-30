@@ -24,6 +24,8 @@ from  moneymoney.models import (
 from rest_framework import serializers
 from django.utils.translation import gettext as _
 from django.conf import settings
+from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.types import OpenApiTypes
 from moneymoney.reusing.request_casting import id_from_url
 
 class BanksSerializer(serializers.HyperlinkedModelSerializer):
@@ -42,10 +44,12 @@ class AccountsSerializer(serializers.HyperlinkedModelSerializer):
         model = Accounts
         fields = ('url', 'id','name', 'active', 'number','currency','banks', 'localname', 'fullname')
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_localname(self, obj):
         return  _(obj.name)
         
         
+    @extend_schema_field(OpenApiTypes.STR)
     def get_fullname(self, obj):
         return  obj.fullName()
         
@@ -72,6 +76,7 @@ class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
         model = Investments
         fields = ('url', 'id','name', 'active','accounts', 'selling_price', 'products',  'selling_expiration', 'daily_adjustment', 'balance_percentage', 'fullname')
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_fullname(self, obj):
         return obj.fullName()
 
@@ -97,6 +102,7 @@ class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
         return updated
         
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):
         return  _(obj.investments.products.currency)
 
@@ -105,6 +111,7 @@ class ConceptsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Concepts
         fields = ('url', 'id', 'name',  'operationstypes', 'editable', 'localname')
+    @extend_schema_field(OpenApiTypes.STR)
     def get_localname(self, obj):
         return  _(obj.name)
 
@@ -119,6 +126,7 @@ class CreditcardsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Creditcardsoperations
         fields = ('url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','creditcards', 'paid','paid_datetime', 'currency')
+    @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):
         return  obj.creditcards.accounts.currency
         
@@ -134,6 +142,7 @@ class OperationstypesSerializer(serializers.HyperlinkedModelSerializer):
         model = Operationstypes
         fields = ('url', 'id', 'name', 'localname')
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_localname(self, obj):
         return  _(obj.name)
         
@@ -144,8 +153,10 @@ class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Accountsoperations
         fields = ('url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','accounts',  'currency', 'comment_decoded')
+    @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):
         return obj.accounts.currency
+    @extend_schema_field(OpenApiTypes.STR)
     def get_comment_decoded(self, obj):
         return Comment().decode(obj.comment), 
                 
@@ -155,6 +166,7 @@ class LeveragesSerializer(serializers.HyperlinkedModelSerializer):
         model = Leverages
         fields = ('url', 'id', 'name', 'multiplier', 'localname')
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_localname(self, obj):
         return  _(obj.name)
 
@@ -194,12 +206,15 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
         updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
         return updated
         
+    @extend_schema_field(OpenApiTypes.INT)
     def get_real_leveraged_multiplier(self, obj):
         return  obj.real_leveraged_multiplier()
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_fullname(self, obj):
         return  obj.fullName()
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_flag(self, obj):
         return  obj.stockmarkets.country
         
@@ -214,6 +229,7 @@ class ProductstypesSerializer(serializers.HyperlinkedModelSerializer):
         model = Productstypes
         fields = ('url', 'id', 'name', 'localname')
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_localname(self, obj):
         return  _(obj.name)
 
@@ -225,10 +241,13 @@ class QuotesSerializer(serializers.HyperlinkedModelSerializer):
         model = Quotes
         fields = ('url', 'id', 'datetime', 'quote',  'products', 'name', 'decimals', 'currency')      
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_name(self, obj):
         return  obj.products.name
+    @extend_schema_field(OpenApiTypes.INT)
     def get_decimals(self, obj):
         return  obj.products.decimals
+    @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):
         return  obj.products.currency
     
