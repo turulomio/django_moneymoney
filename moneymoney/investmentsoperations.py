@@ -858,7 +858,9 @@ class StrategyIO:
         if hasattr(self, "_io") is False:
             r=[]
             for io in self.iom:
+                investment_url=self.request.build_absolute_uri(reverse('investments-detail', args=(io.investment.id, )))
                 for o in io.io:
+                    o["investments"]=investment_url
                     r.append(o)
             self._io=r
         return self._io
@@ -867,7 +869,9 @@ class StrategyIO:
         if hasattr(self, "_io_current") is False:
             r=[]
             for io in self.iom:
+                investment_url=self.request.build_absolute_uri(reverse('investments-detail', args=(io.investment.id, )))
                 for o in io.io_current:
+                    o["investments"]=investment_url
                     r.append(o)
             self._io_current= r
         return self._io_current
@@ -876,8 +880,10 @@ class StrategyIO:
         if hasattr(self, "_io_historical") is False:
             r=[]
             for io in self.iom:
+                investment_url=self.request.build_absolute_uri(reverse('investments-detail', args=(io.investment.id, )))
                 for o in io.io_historical:
                     if self.strategy.dt_from<=o["dt_end"] and o["dt_end"]<=self.strategy.dt_to_for_comparations():
+                        o["investments"]=investment_url
                         r.append(o)
             self._io_historical=r
         return self._io_historical
