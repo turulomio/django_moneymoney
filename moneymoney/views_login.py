@@ -11,6 +11,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 @extend_schema(
+    request=OpenApiTypes.STR, responses=OpenApiTypes.STR    , 
     parameters=[
         OpenApiParameter(name='username', description='User name', required=True, type=str), 
         OpenApiParameter(name='password', description='User password', required=True, type=OpenApiTypes.PASSWORD), 
