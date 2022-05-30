@@ -273,14 +273,22 @@ class StrategiesViewSet(viewsets.ModelViewSet):
     queryset = Strategies.objects.all()
     serializer_class = serializers.StrategiesSerializer
     permission_classes = [permissions.IsAuthenticated]  
-
-    def get_queryset(self):
-        active=RequestGetBool(self.request, "active")
-        investment=RequestGetUrl(self.request, "investment", Investments)
-        type=RequestGetInteger(self.request, "type")
+        
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='active', description='Filter by active accounts', required=True, type=bool), 
+            OpenApiParameter(name='investment', description='Filter by investment', required=True, type=OpenApiTypes.URI), 
+            OpenApiParameter(name='type', description='Filter by type', required=True, type=int), 
+        ],
+    )
+    def list(self, request):
+        active=RequestGetBool(request, "active")
+        investment=RequestGetUrl(request, "investment", Investments)
+        type=RequestGetInteger(request, "type")
         if all_args_are_not_none(active, investment, type):
-            return self.queryset.filter(dt_to__isnull=active,  investments__contains=investment.id, type=type)
-        return self.queryset.all() #We need to rerun all(), because it cached results after CRUD operations
+            self.queryset=self.queryset.filter(dt_to__isnull=active,  investments__contains=investment.id, type=type)
+        serializer = serializers.StrategiesSerializer(self.queryset, many=True, context={'request': request})
+        return Response(serializer.data)
 
 @extend_schema(
         parameters=[
@@ -333,12 +341,17 @@ def StrategiesWithBalance(request):
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
-@api_view(['GET', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def InvestmentsClasses(request):
-    qs_investments_active=Investments.objects.filter(active=True).select_related("products").select_related("products__productstypes").select_related("accounts").select_related("products__leverages")
-    iotm=InvestmentsOperationsTotalsManager.from_investment_queryset(qs_investments_active, timezone.now(), request)
-    return JsonResponse( iotm.json_classes(), encoder=MyDjangoJSONEncoder,     safe=False)
+class InvestmentsClasses(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    @extend_schema(
+        description="Returns data to generate investments classes in pies", 
+        request=None, 
+        responses=OpenApiTypes.OBJECT
+    )
+    def get(self, request, *args, **kwargs):
+        qs_investments_active=Investments.objects.filter(active=True).select_related("products").select_related("products__productstypes").select_related("accounts").select_related("products__leverages")
+        iotm=InvestmentsOperationsTotalsManager.from_investment_queryset(qs_investments_active, timezone.now(), request)
+        return JsonResponse( iotm.json_classes(), encoder=MyDjangoJSONEncoder,     safe=False)
 
 
 class Time(APIView):
