@@ -40,7 +40,7 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'Interactive documentation',
     'VERSION': __version__,
     'SERVE_INCLUDE_SCHEMA': False,
-    # OTHER SETTINGS
+    'SCHEMA_PATH_PREFIX_INSERT': '',
 }
 
 ## Application definitions
