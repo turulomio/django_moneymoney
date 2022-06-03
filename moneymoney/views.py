@@ -2033,9 +2033,14 @@ def Settings(request):
         r['first_name']=request.user.first_name
         r['last_name']=request.user.last_name
         r['user_email']=request.user.email
+        r['invest_amount_1']=int(request.globals.get("invest_amount_1", "2500"))
+        r['invest_amount_2']=int(request.globals.get("invest_amount_2", "3500"))
+        r['invest_amount_3']=int(request.globals.get("invest_amount_3", "8400"))
+        r['invest_amount_4']=int(request.globals.get("invest_amount_4", "8400"))
+        r['invest_amount_5']=int(request.globals.get("invest_amount_5", "8400"))
         return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
     elif request.method == 'POST':
-        r={"local_settings":False, "investing_com":False,  "profile":False, "password":False}
+        r={"local_settings":False, "investing_com":False,  "profile":False, "password":False, "invest_amounts":False}
         
         #Personal settings
         local_currency=RequestString(request,"local_currency")
@@ -2059,13 +2064,25 @@ def Settings(request):
         last_name=RequestString(request, "last_name")
         user_email=RequestString(request, "user_email")
         newp=RequestString(request, "newp")
-        print(first_name, last_name, user_email, newp)
         if all_args_are_not_empty(first_name, last_name, user_email):
             request.user.first_name=first_name
             request.user.last_name=last_name
             request.user.email=user_email
             request.user.save()
             r["profile"]=True
+            
+        invest_amount_1=RequestInteger(request, "invest_amount_1")
+        invest_amount_2=RequestInteger(request, "invest_amount_2")
+        invest_amount_3=RequestInteger(request, "invest_amount_3")
+        invest_amount_4=RequestInteger(request, "invest_amount_4")
+        invest_amount_5=RequestInteger(request, "invest_amount_5")
+        if all_args_are_not_empty(invest_amount_1, invest_amount_2, invest_amount_3, invest_amount_4, invest_amount_5):
+            setGlobal("invest_amount_1", invest_amount_1)
+            setGlobal("invest_amount_2", invest_amount_2)
+            setGlobal("invest_amount_3", invest_amount_3)
+            setGlobal("invest_amount_4", invest_amount_4)
+            setGlobal("invest_amount_5", invest_amount_5)
+            r["invest_amounts"]=True
 
         if all_args_are_not_empty(newp):
             request.user.set_password(newp)
