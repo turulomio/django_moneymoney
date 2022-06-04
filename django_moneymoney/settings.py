@@ -149,7 +149,7 @@ DATE_FORMAT = "Y-m-d"
 DATE_INPUT_FORMATS = ('%Y-%m-%d')
 
 LOGIN_URL = reverse_lazy("login")
-LOGIN_REDIRECT_URL = reverse_lazy("home")
+#LOGIN_REDIRECT_URL = reverse_lazy("home")
 LOGOUT_REDIRECT_URL = reverse_lazy("login")
 
 # Static files (CSS, JavaScript, Images)

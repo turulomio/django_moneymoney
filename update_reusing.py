@@ -9,6 +9,7 @@ args=parser.parse_args()
 
 if args.local==False:
     download_from_github("turulomio", "reusingcode", "django/connection_dj.py", "moneymoney/reusing")
+    download_from_github("turulomio", "reusingcode", "django/responses_json.py", "moneymoney/reusing")
     download_from_github("turulomio", "reusingcode", "django/request_casting.py", "moneymoney/reusing")
     download_from_github("turulomio", "reusingcode", "python/call_by_name.py", "moneymoney/reusing")
     download_from_github("turulomio", "reusingcode", "python/casts.py", "moneymoney/reusing")

@@ -17,9 +17,9 @@ from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_r
 from moneymoney.reusing.casts import string2list_of_integers
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date
 from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average
-from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.decorators import timeit
 from moneymoney.reusing.percentage import Percentage,  percentage_between
+from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEncoder, json_success_response
 from requests import delete, post
 from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetArrayOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestGetListOfIntegers, RequestString, RequestListUrl, id_from_url, all_args_are_not_none,  all_args_are_not_empty
 from urllib import request as urllib_request
@@ -60,21 +60,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import viewsets, permissions, status
 from rest_framework.views import APIView
-from django.core.serializers.json import DjangoJSONEncoder
 from zoneinfo import available_timezones
 from tempfile import TemporaryDirectory
-
-class MyDjangoJSONEncoder(DjangoJSONEncoder):    
-    def default(self, o):
-        if isinstance(o, Decimal):
-            return float(o)
-        if isinstance(o, Percentage):
-            return o.value
-        if isinstance(o, Currency):
-            return o.amount
-        return super().default(o)
-
-
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -919,22 +906,41 @@ def OrdersList(request):
     
  
 
-@transaction.atomic
-@api_view(['POST', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def ProductsFavorites(request):
-    product=RequestUrl(request, "product", Products)
-    favorites=getGlobalListOfIntegers(request, "favorites")
-    if product is not None:
-        if product.id in favorites:
-            favorites.remove(product.id)
-        else:
-            favorites.append(product.id)
-        setGlobal("favorites", str(favorites)[1:-1])
-    return JsonResponse( favorites, encoder=MyDjangoJSONEncoder,     safe=False)
 
 
- 
+class ProductsFavorites(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    @extend_schema(
+        description="Returns an array with a list of favorites url", 
+        responses=OpenApiTypes.OBJECT
+    )
+    
+    
+    def get(self, request, *args, **kwargs):
+        r=[]
+        for favorite_id in getGlobalListOfIntegers(request, "favorites"):
+            r.append(request.build_absolute_uri(reverse('products-detail', args=(favorite_id, ))))
+        return json_data_response(True, r, "List of favorite products urls")
+
+    @extend_schema(
+        description="Returns an array with a list of favorites url", 
+        parameters=[
+            OpenApiParameter(name='product', description='Product url to add or remove from favorites', required=True, type=OpenApiTypes.URI), 
+        ],
+        responses=OpenApiTypes.OBJECT
+    )
+    def post(self, request):
+        product=RequestUrl(request, "product", Products)
+        if product is not None:
+            favorites = getGlobalListOfIntegers(request, "favorites")
+            if product.id in favorites:
+                favorites.remove(product.id)
+                answer=f"{product.id} removed from favorites"
+            else:
+                favorites.append(product.id)
+                answer=f"{product.id} added to favorites"
+            setGlobal("favorites", str(favorites)[1:-1])
+        return json_success_response(True, answer)
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -2175,9 +2181,9 @@ def getGlobalBytes_from_base64(request, key, default=None):
         return default
     
     
-def getGlobalListOfIntegers(request, key, default=[], separator=","):    
+def getGlobalListOfIntegers(request, key, default=[], separator=","):
     try:
-        r = string2list_of_integers(request.globals.GET.get(key), separator)
+        r = string2list_of_integers(request.globals.get(key), separator)
     except:
         r=default
     return r
