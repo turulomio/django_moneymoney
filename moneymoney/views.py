@@ -63,10 +63,18 @@ from rest_framework.views import APIView
 from zoneinfo import available_timezones
 from tempfile import TemporaryDirectory
 
-@api_view(['GET', ])    
+class GroupCatalogManager(permissions.BasePermission):
+    """Permiso que comprueba si pertenece al grupo Interventor """
+    def has_permission(self, request, view):
+        return request.user.groups.filter(name="CatalogManager").exists()
+
+
+
+
 @permission_classes([permissions.IsAuthenticated, ])
+@api_view(['GET', ])
 def CatalogManager(request):
-    return JsonResponse( settings.CATALOG_MANAGER, encoder=MyDjangoJSONEncoder, safe=False)
+    return JsonResponse( request.user.groups.filter(name="CatalogManager").exists(), encoder=MyDjangoJSONEncoder, safe=False)
 
 
 @extend_schema(
