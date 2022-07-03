@@ -9,8 +9,8 @@ class Command(BaseCommand):
         print(f"Updating versions of moneymoney frontend project to {__version__} and {__versiondatetime__}")
         d=__versiondatetime__
         system (f"""sed -i '3s/.*/  "version": "{__version__}",/' ../moneymoney/package.json""")
-        system (f"""sed -i '13s/.*/        version: "{__version__}",/' ../moneymoney/src/store.js""")
-        system (f"""sed -i '14s/.*/        versiondate: new Date({d.year}, {d.month-1}, {d.day}, {d.hour}, {d.minute}),/' ../moneymoney/src/store.js""")
+        system (f"""sed -i '15s/.*/        version: "{__version__}",/' ../moneymoney/src/store.js""")
+        system (f"""sed -i '16s/.*/        versiondate: new Date({d.year}, {d.month-1}, {d.day}, {d.hour}, {d.minute}),/' ../moneymoney/src/store.js""")
 
         print()
         print(f"""To release a new version:
