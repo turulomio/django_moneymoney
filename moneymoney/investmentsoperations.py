@@ -414,18 +414,16 @@ class InvestmentsOperations:
         qs_dividends=Dividends.objects.all().filter(investments_id=self.investment.id).order_by('datetime')
         #Gets investment important datetimes: operations, dividends, init and current time. For each datetime adds another at the beginning of the day, to get mountains in graph
         datetimes=set()
-        datetimes.add(self.io[0]["datetime"]-timedelta(days=30))
+        datetimes.add(self.io[0]["datetime"]-timedelta(seconds=1))
         for op in self.io:
             datetimes.add(op["datetime"])
-            datetimes.add(op["datetime"]-timedelta(seconds=1))
+            datetimes.add(op["datetime"]+timedelta(seconds=1))
         for dividend in qs_dividends:
             datetimes.add(dividend.datetime)
         datetimes.add(timezone.now())
         datetimes_list=list(datetimes)
         datetimes_list.sort()
         
-#        str_datetimes_list=[]
-                
         invested=[]
         gains_dividends=[]
         balance=[]
@@ -433,7 +431,6 @@ class InvestmentsOperations:
         gains=[]
         
         for i, dt in enumerate(datetimes_list):
-#            str_datetimes_list.append(str(dt.date()))
             oper_dt=InvestmentsOperations.from_investment(self.request, self.investment, dt, self.request.local_currency)
             #Calculate dividends in datetime
             dividend_net=0
