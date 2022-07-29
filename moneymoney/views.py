@@ -1509,7 +1509,7 @@ def ReportAnnualIncomeDetails(request, year, month):
         r=[]
         balance=0
         for currency in currencies_in_accounts():
-            for op in cursor_rows("""
+            for i,  op in enumerate(cursor_rows("""
                 select datetime,concepts_id, amount, comment, accounts.id as accounts_id
                 from 
                     accountsoperations,
@@ -1532,11 +1532,11 @@ def ReportAnnualIncomeDetails(request, year, month):
                     date_part('month',datetime)=%s and
                     accounts.currency=%s and
                     accounts.id=creditcards.accounts_id and
-                    creditcards.id=creditcardsoperations.creditcards_id""", (operationstypes_id, year, month,  currency, operationstypes_id, year, month,  currency)):
+                    creditcards.id=creditcardsoperations.creditcards_id""", (operationstypes_id, year, month,  currency, operationstypes_id, year, month,  currency))):
                 if local_currency==currency:
                     balance=balance+op["amount"]
                     r.append({
-                        "id":-1, 
+                        "id":-i, 
                         "datetime": op['datetime'], 
                         "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(op["concepts_id"], ))), 
                         "amount":op['amount'], 
@@ -1554,7 +1554,17 @@ def ReportAnnualIncomeDetails(request, year, month):
     def dividends():
         r=[]
         for o in Dividends.objects.all().filter(datetime__year=year, datetime__month=month).order_by('datetime'):
-            r.append({"id":o.id, "datetime":o.datetime, "concepts":o.concepts.name, "gross":o.gross, "net":o.net, "taxes":o.taxes, "commission":o.commission})
+            r.append({
+                "id":o.id, 
+                "url":request.build_absolute_uri(reverse('dividends-detail', args=(o.id, ))), 
+                "investments":request.build_absolute_uri(reverse('investments-detail', args=(o.investments.id, ))), 
+                "datetime":o.datetime, 
+                "concepts": request.build_absolute_uri(reverse('concepts-detail', args=(o.concepts.id, ))), 
+                "gross":o.gross, 
+                "net":o.net, 
+                "taxes":o.taxes, 
+                "commission":o.commission
+            })
         return r
     def listdict_investmentsoperationshistorical(request, year, month, local_currency, local_zone):
         #Git investments with investmentsoperations in this year, month
