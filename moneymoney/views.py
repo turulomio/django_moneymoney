@@ -1153,7 +1153,7 @@ def ProductsQuotesOHCL(request):
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsRanges(request):
     product=RequestGetUrl(request, "product", Products)
-    only_first=RequestGetBool(request, "only_first")
+    totalized_operations=RequestGetBool(request, "totalized_operations") 
     percentage_between_ranges=RequestGetInteger(request, "percentage_between_ranges")
 
     if percentage_between_ranges is not None:
@@ -1169,10 +1169,10 @@ def ProductsRanges(request):
     else:
         qs_investments=Investments.objects.none()
 
-    if all_args_are_not_none(product, only_first,  percentage_between_ranges, percentage_gains, amount_to_invest, recomendation_methods):
+    if all_args_are_not_none(product, totalized_operations,  percentage_between_ranges, percentage_gains, amount_to_invest, recomendation_methods):
         from moneymoney.productrange import ProductRangeManager
         
-        prm=ProductRangeManager(request, product, percentage_between_ranges, percentage_gains, only_first,  qs_investments=qs_investments, decimals=product.decimals)
+        prm=ProductRangeManager(request, product, percentage_between_ranges, percentage_gains, totalized_operations,  qs_investments=qs_investments, decimals=product.decimals)
         prm.setInvestRecomendation(recomendation_methods)
 
         return JsonResponse( prm.json(), encoder=MyDjangoJSONEncoder, safe=False)

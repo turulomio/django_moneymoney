@@ -7,14 +7,14 @@ from moneymoney.reusing.percentage import Percentage
 from moneymoney.investmentsoperations import InvestmentsOperationsManager
 
 class ProductRange():
-    def __init__(self, request,  id=None,  product=None,  value=None, percentage_down=None,  percentage_up=None, only_first=True, decimals=2):
+    def __init__(self, request,  id=None,  product=None,  value=None, percentage_down=None,  percentage_up=None, totalized_operations=True, decimals=2):
         self.request=request
         self.id=id
         self.product=product
         self.value=value
         self.percentage_down=percentage_down
         self.percentage_up=percentage_up
-        self.only_first=only_first
+        self.totalized_operations=totalized_operations
         self.decimals=decimals
         self.recomendation_invest=False
         self.recomendation_reinvest=False
@@ -50,17 +50,14 @@ class ProductRange():
     ## Search for investments in self.mem.data and 
     def getInvestmentsOperationsInsideJson(self, iom):
         r=[]
-        for io in iom.list:
-            for op in io.io_current:
-                if self.only_first is True:#Only first when neccesary
-                    if io.io_current.index(op)!=0:
-                        continue
-                if self.isInside(op["price_investment"]) is True:
+        if self.totalized_operations is True:
+            for io in iom.list:
+                if self.isInside(io.current_average_price_investment().amount) is True:
                     r.append({
                         "url":self.request.build_absolute_uri(reverse('investments-detail', args=(io.investment.pk, ))), 
                         "id": io.investment.pk, 
                         "name": io.investment.fullName(), 
-                        "invested": op[ 'invested_user'], 
+                        "invested": io.current_invested_user(), 
                         "currency": io.investment.products.currency, 
                         "active": io.investment.active, 
                         "selling_price": io.investment.selling_price, 
@@ -69,6 +66,23 @@ class ProductRange():
                         "products": self.request.build_absolute_uri(reverse('products-detail', args=(io.investment.products.pk, ))), 
                         "accounts": self.request.build_absolute_uri(reverse('accounts-detail', args=(io.investment.accounts.pk, ))), 
                     })
+        else: #Shows all investments operations in each range
+            for io in iom.list:
+                for op in io.io_current:
+                    if self.isInside(op["price_investment"]) is True:
+                        r.append({
+                            "url":self.request.build_absolute_uri(reverse('investments-detail', args=(io.investment.pk, ))), 
+                            "id": io.investment.pk, 
+                            "name": io.investment.fullName(), 
+                            "invested": op[ 'invested_user'], 
+                            "currency": io.investment.products.currency, 
+                            "active": io.investment.active, 
+                            "selling_price": io.investment.selling_price, 
+                            "daily_adjustment": io.investment.daily_adjustment, 
+                            "selling_expiration": io.investment.selling_expiration, 
+                            "products": self.request.build_absolute_uri(reverse('products-detail', args=(io.investment.products.pk, ))), 
+                            "accounts": self.request.build_absolute_uri(reverse('accounts-detail', args=(io.investment.accounts.pk, ))), 
+                        })
 
         return r
         
@@ -87,9 +101,9 @@ class ProductRange():
 ## @param additional_ranges. Number ranges to show over and down calculated limits
 
 class ProductRangeManager(ObjectManager):
-    def __init__(self, request, product, percentage_down, percentage_up, only_first=True, decimals=2, qs_investments=[], additional_ranges=3):
+    def __init__(self, request, product, percentage_down, percentage_up, totalized_operations=True, decimals=2, qs_investments=[], additional_ranges=3):
         ObjectManager.__init__(self)
-        self.only_first=only_first
+        self.totalized_operations=totalized_operations
         self.request=request
         self.product=product
         self.qs_investments=qs_investments
@@ -107,7 +121,7 @@ class ProductRangeManager(ObjectManager):
         i=0
         range_lowest=0.000001
         while current_value>range_lowest:
-            self.tmp.append(ProductRange(self.request,  i, self.product,current_value, self.percentage_down, percentage_up, self.only_first))
+            self.tmp.append(ProductRange(self.request,  i, self.product,current_value, self.percentage_down, percentage_up, self.totalized_operations))
             current_value=current_value*(1-self.percentage_down.value)
             i=i+1
         
