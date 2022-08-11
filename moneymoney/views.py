@@ -765,7 +765,6 @@ def InvestmentsWithBalance(request):
             "active":o.active, 
             "url":request.build_absolute_uri(reverse('investments-detail', args=(o.pk, ))), 
             "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.id, ))), 
-            "product": request.build_absolute_uri(reverse('products-detail', args=(o.products.id, ))), 
             "products":request.build_absolute_uri(reverse('products-detail', args=(o.products.id, ))), 
             "last_datetime": o.products.basic_results()['last_datetime'], 
             "last": o.products.basic_results()['last'], 
@@ -785,6 +784,7 @@ def InvestmentsWithBalance(request):
             "selling_price": o.selling_price, 
             "is_deletable": o.is_deletable(), 
             "flag": o.products.stockmarkets.country, 
+            "gains_at_selling_point_investment": o.selling_price*o.products.real_leveraged_multiplier()*iot.io_total_current["shares"]-iot.io_total_current["invested_investment"], 
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
