@@ -22,6 +22,7 @@ if args.local==False:
     download_from_github("turulomio", "reusingcode", "python/lineal_regression.py", "moneymoney/reusing")
     download_from_github("turulomio", "reusingcode", "python/github.py", "moneymoney/reusing")
     download_from_github("turulomio", "reusingcode", "python/datetime_functions.py", "moneymoney/reusing")
+    download_from_github("turulomio", "reusingcode", "python/sqlparser.py", "moneymoney/reusing")
     download_from_github("turulomio", "reusingcode", "python/text_inputs.py", "moneymoney/reusing")
     download_from_github("turulomio", "reusingcode", "python/libmanagers.py", "moneymoney/reusing")
 

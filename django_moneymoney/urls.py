@@ -65,6 +65,7 @@ urlpatterns=[
     path('products/pairs/', money_views.ProductsPairs,  name='ProductsPairs'),
     path('products/ranges/', money_views.ProductsRanges, name='ProductsRanges'),
     path('products/catalog/update/', money_views.ProductsCatalogUpdate, name='ProductsCatalogUpdate'),
+    path('products/search/', money_views.ProductsSearch.as_view(), name='ProductsSearch'),
     path('products/update/', money_views.ProductsUpdate, name='ProductsUpdate'),
     path('products/quotes/ohcl/', money_views.ProductsQuotesOHCL, name='ProductsQuotesOHCL'),
     path('recomendationmethods/', money_views.RecomendationMethods, name='RecomendationMethods'),

@@ -18,17 +18,17 @@ class MyDjangoJSONEncoder(DjangoJSONEncoder):
             return o.amount
         return super().default(o)
 
-def json_success_response(success, detail):
+def json_success_response(success, detail_):
     """
         Returns a predefined json response
             - success: bool
             - detail: Description of success
     """
-    if not success.__class__.__name__=="bool" or not detail.__class__.__name__=="str":
+    if not success.__class__.__name__=="bool" or not detail_.__class__.__name__ in ("str", "__proxy__"):
         print("json_succcess_response parameters are wrong")
-        
-    return JsonResponse( {"success": success, "detail": detail}, encoder=MyDjangoJSONEncoder, safe=True)
-    
+
+    return JsonResponse( {"success": success, "detail": detail_}, encoder=MyDjangoJSONEncoder, safe=True)
+
 def json_data_response(success, data,  detail=""):
     """
         Returns a predefined json response
