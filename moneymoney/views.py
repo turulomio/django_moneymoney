@@ -797,7 +797,7 @@ def InvestmentsWithBalance(request):
 def InvestmentsoperationsFull(request):
     ids=RequestGetListOfIntegers(request, "investments")
     r=[]
-    for o in Investments.objects.filter(id__in=ids):
+    for o in Investments.objects.filter(id__in=ids).select_related("accounts", "products", "products__productstypes", "products__leverages"):
         r.append(InvestmentsOperations.from_investment(request, o, timezone.now(), request.local_currency).json())
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 

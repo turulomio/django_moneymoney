@@ -128,14 +128,13 @@ def database_update(con, package, software_version):
         if name[-3:]=="sql":
             sqls.append(int(name[:-4]))
     sqls.sort()
-
+    
+    globals_exists=con.cursor_one_field("SELECT EXISTS(SELECT * FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'globals');")
+    if globals_exists==True:
+        database_version=int(con.cursor_one_field("select value from public.globals where global='Version'"))
+    else: #If database is empty
+        database_version=0
     for sql in sqls:
-        globals_exists=con.cursor_one_field("SELECT EXISTS(SELECT * FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'globals');")
-        if globals_exists==True:
-            database_version=int(con.cursor_one_field("select value from public.globals where global='Version'"))
-        else: #If database is empty
-            database_version=0
-
         if database_version<sql:
             con.load_script(resource_filename(package,  "sql/{}.sql".format(sql)))
             con.cursor_one_field("update public.globals set value=%s where global='Version' returning global",(sql,))
