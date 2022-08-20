@@ -257,7 +257,7 @@ def generate_assets_report(request, format):
     with open("/tmp/global.png", "w+b") as file_:
         file_.write(getGlobalBytes_from_base64(request, "base64_assetsreport_classes_by_percentage.png"))
   
-    width=15
+    width=None
     height=12
     doc.addImageParagraph([bytes_after_trim_image(getGlobalBytes_from_base64(request, "base64_assetsreport_classes_by_percentage.png"), "png"), ], width, height, "Illustration")
 
