@@ -809,13 +809,12 @@ def InvestmentsoperationsFullSimulation(request):
     investments=RequestListUrl(request, "investments", Investments)
     dt=RequestDtaware(request, "dt")
     local_currency=RequestString(request, "local_currency")
-    temporaltable=RequestString(request, "temporaltable")
     listdict=request.data["operations"]
     for d in listdict:
         d["datetime"]=string2dtaware(d["datetime"],  "JsUtcIso", request.local_zone)
         d["investments_id"]=investments[0].id
         d["operationstypes_id"]=id_from_url(d["operationstypes"])
-    r=InvestmentsOperations.from_investment_simulation(request, investments,  dt,  local_currency,  listdict,  temporaltable).json()
+    r=InvestmentsOperations.from_investment_simulation(request, investments,  dt,  local_currency,  listdict).json()
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
 

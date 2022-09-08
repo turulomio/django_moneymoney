@@ -9,6 +9,7 @@ from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.datetime_functions import string2dtnaive, dtaware
 from moneymoney.reusing.listdict_functions import listdict_sum, listdict_print_first, listdict_order_by
 from moneymoney.reusing.percentage import Percentage, percentage_between
+from uuid import uuid4
 
 Decimal
 listdict_print_first
@@ -121,17 +122,19 @@ class IOC:
         return percentage_between(self.investment.products.basic_results()["last"], self.investment.selling_price)
 
 ## Manage output of  investment_operations
-## Param num simulations= Número de simulaciones, solo validas cuando tablename distinta de investmentsoperations
+## @param simulation boolean True si es simulation
 class InvestmentsOperations:
-    def __init__(self, request, investment,  str_ld_io, str_ld_io_current, str_ld_io_historical, tablename="investmentsoperations", numsimulations=0, name="IO"):
+    def __init__(self, request, investment,  str_ld_io, str_ld_io_current, str_ld_io_historical, simulation_name=None):
         self.request=request
         self.investment=investment
-        self.tablename=tablename
-        self.numsimulations=numsimulations
-
-        self.name=name
-        self.io=eval(str_ld_io)
         
+        if simulation_name is not None:
+            self.simulation=True
+        else:
+            self.simulation=False
+        self.simulation_name=simulation_name       
+
+        self.io=eval(str_ld_io)
         
         investment_url=request.build_absolute_uri(reverse('investments-detail', args=(self.investment.id, )))
         for o in self.io:
@@ -173,25 +176,28 @@ class InvestmentsOperations:
     ## SINO FUERA ASI ESTARÏA MAL
     ## SI ES UNA SIMULACION DE VIRTUAL PONER EN investments SOLOL A VIRTUAL
     @classmethod
-    def from_investment_simulation(cls, request,  investments, dt, local_currency,  listdict, temporaltable=None):
-        from uuid import uuid4
-        if temporaltable is None: #New simultaion
-            temporaltable="tt"+str(uuid4()).replace("-", "")
-            ids=[]
-            for inv in investments:
-                ids.append(inv.id)
-            execute(f"""
+    def from_investment_simulation(cls, request,  investments, dt, local_currency,  listdict):
+        ids=[]
+        
+        temporaltable="tt"+str(uuid4()).replace("-", "")
+        for inv in investments:
+            ids.append(inv.id)
+        execute(f"""
         create temporary table  {temporaltable}
         as 
             select * from investmentsoperations where investments_id in %s and datetime<=%s;
         """, (tuple(ids), dt))
+        
+        #Actualiza todos los ids al primero de array
+        execute(f"update {temporaltable} set investments_id=%s", (investments[0].id, ))
         
         for d in listdict:
             execute(f"insert into {temporaltable}(id, datetime,  shares,  price, commission,  taxes, operationstypes_id, currency_conversion, investments_id) values((select max(id)+1 from {temporaltable}), %s, %s, %s, %s, %s, %s, %s, %s)", 
             (d["datetime"], d["shares"], d["price"], d["commission"], d["taxes"], d["operationstypes_id"], d["currency_conversion"], d["investments_id"]))
 
         row_io= cursor_one_row("select * from investment_operations(%s,%s,%s,%s,%s,%s)", (investments[0].id, dt, local_currency, temporaltable, investments[0].accounts.currency, investments[0].products.id))
-        r=cls(request, investments[0],  row_io["io"], row_io['io_current'],  row_io['io_historical'], temporaltable, len(listdict))
+        simulation_name="Simulation from investments"+ str(ids)
+        r=cls(request, investments[0],  row_io["io"], row_io['io_current'],  row_io['io_historical'], simulation_name=simulation_name)
         return r
 
 
@@ -235,19 +241,21 @@ class InvestmentsOperations:
         ld=listdict_order_by(ld, "datetime")
         r=InvestmentsOperations.from_investment_simulation(request, [investment, ],  dt,  request.local_currency,  ld)
         return r
+
     def json(self):
         r={}
         r["investment"]={
-            "name": self.investment.name, 
+            "name": self.investment.name if self.simulation==False else self.simulation_name, 
             "selling_price": self.investment.selling_price, 
             "selling_expiration": self.investment.selling_expiration, 
-            "fullName": self.investment.fullName(), 
+            "fullName": self.investment.fullName() if self.simulation==False else self.simulation_name, 
             "gains_at_sellingpoint": self.current_gains_gross_investment_at_selling_price(), 
             "url": self.request.build_absolute_uri(reverse('investments-detail', args=(self.investment.id, ))), 
             "average_price_investment": self.current_average_price_investment(), 
             "active": self.investment.active, 
             "id":self.investment.id, 
             "daily_adjustment":self.investment.daily_adjustment, 
+            "simulation": self.simulation, 
         }
         r["product"]={
             "name": self.investment.products.name, 
@@ -261,7 +269,6 @@ class InvestmentsOperations:
         r["io"]=self.io
         r["io_current"]=self.io_current
         r["io_historical"]=self.io_historical
-        r["tablename"]=self.tablename
         return r
         
     ## Returns the last operation of the io_current
