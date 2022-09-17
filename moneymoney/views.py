@@ -2052,8 +2052,10 @@ def ReportRanking(request):
         d["current_net_gains"]=0
         d["historical_net_gains"]=0
         d["dividends"]=0
+        d["investments"]=[]#List of all urls of investments
         for iot in iotm.list:
             if iot.investment.products.id==product.id:
+                d["investments"].append(request.build_absolute_uri(reverse('investments-detail', args=(iot.investment.id, ))))
                 d["current_net_gains"]=d["current_net_gains"]+iot.io_total_current["gains_net_user"]
                 d["historical_net_gains"]=d["historical_net_gains"]+iot.io_total_historical["gains_net_user"]
                 try:
