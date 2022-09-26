@@ -22,6 +22,7 @@ from moneymoney.reusing.percentage import Percentage,  percentage_between
 from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEncoder, json_success_response
 from moneymoney.reusing.sqlparser import sql_in_one_line
 from requests import delete, post
+from subprocess import run
 from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetArrayOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestGetListOfIntegers, RequestString, RequestListUrl, id_from_url, all_args_are_not_none,  all_args_are_not_empty
 from urllib import request as urllib_request
 
@@ -56,7 +57,7 @@ from moneymoney.models import (
     RANGE_RECOMENDATION_CHOICES, 
 )
 from moneymoney import serializers
-from os import path, system
+from os import path
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import viewsets, permissions, status
@@ -1251,7 +1252,7 @@ def ProductsUpdate(request):
     auto=RequestBool(request, "auto", False) ## Uses automatic request with settings globals investing.com   
     if auto is True:
         with TemporaryDirectory() as tmp:
-            system(f"""wget --header="Host: es.investing.com" \
+            run(f"""wget --header="Host: es.investing.com" \
     --header="User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:92.0) Gecko/20100101 Firefox/92.0" \
     --header="Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8" \
     --header="Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3" \
@@ -1268,7 +1269,8 @@ def ProductsUpdate(request):
     --header="Pragma: no-cache" \
     --header="Cache-Control: no-cache" \
     --header="TE: trailers" \
-    "{request.globals.get('investing_com_url', '')}" -O {tmp}/portfolio.csv""")
+    "{request.globals.get('investing_com_url', '')}" -O {tmp}/portfolio.csv""", shell=True, capture_output=True)
+    
             ic=InvestingCom(request, product=None)
             ic.load_from_filename_in_disk(f"{tmp}/portfolio.csv")
     else:

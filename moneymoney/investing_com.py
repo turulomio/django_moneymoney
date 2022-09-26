@@ -149,7 +149,7 @@ class InvestingCom:
                         except:
                             d["log"]="Error parsing hour" + str(row)
                     r.append(d)
-        print("Products found", len(r))
+        print("Products found updating portfolio", len(r))
         return r
 
     ## Imports data from a CSV file with this struct. It has 6 columns
