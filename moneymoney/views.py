@@ -23,7 +23,7 @@ from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEn
 from moneymoney.reusing.sqlparser import sql_in_one_line
 from requests import delete, post
 from subprocess import run
-from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetArrayOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestGetListOfIntegers, RequestString, RequestListUrl, id_from_url, all_args_are_not_none,  all_args_are_not_empty
+from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetArrayOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestGetListOfIntegers, RequestString, RequestListUrl, id_from_url, all_args_are_not_none,  all_args_are_not_empty,  RequestGetDecimal
 from urllib import request as urllib_request
 
 from moneymoney.models import (
@@ -1025,6 +1025,33 @@ select date, lag, quote, percentage(lag,quote)  from quotes;
     
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
+class ProductsComparationByQuote(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    @extend_schema(
+        description="Compares 2 products setting a range of quotes in a. Gets all datetime in a, and searches them in b to answer quotes", 
+        request=None, 
+        responses=OpenApiTypes.OBJECT
+    )
+    def get(self, request, *args, **kwargs):
+        product_better=RequestGetUrl(request, "a", Products)
+        product_worse=RequestGetUrl(request, "b", Products)
+        quote_better_from=RequestGetDecimal(request, "quote_better_from")
+        quote_better_to=RequestGetDecimal(request, "quote_better_to")
+        if all_args_are_not_empty(product_better, product_worse, quote_better_from, quote_better_to):
+            quotes_better=Quotes.objects.filter(products=product_better, quote__gte=quote_better_from, quote__lte=quote_better_to).order_by("datetime")
+            d=[]
+            for better in quotes_better:
+                worse=product_worse.quote(better.datetime)
+                
+                d.append({
+                    "better_datetime": better.datetime, 
+                    "better_quote":better.quote, 
+                    "worse_datetime":worse["datetime"], 
+                    "worse_quote":worse["quote"], 
+                    "comment": "" if (better.datetime-worse["datetime"]).total_seconds()<=86400 else _("More than one day of difference")
+                })            
+            return json_data_response(True, d, "Products comparation by quote done")
+        return json_data_response(False, None,"Products comparation by quote failed")
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])

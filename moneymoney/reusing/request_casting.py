@@ -58,6 +58,13 @@ def RequestGetBool(request, field, default=None):
         r=default
     return r
 
+def RequestGetDecimal(request, field, default=None):
+    try:
+        r = Decimal(request.GET.get(field))
+    except:
+        r=default
+    return r
+
 def RequestGetInteger(request, field, default=None):
     try:
         r = int(request.GET.get(field))

@@ -60,6 +60,7 @@ urlpatterns=[
     path('investmentsoperations/evolutionchart/', money_views.InvestmentsoperationsEvolutionChart, name='InvestmentsoperationsEvolutionChart'),
     path('investmentsoperationstotalmanager/investments/sameproduct/', money_views.InvestmentsOperationsTotalManager_investments_same_product, name='InvestmentsOperationsTotalManager_investments_same_product'),
     path('orders/list/', money_views.OrdersList, name='OrdersList'),
+    path('products/comparation/by_quote/', money_views.ProductsComparationByQuote.as_view(), name='ProductsComparationByQuote'),
     path('products/favorites/', money_views.ProductsFavorites.as_view(), name='ProductsFavorites'),
     path('products/information/', money_views.ProductsInformation, name='ProductsInformation'),
     path('products/pairs/', money_views.ProductsPairs,  name='ProductsPairs'),
