@@ -24,7 +24,6 @@ from  moneymoney.models import (
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from django.utils.translation import gettext as _
-from django.conf import settings
 from drf_spectacular.utils import extend_schema_field
 from drf_spectacular.types import OpenApiTypes
 from moneymoney.reusing.request_casting import id_from_url
