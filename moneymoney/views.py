@@ -66,7 +66,7 @@ from zoneinfo import available_timezones
 from tempfile import TemporaryDirectory
 
 class GroupCatalogManager(permissions.BasePermission):
-    """Permiso que comprueba si pertenece al grupo Interventor """
+    """Permiso que comprueba si pertenece al grupo CatalogManager """
     def has_permission(self, request, view):
         return request.user.groups.filter(name="CatalogManager").exists()
 
@@ -1217,8 +1217,8 @@ class ProductsViewSet(viewsets.ModelViewSet):
     
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        if settings.CATALOG_MANAGER is False and instance.id>0:
-            return JsonResponse( "Error delting system product", encoder=MyDjangoJSONEncoder,     safe=False)
+        if  request.user.groups.filter(name="CatalogManager").exists() and instance.id>0:
+            return JsonResponse( "Error deleting system product", encoder=MyDjangoJSONEncoder,     safe=False)
     
         self.perform_destroy(instance)
         return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)

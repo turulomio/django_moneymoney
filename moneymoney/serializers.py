@@ -22,6 +22,7 @@ from  moneymoney.models import (
     Strategies, 
 )
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from django.utils.translation import gettext as _
 from django.conf import settings
 from drf_spectacular.utils import extend_schema_field
@@ -199,16 +200,16 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
             validated_data["id"]=Products.objects.earliest('id').id-1
             
         
-        if settings.CATALOG_MANAGER is False and validated_data["id"]>0:
-            return
+        if  request.user.groups.filter(name="CatalogManager").exists() is False and validated_data["id"]>0:
+            raise ValidationError(_("You cant edit a system product if you're not a Catalog Manager (only developers)"))
             
         created=serializers.HyperlinkedModelSerializer.create(self,  validated_data)
         return created
         
     def update(self, instance, validated_data):
-        request=self.context.get("request")
-        if settings.CATALOG_MANAGER is False and id_from_url(request.data["url"])>0:
-            return
+        request=self.context.get("request")       
+        if  request.user.groups.filter(name="CatalogManager").exists() is False and id_from_url(request.data["url"])>0:
+            raise ValidationError(_("You cant edit a system product if you're not a Catalog Manager (only developers)"))
         updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
         return updated
         
