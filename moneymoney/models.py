@@ -261,6 +261,9 @@ class Stockmarkets(models.Model):
     def dtaware_today_closes(self):
         return self.dtaware_closes(date.today())
 
+    ## Returns the starttime of a given date
+    def dtaware_starts(self, date):
+        return dtaware(date, self.starts, self.zone)
     ## Returns a datetime with timezone with the todays stockmarket closes
     def dtaware_today_starts(self):
         return dtaware(date.today(), self.starts, self.zone)

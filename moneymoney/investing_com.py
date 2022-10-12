@@ -1,16 +1,50 @@
 from django.utils.translation import gettext_lazy as _
 
 from moneymoney.models import Products,  Quotes
-
 from csv import reader
-#from logging import debug
-#from datetime import date
+from datetime import timedelta
 from io import StringIO
-#from xulpymoney.objects.quote import Quote
-#from xulpymoney.objects.ohcl import  OHCLDaily
 from moneymoney.reusing.casts import string2decimal
 from moneymoney.reusing.datetime_functions import dtaware, string2date, string2dtaware
-#from monemoney.models import eTickerPosition
+
+class OHCLDaily:
+    def __init__(self, product, date_, open, high, close, low):
+        self.product=product
+        self.date=date_
+        self.open=open
+        self.high=high
+        self.close=close
+        self.low=low
+
+    ## Generate quotes and save them in database
+    ## Returns a list of dictionaries with the result
+    def generate_4_quotes(self):
+        quotes=[]
+        
+        
+        datestart=self.product.stockmarkets.dtaware_starts(self.date)
+        dateends=self.product.stockmarkets.dtaware_closes(self.date)
+        datetimefirst=datestart-timedelta(seconds=1)
+        datetimelow=(datestart+(dateends-datestart)*1/3)
+        datetimehigh=(datestart+(dateends-datestart)*2/3)
+        datetimelast=dateends+timedelta(microseconds=4)
+
+        quote=Quotes(products=self.product, datetime=datetimefirst, quote=self.open)
+        quotes.append({"product": self.product.fullName(),   "code":self.product.ticker_investingcom, "log":quote.modelsave()})
+        
+
+        quote=Quotes(products=self.product, datetime=datetimehigh, quote=self.high)
+        quotes.append({"product": self.product.fullName(),   "code":self.product.ticker_investingcom, "log":quote.modelsave()})
+        
+
+        quote=Quotes(products=self.product, datetime=datetimelast, quote=self.close)
+        quotes.append({"product": self.product.fullName(),   "code":self.product.ticker_investingcom, "log":quote.modelsave()})
+        
+
+        quote=Quotes(products=self.product, datetime=datetimelow, quote=self.low)
+        quotes.append({"product": self.product.fullName(),   "code":self.product.ticker_investingcom, "log":quote.modelsave()})
+        return quotes
+        
 
 class InvestingCom:
     def __init__(self, request,  product=None):
@@ -156,23 +190,22 @@ class InvestingCom:
     ## "Fecha","Último","Apertura","Máximo","Mínimo","Vol.","% var."
     ## "22.07.2019","10,074","10,060","10,148","9,987","10,36M","-0,08%"
     def append_from_historical(self):
-        pass
-#            with open(self.filename) as csv_file:
-#                csv_reader = reader(csv_file, delimiter=',')
-#                line_count = 0
-#                for row in csv_reader:
-#                    if line_count >0:#Ignores headers line
-#                        try:
-#                            ohcl=OHCLDaily(self.mem)
-#                            ohcl.product=self.product
-#                            ohcl.date=string2date(row[0], "DD.MM.YYYY")
-#                            ohcl.close=string2decimal(row[1])
-#                            ohcl.open=string2decimal(row[2])
-#                            ohcl.high=string2decimal(row[3])
-#                            ohcl.low=string2decimal(row[4])
-#                            for quote in ohcl.generate_4_quotes():
-#                                self.append(quote)
-#                        except:
-#                            debug("Error parsing" + str(row))
-#                    line_count += 1
-#            print("Added {} quotes from {} CSV lines".format(self.length(), line_count))
+        r=[]
+        line_count = 0
+        for row in self.csv_object:
+            if line_count >0:#Ignores headers line
+#                try:
+                ohcl=OHCLDaily(
+                    self.product, 
+                    string2date(row[0], "DD.MM.YYYY"), 
+                    string2decimal(row[2]), 
+                    string2decimal(row[3]), 
+                    string2decimal(row[1]), 
+                    string2decimal(row[4])
+                )
+                r=r+ohcl.generate_4_quotes()
+#                except:
+#                    print("Error parsing" + str(row))
+            line_count += 1
+        print("Added {} quotes from {} CSV lines".format(len(r), line_count))
+        return r

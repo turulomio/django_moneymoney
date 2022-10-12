@@ -1323,6 +1323,38 @@ def ProductsUpdate(request):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
      
 
+class QuotesMassiveUpdate(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    @extend_schema(
+        description="Post quotes massively", 
+        request=None, 
+        responses=OpenApiTypes.OBJECT
+    )
+    ## type==1 Investments historical file
+    def post(self, request, *args, **kwargs):
+        from moneymoney.investing_com import InvestingCom
+        product=RequestUrl(request, "product", Products)
+        type=RequestInteger(request, "type")
+        print(product,  type)
+        if product and type==1:## Investment.com historical quotes file
+            # if not GET, then proceed
+            if "csv_file1" not in request.FILES:
+                return json_data_response(False, [], "You must upload a file")
+            else:
+                csv_file = request.FILES["csv_file1"]
+                
+            if not csv_file.name.endswith('.csv'):
+                return json_data_response(False, [], "File is not CSV type")
+
+            #if file is too large, return
+            if csv_file.multiple_chunks():
+                return json_data_response(False, [], "Uploaded file is too big ({} MB).".format(csv_file.size/(1000*1000)))
+
+            ic=InvestingCom(request, product)
+            ic.load_from_filename_in_memory(csv_file)
+            return json_data_response( True, ic.get(),  "Quotes massive update success")
+        return json_data_response( False, [],  "Product and type not set correctly")
+
 @api_view(['POST', ])
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
