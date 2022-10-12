@@ -1,4 +1,3 @@
-
 from  moneymoney.models import (
     Accounts, 
     Accountsoperations, 
@@ -185,7 +184,7 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
     real_leveraged_multiplier = serializers.SerializerMethodField()
     flag=serializers.SerializerMethodField()
     fullname=serializers.SerializerMethodField()
-    uses=serializers.IntegerField()
+    uses=serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Products
