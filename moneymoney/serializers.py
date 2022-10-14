@@ -264,9 +264,14 @@ class QuotesSerializer(serializers.HyperlinkedModelSerializer):
         return created
 
 class StockmarketsSerializer(serializers.HyperlinkedModelSerializer):
+    localname = serializers.SerializerMethodField()
     class Meta:
         model = Stockmarkets
-        fields = ('url', 'id', 'name', 'country', 'starts', 'closes', 'starts_futures',  'closes_futures', 'zone')
+        fields = ('url', 'id', 'name', 'country', 'starts', 'closes', 'starts_futures',  'closes_futures', 'zone', 'localname')
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_localname(self, obj):
+        return  _(obj.name)
 
 class StrategiesSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
