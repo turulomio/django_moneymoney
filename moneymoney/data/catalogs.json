@@ -33,7 +33,7 @@
         { "id": 100, "name": "Leverage x100", "multiplier": 100 },
         { "id": 200, "name": "Leverage x200", "multiplier": 200 },
         { "id": 500, "name": "Leverage x500", "multiplier": 500 },
-        { "id": 1000, "name": "Leverage x100", "multiplier": 1000 }
+        { "id": 1000, "name": "Leverage x1000", "multiplier": 1000 }
     ],
     "products_types": [
         { "id": 1, "name": "Share" },
