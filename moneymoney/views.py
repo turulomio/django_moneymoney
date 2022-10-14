@@ -1196,11 +1196,12 @@ def ProductsRanges(request):
         qs_investments=Investments.objects.filter(id__in=investments_ids)
     else:
         qs_investments=Investments.objects.none()
+    additional_ranges=RequestGetInteger(request, "additional_ranges", 3)
 
     if all_args_are_not_none(product, totalized_operations,  percentage_between_ranges, percentage_gains, amount_to_invest, recomendation_methods):
         from moneymoney.productrange import ProductRangeManager
         
-        prm=ProductRangeManager(request, product, percentage_between_ranges, percentage_gains, totalized_operations,  qs_investments=qs_investments, decimals=product.decimals)
+        prm=ProductRangeManager(request, product, percentage_between_ranges, percentage_gains, totalized_operations,  qs_investments=qs_investments, decimals=product.decimals, additional_ranges=additional_ranges)
         prm.setInvestRecomendation(recomendation_methods)
 
         return JsonResponse( prm.json(), encoder=MyDjangoJSONEncoder, safe=False)
