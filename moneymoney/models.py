@@ -518,16 +518,7 @@ class Dividends(models.Model):
     ## TODO This method should take care of diffrent currencies in accounts. Dividens are in account currency
     @staticmethod
     def net_gains_baduser_between_datetimes_for_some_investments(ids, from_dt,  to_dt):
-        dividends=cursor_one_field("""
-    select 
-        sum(net) 
-    from 
-        dividends 
-    where 
-        datetime>=%s and
-        datetime<=%s  and
-        investments_id in %s
-    """, (from_dt, to_dt, tuple(ids) ))
+        dividends=cursor_one_field("""select sum(net) from dividends where datetime>=%s and datetime<=%s  and investments_id in %s""", (from_dt, to_dt, tuple(ids) ))
         if dividends is None:
             dividends=0
         return dividends
@@ -536,15 +527,7 @@ class Dividends(models.Model):
     ## TODO This method should take care of diffrent currencies in accounts. Dividens are in account currency
     @staticmethod
     def net_gains_baduser_between_datetimes(from_dt,  to_dt):
-        dividends=cursor_one_field("""
-    select 
-        sum(net) 
-    from 
-        dividends 
-    where 
-        datetime>=%s and
-        datetime<=%s  
-    """, (from_dt, to_dt ))
+        dividends=cursor_one_field("""select sum(net) from dividends where datetime>=%s anddatetime<=%s""", (from_dt, to_dt ))
         if dividends is None:
             dividends=0
         return dividends
@@ -1129,7 +1112,7 @@ class Strategies(models.Model):
     ## Returns a queryset with the investments of the strategy, due to self.investments is a text strings
     def investments_queryset(self):
         if hasattr(self, "_investments_queryset") is False:
-            self._investments_queryset=Investments.objects.filter(id__in=self.investments_ids())
+            self._investments_queryset=Investments.objects.filter(id__in=self.investments_ids()).select_related("products")
         return self._investments_queryset
         
     def investments_urls(self, request):

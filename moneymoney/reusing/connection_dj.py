@@ -2,7 +2,23 @@
 ## IF YOU NEED TO UPDATE IT PLEASE MAKE A PULL REQUEST IN THAT PROJECT AND DOWNLOAD FROM IT
 ## DO NOT UPDATE IT IN YOUR CODE
 
-from django.db import connection
+from django.db import connection, reset_queries
+
+
+## Decorator that shows queries gemerated in a method and execution time
+def show_queries(method):
+    def show(*args, **kw):
+        from django.db import connection, reset_queries
+        reset_queries()
+        result = method(*args, **kw)
+        sum_=0
+        rows=connection.queries
+        for d in connection.queries:
+            print (f"[{d['time']}] {d['sql']}")
+            sum_=sum_+float(d['time'])
+        print (f"{len(rows)} db queries took {round(sum_*1000,2)} ms")
+        return result
+    return show
 
 
 def dictfetchall(cursor):

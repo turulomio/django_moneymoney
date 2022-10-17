@@ -17,7 +17,7 @@ from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_r
 from moneymoney.reusing.casts import string2list_of_integers
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date
 from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average
-from moneymoney.reusing.decorators import timeit
+from moneymoney.reusing.decorators import ptimeit
 from moneymoney.reusing.percentage import Percentage,  percentage_between
 from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEncoder, json_success_response
 from moneymoney.reusing.sqlparser import sql_in_one_line
@@ -860,7 +860,6 @@ def InvestmentsChangeSellingPrice(request):
 
 
 @transaction.atomic
-
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsOperationsTotalManager_investments_same_product(request):
@@ -875,8 +874,6 @@ class LeveragesViewSet(viewsets.ModelViewSet):
     queryset = Leverages.objects.all()
     serializer_class = serializers.LeveragesSerializer
     permission_classes = [permissions.IsAuthenticated]  
-
-
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -912,10 +909,6 @@ def OrdersList(request):
            "current_price": o.investments.products.basic_results()["last"], 
         })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
-    
- 
-
-
 
 class ProductsFavorites(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -1957,8 +1950,7 @@ def ReportEvolutionAssets(request, from_year):
 
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
     
-@timeit
-
+@ptimeit
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportEvolutionAssetsChart(request):
