@@ -13,11 +13,10 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 from json import loads
 from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotals, InvestmentsOperationsTotalsManager, StrategyIO
-from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict, show_queries
+from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict
 from moneymoney.reusing.casts import string2list_of_integers
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date
 from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average
-from moneymoney.reusing.decorators import ptimeit
 from moneymoney.reusing.percentage import Percentage,  percentage_between
 from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEncoder, json_success_response
 from moneymoney.reusing.sqlparser import sql_in_one_line
@@ -1351,8 +1350,6 @@ class QuotesMassiveUpdate(APIView):
 
 @api_view(['POST', ])
 @permission_classes([permissions.IsAuthenticated, ])
-@ptimeit
-@show_queries
 @transaction.atomic
 def ProductsCatalogUpdate(request):    
     ## If key desn't exist return None, if d["key"] is "" return None
@@ -1957,7 +1954,6 @@ def ReportEvolutionAssets(request, from_year):
 
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
     
-@ptimeit
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportEvolutionAssetsChart(request):
