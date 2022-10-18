@@ -13,7 +13,7 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 from json import loads
 from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotals, InvestmentsOperationsTotalsManager, StrategyIO
-from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict
+from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict, show_queries
 from moneymoney.reusing.casts import string2list_of_integers
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date
 from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average
@@ -1352,7 +1352,39 @@ class QuotesMassiveUpdate(APIView):
 @api_view(['POST', ])
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
+@show_queries
+@ptimeit
 def ProductsCatalogUpdate(request):
+    ## iterate list of new catalog products and return searched
+    def search_product_in_new_catalog(catalog, id):
+        for d in catalog:
+            if id==d["id"]:
+                p=Products()
+                p.pk=d["id"]
+                p.name=checks_and_sets_value(d, "name")
+                p.isin=checks_and_sets_value(d, "isin")
+                p.currency=checks_and_sets_value(d, "currency")
+                p.productstypes=Productstypes.objects.get(pk=d["productstypes"])
+                p.agrupations=checks_and_sets_value(d, "agrupations")
+                p.web=checks_and_sets_value(d, "web")
+                p.address=checks_and_sets_value(d, "address")
+                p.phone=checks_and_sets_value(d, "phone")
+                p.mail=checks_and_sets_value(d, "mail")
+                p.percentage=checks_and_sets_value(d, "percentage")
+                p.pci=checks_and_sets_value(d, "pci")
+                p.leverages=Leverages.objects.get(pk=d["leverages"])
+                p.stockmarkets=Stockmarkets.objects.get(pk=d["stockmarkets"])
+                p.comment=checks_and_sets_value(d, "comment")
+                p.obsolete=checks_and_sets_value(d, "obsolete")
+                p.ticker_yahoo=checks_and_sets_value(d, "ticker_yahoo")
+                p.ticker_morningstar=checks_and_sets_value(d, "ticker_morningstar")
+                p.ticker_google=checks_and_sets_value(d, "ticker_google")
+                p.ticker_quefondos=checks_and_sets_value(d, "ticker_quefondos")
+                p.ticker_investingcom=checks_and_sets_value(d, "ticker_investingcom")
+                p.decimals=checks_and_sets_value(d, "decimals")
+                break
+        return None
+    
     ## If key desn't exist return None, if d["key"] is "" return None
     def checks_and_sets_value(d, key):
         if key not in d:
@@ -1376,43 +1408,24 @@ def ProductsCatalogUpdate(request):
             return Response({'status': 'File has not .json extension'}, status=status.HTTP_404_NOT_FOUND)
 
         data=loads(json_file.read())
-
-    print("Starting")
-
+        
+    qs_before=Products.objects.all().select_related("stockmarkets", "leverages", "productstypes") #Products in catalog before update
     r={}
     r["total"]=len(data["products"])
     r["logs"]=[]
-    for d in data["products"]:
-        p=Products()
-        p.pk=d["id"]
-        p.name=checks_and_sets_value(d, "name")
-        p.isin=checks_and_sets_value(d, "isin")
-        p.currency=checks_and_sets_value(d, "currency")
-        p.productstypes=Productstypes.objects.get(pk=d["productstypes"])
-        p.agrupations=checks_and_sets_value(d, "agrupations")
-        p.web=checks_and_sets_value(d, "web")
-        p.address=checks_and_sets_value(d, "address")
-        p.phone=checks_and_sets_value(d, "phone")
-        p.mail=checks_and_sets_value(d, "mail")
-        p.percentage=checks_and_sets_value(d, "percentage")
-        p.pci=checks_and_sets_value(d, "pci")
-        p.leverages=Leverages.objects.get(pk=d["leverages"])
-        p.stockmarkets=Stockmarkets.objects.get(pk=d["stockmarkets"])
-        p.comment=checks_and_sets_value(d, "comment")
-        p.obsolete=checks_and_sets_value(d, "obsolete")
-        p.ticker_yahoo=checks_and_sets_value(d, "ticker_yahoo")
-        p.ticker_morningstar=checks_and_sets_value(d, "ticker_morningstar")
-        p.ticker_google=checks_and_sets_value(d, "ticker_google")
-        p.ticker_quefondos=checks_and_sets_value(d, "ticker_quefondos")
-        p.ticker_investingcom=checks_and_sets_value(d, "ticker_investingcom")
-        p.decimals=checks_and_sets_value(d, "decimals")
-        before=Products.objects.get(pk=d["id"])
+    for before in qs_before:
+        new_product=search_product_in_new_catalog(data["products"], before.id)
         
-        if before is None:
-            r["logs"].append({"product":str(p), "log":_("Created")})
-        elif not p.is_fully_equal(before):
-            r["logs"].append({"product":str(p), "log":_("Updated")})
-        p.save()
+        if new_product is None:
+            
+            #MALLLL
+            r["logs"].append({"product":str(new_product), "log":_("Created")})
+        else:
+            if not new_product.is_fully_equal(before):
+                r["logs"].append({"product":str(new_product), "log":_("Updated")})
+            else:
+                continue
+        new_product.save()
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
  
 class QuotesViewSet(viewsets.ModelViewSet):
