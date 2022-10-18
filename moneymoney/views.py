@@ -1351,40 +1351,10 @@ class QuotesMassiveUpdate(APIView):
 
 @api_view(['POST', ])
 @permission_classes([permissions.IsAuthenticated, ])
-@transaction.atomic
-@show_queries
 @ptimeit
-def ProductsCatalogUpdate(request):
-    ## iterate list of new catalog products and return searched
-    def search_product_in_new_catalog(catalog, id):
-        for d in catalog:
-            if id==d["id"]:
-                p=Products()
-                p.pk=d["id"]
-                p.name=checks_and_sets_value(d, "name")
-                p.isin=checks_and_sets_value(d, "isin")
-                p.currency=checks_and_sets_value(d, "currency")
-                p.productstypes=Productstypes.objects.get(pk=d["productstypes"])
-                p.agrupations=checks_and_sets_value(d, "agrupations")
-                p.web=checks_and_sets_value(d, "web")
-                p.address=checks_and_sets_value(d, "address")
-                p.phone=checks_and_sets_value(d, "phone")
-                p.mail=checks_and_sets_value(d, "mail")
-                p.percentage=checks_and_sets_value(d, "percentage")
-                p.pci=checks_and_sets_value(d, "pci")
-                p.leverages=Leverages.objects.get(pk=d["leverages"])
-                p.stockmarkets=Stockmarkets.objects.get(pk=d["stockmarkets"])
-                p.comment=checks_and_sets_value(d, "comment")
-                p.obsolete=checks_and_sets_value(d, "obsolete")
-                p.ticker_yahoo=checks_and_sets_value(d, "ticker_yahoo")
-                p.ticker_morningstar=checks_and_sets_value(d, "ticker_morningstar")
-                p.ticker_google=checks_and_sets_value(d, "ticker_google")
-                p.ticker_quefondos=checks_and_sets_value(d, "ticker_quefondos")
-                p.ticker_investingcom=checks_and_sets_value(d, "ticker_investingcom")
-                p.decimals=checks_and_sets_value(d, "decimals")
-                break
-        return None
-    
+@show_queries
+@transaction.atomic
+def ProductsCatalogUpdate(request):    
     ## If key desn't exist return None, if d["key"] is "" return None
     def checks_and_sets_value(d, key):
         if key not in d:
@@ -1409,23 +1379,47 @@ def ProductsCatalogUpdate(request):
 
         data=loads(json_file.read())
         
-    qs_before=Products.objects.all().select_related("stockmarkets", "leverages", "productstypes") #Products in catalog before update
+#    qs_before=Products.objects.all().select_related("stockmarkets", "leverages", "productstypes") #Products in catalog before update
     r={}
     r["total"]=len(data["products"])
     r["logs"]=[]
-    for before in qs_before:
-        new_product=search_product_in_new_catalog(data["products"], before.id)
-        
-        if new_product is None:
+    for d in data["products"]:
+        p=Products()
+        p.pk=d["id"]
+        p.name=checks_and_sets_value(d, "name")
+        p.isin=checks_and_sets_value(d, "isin")
+        p.currency=checks_and_sets_value(d, "currency")
+        p.productstypes=Productstypes.objects.get(pk=d["productstypes"])
+        p.agrupations=checks_and_sets_value(d, "agrupations")
+        p.web=checks_and_sets_value(d, "web")
+        p.address=checks_and_sets_value(d, "address")
+        p.phone=checks_and_sets_value(d, "phone")
+        p.mail=checks_and_sets_value(d, "mail")
+        p.percentage=checks_and_sets_value(d, "percentage")
+        p.pci=checks_and_sets_value(d, "pci")
+        p.leverages=Leverages.objects.get(pk=d["leverages"])
+        p.stockmarkets=Stockmarkets.objects.get(pk=d["stockmarkets"])
+        p.comment=checks_and_sets_value(d, "comment")
+        p.obsolete=checks_and_sets_value(d, "obsolete")
+        p.ticker_yahoo=checks_and_sets_value(d, "ticker_yahoo")
+        p.ticker_morningstar=checks_and_sets_value(d, "ticker_morningstar")
+        p.ticker_google=checks_and_sets_value(d, "ticker_google")
+        p.ticker_quefondos=checks_and_sets_value(d, "ticker_quefondos")
+        p.ticker_investingcom=checks_and_sets_value(d, "ticker_investingcom")
+        p.decimals=checks_and_sets_value(d, "decimals")
+        try:
+            old=Products.objects.select_related("stockmarkets", "leverages", "productstypes").get(pk=d["id"])
+        except:
+            old=None
             
-            #MALLLL
-            r["logs"].append({"product":str(new_product), "log":_("Created")})
+        
+        if old is None:
+            r["logs"].append({"product":str(p), "log":_("Created")})
+            p.save()
         else:
-            if not new_product.is_fully_equal(before):
-                r["logs"].append({"product":str(new_product), "log":_("Updated")})
-            else:
-                continue
-        new_product.save()
+            if not p.is_fully_equal(old):
+                r["logs"].append({"product":str(p), "log":_("Updated")})
+                p.save()
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
  
 class QuotesViewSet(viewsets.ModelViewSet):
