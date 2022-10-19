@@ -527,7 +527,7 @@ class Dividends(models.Model):
     ## TODO This method should take care of diffrent currencies in accounts. Dividens are in account currency
     @staticmethod
     def net_gains_baduser_between_datetimes(from_dt,  to_dt):
-        dividends=cursor_one_field("""select sum(net) from dividends where datetime>=%s anddatetime<=%s""", (from_dt, to_dt ))
+        dividends=cursor_one_field("""select sum(net) from dividends where datetime>=%s and datetime<=%s""", (from_dt, to_dt ))
         if dividends is None:
             dividends=0
         return dividends
