@@ -13,16 +13,17 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 from json import loads
 from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotals, InvestmentsOperationsTotalsManager, StrategyIO
-from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict
+from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict, show_queries
 from moneymoney.reusing.casts import string2list_of_integers
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date
+from moneymoney.reusing.decorators import ptimeit
 from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average
 from moneymoney.reusing.percentage import Percentage,  percentage_between
+from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetArrayOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestGetListOfIntegers, RequestString, RequestListUrl, id_from_url, all_args_are_not_none,  all_args_are_not_empty,  RequestGetDecimal
 from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEncoder, json_success_response
 from moneymoney.reusing.sqlparser import sql_in_one_line
 from requests import delete, post
 from subprocess import run
-from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetArrayOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestGetListOfIntegers, RequestString, RequestListUrl, id_from_url, all_args_are_not_none,  all_args_are_not_empty,  RequestGetDecimal
 from urllib import request as urllib_request
 
 from moneymoney.models import (
@@ -63,6 +64,11 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.views import APIView
 from zoneinfo import available_timezones
 from tempfile import TemporaryDirectory
+
+
+ptimeit, show_queries
+
+
 
 class GroupCatalogManager(permissions.BasePermission):
     """Permiso que comprueba si pertenece al grupo CatalogManager """
@@ -1034,13 +1040,13 @@ class ProductsComparationByQuote(APIView):
             d=[]
             for better in quotes_better:
                 worse=product_worse.quote(better.datetime)
-                
+                minutes_apart=int((better.datetime-worse["datetime"]).total_seconds()/60)
                 d.append({
                     "better_datetime": better.datetime, 
                     "better_quote":better.quote, 
                     "worse_datetime":worse["datetime"], 
                     "worse_quote":worse["quote"], 
-                    "comment": "" if (better.datetime-worse["datetime"]).total_seconds()<=86400 else _("More than one day of difference")
+                    "minutes_apart": minutes_apart, 
                 })            
             return json_data_response(True, d, "Products comparation by quote done")
         return json_data_response(False, None,"Products comparation by quote failed")
@@ -1048,7 +1054,6 @@ class ProductsComparationByQuote(APIView):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsPairs(request):
-    #fromyear=RequestGetInteger(request, "fromyear", date.today().year-3) 
     product_better=RequestGetUrl(request, "a", Products)
     product_worse=RequestGetUrl(request, "b", Products)
     
