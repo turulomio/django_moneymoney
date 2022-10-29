@@ -1571,7 +1571,6 @@ def ReportAnnualIncome(request, year):
         incomes=balance_user_by_operationstypes(year,  month,  eOperationType.Income, local_currency, local_zone)-dividends
         expenses=balance_user_by_operationstypes(year,  month,  eOperationType.Expense, local_currency, local_zone)
         fast_operations=balance_user_by_operationstypes(year,  month,  eOperationType.FastOperations, local_currency, local_zone)
-        print(fast_operations)
         dt_from=dtaware_month_start(year, month,  request.local_zone)
         dt_to=dtaware_month_end(year, month,  request.local_zone)
         gains=iom.historical_gains_net_user_between_dt(dt_from, dt_to)
@@ -1723,6 +1722,7 @@ def ReportAnnualIncomeDetails(request, year, month):
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportAnnualGainsByProductstypes(request, year):
     local_currency=request.local_currency
+    local_zone=request.local_zone
     gains=cursor_rows("""
 select 
     investments.id, 
@@ -1773,7 +1773,18 @@ group by productstypes_id""", (year, ))
                 "dividends_gross":dividends_gross, 
                 "gains_net":gains_net, 
                 "dividends_net": dividends_net, 
-        })
+        })      
+        
+    fast_operations=balance_user_by_operationstypes(year,  None,  eOperationType.FastOperations, local_currency, local_zone)
+
+    l.append({
+            "id": -1000, #Fast operations
+            "name":_("Fast operations"), 
+            "gains_gross": fast_operations, 
+            "dividends_gross":0, 
+            "gains_net":fast_operations, 
+            "dividends_net": 0, 
+    })
     return JsonResponse( l, encoder=MyDjangoJSONEncoder,     safe=False)
 
 
