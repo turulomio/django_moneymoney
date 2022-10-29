@@ -116,7 +116,7 @@ class eConcept:
     DerivativesAdjustment=68
     DerivativesGuarantee=70
     DerivativesCommission=72
-    FastInvestmentOperations=73
+    FastInvestmentOperations=74
     RolloverPaid=75
     RolloverReceived=76
 

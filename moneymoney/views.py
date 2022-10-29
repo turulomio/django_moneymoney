@@ -243,8 +243,7 @@ class Derivatives(APIView):
         qs=Accountsoperations.objects.filter(concepts__id__in=(
             eConcept.DerivativesAdjustment, 
             eConcept.DerivativesCommission, 
-            eConcept.FastInvestmentOperationsGains, 
-            eConcept.FastInvestmentOperationsLosses
+            eConcept.FastInvestmentOperations
             ))\
             .annotate(year=ExtractYear('datetime'), month=ExtractMonth('datetime'))\
             .values( 'year', 'month')\
