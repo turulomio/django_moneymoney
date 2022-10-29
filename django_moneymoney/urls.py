@@ -47,6 +47,7 @@ urlpatterns=[
     path('creditcardsoperations/payment/refund/', money_views.CreditcardsoperationsPaymentsRefund, name='CreditcardsoperationsPaymentsRefund'),
     path('concepts/migration/', money_views.ConceptsMigration, name='ConceptsMigration'),
     path('concepts/used/', money_views.ConceptsUsed, name='ConceptsUsed'),
+    path('derivatives/', money_views.Derivatives.as_view(), name='Derivatives'),
     path('banks/withbalance/', money_views.BanksWithBalance, name='BanksWithBalance'),
     path('estimations/dps/add/', money_views.EstimationsDps_add, name='EstimationsDps_add'),
     path('estimations/dps/delete/', money_views.EstimationsDps_delete, name='EstimationsDps_delete'),

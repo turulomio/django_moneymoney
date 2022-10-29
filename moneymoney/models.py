@@ -66,6 +66,7 @@ class eOperationType:
     TransferSharesOrigin=9
     TransferSharesDestiny=10
     DerivativeManagement=11
+    FastOperations=12
     
 class eTickerPosition(IntEnum):
     """It's the number to access to a python list,  not to postgresql. In postgres it will be +1"""
@@ -115,6 +116,7 @@ class eConcept:
     DerivativesAdjustment=68
     DerivativesGuarantee=70
     DerivativesCommission=72
+    FastInvestmentOperations=73
     RolloverPaid=75
     RolloverReceived=76
 

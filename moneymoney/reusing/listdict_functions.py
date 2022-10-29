@@ -283,6 +283,62 @@ def listdict2listofordereddicts(ld, keys):
         r.append(r_d)
     return r
 
+
+## Returns the dictionary that has the max value of a key. Not necessary is unique
+def listdict_max(ld, key):
+     print("TODO")
+
+## Returns maximum value of a given key. Is unique. REturns NOne if listdict is empty
+def listdict_max_value(ld, key):
+     if len(ld)>0:
+          r=ld[0][key]
+     else:
+         return None
+     for d in ld:
+         if  d[key]>r:
+             r=d[key]
+     return r
+
+## Returns minimum value of a given key. Is unique. REturns NOne if listdict is empty
+def listdict_min_value(ld, key):
+     if len(ld)>0:
+          r=ld[0][key]
+     else:
+         return None
+     for d in ld:
+         if  d[key]<r:
+             r=d[key]
+     return r
+
+## Converts a tipical groyp by lor with year, month, value into an other lor with year, 1, 2, 3 .... 12, total 
+def listdict_year_month_value_transposition(ld, key_year="year", key_month="month", key_value="value"):
+    if len(ld)==0:
+       return []
+
+    if not key_year in ld[0] or not key_month in ld[0] or not key_value in ld[0]:
+        print("Keys names are not correct in dictionary in listdict_year_month_value_transposition function")
+        return None
+
+    min_year=listdict_min_value(ld, key_year)
+    max_year=listdict_max_value(ld, key_year)
+    #Initialize result
+    r=[]
+    for year in range(min_year,max_year+1):
+        r.append({"year": year, "m1":0, "m2":0,  "m3":0, "m4":0, "m5":0, "m6":0, "m7":0, "m8":0, "m9":0, "m10":0, "m11":0, "m12":0, "total":0})
+
+    #Assign values
+    for d in ld:
+        r[d[key_year]-min_year]["m"+str(d[key_month])]=d[key_value]
+
+    #Calculate totals
+    for year in range(min_year,max_year+1):
+        d=r[year-min_year]
+        d["total"]=d["m1"]+d["m2"]+d["m3"]+d["m4"]+d["m5"]+d["m6"]+d["m7"]+d["m8"]+d["m9"]+d["m10"]+d["m11"]+d["m12"]
+
+    return r
+
+
+
 if __name__ == "__main__":
     from datetime import datetime, date
     from decimal import Decimal
@@ -295,3 +351,14 @@ if __name__ == "__main__":
             print(row)
             
     print(listdict2dictkv(ld, "a","b"))
+    
+    
+    
+    print ("-- List dict transposition")
+    o=[
+        {"year": 2022, "month": 1, "my_sum": 12},
+        {"year": 2021, "month": 2, "my_sum": 123},
+        {"year": 2019, "month": 5, "my_sum": 1},
+        {"year": 2022, "month": 12, "my_sum": 12},
+    ]
+    print(listdict_year_month_value_transposition(o,key_value="my_sum"))

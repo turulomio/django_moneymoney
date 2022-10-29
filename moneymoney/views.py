@@ -4,7 +4,8 @@ from datetime import date, timedelta
 from decimal import Decimal
 from django.conf import settings
 from django.db import transaction
-from django.db.models import prefetch_related_objects, Count
+from django.db.models import prefetch_related_objects, Count, Sum
+from django.db.models.functions.datetime import ExtractMonth, ExtractYear
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -17,7 +18,7 @@ from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_r
 from moneymoney.reusing.casts import string2list_of_integers
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date
 from moneymoney.reusing.decorators import ptimeit
-from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average
+from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average, listdict_year_month_value_transposition
 from moneymoney.reusing.percentage import Percentage,  percentage_between
 from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetArrayOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestGetListOfIntegers, RequestString, RequestListUrl, id_from_url, all_args_are_not_none,  all_args_are_not_empty,  RequestGetDecimal
 from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEncoder, json_success_response
@@ -230,6 +231,26 @@ class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
             return self.queryset.filter(accountsoperations__id=accountsoperations_id)
         else:
             return self.queryset.all()
+
+
+    
+class Derivatives(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    @extend_schema(
+        description="return 'Derivatives and Fast InvestmentOperations' accounts operations", 
+    )
+    def get(self, request, *args, **kwargs):
+        qs=Accountsoperations.objects.filter(concepts__id__in=(
+            eConcept.DerivativesAdjustment, 
+            eConcept.DerivativesCommission, 
+            eConcept.FastInvestmentOperationsGains, 
+            eConcept.FastInvestmentOperationsLosses
+            ))\
+            .annotate(year=ExtractYear('datetime'), month=ExtractMonth('datetime'))\
+            .values( 'year', 'month')\
+            .annotate(amount=Sum('amount'))\
+            .order_by('year', 'month')
+        return json_data_response(True, listdict_year_month_value_transposition(list(qs.values('year', 'month', 'amount')), key_value="amount"), "Derivatives query done")
 
 class DividendsViewSet(viewsets.ModelViewSet):
     queryset = Dividends.objects.all()
@@ -1549,13 +1570,13 @@ def ReportAnnualIncome(request, year):
         dividends=Dividends.netgains_dividends(year, month)
         incomes=balance_user_by_operationstypes(year,  month,  eOperationType.Income, local_currency, local_zone)-dividends
         expenses=balance_user_by_operationstypes(year,  month,  eOperationType.Expense, local_currency, local_zone)
-        
-        
+        fast_operations=balance_user_by_operationstypes(year,  month,  eOperationType.FastOperations, local_currency, local_zone)
+        print(fast_operations)
         dt_from=dtaware_month_start(year, month,  request.local_zone)
         dt_to=dtaware_month_end(year, month,  request.local_zone)
         gains=iom.historical_gains_net_user_between_dt(dt_from, dt_to)
         total=incomes+gains+expenses+dividends
-        return month_name, month,  year,  incomes, expenses, gains, dividends, total
+        return month_name, month,  year,  incomes, expenses, gains, dividends, total, fast_operations
     
     list_=[]
     futures=[]
@@ -1585,14 +1606,15 @@ def ReportAnnualIncome(request, year):
             futures.append(executor.submit(month_results, year, month, month_name))
         
         for future in as_completed(futures):
-            month_name, month,  year,  incomes, expenses, gains, dividends, total = future.result()
+            month_name, month,  year,  incomes, expenses, gains, dividends, total,  fast_operations= future.result()
             list_.append({
                 "id": f"{year}/{month}/", 
                 "month_number":month, 
                 "month": month_name,
                 "incomes":incomes, 
                 "expenses":expenses, 
-                "gains":gains, 
+                "gains":gains,  
+                "fast_operations": fast_operations, 
                 "dividends":dividends, 
                 "total":total,  
             })
@@ -1687,9 +1709,10 @@ def ReportAnnualIncomeDetails(request, year, month):
         return list_ioh
     ####
     r={}
-    r["expenses"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, 1,  request.local_currency, request.local_zone)
-    r["incomes"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, 2,  request.local_currency, request.local_zone)
+    r["expenses"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, eOperationType.Expense,  request.local_currency, request.local_zone)
+    r["incomes"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, eOperationType.Income,  request.local_currency, request.local_zone)
     r["dividends"]=dividends()
+    r["fast_operations"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, eOperationType.FastOperations,  request.local_currency, request.local_zone)
     r["gains"]=listdict_investmentsoperationshistorical(request, year, month, request.local_currency, request.local_zone)
 
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)

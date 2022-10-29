@@ -296,8 +296,6 @@ def var2json(var):
         return dumps(var)
     return var
 
-
-
 if __name__ == "__main__":
     def print_lor(lor):
         print("")
