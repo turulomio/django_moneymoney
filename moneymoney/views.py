@@ -2115,6 +2115,7 @@ def ReportCurrentInvestmentsOperations(request):
             ioc=IOC(io.investment, o )
             ld.append({
                 "investments": request.build_absolute_uri(reverse('investments-detail', args=(io.investment.pk, ))),
+                "name": io.investment.fullName(), # Needed for AssetsReport
                 "operationstypes":ioc.d["operationstypes"], 
                 "datetime": ioc.d["datetime"], 
                 "shares": ioc.d['shares'], 
