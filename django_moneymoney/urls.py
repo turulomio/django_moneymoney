@@ -91,6 +91,7 @@ urlpatterns=[
     path('strategies/withbalance/', money_views.StrategiesWithBalance, name='StrategiesWithBalance'),
     path('time/', money_views.Time.as_view(), name='Time'),
     path('timezones/', money_views.Timezones.as_view(), name='Timezones'),
+    path('unogenerator/working/', money_views.UnogeneratorWorking.as_view()),
     
 
     path('schema/', SpectacularAPIView.as_view(), name='schema'),

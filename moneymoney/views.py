@@ -65,6 +65,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.views import APIView
 from zoneinfo import available_timezones
 from tempfile import TemporaryDirectory
+from unogenerator.server import is_server_working
 
 
 ptimeit, show_queries
@@ -375,6 +376,18 @@ class InvestmentsClasses(APIView):
         iotm=InvestmentsOperationsTotalsManager.from_investment_queryset(qs_investments_active, timezone.now(), request)
         return JsonResponse( iotm.json_classes(), encoder=MyDjangoJSONEncoder,     safe=False)
 
+class UnogeneratorWorking(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    @extend_schema(
+        description="Returns if unogenerator server is working", 
+        request=None, 
+        responses=OpenApiTypes.OBJECT
+    )
+    def get(self, request, *args, **kwargs):
+        if is_server_working():
+            return json_success_response(True, _("Unogenerator server is working") )
+        else:
+            return json_success_response(False, _("Unogenerator server is not working") )
 
 class Time(APIView):
     permission_classes = [permissions.IsAuthenticated]
