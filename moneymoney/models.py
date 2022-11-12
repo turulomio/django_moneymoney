@@ -192,6 +192,7 @@ class Accounts(models.Model):
     active = models.BooleanField(blank=False, null=False)
     number = models.CharField(max_length=24, blank=True, null=True)
     currency = models.TextField()
+    decimals=models.IntegerField(blank=False, null=False)
 
     class Meta:
         managed = False

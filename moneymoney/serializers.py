@@ -47,7 +47,7 @@ class AccountsSerializer(serializers.HyperlinkedModelSerializer):
     fullname = serializers.SerializerMethodField()
     class Meta:
         model = Accounts
-        fields = ('url', 'id','name', 'active', 'number','currency','banks', 'localname', 'fullname')
+        fields = ('url', 'id','name', 'active', 'number','currency','banks', 'localname', 'fullname', 'decimals')
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_localname(self, obj):
