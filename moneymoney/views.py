@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from django.conf import settings
 from django.db import transaction
-from django.db.models import prefetch_related_objects, Count, Sum
+from django.db.models import prefetch_related_objects, Count, Sum, Q
 from django.db.models.functions.datetime import ExtractMonth, ExtractYear
 from django.urls import reverse
 from django.utils import timezone
@@ -1272,10 +1272,11 @@ class ProductsSearch(APIView):
             OpenApiParameter(name='search', description='String used to search products', required=True, type=str), 
         ],
     )
-    def get(self, request, *args, **kwargs):
-        search=RequestGetString(request, "search")
-        if all_args_are_not_none(search):
-            rows=cursor_rows(sql_in_one_line("""
+    @ptimeit
+    @show_queries
+    def get (self, request, *args, **kwargs):
+        def db_query_by_products_ids(ids):
+            return cursor_rows(sql_in_one_line("""
                 select 
                     products.id, 
                     last_datetime, 
@@ -1288,14 +1289,33 @@ class ProductsSearch(APIView):
                     products,
                     last_penultimate_lastyear(products.id, now()) 
                 where 
-                    products.name ilike(%s) or
-                    products.isin ilike(%s) or
-                    products.ticker_yahoo ilike(%s) or
-                    products.ticker_morningstar ilike(%s) or
-                    products.ticker_google ilike(%s) or
-                    products.ticker_quefondos ilike(%s) or
-                    products.ticker_investingcom ilike(%s)
-            """), [f"%%{search}%%"]*7)
+                    products.id in %s
+            """), (tuple(ids), ))
+        #############################################
+        search=RequestGetString(request, "search")
+        obsoletes=RequestGetBool(request, "obsoletes", True)
+        if all_args_are_not_none(search):
+            
+            if search ==":FAVORITES":
+                ids=getGlobalListOfIntegers(request, "favorites")
+            elif search==":INVESTMENTS":
+                ids=list(Investments.objects.all().values_list("products__id",  flat=True).distinct())
+            elif search==":ACTIVE_INVESTMENTS":
+                ids=list(Investments.objects.filter(active=True).values_list("products__id",  flat=True).distinct())
+            elif search==":PERSONAL":
+                ids=list(Products.objects.filter(id__lt=0).values_list('id', flat=True))
+            else: #use search text
+                ids=list(Products.objects.filter(obsolete=obsoletes).filter(
+                    Q(name__icontains=search) |
+                    Q(isin__icontains=search) |
+                    Q(ticker_yahoo__icontains=search) |
+                    Q(ticker_investingcom__icontains=search) |
+                    Q(ticker_morningstar__icontains=search) |
+                    Q(ticker_google__icontains=search) |
+                    Q(ticker_quefondos__icontains=search)
+                ).values_list('id', flat=True))
+            print(ids[:10],  len(ids))
+            rows=db_query_by_products_ids(ids) if len(ids)>0 else []
             for row in rows:
                 row["product"]=request.build_absolute_uri(reverse('products-detail', args=(row['id'], )))
                 row["percentage_last_year"]=None if row["lastyear"] is None else Percentage(row["last"]-row["lastyear"], row["lastyear"])
