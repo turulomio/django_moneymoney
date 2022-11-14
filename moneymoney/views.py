@@ -1272,8 +1272,6 @@ class ProductsSearch(APIView):
             OpenApiParameter(name='search', description='String used to search products', required=True, type=str), 
         ],
     )
-    @ptimeit
-    @show_queries
     def get (self, request, *args, **kwargs):
         def db_query_by_products_ids(ids):
             return cursor_rows(sql_in_one_line("""
@@ -1314,7 +1312,6 @@ class ProductsSearch(APIView):
                     Q(ticker_google__icontains=search) |
                     Q(ticker_quefondos__icontains=search)
                 ).values_list('id', flat=True))
-            print(ids[:10],  len(ids))
             rows=db_query_by_products_ids(ids) if len(ids)>0 else []
             for row in rows:
                 row["product"]=request.build_absolute_uri(reverse('products-detail', args=(row['id'], )))
