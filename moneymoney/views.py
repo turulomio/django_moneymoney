@@ -1291,7 +1291,6 @@ class ProductsSearch(APIView):
             """), (tuple(ids), ))
         #############################################
         search=RequestGetString(request, "search")
-        obsoletes=RequestGetBool(request, "obsoletes", True)
         if all_args_are_not_none(search):
             
             if search ==":FAVORITES":
@@ -1303,7 +1302,7 @@ class ProductsSearch(APIView):
             elif search==":PERSONAL":
                 ids=list(Products.objects.filter(id__lt=0).values_list('id', flat=True))
             else: #use search text
-                ids=list(Products.objects.filter(obsolete=obsoletes).filter(
+                ids=list(Products.objects.filter(
                     Q(name__icontains=search) |
                     Q(isin__icontains=search) |
                     Q(ticker_yahoo__icontains=search) |
