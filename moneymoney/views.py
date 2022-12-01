@@ -12,6 +12,7 @@ from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
+
 from json import loads
 from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotals, InvestmentsOperationsTotalsManager, StrategyIO
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict, show_queries
@@ -59,7 +60,7 @@ from moneymoney.models import (
 )
 from moneymoney import serializers
 from os import path
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework import viewsets, permissions, status
 from rest_framework.views import APIView
@@ -1254,6 +1255,13 @@ class ProductsViewSet(viewsets.ModelViewSet):
         self.perform_destroy(instance)
         return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
     
+
+    @action(detail=True, methods=['POST'], name='Delete last quote of the product', url_path="delete_last_quote", url_name='delete_last_quote', permission_classes=[permissions.IsAuthenticated])
+    def delete_last_quote(self, request, pk=None):
+        product = self.get_object()
+        instance = Quotes.objects.filter(products=product).order_by("-datetime")[0]
+        self.perform_destroy(instance)
+        return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
 
 class ProductspairsViewSet(viewsets.ModelViewSet):
     queryset = Productspairs.objects.all()
