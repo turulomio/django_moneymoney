@@ -15,7 +15,7 @@ from drf_spectacular.types import OpenApiTypes
 
 from json import loads
 from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotals, InvestmentsOperationsTotalsManager, StrategyIO
-from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict, show_queries
+from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict, show_queries, show_queries_function
 from moneymoney.reusing.casts import string2list_of_integers
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date
 from moneymoney.reusing.decorators import ptimeit
@@ -69,7 +69,7 @@ from tempfile import TemporaryDirectory
 from unogenerator.server import is_server_working
 
 
-ptimeit, show_queries
+ptimeit, show_queries, show_queries_function
 
 
 
@@ -1262,25 +1262,13 @@ class ProductsViewSet(viewsets.ModelViewSet):
         instance = Quotes.objects.filter(products=product).order_by("-datetime")[0]
         self.perform_destroy(instance)
         return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
+        
 
-class ProductspairsViewSet(viewsets.ModelViewSet):
-    queryset = Productspairs.objects.all()
-    serializer_class = serializers.ProductspairsSerializer
-    permission_classes = [permissions.IsAuthenticated]  
-
-class ProductstypesViewSet(viewsets.ModelViewSet):
-    queryset = Productstypes.objects.all()
-    serializer_class = serializers.ProductstypesSerializer
-    permission_classes = [permissions.IsAuthenticated]  
-    
-class ProductsSearch(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    @extend_schema(
-        parameters=[
-            OpenApiParameter(name='search', description='String used to search products', required=True, type=str), 
-        ],
-    )
-    def get (self, request, *args, **kwargs):
+    @action(detail=False, methods=["GET"], url_path='search_with_quotes', url_name='search_with_quotes')
+    def search_with_quotes(self, request, *args, **kwargs):
+        """
+            Search products and return them with last, penultimate, and last year quotes
+        """
         def db_query_by_products_ids(ids):
             return cursor_rows(sql_in_one_line("""
                 select 
@@ -1297,7 +1285,7 @@ class ProductsSearch(APIView):
                 where 
                     products.id in %s
             """), (tuple(ids), ))
-        #############################################
+        #############################################        
         search=RequestGetString(request, "search")
         if all_args_are_not_none(search):
             
@@ -1325,6 +1313,16 @@ class ProductsSearch(APIView):
                 row["percentage_last_year"]=None if row["lastyear"] is None else Percentage(row["last"]-row["lastyear"], row["lastyear"])
             return json_data_response(True, rows, "Products search done")
         return json_data_response(False, rows, "Products search error")
+
+class ProductspairsViewSet(viewsets.ModelViewSet):
+    queryset = Productspairs.objects.all()
+    serializer_class = serializers.ProductspairsSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
+class ProductstypesViewSet(viewsets.ModelViewSet):
+    queryset = Productstypes.objects.all()
+    serializer_class = serializers.ProductstypesSerializer
+    permission_classes = [permissions.IsAuthenticated]  
 
 
 @api_view(['POST', ])
