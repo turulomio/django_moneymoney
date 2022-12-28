@@ -28,36 +28,7 @@ from requests import delete, post
 from subprocess import run
 from urllib import request as urllib_request
 
-from moneymoney.models import (
-    Banks, 
-    Accounts, 
-    Accountsoperations, 
-    Comment, 
-    Concepts, 
-    Creditcards, 
-    Creditcardsoperations, 
-    Dividends,
-    Dps, 
-    Investments, 
-    Investmentsoperations, 
-    Leverages, 
-    Operationstypes, 
-    Orders, 
-    Products, 
-    Productspairs, 
-    Productstypes, 
-    Quotes, 
-    Stockmarkets, 
-    Strategies, 
-    currencies_in_accounts, 
-    percentage_to_selling_point, 
-    total_balance, 
-    balance_user_by_operationstypes, 
-    eComment, 
-    eConcept, 
-    eOperationType, 
-    RANGE_RECOMENDATION_CHOICES, 
-)
+from moneymoney import models
 from moneymoney import serializers
 from os import path
 from rest_framework.decorators import api_view, permission_classes, action
@@ -126,8 +97,8 @@ def AssetsReport(request):
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
 def ConceptsMigration(request):         
-    concept_from=RequestUrl(request, "from", Concepts)
-    concept_to=RequestUrl(request, "to", Concepts)
+    concept_from=RequestUrl(request, "from", models.Concepts)
+    concept_to=RequestUrl(request, "to", models.Concepts)
     if concept_from is not None and concept_to is not None:
         execute("update accountsoperations set concepts_id=%s where concepts_id=%s", (concept_to.id, concept_from.id))
         execute("update creditcardsoperations set concepts_id=%s where concepts_id=%s", (concept_to.id, concept_from.id))
@@ -140,7 +111,7 @@ def ConceptsMigration(request):
 @permission_classes([permissions.IsAuthenticated, ])
 def ConceptsUsed(request): 
     """Returns concepts with use  and migration information"""
-    qs=Concepts.objects.all() 
+    qs=models.Concepts.objects.all() 
     r=[]
     for o in qs:
         r.append({
@@ -168,7 +139,7 @@ def CreditcardsPayments(request):
     """
         Returns information of historical credit card payments
     """
-    creditcard=RequestGetUrl(request, "creditcard", Creditcards)
+    creditcard=RequestGetUrl(request, "creditcard", models.Creditcards)
     
     if creditcard is not None:
     
@@ -198,13 +169,13 @@ def CreditcardsPayments(request):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 class ConceptsViewSet(viewsets.ModelViewSet):
-    queryset = Concepts.objects.all()
+    queryset = models.Concepts.objects.all()
     serializer_class = serializers.ConceptsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
 
 class CreditcardsViewSet(viewsets.ModelViewSet):
-    queryset = Creditcards.objects.all()
+    queryset = models.Creditcards.objects.all()
     serializer_class = serializers.CreditcardsSerializer
     permission_classes = [permissions.IsAuthenticated]      
     
@@ -221,7 +192,7 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
 
 
 class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
-    queryset = Creditcardsoperations.objects.all().select_related("creditcards").select_related("creditcards__accounts")
+    queryset = models.Creditcardsoperations.objects.all().select_related("creditcards").select_related("creditcards__accounts")
     serializer_class = serializers.CreditcardsoperationsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
@@ -242,10 +213,10 @@ class Derivatives(APIView):
         description="return 'Derivatives and Fast InvestmentOperations' accounts operations", 
     )
     def get(self, request, *args, **kwargs):
-        qs=Accountsoperations.objects.filter(concepts__id__in=(
-            eConcept.DerivativesAdjustment, 
-            eConcept.DerivativesCommission, 
-            eConcept.FastInvestmentOperations
+        qs=models.Accountsoperations.objects.filter(concepts__id__in=(
+            models.eConcept.DerivativesAdjustment, 
+            models.eConcept.DerivativesCommission, 
+            models.eConcept.FastInvestmentOperations
             ))\
             .annotate(year=ExtractYear('datetime'), month=ExtractMonth('datetime'))\
             .values( 'year', 'month')\
@@ -254,7 +225,7 @@ class Derivatives(APIView):
         return json_data_response(True, listdict_year_month_value_transposition(list(qs.values('year', 'month', 'amount')), key_value="amount"), "Derivatives query done")
 
 class DividendsViewSet(viewsets.ModelViewSet):
-    queryset = Dividends.objects.all()
+    queryset = models.Dividends.objects.all()
     serializer_class = serializers.DividendsSerializer
     permission_classes = [permissions.IsAuthenticated] 
     
@@ -273,28 +244,28 @@ class DividendsViewSet(viewsets.ModelViewSet):
             return self.queryset.order_by("datetime")
     
 class DpsViewSet(viewsets.ModelViewSet):
-    queryset = Dps.objects.all()
+    queryset = models.Dps.objects.all()
     serializer_class = serializers.DpsSerializer
     permission_classes = [permissions.IsAuthenticated]      
     
     def get_queryset(self):
-        product=RequestGetUrl(self.request, 'product', Products)
+        product=RequestGetUrl(self.request, 'product', models.Products)
         if all_args_are_not_none(product):
             return self.queryset.filter(products=product)
         return self.queryset
 
 class OrdersViewSet(viewsets.ModelViewSet):
-    queryset = Orders.objects.all()
+    queryset = models.Orders.objects.all()
     serializer_class = serializers.OrdersSerializer
     permission_classes = [permissions.IsAuthenticated]  
 
 class OperationstypesViewSet(viewsets.ModelViewSet):
-    queryset = Operationstypes.objects.all()
+    queryset = models.Operationstypes.objects.all()
     serializer_class = serializers.OperationstypesSerializer
     permission_classes = [permissions.IsAuthenticated]  
 
 class StrategiesViewSet(viewsets.ModelViewSet):
-    queryset = Strategies.objects.all()
+    queryset = models.Strategies.objects.all()
     serializer_class = serializers.StrategiesSerializer
     permission_classes = [permissions.IsAuthenticated]  
         
@@ -307,7 +278,7 @@ class StrategiesViewSet(viewsets.ModelViewSet):
     )
     def list(self, request):
         active=RequestGetBool(request, "active")
-        investment=RequestGetUrl(request, "investment", Investments)
+        investment=RequestGetUrl(request, "investment", models.Investments)
         type=RequestGetInteger(request, "type")
         if all_args_are_not_none(active, investment, type):
             self.queryset=self.queryset.filter(dt_to__isnull=active,  investments__contains=investment.id, type=type)
@@ -324,12 +295,12 @@ class StrategiesViewSet(viewsets.ModelViewSet):
 def StrategiesWithBalance(request):        
     active=RequestGetBool(request, 'active')
     if active is None:
-        qs=Strategies.objects.all() 
+        qs=models.Strategies.objects.all() 
     else:
         if active is True:
-            qs=Strategies.objects.filter(dt_to__isnull=True)
+            qs=models.Strategies.objects.filter(dt_to__isnull=True)
         else:
-            qs=Strategies.objects.filter(dt_to__isnull=False)
+            qs=models.Strategies.objects.filter(dt_to__isnull=False)
 
     r=[]
     for strategy in qs:
@@ -337,7 +308,7 @@ def StrategiesWithBalance(request):
         s=StrategyIO(request, strategy)
         gains_current_net_user=s.current_gains_net_user() 
         gains_historical_net_user=s.historical_gains_net_user()
-        dividends_net_user=Dividends.net_gains_baduser_between_datetimes_for_some_investments(strategy.investments_ids(), strategy.dt_from, strategy.dt_to_for_comparations())
+        dividends_net_user=models.Dividends.net_gains_baduser_between_datetimes_for_some_investments(strategy.investments_ids(), strategy.dt_from, strategy.dt_to_for_comparations())
         r.append({
             "id": strategy.id,  
             "url": request.build_absolute_uri(reverse('strategies-detail', args=(strategy.pk, ))), 
@@ -373,7 +344,7 @@ class InvestmentsClasses(APIView):
         responses=OpenApiTypes.OBJECT
     )
     def get(self, request, *args, **kwargs):
-        qs_investments_active=Investments.objects.filter(active=True).select_related("products").select_related("products__productstypes").select_related("accounts").select_related("products__leverages")
+        qs_investments_active=models.Investments.objects.filter(active=True).select_related("products").select_related("products__productstypes").select_related("accounts").select_related("products__leverages")
         iotm=InvestmentsOperationsTotalsManager.from_investment_queryset(qs_investments_active, timezone.now(), request)
         return JsonResponse( iotm.json_classes(), encoder=MyDjangoJSONEncoder,     safe=False)
 
@@ -406,7 +377,7 @@ class Timezones(APIView):
 
 
 class InvestmentsViewSet(viewsets.ModelViewSet):
-    queryset = Investments.objects.select_related("accounts").all()
+    queryset = models.Investments.objects.select_related("accounts").all()
     serializer_class = serializers.InvestmentsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
@@ -426,7 +397,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
 
 
 class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
-    queryset = Investmentsoperations.objects.select_related("investments").select_related("investments__products").all()
+    queryset = models.Investmentsoperations.objects.select_related("investments").select_related("investments__products").all()
     serializer_class = serializers.InvestmentsoperationsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
@@ -441,20 +412,20 @@ class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
 def AccountTransfer(request): 
-    account_origin=RequestUrl(request, 'account_origin', Accounts)#Returns an account object
-    account_destiny=RequestUrl(request, 'account_destiny', Accounts)
+    account_origin=RequestUrl(request, 'account_origin', models.Accounts)#Returns an account object
+    account_destiny=RequestUrl(request, 'account_destiny', models.Accounts)
     datetime=RequestDtaware(request, 'datetime')
     amount=RequestDecimal(request, 'amount')
     commission=RequestDecimal(request, 'commission',  0)
-    ao_origin=RequestUrl(request, 'ao_origin', Accountsoperations)
-    ao_destiny=RequestUrl(request, 'ao_destiny', Accountsoperations)
-    ao_commission=RequestUrl(request, 'ao_commission', Accountsoperations)
+    ao_origin=RequestUrl(request, 'ao_origin', models.Accountsoperations)
+    ao_destiny=RequestUrl(request, 'ao_destiny', models.Accountsoperations)
+    ao_commission=RequestUrl(request, 'ao_commission', models.Accountsoperations)
     if request.method=="POST":
         if ( account_destiny is not None and account_origin is not None and datetime is not None and amount is not None and amount >=0 and commission is not None and commission >=0 and account_destiny!=account_origin):
             if commission >0:
-                ao_commission=Accountsoperations()
+                ao_commission=models.Accountsoperations()
                 ao_commission.datetime=datetime
-                concept_commision=Concepts.objects.get(pk=eConcept.BankCommissions)
+                concept_commision=models.Concepts.objects.get(pk=models.eConcept.BankCommissions)
                 ao_commission.concepts=concept_commision
                 ao_commission.operationstypes=concept_commision.operationstypes
                 ao_commission.amount=-commission
@@ -462,9 +433,9 @@ def AccountTransfer(request):
                 ao_commission.save()
 
             #Origin
-            ao_origin=Accountsoperations()
+            ao_origin=models.Accountsoperations()
             ao_origin.datetime=datetime
-            concept_transfer_origin=Concepts.objects.get(pk=eConcept.TransferOrigin)
+            concept_transfer_origin=models.Concepts.objects.get(pk=models.eConcept.TransferOrigin)
             ao_origin.concepts=concept_transfer_origin
             ao_origin.operationstypes=concept_transfer_origin.operationstypes
             ao_origin.amount=-amount
@@ -473,9 +444,9 @@ def AccountTransfer(request):
             print(ao_origin)
 
             #Destiny
-            ao_destiny=Accountsoperations()
+            ao_destiny=models.Accountsoperations()
             ao_destiny.datetime=datetime
-            concept_transfer_destiny=Concepts.objects.get(pk=eConcept.TransferDestiny)
+            concept_transfer_destiny=models.Concepts.objects.get(pk=models.eConcept.TransferDestiny)
             ao_destiny.concepts=concept_transfer_destiny
             ao_destiny.operationstypes=concept_transfer_destiny.operationstypes
             ao_destiny.amount=amount
@@ -483,12 +454,12 @@ def AccountTransfer(request):
             ao_destiny.save()
 
             #Encoding comments
-            ao_origin.comment=Comment().encode(eComment.AccountTransferOrigin, ao_origin, ao_destiny, ao_commission)
+            ao_origin.comment=models.Comment().encode(models.eComment.AccountTransferOrigin, ao_origin, ao_destiny, ao_commission)
             ao_origin.save()
-            ao_destiny.comment=Comment().encode(eComment.AccountTransferDestiny, ao_origin, ao_destiny, ao_commission)
+            ao_destiny.comment=models.Comment().encode(models.eComment.AccountTransferDestiny, ao_origin, ao_destiny, ao_commission)
             ao_destiny.save()
             if ao_commission is not None:
-                ao_commission.comment=Comment().encode(eComment.AccountTransferOriginCommission, ao_origin, ao_destiny, ao_commission)
+                ao_commission.comment=models.Comment().encode(models.eComment.AccountTransferOriginCommission, ao_origin, ao_destiny, ao_commission)
                 ao_commission.save()
             return JsonResponse( True,  encoder=MyDjangoJSONEncoder,     safe=False)
         else:
@@ -509,7 +480,7 @@ def AccountTransfer(request):
         return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)  
 
 class AccountsViewSet(viewsets.ModelViewSet):
-    queryset = Accounts.objects.select_related("banks").all()
+    queryset = models.Accounts.objects.select_related("banks").all()
     serializer_class = serializers.AccountsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
@@ -535,7 +506,7 @@ class AccountsViewSet(viewsets.ModelViewSet):
         
 
 class AccountsoperationsViewSet(viewsets.ModelViewSet):
-    queryset = Accountsoperations.objects.all()
+    queryset = models.Accountsoperations.objects.all()
     serializer_class = serializers.AccountsoperationsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
@@ -549,7 +520,7 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
             return self.queryset.select_related("accounts").all()
             
 class BanksViewSet(viewsets.ModelViewSet):
-    queryset = Banks.objects.all()
+    queryset = models.Banks.objects.all()
     permission_classes = [permissions.IsAuthenticated]  
     serializer_class =  serializers.BanksSerializer
 
@@ -565,9 +536,9 @@ class BanksViewSet(viewsets.ModelViewSet):
 def BanksWithBalance(request):
     active=RequestGetBool(request, 'active')
     if active is None:
-        qs=Banks.objects.all() 
+        qs=models.Banks.objects.all() 
     else:
-        qs=Banks.objects.filter(active=active)
+        qs=models.Banks.objects.filter(active=active)
             
     r=[]
     for o in qs:
@@ -594,11 +565,11 @@ def AccountsWithBalance(request):
     bank_id=RequestGetInteger(request, 'bank')
 
     if bank_id is not None:
-        qs=Accounts.objects.select_related("banks").filter(banks__id=bank_id,   active=True)
+        qs=models.Accounts.objects.select_related("banks").filter(banks__id=bank_id,   active=True)
     elif active is not None:
-        qs=Accounts.objects.select_related("banks").filter( active=active)
+        qs=models.Accounts.objects.select_related("banks").filter( active=active)
     else:
-        qs=Accounts.objects.select_related("banks").all()
+        qs=models.Accounts.objects.select_related("banks").all()
             
     r=[]
     for o in qs:
@@ -637,10 +608,10 @@ def AccountsoperationsWithBalance(request):
     
     
     if all_args_are_not_none(accounts_id, year, month):
-        account=Accounts.objects.get(pk=accounts_id)
+        account=models.Accounts.objects.get(pk=accounts_id)
         dt_initial=dtaware_month_start(year, month, request.local_zone)
         initial_balance=account.balance( dt_initial, request.local_currency)[0]
-        qs=Accountsoperations.objects.select_related("accounts").select_related("operationstypes").select_related("concepts").filter(datetime__year=year, datetime__month=month, accounts__id=accounts_id).order_by("datetime")
+        qs=models.Accountsoperations.objects.select_related("accounts").select_related("operationstypes").select_related("concepts").filter(datetime__year=year, datetime__month=month, accounts__id=accounts_id).order_by("datetime")
 
         r=[]
         for o in qs:
@@ -653,7 +624,7 @@ def AccountsoperationsWithBalance(request):
                 "amount": o.amount, 
                 "balance":  initial_balance + o.amount, 
                 "comment": o.comment, 
-                "comment_decoded": Comment().decode(o.comment), 
+                "comment_decoded": models.Comment().decode(o.comment), 
                 "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.pk, ))), 
                 "currency": o.accounts.currency, 
                 "is_editable": o.is_editable(), 
@@ -667,25 +638,25 @@ def AccountsoperationsWithBalance(request):
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
 def CreditcardsoperationsPayments(request, pk):
-    creditcard=Creditcards.objects.get(pk=pk)
+    creditcard=models.Creditcards.objects.get(pk=pk)
     dt_payment=RequestDtaware(request, "dt_payment")
     cco_ids=RequestListOfIntegers(request, "cco")
     
     if creditcard is not None and dt_payment is not None and cco_ids is not None:
-        qs_cco=Creditcardsoperations.objects.all().filter(pk__in=(cco_ids))
+        qs_cco=models.Creditcardsoperations.objects.all().filter(pk__in=(cco_ids))
         sumamount=0
         for o in qs_cco:
             sumamount=sumamount+o.amount
         
-        c=Accountsoperations()
+        c=models.Accountsoperations()
         c.datetime=dt_payment
-        c.concepts=Concepts.objects.get(pk=eConcept.CreditCardBilling)
+        c.concepts=models.Concepts.objects.get(pk=models.eConcept.CreditCardBilling)
         c.operationstypes=c.concepts.operationstypes
         c.amount=sumamount
         c.accounts=creditcard.accounts
         c.comment="Transaction in progress"
         c.save()
-        c.comment=Comment().encode(eComment.CreditCardBilling, creditcard, c)
+        c.comment=models.Comment().encode(models.eComment.CreditCardBilling, creditcard, c)
         c.save()
 
         #Modifica el registro y lo pone como paid y la datetime de pago y añade la opercuenta
@@ -706,10 +677,10 @@ def CreditcardsoperationsPaymentsRefund(request):
     
     accountsoperations_id=RequestInteger(request, 'accountsoperations_id')
     if accountsoperations_id is not None:
-        ao=Accountsoperations.objects.get(pk=accountsoperations_id)
+        ao=models.Accountsoperations.objects.get(pk=accountsoperations_id)
     
     if ao is not None:
-        Creditcardsoperations.objects.filter(accountsoperations_id=ao.id).update(paid_datetime=None,  paid=False, accountsoperations_id=None)
+        models.Creditcardsoperations.objects.filter(accountsoperations_id=ao.id).update(paid_datetime=None,  paid=False, accountsoperations_id=None)
         ao.delete() #Must be at the end due to middle queries
 
         return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
@@ -723,7 +694,7 @@ def CreditcardsoperationsWithBalance(request):
     paid=RequestGetBool(request, 'paid')
     if creditcard_id is not None and paid is not None:
         initial_balance=0
-        qs=Creditcardsoperations.objects.select_related("creditcards").select_related("operationstypes").select_related("concepts").filter(paid=paid, creditcards__id=creditcard_id).order_by("datetime")
+        qs=models.Creditcardsoperations.objects.select_related("creditcards").select_related("operationstypes").select_related("concepts").filter(paid=paid, creditcards__id=creditcard_id).order_by("datetime")
 
     r=[]
     for o in qs:
@@ -735,7 +706,7 @@ def CreditcardsoperationsWithBalance(request):
             "operationstypes":request.build_absolute_uri(reverse('operationstypes-detail', args=(o.operationstypes.pk, ))), 
             "amount": o.amount, 
             "balance":  initial_balance + o.amount, 
-            "comment": Comment().decode(o.comment), 
+            "comment": models.Comment().decode(o.comment), 
             "creditcards":request.build_absolute_uri(reverse('creditcards-detail', args=(o.creditcards.pk, ))), 
             "paid": o.paid, 
             "paid_datetime": o.paid_datetime, 
@@ -752,9 +723,9 @@ def CreditcardsWithBalance(request):
     active=RequestGetBool(request, 'active')
     
     if accounts_id is not None and active is not None:
-        qs=Creditcards.objects.select_related("accounts").filter(accounts__id=accounts_id, active=active).order_by("name")
+        qs=models.Creditcards.objects.select_related("accounts").filter(accounts__id=accounts_id, active=active).order_by("name")
     else:
-        qs=Creditcards.objects.select_related("accounts").order_by("name")
+        qs=models.Creditcards.objects.select_related("accounts").order_by("name")
 
     r=[]
     for o in qs:
@@ -788,11 +759,11 @@ def InvestmentsWithBalance(request):
     bank_id=RequestGetInteger(request, 'bank', None)
 
     if bank_id is not None:
-        qs=Investments.objects.select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages").filter(accounts__banks__id=bank_id,   active=True)
+        qs=models.Investments.objects.select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages").filter(accounts__banks__id=bank_id,   active=True)
     elif active is not None:
-        qs=Investments.objects.select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages").filter( active=active)
+        qs=models.Investments.objects.select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages").filter( active=active)
     else:
-        qs=Investments.objects.select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages").all()
+        qs=models.Investments.objects.select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages").all()
             
     r=[]
     for o in qs:
@@ -817,7 +788,7 @@ def InvestmentsWithBalance(request):
             "currency": o.products.currency, 
             "currency_account": o.accounts.currency, 
             "percentage_invested": percentage_invested, 
-            "percentage_selling_point": percentage_to_selling_point(iot.io_total_current["shares"], iot.investment.selling_price, iot.investment.products.basic_results()['last']), 
+            "percentage_selling_point": models.percentage_to_selling_point(iot.io_total_current["shares"], iot.investment.selling_price, iot.investment.products.basic_results()['last']), 
             "selling_expiration": o.selling_expiration, 
             "shares":iot.io_total_current["shares"], 
             "balance_percentage": o.balance_percentage, 
@@ -838,7 +809,7 @@ def InvestmentsWithBalance(request):
 def InvestmentsoperationsFull(request):
     ids=RequestGetListOfIntegers(request, "investments")
     r=[]
-    for o in Investments.objects.filter(id__in=ids).select_related("accounts", "products", "products__productstypes", "products__leverages"):
+    for o in models.Investments.objects.filter(id__in=ids).select_related("accounts", "products", "products__productstypes", "products__leverages"):
         r.append(InvestmentsOperations.from_investment(request, o, timezone.now(), request.local_currency).json())
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
@@ -846,7 +817,7 @@ def InvestmentsoperationsFull(request):
 @api_view(['POST', ]) 
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsoperationsFullSimulation(request):
-    investments=RequestListUrl(request, "investments", Investments)
+    investments=RequestListUrl(request, "investments", models.Investments)
     dt=RequestDtaware(request, "dt")
     local_currency=RequestString(request, "local_currency")
     listdict=request.data["operations"]
@@ -861,7 +832,7 @@ def InvestmentsoperationsFullSimulation(request):
 @api_view(['GET', ]) 
 @permission_classes([permissions.IsAuthenticated, ])
 def StrategiesSimulation(request):
-    strategy=RequestGetUrl(request, "strategy", Strategies)
+    strategy=RequestGetUrl(request, "strategy", models.Strategies)
     dt=RequestGetDtaware(request, "dt")
     temporaltable=RequestGetString(request, "temporaltable")
     simulated_operations=[]
@@ -876,7 +847,7 @@ def StrategiesSimulation(request):
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsoperationsEvolutionChart(request):
     id=RequestGetInteger(request, "investment")
-    io=InvestmentsOperations.from_investment(request, Investments.objects.get(pk=id), timezone.now(), request.local_currency)
+    io=InvestmentsOperations.from_investment(request, models.Investments.objects.get(pk=id), timezone.now(), request.local_currency)
     return JsonResponse( io.chart_evolution(), encoder=MyDjangoJSONEncoder,     safe=False)
 
 
@@ -886,7 +857,7 @@ def InvestmentsoperationsEvolutionChart(request):
 def InvestmentsChangeSellingPrice(request):
     selling_price=RequestDecimal(request, "selling_price")
     selling_expiration=RequestDate(request, "selling_expiration")
-    investments=RequestListUrl(request, "investments", Investments)
+    investments=RequestListUrl(request, "investments", models.Investments)
     
     if investments is not None and selling_price is not None: #Pricce 
         for inv in investments:
@@ -902,15 +873,15 @@ def InvestmentsChangeSellingPrice(request):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsOperationsTotalManager_investments_same_product(request):
-    product=RequestGetUrl(request, "product", Products)
+    product=RequestGetUrl(request, "product", models.Products)
     if product is not None:
-        qs_investments=Investments.objects.filter(products=product, active=True)
+        qs_investments=models.Investments.objects.filter(products=product, active=True)
         iotm=InvestmentsOperationsTotalsManager.from_investment_queryset(qs_investments,  timezone.now(), request)
         return JsonResponse( iotm.json(), encoder=MyDjangoJSONEncoder,     safe=False)
     return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
 
 class LeveragesViewSet(viewsets.ModelViewSet):
-    queryset = Leverages.objects.all()
+    queryset = models.Leverages.objects.all()
     serializer_class = serializers.LeveragesSerializer
     permission_classes = [permissions.IsAuthenticated]  
 
@@ -921,13 +892,13 @@ def OrdersList(request):
     expired=RequestGetBool(request, 'expired')
     executed=RequestGetBool(request, 'executed')
     if active is not None:
-        qs=Orders.objects.filter(expiration__gte=date.today(),  executed__isnull=True).select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__productstypes").select_related("investments__products__leverages")
+        qs=models.Orders.objects.filter(expiration__gte=date.today(),  executed__isnull=True).select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__productstypes").select_related("investments__products__leverages")
     elif expired is not None:
-        qs=Orders.objects.filter(expiration__lte=date.today(),  executed__isnull=True).select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__productstypes").select_related("investments__products__leverages")
+        qs=models.Orders.objects.filter(expiration__lte=date.today(),  executed__isnull=True).select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__productstypes").select_related("investments__products__leverages")
     elif executed is not None:
-        qs=Orders.objects.filter(executed__isnull=False).select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__productstypes").select_related("investments__products__leverages")
+        qs=models.Orders.objects.filter(executed__isnull=False).select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__productstypes").select_related("investments__products__leverages")
     else:
-        qs=Orders.objects.all().select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__productstypes").select_related("investments__products__leverages")
+        qs=models.Orders.objects.all().select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__productstypes").select_related("investments__products__leverages")
 
     r=[]
     for o in qs:
@@ -971,7 +942,7 @@ class ProductsFavorites(APIView):
         responses=OpenApiTypes.OBJECT
     )
     def post(self, request):
-        product=RequestUrl(request, "product", Products)
+        product=RequestUrl(request, "product", models.Products)
         if product is not None:
             favorites = getGlobalListOfIntegers(request, "favorites")
             if product.id in favorites:
@@ -987,7 +958,7 @@ class ProductsFavorites(APIView):
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsInformation(request):
     first_year=RequestGetInteger(request, "first_year",  2005)
-    product=RequestGetUrl(request, "product", Products)
+    product=RequestGetUrl(request, "product", models.Products)
     
     if product is None:
         return Response({'status': "Product wan't found"}, status=status.HTTP_404_NOT_FOUND)
@@ -1065,12 +1036,12 @@ class ProductsComparationByQuote(APIView):
         responses=OpenApiTypes.OBJECT
     )
     def get(self, request, *args, **kwargs):
-        product_better=RequestGetUrl(request, "a", Products)
-        product_worse=RequestGetUrl(request, "b", Products)
+        product_better=RequestGetUrl(request, "a", models.Products)
+        product_worse=RequestGetUrl(request, "b", models.Products)
         quote_better_from=RequestGetDecimal(request, "quote_better_from")
         quote_better_to=RequestGetDecimal(request, "quote_better_to")
         if all_args_are_not_empty(product_better, product_worse, quote_better_from, quote_better_to):
-            quotes_better=Quotes.objects.filter(products=product_better, quote__gte=quote_better_from, quote__lte=quote_better_to).order_by("datetime")
+            quotes_better=models.Quotes.objects.filter(products=product_better, quote__gte=quote_better_from, quote__lte=quote_better_to).order_by("datetime")
             d=[]
             for better in quotes_better:
                 worse=product_worse.quote(better.datetime)
@@ -1088,8 +1059,8 @@ class ProductsComparationByQuote(APIView):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsPairs(request):
-    product_better=RequestGetUrl(request, "a", Products)
-    product_worse=RequestGetUrl(request, "b", Products)
+    product_better=RequestGetUrl(request, "a", models.Products)
+    product_worse=RequestGetUrl(request, "b", models.Products)
     
     if product_better.currency==product_worse.currency:
         common_quotes=cursor_rows("""
@@ -1181,7 +1152,7 @@ def ProductsPairs(request):
 ## products/quotes/ohcl?product=url&date=2022-4-1
 def ProductsQuotesOHCL(request):
     if request.method=="GET":
-        product=RequestGetUrl(request, "product", Products)
+        product=RequestGetUrl(request, "product", models.Products)
         year=RequestGetInteger(request, "year")
         month=RequestGetInteger(request, "month")
         
@@ -1198,10 +1169,10 @@ def ProductsQuotesOHCL(request):
             return JsonResponse( ld_ohcl, encoder=MyDjangoJSONEncoder, safe=False)
             
     elif request.method=="DELETE":
-        product=RequestUrl(request, "product", Products)
+        product=RequestUrl(request, "product", models.Products)
         date=RequestDate(request, "date")
         if product is not None and date is not None:
-            qs=Quotes.objects.filter(products=product, datetime__date=date)
+            qs=models.Quotes.objects.filter(products=product, datetime__date=date)
             qs.delete()
             return JsonResponse(True, encoder=MyDjangoJSONEncoder, safe=False)
 
@@ -1211,7 +1182,7 @@ def ProductsQuotesOHCL(request):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsRanges(request):
-    product=RequestGetUrl(request, "product", Products)
+    product=RequestGetUrl(request, "product", models.Products)
     totalized_operations=RequestGetBool(request, "totalized_operations") 
     percentage_between_ranges=RequestGetInteger(request, "percentage_between_ranges")
 
@@ -1224,9 +1195,9 @@ def ProductsRanges(request):
     recomendation_methods=RequestGetInteger(request, "recomendation_methods")
     investments_ids=RequestGetArrayOfIntegers(request,"investments[]") 
     if len(investments_ids)>0:
-        qs_investments=Investments.objects.filter(id__in=investments_ids)
+        qs_investments=models.Investments.objects.filter(id__in=investments_ids)
     else:
-        qs_investments=Investments.objects.none()
+        qs_investments=models.Investments.objects.none()
     additional_ranges=RequestGetInteger(request, "additional_ranges", 3)
 
     if all_args_are_not_none(product, totalized_operations,  percentage_between_ranges, percentage_gains, amount_to_invest, recomendation_methods):
@@ -1243,7 +1214,7 @@ def ProductsRanges(request):
 ## Solo afectaría a personal products<0. Solo investments, ya que todas las demás dependen de produto y habría que borrarllas
 ## Es decir si borro un producto, borraría quotes, splits, estimatiosn.....
 class ProductsViewSet(viewsets.ModelViewSet):
-    queryset = Products.objects.select_related("productstypes").select_related("leverages").select_related("stockmarkets").all().annotate(uses=Count('investments', distinct=True))
+    queryset = models.Products.objects.select_related("productstypes").select_related("leverages").select_related("stockmarkets").all().annotate(uses=Count('investments', distinct=True))
     serializer_class = serializers.ProductsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
@@ -1259,7 +1230,7 @@ class ProductsViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['POST'], name='Delete last quote of the product', url_path="delete_last_quote", url_name='delete_last_quote', permission_classes=[permissions.IsAuthenticated])
     def delete_last_quote(self, request, pk=None):
         product = self.get_object()
-        instance = Quotes.objects.filter(products=product).order_by("-datetime")[0]
+        instance = models.Quotes.objects.filter(products=product).order_by("-datetime")[0]
         self.perform_destroy(instance)
         return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
         
@@ -1292,13 +1263,24 @@ class ProductsViewSet(viewsets.ModelViewSet):
             if search ==":FAVORITES":
                 ids=getGlobalListOfIntegers(request, "favorites")
             elif search==":INVESTMENTS":
-                ids=list(Investments.objects.all().values_list("products__id",  flat=True).distinct())
+                ids=list(models.Investments.objects.all().values_list("products__id",  flat=True).distinct())
             elif search==":ACTIVE_INVESTMENTS":
-                ids=list(Investments.objects.filter(active=True).values_list("products__id",  flat=True).distinct())
+                ids=list(models.Investments.objects.filter(active=True).values_list("products__id",  flat=True).distinct())
             elif search==":PERSONAL":
-                ids=list(Products.objects.filter(id__lt=0).values_list('id', flat=True))
+                ids=list(models.Products.objects.filter(id__lt=0).values_list('id', flat=True))
+            elif search==":INDICES":
+                ids=list(models.Products.objects.filter(productstypes=models.Productstypes.objects.get(pk=models.eProductType.Index)).values_list('id', flat=True))
+            elif search==":CFD_FUTURES":
+                ids=list(models.Products.objects.filter(productstypes__in=(models.Productstypes.objects.get(pk=models.eProductType.CFD), models.Productstypes.objects.get(pk=models.eProductType.Future))).values_list('id', flat=True))
+            elif search==":ETF":
+                ids=list(models.Products.objects.filter(productstypes=models.Productstypes.objects.get(pk=models.eProductType.ETF)).values_list('id', flat=True))
+            elif search==":BONDS":
+                ids=list(models.Products.objects.filter(productstypes__in=(models.Productstypes.objects.get(pk=models.eProductType.PublicBond), models.Productstypes.objects.get(pk=models.eProductType.PrivateBond))).values_list('id', flat=True))
+            elif search==":CURRENCIES":
+                ids=list(models.Products.objects.filter(productstypes=models.Productstypes.objects.get(pk=models.eProductType.Currency)).values_list('id', flat=True))
+ 
             else: #use search text
-                ids=list(Products.objects.filter(
+                ids=list(models.Products.objects.filter(
                     Q(name__icontains=search) |
                     Q(isin__icontains=search) |
                     Q(ticker_yahoo__icontains=search) |
@@ -1315,12 +1297,12 @@ class ProductsViewSet(viewsets.ModelViewSet):
         return json_data_response(False, rows, "Products search error")
 
 class ProductspairsViewSet(viewsets.ModelViewSet):
-    queryset = Productspairs.objects.all()
+    queryset = models.Productspairs.objects.all()
     serializer_class = serializers.ProductspairsSerializer
     permission_classes = [permissions.IsAuthenticated]  
 
 class ProductstypesViewSet(viewsets.ModelViewSet):
-    queryset = Productstypes.objects.all()
+    queryset = models.Productstypes.objects.all()
     serializer_class = serializers.ProductstypesSerializer
     permission_classes = [permissions.IsAuthenticated]  
 
@@ -1383,10 +1365,10 @@ class QuotesMassiveUpdate(APIView):
         request=None, 
         responses=OpenApiTypes.OBJECT
     )
-    ## type==1 Investments historical file
+    ## type==1 models.Investments historical file
     def post(self, request, *args, **kwargs):
         from moneymoney.investing_com import InvestingCom
-        product=RequestUrl(request, "product", Products)
+        product=RequestUrl(request, "product", models.Products)
         type=RequestInteger(request, "type")
         print(product,  type)
         if product and type==1:## Investment.com historical quotes file
@@ -1441,12 +1423,12 @@ def ProductsCatalogUpdate(request):
     r["total"]=len(data["products"])
     r["logs"]=[]
     for d in data["products"]:
-        p=Products()
+        p=models.Products()
         p.pk=d["id"]
         p.name=checks_and_sets_value(d, "name")
         p.isin=checks_and_sets_value(d, "isin")
         p.currency=checks_and_sets_value(d, "currency")
-        p.productstypes=Productstypes.objects.get(pk=d["productstypes"])
+        p.productstypes=models.Productstypes.objects.get(pk=d["productstypes"])
         p.agrupations=checks_and_sets_value(d, "agrupations")
         p.web=checks_and_sets_value(d, "web")
         p.address=checks_and_sets_value(d, "address")
@@ -1454,8 +1436,8 @@ def ProductsCatalogUpdate(request):
         p.mail=checks_and_sets_value(d, "mail")
         p.percentage=checks_and_sets_value(d, "percentage")
         p.pci=checks_and_sets_value(d, "pci")
-        p.leverages=Leverages.objects.get(pk=d["leverages"])
-        p.stockmarkets=Stockmarkets.objects.get(pk=d["stockmarkets"])
+        p.leverages=models.Leverages.objects.get(pk=d["leverages"])
+        p.stockmarkets=models.Stockmarkets.objects.get(pk=d["stockmarkets"])
         p.comment=checks_and_sets_value(d, "comment")
         p.obsolete=checks_and_sets_value(d, "obsolete")
         p.ticker_yahoo=checks_and_sets_value(d, "ticker_yahoo")
@@ -1465,7 +1447,7 @@ def ProductsCatalogUpdate(request):
         p.ticker_investingcom=checks_and_sets_value(d, "ticker_investingcom")
         p.decimals=checks_and_sets_value(d, "decimals")
         try:
-            old=Products.objects.select_related("stockmarkets", "leverages", "productstypes").get(pk=d["id"])
+            old=models.Products.objects.select_related("stockmarkets", "leverages", "productstypes").get(pk=d["id"])
         except:
             old=None
             
@@ -1480,7 +1462,7 @@ def ProductsCatalogUpdate(request):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
  
 class QuotesViewSet(viewsets.ModelViewSet):
-    queryset = Quotes.objects.all().select_related("products")
+    queryset = models.Quotes.objects.all().select_related("products")
     serializer_class = serializers.QuotesSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
@@ -1491,18 +1473,18 @@ class QuotesViewSet(viewsets.ModelViewSet):
     ## api/quotes/?product=url Showss all quotes of a product
     ## api/quotes/?product=url&month=1&year=2021 Showss all quotes of a product in a month
     def get_queryset(self):
-        product=RequestGetUrl(self.request, 'product', Products)
+        product=RequestGetUrl(self.request, 'product', models.Products)
         future=RequestGetBool(self.request, 'future')
         last=RequestGetBool(self.request, 'last')
         month=RequestGetInteger(self.request, 'month')
         year=RequestGetInteger(self.request, 'year')
         
         if future is True:
-            return Quotes.objects.all().filter(datetime__gte=timezone.now()).select_related("products").order_by("datetime")
+            return models.Quotes.objects.all().filter(datetime__gte=timezone.now()).select_related("products").order_by("datetime")
                 
         ## Search last quote of al linvestments
         if last is True:
-            qs=Quotes.objects.raw("""
+            qs=models.Quotes.objects.raw("""
                 select 
                     id, 
                     quotes.products_id, 
@@ -1522,9 +1504,9 @@ class QuotesViewSet(viewsets.ModelViewSet):
             return qs
 
         if product is not None and year is not None and month is not None:
-            return Quotes.objects.all().filter(products=product, datetime__year=year, datetime__month=month).select_related("products").order_by("datetime")
+            return models.Quotes.objects.all().filter(products=product, datetime__year=year, datetime__month=month).select_related("products").order_by("datetime")
         if product is not None:
-            return Quotes.objects.all().filter(products=product).select_related("products").order_by("datetime")
+            return models.Quotes.objects.all().filter(products=product).select_related("products").order_by("datetime")
             
         return self.queryset
 
@@ -1533,7 +1515,7 @@ class QuotesViewSet(viewsets.ModelViewSet):
 @permission_classes([permissions.IsAuthenticated, ])
 def RecomendationMethods(request): 
     r=[]
-    for id, name in RANGE_RECOMENDATION_CHOICES:
+    for id, name in models.RANGE_RECOMENDATION_CHOICES:
         r.append({
             "id":id, 
             "name":name, 
@@ -1546,13 +1528,13 @@ def RecomendationMethods(request):
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportAnnual(request, year):
     def month_results(month_end, month_name, local_currency):
-        return month_end, month_name, total_balance(month_end, local_currency)
+        return month_end, month_name, models.total_balance(month_end, local_currency)
         
     #####################
     local_zone=request.local_zone
     local_currency=request.local_currency
     dtaware_last_year=dtaware_year_end(year-1, local_zone)
-    last_year_balance=total_balance(dtaware_last_year, request.local_currency)['total_user']
+    last_year_balance=models.total_balance(dtaware_last_year, request.local_currency)['total_user']
     list_=[]
     futures=[]
     
@@ -1601,10 +1583,10 @@ def ReportAnnual(request, year):
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportAnnualIncome(request, year):   
     def month_results(year,  month, month_name):
-        dividends=Dividends.netgains_dividends(year, month)
-        incomes=balance_user_by_operationstypes(year,  month,  eOperationType.Income, local_currency, local_zone)-dividends
-        expenses=balance_user_by_operationstypes(year,  month,  eOperationType.Expense, local_currency, local_zone)
-        fast_operations=balance_user_by_operationstypes(year,  month,  eOperationType.FastOperations, local_currency, local_zone)
+        dividends=models.Dividends.netgains_dividends(year, month)
+        incomes=models.balance_user_by_operationstypes(year,  month,  models.eOperationType.Income, local_currency, local_zone)-dividends
+        expenses=models.balance_user_by_operationstypes(year,  month,  models.eOperationType.Expense, local_currency, local_zone)
+        fast_operations=models.balance_user_by_operationstypes(year,  month,  models.eOperationType.FastOperations, local_currency, local_zone)
         dt_from=dtaware_month_start(year, month,  request.local_zone)
         dt_to=dtaware_month_end(year, month,  request.local_zone)
         gains=iom.historical_gains_net_user_between_dt(dt_from, dt_to)
@@ -1617,7 +1599,7 @@ def ReportAnnualIncome(request, year):
     local_currency=request.local_currency
     #IOManager de final de año para luego calcular gains entre fechas
     dt_year_to=dtaware_year_end(year, request.local_zone)
-    iom=InvestmentsOperationsManager.from_investment_queryset(Investments.objects.all(), dt_year_to, request)
+    iom=InvestmentsOperationsManager.from_investment_queryset(models.Investments.objects.all(), dt_year_to, request)
 
     
     # HA MEJORADO UNOS 3 segundos de 16 a 13
@@ -1664,7 +1646,7 @@ def ReportAnnualIncomeDetails(request, year, month):
         # Expenses
         r=[]
         balance=0
-        for currency in currencies_in_accounts():
+        for currency in models.currencies_in_accounts():
             for i,  op in enumerate(cursor_rows("""
                 select datetime,concepts_id, amount, comment, accounts.id as accounts_id
                 from 
@@ -1697,7 +1679,7 @@ def ReportAnnualIncomeDetails(request, year, month):
                         "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(op["concepts_id"], ))), 
                         "amount":op['amount'], 
                         "balance": balance,
-                        "comment_decoded":Comment().decode(op["comment"]), 
+                        "comment_decoded":models.Comment().decode(op["comment"]), 
                         "currency": currency, 
                         "account": request.build_absolute_uri(reverse('accounts-detail', args=(op["accounts_id"], ))), 
                     })
@@ -1709,7 +1691,7 @@ def ReportAnnualIncomeDetails(request, year, month):
         return r
     def dividends():
         r=[]
-        for o in Dividends.objects.all().filter(datetime__year=year, datetime__month=month).order_by('datetime'):
+        for o in models.Dividends.objects.all().filter(datetime__year=year, datetime__month=month).order_by('datetime'):
             r.append({
                 "id":o.id, 
                 "url":request.build_absolute_uri(reverse('dividends-detail', args=(o.id, ))), 
@@ -1727,7 +1709,7 @@ def ReportAnnualIncomeDetails(request, year, month):
         list_ioh=[]
         dt_year_month=dtaware_month_end(year, month, local_zone)
         ioh_id=0#To avoid vue.js warnings
-        for investment in Investments.objects.raw("select distinct(investments.*) from investmentsoperations, investments where date_part('year', datetime)=%s and date_part('month', datetime)=%s and investments.id=investmentsoperations.investments_id", (year, month)):
+        for investment in models.Investments.objects.raw("select distinct(investments.*) from investmentsoperations, investments where date_part('year', datetime)=%s and date_part('month', datetime)=%s and investments.id=investmentsoperations.investments_id", (year, month)):
             investments_operations=InvestmentsOperations.from_investment(request, investment, dt_year_month, local_currency)
             
             for ioh in investments_operations.io_historical:
@@ -1742,10 +1724,10 @@ def ReportAnnualIncomeDetails(request, year, month):
         return list_ioh
     ####
     r={}
-    r["expenses"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, eOperationType.Expense,  request.local_currency, request.local_zone)
-    r["incomes"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, eOperationType.Income,  request.local_currency, request.local_zone)
+    r["expenses"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, models.eOperationType.Expense,  request.local_currency, request.local_zone)
+    r["incomes"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, models.eOperationType.Income,  request.local_currency, request.local_zone)
     r["dividends"]=dividends()
-    r["fast_operations"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, eOperationType.FastOperations,  request.local_currency, request.local_zone)
+    r["fast_operations"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, models.eOperationType.FastOperations,  request.local_currency, request.local_zone)
     r["gains"]=listdict_investmentsoperationshistorical(request, year, month, request.local_currency, request.local_zone)
 
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
@@ -1781,7 +1763,7 @@ from
 group by productstypes_id""", (year, ))
     dividends_dict=listdict2dict(dividends, "productstypes_id")
     l=[]
-    for pt in Productstypes.objects.all():
+    for pt in models.Productstypes.objects.all():
         gains_net, gains_gross= 0, 0
         dividends_gross, dividends_net=0, 0
         for row in gains:
@@ -1809,7 +1791,7 @@ group by productstypes_id""", (year, ))
                 "dividends_net": dividends_net, 
         })      
         
-    fast_operations=balance_user_by_operationstypes(year,  None,  eOperationType.FastOperations, local_currency, local_zone)
+    fast_operations=models.balance_user_by_operationstypes(year,  None,  models.eOperationType.FastOperations, local_currency, local_zone)
 
     l.append({
             "id": -1000, #Fast operations
@@ -1840,7 +1822,7 @@ def ReportConcepts(request):
     dict_month_negative={}
     dict_median={}
     
-    concepts=Concepts.objects.all().select_related("operationstypes")
+    concepts=models.Concepts.objects.all().select_related("operationstypes")
     
     ## median
     for row in cursor_rows("""
@@ -1904,7 +1886,7 @@ group by
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportConceptsHistorical(request):
-    concept=RequestGetUrl(request, "concept", Concepts)
+    concept=RequestGetUrl(request, "concept", models.Concepts)
     if concept is None:
         return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
     r={}
@@ -1944,7 +1926,7 @@ def ReportConceptsHistorical(request):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportDividends(request):
-    qs_investments=Investments.objects.filter(active=True).select_related("products").select_related("accounts").select_related("products__leverages").select_related("products__productstypes")
+    qs_investments=models.Investments.objects.filter(active=True).select_related("products").select_related("accounts").select_related("products__leverages").select_related("products__productstypes")
     shares=cursor_rows_as_dict("investments_id", """
         select 
             investments.id as investments_id ,
@@ -2000,7 +1982,7 @@ def ReportDividends(request):
 def ReportEvolutionAssets(request, from_year):
     tb={}
     for year in range(from_year-1, date.today().year+1):
-        tb[year]=total_balance(dtaware_month_end(year, 12, request.local_zone), request.local_currency)
+        tb[year]=models.total_balance(dtaware_month_end(year, 12, request.local_zone), request.local_currency)
     
     
     list_=[]
@@ -2008,10 +1990,10 @@ def ReportEvolutionAssets(request, from_year):
         dt_from=dtaware_year_start(year, request.local_zone)
         dt_to=dtaware_year_end(year, request.local_zone)
         
-        iom=InvestmentsOperationsManager.from_investment_queryset(Investments.objects.all(), dt_to, request)
-        dividends=Dividends.net_gains_baduser_between_datetimes(dt_from, dt_to)
-        incomes=balance_user_by_operationstypes(year, None,  eOperationType.Income, request.local_currency, request.local_zone)-dividends
-        expenses=balance_user_by_operationstypes(year, None,  eOperationType.Expense, request.local_currency, request.local_zone)
+        iom=InvestmentsOperationsManager.from_investment_queryset(models.Investments.objects.all(), dt_to, request)
+        dividends=models.Dividends.net_gains_baduser_between_datetimes(dt_from, dt_to)
+        incomes=models.balance_user_by_operationstypes(year, None,  models.eOperationType.Income, request.local_currency, request.local_zone)-dividends
+        expenses=models.balance_user_by_operationstypes(year, None,  models.eOperationType.Expense, request.local_currency, request.local_zone)
         gains=iom.historical_gains_net_user_between_dt(dt_from, dt_to)
         list_.append({
             "year": year, 
@@ -2032,7 +2014,7 @@ def ReportEvolutionAssets(request, from_year):
 def ReportEvolutionAssetsChart(request):
     def month_results(year, month,  local_currency, local_zone):
         dt=dtaware_month_end(year, month, local_zone)
-        return dt, total_balance(dt, local_currency)
+        return dt, models.total_balance(dt, local_currency)
     #####################
     year_from=RequestGetInteger(request, "from")
     if year_from==date.today().year:
@@ -2067,21 +2049,21 @@ def ReportEvolutionAssetsChart(request):
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportEvolutionInvested(request, from_year):
     list_=[]
-    qs=Investments.objects.all()
+    qs=models.Investments.objects.all()
     for year in range(from_year, date.today().year+1): 
         iom=InvestmentsOperationsManager.from_investment_queryset(qs, dtaware_month_end(year, 12, request.local_zone), request)
         dt_from=dtaware_year_start(year, request.local_zone)
         dt_to=dtaware_year_end(year, request.local_zone)
         
-        custody_commissions=cursor_one_field("select sum(amount) from accountsoperations where concepts_id = %s and datetime>%s and datetime<= %s", (eConcept.CommissionCustody, dt_from, dt_to))
-        taxes=cursor_one_field("select sum(amount) from accountsoperations where concepts_id in( %s,%s) and datetime>%s and datetime<= %s", (eConcept.TaxesReturn, eConcept.TaxesPayment, dt_from, dt_to))
+        custody_commissions=cursor_one_field("select sum(amount) from accountsoperations where concepts_id = %s and datetime>%s and datetime<= %s", (models.eConcept.CommissionCustody, dt_from, dt_to))
+        taxes=cursor_one_field("select sum(amount) from accountsoperations where concepts_id in( %s,%s) and datetime>%s and datetime<= %s", (models.eConcept.TaxesReturn, models.eConcept.TaxesPayment, dt_from, dt_to))
         d={}
         d['year']=year
         d['invested']=iom.current_invested_user()
         d['balance']=iom.current_balance_futures_user()
         d['diff']=d['balance']-d['invested']
         d['percentage']=percentage_between(d['invested'], d['balance'])
-        d['net_gains_plus_dividends']=iom.historical_gains_net_user_between_dt(dt_from, dt_to)+Dividends.net_gains_baduser_between_datetimes_for_some_investments(iom.list_of_investments_ids(), dt_from, dt_to)
+        d['net_gains_plus_dividends']=iom.historical_gains_net_user_between_dt(dt_from, dt_to)+models.Dividends.net_gains_baduser_between_datetimes_for_some_investments(iom.list_of_investments_ids(), dt_from, dt_to)
         d['custody_commissions']=0 if custody_commissions is None else custody_commissions
         d['taxes']=0 if taxes is None else taxes
         d['investment_commissions']=iom.o_commissions_account_between_dt(dt_from, dt_to)
@@ -2100,7 +2082,7 @@ def ReportsInvestmentsLastOperation(request):
     method=RequestGetInteger(request, "method", 0)
     ld=[]
     if method==0:
-        investments=Investments.objects.filter(active=True).select_related("accounts").select_related("products")
+        investments=models.Investments.objects.filter(active=True).select_related("accounts").select_related("products")
         iom=InvestmentsOperationsManager.from_investment_queryset(investments, timezone.now(), request)
     elif method==1:#Merginc current operations
         iom=InvestmentsOperationsManager.merging_all_current_operations_of_active_investments(request, timezone.now())
@@ -2111,7 +2093,7 @@ def ReportsInvestmentsLastOperation(request):
         if method==0:
                 investments_urls.append(request.build_absolute_uri(reverse('investments-detail', args=(io.investment.pk, ))), )
         if method==1:
-            investments_same_product=Investments.objects.filter(active=True, products=io.investment.products).select_related("accounts").select_related("products")
+            investments_same_product=models.Investments.objects.filter(active=True, products=io.investment.products).select_related("accounts").select_related("products")
             for inv in investments_same_product:
                 investments_urls.append(request.build_absolute_uri(reverse('investments-detail', args=(inv.pk, ))), )
             
@@ -2142,7 +2124,7 @@ def ReportsInvestmentsLastOperation(request):
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportCurrentInvestmentsOperations(request):
     ld=[]
-    investments=Investments.objects.filter(active=True).select_related("accounts").select_related("products")
+    investments=models.Investments.objects.filter(active=True).select_related("accounts").select_related("products")
     iom=InvestmentsOperationsManager.from_investment_queryset(investments, timezone.now(), request)
     
     for io in iom:
@@ -2172,7 +2154,7 @@ def ReportCurrentInvestmentsOperations(request):
 def ReportRanking(request):
     iotm=InvestmentsOperationsTotalsManager.from_all_investments(request, timezone.now())
     products_ids=cursor_one_column('select distinct(products_id) from investments')
-    products=Products.objects.all().filter(id__in=products_ids)
+    products=models.Products.objects.all().filter(id__in=products_ids)
     ld=[]
     dividends=cursor_rows_as_dict("investments_id","select investments_id, sum(net) from dividends group by investments_id")
     for product in products:
@@ -2207,7 +2189,7 @@ def ReportRanking(request):
 @permission_classes([permissions.IsAuthenticated, ])
 def Statistics(request):
     r=[]
-    for name, cls in ((_("Accounts"), Accounts), (_("Accounts operations"), Accountsoperations), (_("Banks"), Banks), (_("Concept"),  Concepts)):
+    for name, cls in ((_("Accounts"), models.Accounts), (_("Accounts operations"), models.Accountsoperations), (_("Banks"), models.Banks), (_("Concept"),  models.Concepts)):
         r.append({"name": name, "value":cls.objects.all().count()})
     return JsonResponse(r, safe=False)
 
@@ -2311,7 +2293,7 @@ def Binary2Global(request):
 def EstimationsDps_add(request):
     year=RequestInteger(request, 'year')
     estimation=RequestDecimal(request, 'estimation')
-    product=RequestUrl(request, 'product', Products)
+    product=RequestUrl(request, 'product', models.Products)
     if year is not None and estimation is not None  and product is not None:
         execute("delete from estimations_dps where products_id=%s and year=%s", (product.id, year))
         execute("insert into estimations_dps (date_estimation,year,estimation,source,manual,products_id) values(%s,%s,%s,%s,%s,%s)", (
@@ -2326,7 +2308,7 @@ def EstimationsDps_add(request):
 @transaction.atomic
 def EstimationsDps_delete(request):
     year=RequestInteger(request, 'year')
-    product=RequestUrl(request, 'product', Products)
+    product=RequestUrl(request, 'product', models.Products)
     if year is not None and product is not None:
         execute("delete from estimations_dps where products_id=%s and year=%s", (product.id, year))
         return JsonResponse(True, safe=False)
@@ -2337,7 +2319,7 @@ def EstimationsDps_delete(request):
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic
 def EstimationsDps_list(request): 
-    product=RequestGetUrl(request, "product", Products)
+    product=RequestGetUrl(request, "product", models.Products)
     if product is not None:
         rows=cursor_rows("select * from estimations_dps where products_id=%s order by year", (product.id, ))
 
@@ -2347,7 +2329,7 @@ def EstimationsDps_list(request):
     return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
 
 class StockmarketsViewSet(viewsets.ModelViewSet):
-    queryset = Stockmarkets.objects.all()
+    queryset = models.Stockmarkets.objects.all()
     serializer_class = serializers.StockmarketsSerializer
     permission_classes = [permissions.IsAuthenticated]  
 
