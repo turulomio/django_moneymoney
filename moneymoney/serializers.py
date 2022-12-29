@@ -1,25 +1,4 @@
-from  moneymoney.models import (
-    Accounts, 
-    Accountsoperations, 
-    Banks, 
-    Comment, 
-    Concepts, 
-    Creditcards, 
-    Creditcardsoperations, 
-    Dividends, 
-    Dps, 
-    Investments, 
-    Investmentsoperations, 
-    Leverages, 
-    Orders, 
-    Operationstypes, 
-    Products, 
-    Productspairs, 
-    Productstypes, 
-    Quotes, 
-    Stockmarkets, 
-    Strategies, 
-)
+from moneymoney import models
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from django.utils.translation import gettext as _
@@ -36,7 +15,7 @@ class SuccessSerializer(serializers.Serializer):
 class BanksSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()
     class Meta:
-        model = Banks
+        model = models.Banks
         fields = ('url', 'name', 'active', 'id', 'localname')
 
     def get_localname(self, obj):
@@ -46,7 +25,7 @@ class AccountsSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()
     fullname = serializers.SerializerMethodField()
     class Meta:
-        model = Accounts
+        model = models.Accounts
         fields = ('url', 'id','name', 'active', 'number','currency','banks', 'localname', 'fullname', 'decimals')
 
     @extend_schema_field(OpenApiTypes.STR)
@@ -61,7 +40,7 @@ class AccountsSerializer(serializers.HyperlinkedModelSerializer):
         
 class DividendsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = Dividends
+        model = models.Dividends
         fields = ('url', 'id', 'investments', 'gross','taxes','net', 'dps', 'datetime', 'accountsoperations', 'commission', 'concepts', 'currency_conversion')
 
     
@@ -78,7 +57,7 @@ class DividendsSerializer(serializers.HyperlinkedModelSerializer):
 class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
     fullname = serializers.SerializerMethodField()
     class Meta:
-        model = Investments
+        model = models.Investments
         fields = ('url', 'id','name', 'active','accounts', 'selling_price', 'products',  'selling_expiration', 'daily_adjustment', 'balance_percentage', 'fullname')
 
     @extend_schema_field(OpenApiTypes.STR)
@@ -88,7 +67,7 @@ class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
 class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     currency = serializers.SerializerMethodField()
     class Meta:
-        model = Investmentsoperations
+        model = models.Investmentsoperations
         fields = ('url', 'id','operationstypes', 'investments','shares', 'taxes', 'commission',  'price', 'datetime', 'comment', 'show_in_ranges', 'currency_conversion', 'currency')
 
     
@@ -114,7 +93,7 @@ class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
 class ConceptsSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()
     class Meta:
-        model = Concepts
+        model = models.Concepts
         fields = ('url', 'id', 'name',  'operationstypes', 'editable', 'localname')
     @extend_schema_field(OpenApiTypes.STR)
     def get_localname(self, obj):
@@ -122,14 +101,14 @@ class ConceptsSerializer(serializers.HyperlinkedModelSerializer):
 
 class CreditcardsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = Creditcards
+        model = models.Creditcards
         fields = ('url', 'id', 'name',  'number', 'accounts', 'maximumbalance', 'deferred', 'active')
         
 class CreditcardsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     currency = serializers.SerializerMethodField()
     
     class Meta:
-        model = Creditcardsoperations
+        model = models.Creditcardsoperations
         fields = ('url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','creditcards', 'paid','paid_datetime', 'currency')
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):
@@ -138,13 +117,13 @@ class CreditcardsoperationsSerializer(serializers.HyperlinkedModelSerializer):
         
 class DpsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = Dps
+        model = models.Dps
         fields = ('url', 'date',  'paydate', 'gross', 'products')
 
 class OperationstypesSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()
     class Meta:
-        model = Operationstypes
+        model = models.Operationstypes
         fields = ('url', 'id', 'name', 'localname')
 
     @extend_schema_field(OpenApiTypes.STR)
@@ -156,19 +135,19 @@ class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     comment_decoded = serializers.SerializerMethodField()
     
     class Meta:
-        model = Accountsoperations
+        model = models.Accountsoperations
         fields = ('url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','accounts',  'currency', 'comment_decoded')
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):
         return obj.accounts.currency
     @extend_schema_field(OpenApiTypes.STR)
     def get_comment_decoded(self, obj):
-        return Comment().decode(obj.comment), 
+        return models.Comment().decode(obj.comment), 
                 
 class LeveragesSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()
     class Meta:
-        model = Leverages
+        model = models.Leverages
         fields = ('url', 'id', 'name', 'multiplier', 'localname')
 
     @extend_schema_field(OpenApiTypes.STR)
@@ -177,7 +156,7 @@ class LeveragesSerializer(serializers.HyperlinkedModelSerializer):
 
 class OrdersSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = Orders
+        model = models.Orders
         fields = ('url', 'date', 'expiration',  'shares', 'price','investments','executed')
         
 class ProductsSerializer(serializers.HyperlinkedModelSerializer):
@@ -187,15 +166,15 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
     uses=serializers.IntegerField(read_only=True)
 
     class Meta:
-        model = Products
+        model = models.Products
         fields = ('url', 'id', 'name',  'isin', 'currency','productstypes','agrupations', 'web', 'address', 'phone', 'mail', 'percentage', 'pci', 'leverages', 'stockmarkets', 'comment',  'obsolete', 'ticker_yahoo', 'ticker_morningstar','ticker_google','ticker_quefondos','ticker_investingcom', 'decimals', 'real_leveraged_multiplier', 'fullname', 'uses', 'flag')
     
     def create(self, validated_data):
         request=self.context.get("request")
         if request.data["system"] is True :
-            validated_data["id"]=Products.objects.latest('id').id+1
+            validated_data["id"]=models.Products.objects.latest('id').id+1
         else:
-            validated_data["id"]=Products.objects.earliest('id').id-1
+            validated_data["id"]=models.Products.objects.earliest('id').id-1
             
         
         if  request.user.groups.filter(name="CatalogManager").exists() is False and validated_data["id"]>0:
@@ -225,13 +204,13 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
         
 class ProductspairsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = Productspairs
+        model = models.Productspairs
         fields = ('url', 'name', 'a',  'b')
 
 class ProductstypesSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()
     class Meta:
-        model = Productstypes
+        model = models.Productstypes
         fields = ('url', 'id', 'name', 'localname')
 
     @extend_schema_field(OpenApiTypes.STR)
@@ -243,7 +222,7 @@ class QuotesSerializer(serializers.HyperlinkedModelSerializer):
     decimals = serializers.SerializerMethodField()
     currency = serializers.SerializerMethodField()
     class Meta:
-        model = Quotes
+        model = models.Quotes
         fields = ('url', 'id', 'datetime', 'quote',  'products', 'name', 'decimals', 'currency')      
 
     @extend_schema_field(OpenApiTypes.STR)
@@ -257,7 +236,7 @@ class QuotesSerializer(serializers.HyperlinkedModelSerializer):
         return  obj.products.currency
     
     def create(self, validated_data):
-        quotes=Quotes.objects.all().filter(datetime=validated_data['datetime'], products=validated_data['products'])
+        quotes=models.Quotes.objects.all().filter(datetime=validated_data['datetime'], products=validated_data['products'])
         if quotes.count()!=0:
             quotes.delete()
         created=serializers.HyperlinkedModelSerializer.create(self,  validated_data)
@@ -266,7 +245,7 @@ class QuotesSerializer(serializers.HyperlinkedModelSerializer):
 class StockmarketsSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()
     class Meta:
-        model = Stockmarkets
+        model = models.Stockmarkets
         fields = ('url', 'id', 'name', 'country', 'starts', 'closes', 'starts_futures',  'closes_futures', 'zone', 'localname')
 
     @extend_schema_field(OpenApiTypes.STR)
@@ -275,5 +254,5 @@ class StockmarketsSerializer(serializers.HyperlinkedModelSerializer):
 
 class StrategiesSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = Strategies
+        model = models.Strategies
         fields = ('url', 'id', 'name',  'investments', 'dt_from','dt_to','type','comment','additional1','additional2','additional3','additional4','additional5','additional6','additional7','additional8','additional9','additional10')
