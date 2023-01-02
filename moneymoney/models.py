@@ -1044,8 +1044,10 @@ class Quotes(models.Model):
     def __str__(self):
         return f"Quote ({self.id}) of '{self.products.name}' at {self.datetime} is {self.quote}"
         
-    def modelsave(self):
+    def save(self, *args, **kwargs):
         quotes=Quotes.objects.all().filter(datetime=self.datetime, products=self.products)
+        if self.datetime-timezone.now()>timedelta(days=1):
+            return f"Error saving '{self}'. Datetime it's in the future"
         if quotes.count()>0:
             for quote in quotes:
                 quote.quote=self.quote

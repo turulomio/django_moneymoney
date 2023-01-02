@@ -30,19 +30,19 @@ class OHCLDaily:
         datetimelast=dateends+timedelta(microseconds=4)
 
         quote=Quotes(products=self.product, datetime=datetimefirst, quote=self.open)
-        quotes.append({"product": self.product.fullName(),   "code":self.product.ticker_investingcom, "log":quote.modelsave()})
+        quotes.append({"product": self.product.fullName(),   "code":self.product.ticker_investingcom, "log":quote.save()})
         
 
         quote=Quotes(products=self.product, datetime=datetimehigh, quote=self.high)
-        quotes.append({"product": self.product.fullName(),   "code":self.product.ticker_investingcom, "log":quote.modelsave()})
+        quotes.append({"product": self.product.fullName(),   "code":self.product.ticker_investingcom, "log":quote.save()})
         
 
         quote=Quotes(products=self.product, datetime=datetimelast, quote=self.close)
-        quotes.append({"product": self.product.fullName(),   "code":self.product.ticker_investingcom, "log":quote.modelsave()})
+        quotes.append({"product": self.product.fullName(),   "code":self.product.ticker_investingcom, "log":quote.save()})
         
 
         quote=Quotes(products=self.product, datetime=datetimelow, quote=self.low)
-        quotes.append({"product": self.product.fullName(),   "code":self.product.ticker_investingcom, "log":quote.modelsave()})
+        quotes.append({"product": self.product.fullName(),   "code":self.product.ticker_investingcom, "log":quote.save()})
         return quotes
         
 
@@ -169,7 +169,7 @@ class InvestingCom:
                             quote.datetime=dtaware(date_, product.stockmarkets.closes, product.stockmarkets.zone)#Without 4 microseconds becaouse is not a ohcl
                             quote.quote=string2decimal(row[3])
                             quotes_count=quotes_count+1
-                            d["log"]=quote.modelsave()
+                            d["log"]=quote.save()
                         except:
                             d["log"]="Error parsing date"+ str(row)
                     else: #It's an hour
@@ -179,7 +179,7 @@ class InvestingCom:
                             quote.datetime=string2dtaware(row[16],"%H:%M:%S", self.request.globals["mem__localzone"])
                             quote.quote=string2decimal(row[3])
                             quotes_count=quotes_count+1
-                            d["log"]=quote.modelsave()
+                            d["log"]=quote.save()
                         except:
                             d["log"]="Error parsing hour" + str(row)
                     r.append(d)
