@@ -1045,17 +1045,17 @@ class Quotes(models.Model):
         return f"Quote ({self.id}) of '{self.products.name}' at {self.datetime} is {self.quote}"
         
     def save(self, *args, **kwargs):
-        quotes=Quotes.objects.all().filter(datetime=self.datetime, products=self.products)
         if self.datetime-timezone.now()>timedelta(days=1):
-            return f"Error saving '{self}'. Datetime it's in the future"
+            return _("Error saving '{0}'. Datetime it's in the future").format(self)
+        quotes=Quotes.objects.all().filter(datetime=self.datetime, products=self.products)
         if quotes.count()>0:
             for quote in quotes:
                 quote.quote=self.quote
                 models.Model.save(quote)
-                return (f"Updating {quote}")
+                return _("Updating '{0}'").format(quote)
         else:
             models.Model.save(self)
-            return (f"Inserting {self}")
+            return _("Inserting '{0}'").format(self)
 
 
 class Simulations(models.Model):
