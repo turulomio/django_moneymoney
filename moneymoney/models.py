@@ -3,7 +3,7 @@
 #   * Rearrange models' order
 #   * Make sure each model has one field with primary_key=True
 #   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
-#   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
+#   * Remove `managed = True` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
 from datetime import date, timedelta
 from decimal import Decimal
@@ -195,7 +195,7 @@ class Accounts(models.Model):
     decimals=models.IntegerField(blank=False, null=False)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'accounts'
         ordering = ['name']
         
@@ -320,7 +320,7 @@ class Accountsoperations(models.Model):
     datetime = models.DateTimeField(blank=False, null=False)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'accountsoperations'
         
     def __str__(self):
@@ -369,7 +369,7 @@ class Annualtargets(models.Model):
     percentage = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'annualtargets'
 
 
@@ -379,7 +379,7 @@ class Banks(models.Model):
     active = models.BooleanField(default=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'banks'      
 
     def __str__(self):
@@ -419,7 +419,7 @@ class Concepts(models.Model):
     editable = models.BooleanField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'concepts'
         ordering = ['name']
         
@@ -448,7 +448,7 @@ class Creditcards(models.Model):
     number = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'creditcards'
 
     def is_deletable(self):
@@ -472,7 +472,7 @@ class Creditcardsoperations(models.Model):
     datetime = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'creditcardsoperations'
 
 
@@ -489,7 +489,7 @@ class Dividends(models.Model):
     currency_conversion = models.DecimalField(max_digits=10, decimal_places=6)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'dividends'
 
     def delete(self):
@@ -562,7 +562,7 @@ class Dps(models.Model):
     paydate = models.DateField(blank=False, null=False)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'dps'
 
 ## django no funciona con 2 primary keys, así que hago los inserts manuales
@@ -575,7 +575,7 @@ class EstimationsDps(models.Model):
     products= models.ForeignKey('Products', models.DO_NOTHING)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'estimations_dps'
         unique_together = (('year', 'products'),)
 
@@ -589,7 +589,7 @@ class EstimationsEps(models.Model):
     products= models.ForeignKey('Products', models.DO_NOTHING)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'estimations_eps'
         unique_together = (('year', 'products'),)
 
@@ -599,7 +599,7 @@ class Globals(models.Model):
     value = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'globals'
 
 
@@ -614,7 +614,7 @@ class Investments(models.Model):
     balance_percentage = models.DecimalField(max_digits=18, decimal_places=6)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'investments'
         ordering = ['name']
         
@@ -699,7 +699,7 @@ class Investmentsoperations(models.Model):
     currency_conversion = models.DecimalField(max_digits=30, decimal_places=10, blank=False, null=False)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'investmentsoperations'
         
     def __str__(self):
@@ -776,7 +776,7 @@ class Investmentsaccountsoperations(models.Model):
     investments = models.ForeignKey(Investments, models.DO_NOTHING, blank=False, null=False)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'investmentsaccountsoperations'
 
 
@@ -787,7 +787,7 @@ class Leverages(models.Model):
     multiplier = models.DecimalField(max_digits=100, decimal_places=2)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'leverages'
 
     def __str__(self):
@@ -801,7 +801,7 @@ class Operationstypes(models.Model):
     name = models.TextField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'operationstypes'
         
     def __str__(self):
@@ -828,7 +828,7 @@ class Opportunities(models.Model):
     short = models.BooleanField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'opportunities'
 
 
@@ -841,7 +841,7 @@ class Orders(models.Model):
     executed = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'orders'
         
     def currency_amount(self):
@@ -878,41 +878,13 @@ class Products(models.Model):
     decimals = models.IntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'products'
         ordering = ['name']
 
     def __str__(self):
         return self.fullName()
 
-    ## Compara dos objetos products campo por campo False
-    def is_fully_equal(self, other):
-        if (
-            self.id!=other.id or
-            self.isin!=other.isin or
-            self.currency!=other.currency or
-            self.productstypes!=other.productstypes or
-            self.agrupations!=other.agrupations or
-            self.web!=other.web or
-            self.address!=other.address or
-            self.phone!=other.phone or
-            self.mail!=other.mail or
-            self.percentage!=other.percentage or
-            self.pci!=other.pci or
-            self.leverages!=other.leverages or
-            self.stockmarkets!=other.stockmarkets or
-            self.comment!=other.comment or
-            self.obsolete!=other.obsolete or
-            self.ticker_yahoo!=other.ticker_yahoo or
-            self.ticker_morningstar!=other.ticker_morningstar or
-            self.ticker_google!=other.ticker_google or
-            self.ticker_quefondos!=other.ticker_quefondos or
-            self.ticker_investingcom!=other.ticker_investingcom or
-            self.decimals!=other.decimals ):
-            return False
-        else:
-            return True
-        
     def fullName(self):
         return "{} ({})".format(self.name, _(self.stockmarkets.name))
         
@@ -998,7 +970,7 @@ class Productspairs(models.Model):
     b = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='+')
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'productspairs'
 
 class Productstypes(models.Model):
@@ -1006,7 +978,7 @@ class Productstypes(models.Model):
     name = models.TextField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'productstypes'
         
     def __str__(self):
@@ -1014,9 +986,6 @@ class Productstypes(models.Model):
         
     def fullName(self):
         return _(self.name)
-    ## Returns a json string
-    def json(self):
-        return f"""{{ "id": {jss(self.id)}, "name": {jss(self.name)} }}"""
 
 class Quotes(models.Model):
     id = models.AutoField(primary_key=True)
@@ -1025,7 +994,7 @@ class Quotes(models.Model):
     products = models.ForeignKey(Products, models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'quotes'
         
     def __str__(self):
@@ -1053,7 +1022,7 @@ class Simulations(models.Model):
     creation = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'simulations'
 
 
@@ -1065,7 +1034,7 @@ class Splits(models.Model):
     comment = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'splits'
 
 
@@ -1093,7 +1062,7 @@ class Strategies(models.Model):
     additional10 = models.IntegerField(blank=True, null=True)   
     
     class Meta:
-        managed = False
+        managed = True
         db_table = 'strategies'
         ordering = ['name']
         

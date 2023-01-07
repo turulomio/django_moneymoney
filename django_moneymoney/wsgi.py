@@ -15,15 +15,5 @@ from moneymoney import __versiondatetime__
 from django.core.wsgi import get_wsgi_application
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_moneymoney.settings')
 
-print("Checking database version")
-con=Connection()
-con.db=settings.DATABASES['default']['NAME']
-con.password=settings.DATABASES['default']['PASSWORD']
-con.port=settings.DATABASES['default']['PORT']
-con.server=settings.DATABASES['default']['HOST']
-con.user=settings.DATABASES['default']['USER']
-con.connect()
-database_update(con, 'moneymoney', __versiondatetime__)
-con.disconnect()
 
 application = get_wsgi_application()
