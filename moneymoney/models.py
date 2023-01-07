@@ -241,11 +241,6 @@ class Stockmarkets(models.Model):
     def __str__(self):
         return self.fullName()
         
-    ## Returns a json string
-    def json(self):
-        return f"""{{ "id": {jss(self.id)}, "name": {jss(self.name)}, "country": {jss(self.country)}, "starts": {jss(self.starts)}, "closes":  {jss(self.closes)}, "starts_futures": {jss(self.starts_futures)}, "closes_futures": {jss(self.closes_futures)} }}"""
-
-        
     def fullName(self):
         return _(self.name)
         
@@ -799,12 +794,7 @@ class Leverages(models.Model):
         return self.fullName()
         
     def fullName(self):
-        return _(self.name)        
-        
-    ## Returns a json string
-    def json(self):
-        return f"""{{ "id": {jss(self.id)}, "name": {jss(self.name)}, "multiplier": {jss(self.multiplier)} }}"""
-
+        return _(self.name)
 
 class Operationstypes(models.Model):
     id = models.IntegerField(primary_key=True)
@@ -891,10 +881,7 @@ class Products(models.Model):
         managed = False
         db_table = 'products'
         ordering = ['name']
-    ## Returns a json string
-    def json(self):
-        return f"""{{ "id": {jss(self.id)}, "name": {jss(self.name)}, "isin": {jss(self.isin)}, "currency": {jss(self.currency)}, "productstypes": {jss(self.productstypes.id)}, "agrupations": {jss(self.agrupations)}, "web": {jss(self.web)}, "address": {jss(self.address)}, "phone": {jss(self.phone)}, "mail": {jss(self.mail)}, "percentage": {jss(self.percentage)}, "pci": {jss(self.pci)}, "leverages": {jss(self.leverages.id)}, "stockmarkets": {jss(self.stockmarkets.id)}, "comment": {jss(self.comment)}, "obsolete": {jss(self.obsolete)}, "ticker_google": {jss(self.ticker_google)}, "ticker_yahoo": {jss(self.ticker_yahoo)}, "ticker_morningstar": {jss(self.ticker_morningstar)}, "ticker_quefondos": {jss(self.ticker_quefondos)}, "ticker_investingcom": {jss(self.ticker_investingcom)}, "decimals": {jss(self.decimals)} }}"""
-        
+
     def __str__(self):
         return self.fullName()
 

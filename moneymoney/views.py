@@ -12,8 +12,8 @@ from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
-
-from json import loads
+from moneymoney import models
+from moneymoney import serializers
 from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotals, InvestmentsOperationsTotalsManager, StrategyIO
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict, show_queries, show_queries_function
 from moneymoney.reusing.casts import string2list_of_integers
@@ -26,10 +26,6 @@ from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEn
 from moneymoney.reusing.sqlparser import sql_in_one_line
 from requests import delete, post
 from subprocess import run
-from urllib import request as urllib_request
-
-from moneymoney import models
-from moneymoney import serializers
 from os import path
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
@@ -1389,77 +1385,6 @@ class QuotesMassiveUpdate(APIView):
             ic.load_from_filename_in_memory(csv_file)
             return json_data_response( True, ic.get(),  "Quotes massive update success")
         return json_data_response( False, [],  "Product and type not set correctly")
-
-@api_view(['POST', ])
-@permission_classes([permissions.IsAuthenticated, ])
-@transaction.atomic
-def ProductsCatalogUpdate(request):    
-    ## If key desn't exist return None, if d["key"] is "" return None
-    def checks_and_sets_value(d, key):
-        if key not in d:
-            return None
-        if d[key]=="":
-            return None
-        return d[key]
-    
-    auto=RequestBool(request, "auto", False) ## Uses automatic request with settings globals investing.com   
-    if auto is True:
-        response = urllib_request. urlopen("https://raw.githubusercontent.com/turulomio/django_moneymoney/main/moneymoney/data/catalogs.json")
-        data =  loads(response. read())
-    else:
-        # if not GET, then proceed
-        if "json_file1" not in request.FILES:
-            return Response({'status': 'You must upload a file'}, status=status.HTTP_404_NOT_FOUND)
-        else:
-            json_file = request.FILES["json_file1"]
-            
-        if not json_file.name.endswith('.json'):
-            return Response({'status': 'File has not .json extension'}, status=status.HTTP_404_NOT_FOUND)
-
-        data=loads(json_file.read())
-        
-#    qs_before=Products.objects.all().select_related("stockmarkets", "leverages", "productstypes") #Products in catalog before update
-    r={}
-    r["total"]=len(data["products"])
-    r["logs"]=[]
-    for d in data["products"]:
-        p=models.Products()
-        p.pk=d["id"]
-        p.name=checks_and_sets_value(d, "name")
-        p.isin=checks_and_sets_value(d, "isin")
-        p.currency=checks_and_sets_value(d, "currency")
-        p.productstypes=models.Productstypes.objects.get(pk=d["productstypes"])
-        p.agrupations=checks_and_sets_value(d, "agrupations")
-        p.web=checks_and_sets_value(d, "web")
-        p.address=checks_and_sets_value(d, "address")
-        p.phone=checks_and_sets_value(d, "phone")
-        p.mail=checks_and_sets_value(d, "mail")
-        p.percentage=checks_and_sets_value(d, "percentage")
-        p.pci=checks_and_sets_value(d, "pci")
-        p.leverages=models.Leverages.objects.get(pk=d["leverages"])
-        p.stockmarkets=models.Stockmarkets.objects.get(pk=d["stockmarkets"])
-        p.comment=checks_and_sets_value(d, "comment")
-        p.obsolete=checks_and_sets_value(d, "obsolete")
-        p.ticker_yahoo=checks_and_sets_value(d, "ticker_yahoo")
-        p.ticker_morningstar=checks_and_sets_value(d, "ticker_morningstar")
-        p.ticker_google=checks_and_sets_value(d, "ticker_google")
-        p.ticker_quefondos=checks_and_sets_value(d, "ticker_quefondos")
-        p.ticker_investingcom=checks_and_sets_value(d, "ticker_investingcom")
-        p.decimals=checks_and_sets_value(d, "decimals")
-        try:
-            old=models.Products.objects.select_related("stockmarkets", "leverages", "productstypes").get(pk=d["id"])
-        except:
-            old=None
-            
-        
-        if old is None:
-            r["logs"].append({"product":str(p), "log":_("Created")})
-            p.save()
-        else:
-            if not p.is_fully_equal(old):
-                r["logs"].append({"product":str(p), "log":_("Updated")})
-                p.save()
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
  
 class QuotesViewSet(viewsets.ModelViewSet):
     queryset = models.Quotes.objects.all().select_related("products")
