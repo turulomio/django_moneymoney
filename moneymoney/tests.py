@@ -2,9 +2,9 @@ from django.contrib.auth.models import User
 from django.test import tag
 #from django.utils import timezone
 from json import loads
-#from rest_framework import status
+from rest_framework import status
 from moneymoney import models
-from moneymoney.tests_helpers import print_list
+from moneymoney.reusing.tests_helpers import print_list, hlu
 from rest_framework.test import APIClient, APITestCase
 from django.contrib.auth.models import Group
 
@@ -79,8 +79,19 @@ class CtTestCase(APITestCase):
         cls.client_catalog_manager=APIClient()
         cls.client_catalog_manager.credentials(HTTP_AUTHORIZATION='Token ' + cls.token_user_catalog_manager)
     
-    def test_products(self):
+    def test_investments(self):
+        r= self.client_testing.post("/api/banks/", {"name":"My bank", "active":True})
+        bank=loads(r.content)
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED,  "Error creating bank")
 
-        print(User.objects.all())
-        print(models.Products.objects.all())
-        print_list(self.client_testing, "products")
+        r= self.client_testing.post("/api/accounts/", {"name":"My account", "banks":bank["url"],  "active":True, "currency":"EUR", "decimals":2})
+        account=loads(r.content)
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED,  "Error creating account")
+        
+        r= self.client_testing.post("/api/investment/", {"name":"My account", "accounts": account["url"],  "active":True, "products": hlu("products", 79329)})
+        investment=loads(r.content)
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED,  "Error creating investment")
+        
+        
+        
+        print(investment)
