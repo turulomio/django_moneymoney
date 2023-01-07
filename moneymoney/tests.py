@@ -88,7 +88,7 @@ class CtTestCase(APITestCase):
         account=loads(r.content)
         self.assertEqual(r.status_code, status.HTTP_201_CREATED,  "Error creating account")
         
-        r= self.client_testing.post("/api/investment/", {"name":"My account", "accounts": account["url"],  "active":True, "products": hlu("products", 79329)})
+        r= self.client_testing.post("/api/investments/", {"name":"My account", "accounts": account["url"],  "active":True, "products": hlu("products", 79329), "selling_price":23.12, "balance_percentage":100})
         investment=loads(r.content)
         self.assertEqual(r.status_code, status.HTTP_201_CREATED,  "Error creating investment")
         
