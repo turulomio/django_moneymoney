@@ -1,8 +1,8 @@
 {
   "header": {
     "comment": "eric project file for project django_moneymoney",
-    "copyright": "Copyright (C) 2022 , ",
-    "saved": "2022-08-11, 21:23:28"
+    "copyright": "Copyright (C) 2023 , ",
+    "saved": "2023-01-07, 21:56:17"
   },
   "project": {
     "AUTHOR": "",
@@ -11,6 +11,7 @@
     "DOCSTRING": "",
     "DOCUMENTATIONPARMS": {},
     "EMAIL": "",
+    "EMBEDDED_VENV": false,
     "EOL": 0,
     "FILETYPES": {
       "*.e4p": "OTHERS",
@@ -38,6 +39,7 @@
     },
     "INTERFACES": [],
     "LEXERASSOCS": {},
+    "LICENSE": "",
     "MAINSCRIPT": "",
     "MAKEPARAMS": {
       "MakeEnabled": false,
@@ -52,7 +54,8 @@
       "README.md",
       "doc/entity_relationship.md",
       "doc/javascript.md",
-      "doc/structure.md"
+      "doc/structure.md",
+      "requirements.txt"
     ],
     "OTHERTOOLSPARMS": {},
     "PACKAGERSPARMS": {},
@@ -83,13 +86,17 @@
       "moneymoney/hardcoded_strings.py",
       "moneymoney/investing_com.py",
       "moneymoney/investmentsoperations.py",
+      "moneymoney/management/commands/coverage.py",
       "moneymoney/management/commands/doxygen.py",
+      "moneymoney/management/commands/dumpdata_catalogs.py",
       "moneymoney/management/commands/dumppostgres.py",
-      "moneymoney/management/commands/export_catalogs.py",
+      "moneymoney/management/commands/loaddata_catalogs.py",
       "moneymoney/management/commands/makedbmessages.py",
       "moneymoney/management/commands/procedure.py",
       "moneymoney/management/commands/sync_quotes.py",
       "moneymoney/middleware.py",
+      "moneymoney/migrations/0001_initial.py",
+      "moneymoney/migrations/0002_auto_20230107_2039.py",
       "moneymoney/migrations/__init__.py",
       "moneymoney/models.py",
       "moneymoney/productrange.py",
@@ -112,6 +119,8 @@
       "moneymoney/reusing/text_inputs.py",
       "moneymoney/serializers.py",
       "moneymoney/tests.py",
+      "moneymoney/tests_data.py",
+      "moneymoney/tests_helpers.py",
       "moneymoney/views.py",
       "moneymoney/views_login.py",
       "update_reusing.py"
@@ -119,10 +128,12 @@
     "SPELLEXCLUDES": "",
     "SPELLLANGUAGE": "en_US",
     "SPELLWORDS": "",
+    "TESTING_FRAMEWORK": "",
     "TRANSLATIONEXCEPTIONS": [],
     "TRANSLATIONPATTERN": "",
     "TRANSLATIONS": [],
     "TRANSLATIONSBINPATH": "",
+    "TRANSLATIONSOURCESTARTPATH": "",
     "UICPARAMS": {
       "Package": "",
       "PackagesRoot": "",
