@@ -1,0 +1,439 @@
+[
+{
+    "model": "moneymoney.stockmarkets",
+    "pk": 1,
+    "fields": {
+        "name": "Madrid Stock Exchange",
+        "country": "es",
+        "starts": "09:00:00",
+        "closes": "17:38:00",
+        "starts_futures": "08:00:00",
+        "closes_futures": "20:00:00",
+        "zone": "Europe/Madrid"
+    }
+},
+{
+    "model": "moneymoney.stockmarkets",
+    "pk": 2,
+    "fields": {
+        "name": "NYSE Stock Exchange",
+        "country": "us",
+        "starts": "09:30:00",
+        "closes": "16:38:00",
+        "starts_futures": "00:00:00",
+        "closes_futures": "23:59:00",
+        "zone": "America/New_York"
+    }
+},
+{
+    "model": "moneymoney.stockmarkets",
+    "pk": 3,
+    "fields": {
+        "name": "Paris Stock Exchange",
+        "country": "fr",
+        "starts": "09:00:00",
+        "closes": "17:38:00",
+        "starts_futures": "08:00:00",
+        "closes_futures": "22:00:00",
+        "zone": "Europe/Paris"
+    }
+},
+{
+    "model": "moneymoney.stockmarkets",
+    "pk": 4,
+    "fields": {
+        "name": "London Stock Exchange",
+        "country": "en",
+        "starts": "09:00:00",
+        "closes": "17:38:00",
+        "starts_futures": "08:00:00",
+        "closes_futures": "20:00:00",
+        "zone": "Europe/London"
+    }
+},
+{
+    "model": "moneymoney.stockmarkets",
+    "pk": 5,
+    "fields": {
+        "name": "Frankfurt Stock Exchange",
+        "country": "de",
+        "starts": "09:00:00",
+        "closes": "17:38:00",
+        "starts_futures": "01:00:00",
+        "closes_futures": "22:00:00",
+        "zone": "Europe/Berlin"
+    }
+},
+{
+    "model": "moneymoney.stockmarkets",
+    "pk": 6,
+    "fields": {
+        "name": "Milan Stock Exchange",
+        "country": "it",
+        "starts": "09:00:00",
+        "closes": "17:38:00",
+        "starts_futures": "08:00:00",
+        "closes_futures": "20:00:00",
+        "zone": "Europe/Rome"
+    }
+},
+{
+    "model": "moneymoney.stockmarkets",
+    "pk": 7,
+    "fields": {
+        "name": "Tokyo Stock Exchange",
+        "country": "jp",
+        "starts": "09:00:00",
+        "closes": "15:08:00",
+        "starts_futures": "08:00:00",
+        "closes_futures": "20:00:00",
+        "zone": "Asia/Tokyo"
+    }
+},
+{
+    "model": "moneymoney.stockmarkets",
+    "pk": 8,
+    "fields": {
+        "name": "Hong Kong Stock Exchange",
+        "country": "cn",
+        "starts": "09:30:00",
+        "closes": "16:08:00",
+        "starts_futures": "08:00:00",
+        "closes_futures": "20:00:00",
+        "zone": "Asia/Hong_Kong"
+    }
+},
+{
+    "model": "moneymoney.stockmarkets",
+    "pk": 9,
+    "fields": {
+        "name": "Lisbon Stock Exchange",
+        "country": "pt",
+        "starts": "09:00:00",
+        "closes": "17:38:00",
+        "starts_futures": "08:00:00",
+        "closes_futures": "17:40:00",
+        "zone": "Europe/Lisbon"
+    }
+},
+{
+    "model": "moneymoney.stockmarkets",
+    "pk": 10,
+    "fields": {
+        "name": "Europe Stock Exchange",
+        "country": "ue",
+        "starts": "09:00:00",
+        "closes": "17:38:00",
+        "starts_futures": "01:00:00",
+        "closes_futures": "22:00:00",
+        "zone": "Europe/Brussels"
+    }
+},
+{
+    "model": "moneymoney.stockmarkets",
+    "pk": 11,
+    "fields": {
+        "name": "Belgium Stock Exchange",
+        "country": "be",
+        "starts": "09:00:00",
+        "closes": "17:38:00",
+        "starts_futures": "08:00:00",
+        "closes_futures": "17:40:00",
+        "zone": "Europe/Brussels"
+    }
+},
+{
+    "model": "moneymoney.stockmarkets",
+    "pk": 12,
+    "fields": {
+        "name": "Amsterdam Stock Exchange",
+        "country": "nl",
+        "starts": "09:00:00",
+        "closes": "17:38:00",
+        "starts_futures": "08:00:00",
+        "closes_futures": "22:00:00",
+        "zone": "Europe/Amsterdam"
+    }
+},
+{
+    "model": "moneymoney.stockmarkets",
+    "pk": 13,
+    "fields": {
+        "name": "Dublin Stock Exchange",
+        "country": "ie",
+        "starts": "08:00:00",
+        "closes": "16:38:00",
+        "starts_futures": "08:00:00",
+        "closes_futures": "20:00:00",
+        "zone": "Europe/Dublin"
+    }
+},
+{
+    "model": "moneymoney.stockmarkets",
+    "pk": 14,
+    "fields": {
+        "name": "Helsinki Stock Exchange",
+        "country": "fi",
+        "starts": "09:00:00",
+        "closes": "18:38:00",
+        "starts_futures": "08:00:00",
+        "closes_futures": "20:00:00",
+        "zone": "Europe/Helsinki"
+    }
+},
+{
+    "model": "moneymoney.stockmarkets",
+    "pk": 15,
+    "fields": {
+        "name": "Not listed on official markets",
+        "country": "earth",
+        "starts": "09:00:00",
+        "closes": "17:38:00",
+        "starts_futures": "08:00:00",
+        "closes_futures": "20:00:00",
+        "zone": "Europe/Madrid"
+    }
+},
+{
+    "model": "moneymoney.stockmarkets",
+    "pk": 16,
+    "fields": {
+        "name": "AMEX Stock Exchange",
+        "country": "us",
+        "starts": "09:30:00",
+        "closes": "16:38:00",
+        "starts_futures": "00:00:00",
+        "closes_futures": "23:59:00",
+        "zone": "America/New_York"
+    }
+},
+{
+    "model": "moneymoney.stockmarkets",
+    "pk": 17,
+    "fields": {
+        "name": "Nasdaq Stock Exchange",
+        "country": "us",
+        "starts": "09:30:00",
+        "closes": "16:38:00",
+        "starts_futures": "00:00:00",
+        "closes_futures": "23:59:00",
+        "zone": "America/New_York"
+    }
+},
+{
+    "model": "moneymoney.stockmarkets",
+    "pk": 18,
+    "fields": {
+        "name": "Luxembourg Stock Exchange",
+        "country": "lu",
+        "starts": "09:00:00",
+        "closes": "17:38:00",
+        "starts_futures": "08:00:00",
+        "closes_futures": "20:00:00",
+        "zone": "Europe/Luxembourg"
+    }
+},
+{
+    "model": "moneymoney.leverages",
+    "pk": -1,
+    "fields": {
+        "name": "Variable leverage",
+        "multiplier": "-1"
+    }
+},
+{
+    "model": "moneymoney.leverages",
+    "pk": 1,
+    "fields": {
+        "name": "Without leverage",
+        "multiplier": "1"
+    }
+},
+{
+    "model": "moneymoney.leverages",
+    "pk": 2,
+    "fields": {
+        "name": "Leverage x2",
+        "multiplier": "2"
+    }
+},
+{
+    "model": "moneymoney.leverages",
+    "pk": 3,
+    "fields": {
+        "name": "Leverage x3",
+        "multiplier": "3"
+    }
+},
+{
+    "model": "moneymoney.leverages",
+    "pk": 4,
+    "fields": {
+        "name": "Leverage x4",
+        "multiplier": "4"
+    }
+},
+{
+    "model": "moneymoney.leverages",
+    "pk": 5,
+    "fields": {
+        "name": "Leverage x5",
+        "multiplier": "5"
+    }
+},
+{
+    "model": "moneymoney.leverages",
+    "pk": 10,
+    "fields": {
+        "name": "Leverage x10",
+        "multiplier": "10"
+    }
+},
+{
+    "model": "moneymoney.leverages",
+    "pk": 20,
+    "fields": {
+        "name": "Leverage x20",
+        "multiplier": "20"
+    }
+},
+{
+    "model": "moneymoney.leverages",
+    "pk": 25,
+    "fields": {
+        "name": "Leverage x25",
+        "multiplier": "25"
+    }
+},
+{
+    "model": "moneymoney.leverages",
+    "pk": 50,
+    "fields": {
+        "name": "Leverage x50",
+        "multiplier": "50"
+    }
+},
+{
+    "model": "moneymoney.leverages",
+    "pk": 100,
+    "fields": {
+        "name": "Leverage x100",
+        "multiplier": "100"
+    }
+},
+{
+    "model": "moneymoney.leverages",
+    "pk": 200,
+    "fields": {
+        "name": "Leverage x200",
+        "multiplier": "200"
+    }
+},
+{
+    "model": "moneymoney.leverages",
+    "pk": 500,
+    "fields": {
+        "name": "Leverage x500",
+        "multiplier": "500"
+    }
+},
+{
+    "model": "moneymoney.leverages",
+    "pk": 1000,
+    "fields": {
+        "name": "Leverage x100",
+        "multiplier": "1000"
+    }
+},
+{
+    "model": "moneymoney.productstypes",
+    "pk": 1,
+    "fields": {
+        "name": "Share"
+    }
+},
+{
+    "model": "moneymoney.productstypes",
+    "pk": 2,
+    "fields": {
+        "name": "Fund"
+    }
+},
+{
+    "model": "moneymoney.productstypes",
+    "pk": 3,
+    "fields": {
+        "name": "Index"
+    }
+},
+{
+    "model": "moneymoney.productstypes",
+    "pk": 4,
+    "fields": {
+        "name": "ETF"
+    }
+},
+{
+    "model": "moneymoney.productstypes",
+    "pk": 5,
+    "fields": {
+        "name": "Warrant"
+    }
+},
+{
+    "model": "moneymoney.productstypes",
+    "pk": 6,
+    "fields": {
+        "name": "Currency"
+    }
+},
+{
+    "model": "moneymoney.productstypes",
+    "pk": 7,
+    "fields": {
+        "name": "Public bond"
+    }
+},
+{
+    "model": "moneymoney.productstypes",
+    "pk": 8,
+    "fields": {
+        "name": "Pension plan"
+    }
+},
+{
+    "model": "moneymoney.productstypes",
+    "pk": 9,
+    "fields": {
+        "name": "Private bond"
+    }
+},
+{
+    "model": "moneymoney.productstypes",
+    "pk": 10,
+    "fields": {
+        "name": "Deposit"
+    }
+},
+{
+    "model": "moneymoney.productstypes",
+    "pk": 11,
+    "fields": {
+        "name": "Account"
+    }
+},
+{
+    "model": "moneymoney.productstypes",
+    "pk": 12,
+    "fields": {
+        "name": "CFD"
+    }
+},
+{
+    "model": "moneymoney.productstypes",
+    "pk": 13,
+    "fields": {
+        "name": "Future"
+    }
+}
+]
