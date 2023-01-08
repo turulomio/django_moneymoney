@@ -43,7 +43,7 @@
     "pk": 4,
     "fields": {
         "name": "London Stock Exchange",
-        "country": "en",
+        "country": "gb",
         "starts": "09:00:00",
         "closes": "17:38:00",
         "starts_futures": "08:00:00",
@@ -121,7 +121,7 @@
     "pk": 10,
     "fields": {
         "name": "Europe Stock Exchange",
-        "country": "ue",
+        "country": "eu",
         "starts": "09:00:00",
         "closes": "17:38:00",
         "starts_futures": "01:00:00",
@@ -186,7 +186,7 @@
     "pk": 15,
     "fields": {
         "name": "Not listed on official markets",
-        "country": "earth",
+        "country": "xx",
         "starts": "09:00:00",
         "closes": "17:38:00",
         "starts_futures": "08:00:00",
@@ -341,8 +341,92 @@
     "model": "moneymoney.leverages",
     "pk": 1000,
     "fields": {
-        "name": "Leverage x100",
+        "name": "Leverage x1000",
         "multiplier": "1000"
+    }
+},
+{
+    "model": "moneymoney.operationstypes",
+    "pk": 1,
+    "fields": {
+        "name": "Expense"
+    }
+},
+{
+    "model": "moneymoney.operationstypes",
+    "pk": 2,
+    "fields": {
+        "name": "Income"
+    }
+},
+{
+    "model": "moneymoney.operationstypes",
+    "pk": 3,
+    "fields": {
+        "name": "Transfer"
+    }
+},
+{
+    "model": "moneymoney.operationstypes",
+    "pk": 4,
+    "fields": {
+        "name": "Purchase of shares"
+    }
+},
+{
+    "model": "moneymoney.operationstypes",
+    "pk": 5,
+    "fields": {
+        "name": "Sale of shares"
+    }
+},
+{
+    "model": "moneymoney.operationstypes",
+    "pk": 6,
+    "fields": {
+        "name": "Shares addition"
+    }
+},
+{
+    "model": "moneymoney.operationstypes",
+    "pk": 7,
+    "fields": {
+        "name": "Credit card billing"
+    }
+},
+{
+    "model": "moneymoney.operationstypes",
+    "pk": 8,
+    "fields": {
+        "name": "Transfer of funds"
+    }
+},
+{
+    "model": "moneymoney.operationstypes",
+    "pk": 9,
+    "fields": {
+        "name": "Transfer of shares origin"
+    }
+},
+{
+    "model": "moneymoney.operationstypes",
+    "pk": 10,
+    "fields": {
+        "name": "Transfer of shares destiny"
+    }
+},
+{
+    "model": "moneymoney.operationstypes",
+    "pk": 11,
+    "fields": {
+        "name": "Derivative management"
+    }
+},
+{
+    "model": "moneymoney.operationstypes",
+    "pk": 12,
+    "fields": {
+        "name": "Fast operations"
     }
 },
 {

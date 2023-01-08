@@ -4,7 +4,8 @@ from django.test import tag
 from json import loads
 from rest_framework import status
 from moneymoney import models
-from moneymoney.reusing.tests_helpers import print_list, hlu
+from moneymoney.reusing.tests_helpers import print_list, hlu, TestModelManager, test_crud_unauthorized_anonymous, test_crud
+
 from rest_framework.test import APIClient, APITestCase
 from django.contrib.auth.models import Group
 
@@ -12,7 +13,7 @@ print_list
 tag
 
 class CtTestCase(APITestCase):
-    fixtures=["other.json","products.json"] #Para cargar datos por defecto
+    fixtures=["other.json","products.json", "concepts.json"] #Para cargar datos por defecto
 
     @classmethod
     def setUpClass(cls):
@@ -21,7 +22,7 @@ class CtTestCase(APITestCase):
         """
         super().setUpClass()
         
-        #cls.tmm=TestModelManager.from_module_with_testmodels("calories_tracker.tests_data")
+        cls.tmm=TestModelManager.from_module_with_testmodels("moneymoney.tests_data")
         
         # User to test api
         cls.user_testing = User(
@@ -78,8 +79,33 @@ class CtTestCase(APITestCase):
         
         cls.client_catalog_manager=APIClient()
         cls.client_catalog_manager.credentials(HTTP_AUTHORIZATION='Token ' + cls.token_user_catalog_manager)
-    
+        
+        cls.assertTrue(cls, models.Operationstypes.objects.all().count()>0,  "There aren't operationstypes")
+        cls.assertTrue(cls, models.Products.objects.all().count()>0, "There aren't products")
+        
+        
+    def test_anonymous_crud(self):
+        """
+            Anonymous user trys to crud
+        """
+        print()
+        for tm  in self.tmm:
+            print("test_anonymous_crud", tm.__name__)
+            test_crud_unauthorized_anonymous(self, self.client_anonymous, self.client_testing,  tm)
+
+  
+    def test_crud_non_catalog(self):
+        """
+            Checks crud operations to not catalog models
+        """
+        print()
+        for tm  in self.tmm.private():
+            print("test_crud_non_catalog", tm.__name__)
+            test_crud(self, self.client_testing, tm)
+
     def test_investments(self):
+        print()
+        print("test_investments")
         r= self.client_testing.post("/api/banks/", {"name":"My bank", "active":True})
         bank=loads(r.content)
         self.assertEqual(r.status_code, status.HTTP_201_CREATED,  "Error creating bank")
@@ -88,10 +114,6 @@ class CtTestCase(APITestCase):
         account=loads(r.content)
         self.assertEqual(r.status_code, status.HTTP_201_CREATED,  "Error creating account")
         
-        r= self.client_testing.post("/api/investments/", {"name":"My account", "accounts": account["url"],  "active":True, "products": hlu("products", 79329), "selling_price":23.12, "balance_percentage":100})
-        investment=loads(r.content)
+        r= self.client_testing.post("/api/investments/", {"name":"My investment", "accounts": account["url"],  "active":True, "products": hlu("products", 79329), "selling_price": 23.12, "balance_percentage":100})
+        #investment=loads(r.content)
         self.assertEqual(r.status_code, status.HTTP_201_CREATED,  "Error creating investment")
-        
-        
-        
-        print(investment)

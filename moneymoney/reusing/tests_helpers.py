@@ -283,8 +283,10 @@ def test_crud_unauthorized_anonymous(apitestclass, client_anonymous, client_auth
         
         #Authorized client creates for testing purposes
         payload=tm.get_examples(i, client_authorized)
+        print("PAYLOAD", payload)
         r=client_authorized.post(tm.hlu(), payload)
-        
+        print(r)
+        print(r.content)
         apitestclass.assertEqual(r.status_code, status.HTTP_201_CREATED, f"post method of {tm.model_string()}")
         d=loads(r.content)
         id=d["id"]

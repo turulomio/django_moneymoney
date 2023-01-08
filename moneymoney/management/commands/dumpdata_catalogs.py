@@ -28,6 +28,18 @@ class Command(BaseCommand):
         #Generate fixtures
                 
     def handle(self, *args,**options):
+        
+        
+        call_command(
+            "dumpdata",         
+            "moneymoney.stockmarkets", 
+            "moneymoney.leverages", 
+            "moneymoney.operationstypes", 
+            "moneymoney.productstypes", 
+            "--indent",  "4", 
+            "-o", "moneymoney/fixtures/other.json"
+        )
+        
         # Personal products are generated with id<0 in products table, so I pass pks as --pks parameter
         products_ids=list(models.Products.objects.filter(id__gt=0).values_list('id', flat=True))
         s=""
@@ -35,22 +47,25 @@ class Command(BaseCommand):
             s=s+f"{id},"
         s=s[:-1]
         
-        
-        call_command(
-            "dumpdata",         
-            "moneymoney.stockmarkets", 
-            "moneymoney.leverages", 
-            "moneymoney.productstypes", 
-            "--indent",  "4", 
-            "-o", "moneymoney/fixtures/other.json"
-        )
-        
-        
         call_command(
             "dumpdata",
             "moneymoney.products", 
             "--indent",  "4", 
             "--pks",  s, 
             "-o", "moneymoney/fixtures/products.json"
+        )
+                
+        # System concepts are generated with id<100 in concepts table, so I pass pks as --pks parameter
+        concepts_ids=list(models.Concepts.objects.filter(id__lt=100).values_list('id', flat=True))
+        s=""
+        for id in concepts_ids:
+            s=s+f"{id},"
+        s=s[:-1]
+        call_command(
+            "dumpdata",
+            "moneymoney.concepts", 
+            "--indent",  "4", 
+            "--pks",  s, 
+            "-o", "moneymoney/fixtures/concepts.json"
         )
         
