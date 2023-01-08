@@ -109,7 +109,7 @@ class CreditcardsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     
     class Meta:
         model = models.Creditcardsoperations
-        fields = ('url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','creditcards', 'paid','paid_datetime', 'currency')
+        fields = ('url', 'id', 'datetime', 'concepts',  'operationstypes', 'amount','comment','creditcards', 'paid','paid_datetime', 'currency')
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):
         return  obj.creditcards.accounts.currency
@@ -136,7 +136,7 @@ class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     
     class Meta:
         model = models.Accountsoperations
-        fields = ('url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','accounts',  'currency', 'comment_decoded')
+        fields = ('id','url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','accounts',  'currency', 'comment_decoded')
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):
         return obj.accounts.currency
@@ -157,7 +157,7 @@ class LeveragesSerializer(serializers.HyperlinkedModelSerializer):
 class OrdersSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = models.Orders
-        fields = ('url', 'date', 'expiration',  'shares', 'price','investments','executed')
+        fields = ('url', 'id', 'date', 'expiration',  'shares', 'price','investments','executed')
         
 class ProductsSerializer(serializers.HyperlinkedModelSerializer):
     real_leveraged_multiplier = serializers.SerializerMethodField()
@@ -205,7 +205,7 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
 class ProductspairsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = models.Productspairs
-        fields = ('url', 'name', 'a',  'b')
+        fields = ('url', 'id', 'name', 'a',  'b')
 
 class ProductstypesSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()

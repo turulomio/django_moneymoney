@@ -1,4 +1,4 @@
-from moneymoney.reusing.tests_helpers import TestModel, td_string, td_timezone, td_integer, td_decimal
+from moneymoney.reusing.tests_helpers import TestModel, td_string, td_timezone
 
     
 class tmBanks(TestModel):

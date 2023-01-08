@@ -35,12 +35,16 @@ class TestModel:
         
         
     @classmethod
-    def create(cls, index, client):
+    def create(cls, index, client,log=False):
         """
             returns dict creation
         """
+        if log is True:
+            print(f"+  {cls.__name__}. Creating object...")
         r=client.post(cls.hlu(), cls.get_examples(0, client)) #Linka al primer recipe. Debería crear todo nuevo recursivo, pero parece funciona
-        #print("Creado", cls.model_string(),  r.content)
+        if log is True:
+            print(f"   - {r}")
+            print(f"   - {r.content}")
         return loads(r.content)
         
     @classmethod
@@ -205,16 +209,22 @@ def test_cross_user_data(apitestclass, client1,  client2,  url):
     apitestclass.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND, f"{url}. WARNING: Client2 can access Client1 post")
     
     
-def test_only_retrieve_and_list_actions_allowed(apitestclass,  client,  tm):
+def test_only_retrieve_and_list_actions_allowed(apitestclass,  client,  tm, log=False):
     """
     Function Checks api_model can be only accessed fot get and list views
 
     @param api_model DESCRIPTION
     @type TYPE
     """
-
+    
+    if log is True:
+        print(f"+  {tm.__name__}. test_only_retrive_and_list_actions_allowed. POST...")
     r=client.post(tm.hlu(), {})
+    if log is True:
+        print(f"   - {r}")
+        print(f"   - {r.content}")
     apitestclass.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN, f"create action of {tm.model_string()}")
+
     r=client.get(tm.hlu())
     apitestclass.assertEqual(r.status_code, status.HTTP_200_OK, f"list method of {tm.model_string()}")
     r=client.get(tm.hlu_first_fixture())
@@ -283,10 +293,7 @@ def test_crud_unauthorized_anonymous(apitestclass, client_anonymous, client_auth
         
         #Authorized client creates for testing purposes
         payload=tm.get_examples(i, client_authorized)
-        print("PAYLOAD", payload)
         r=client_authorized.post(tm.hlu(), payload)
-        print(r)
-        print(r.content)
         apitestclass.assertEqual(r.status_code, status.HTTP_201_CREATED, f"post method of {tm.model_string()}")
         d=loads(r.content)
         id=d["id"]

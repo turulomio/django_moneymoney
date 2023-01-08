@@ -4,7 +4,7 @@ from django.test import tag
 from json import loads
 from rest_framework import status
 from moneymoney import models
-from moneymoney.reusing.tests_helpers import print_list, hlu, TestModelManager, test_crud_unauthorized_anonymous, test_crud
+from moneymoney.reusing.tests_helpers import print_list, hlu, TestModelManager, test_crud_unauthorized_anonymous, test_crud, test_only_retrieve_and_list_actions_allowed
 
 from rest_framework.test import APIClient, APITestCase
 from django.contrib.auth.models import Group
@@ -82,6 +82,7 @@ class CtTestCase(APITestCase):
         
         cls.assertTrue(cls, models.Operationstypes.objects.all().count()>0,  "There aren't operationstypes")
         cls.assertTrue(cls, models.Products.objects.all().count()>0, "There aren't products")
+        cls.assertTrue(cls, models.Concepts.objects.all().count()>0, "There aren't concepts")
         
         
     def test_anonymous_crud(self):
@@ -89,9 +90,18 @@ class CtTestCase(APITestCase):
             Anonymous user trys to crud
         """
         print()
-        for tm  in self.tmm:
+        for tm  in self.tmm.private():
             print("test_anonymous_crud", tm.__name__)
             test_crud_unauthorized_anonymous(self, self.client_anonymous, self.client_testing,  tm)
+
+    def test_catalog_only_retrieve_and_list_actions_allowed(self):
+        """
+            Checks that catalog table can be only accesed to GET method to normal users
+        """
+        print()
+        for tm  in self.tmm.catalogs():
+            print("test_catalog_only_retrieve_and_list_actions_allowed", tm.__name__)
+            test_only_retrieve_and_list_actions_allowed(self, self.client_testing, tm, log=False)
 
   
     def test_crud_non_catalog(self):

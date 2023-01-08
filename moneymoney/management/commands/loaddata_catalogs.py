@@ -13,7 +13,7 @@ class Command(BaseCommand):
         call_command(
             "loaddata",
             "moneymoney/fixtures/other.json", 
-            "moneymoney/fixtures/concepts.json"
+            "moneymoney/fixtures/concepts.json", 
             "moneymoney/fixtures/products.json"
         )
         

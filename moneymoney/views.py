@@ -46,6 +46,18 @@ class GroupCatalogManager(permissions.BasePermission):
         return request.user.groups.filter(name="CatalogManager").exists()
 
 
+class CatalogModelViewSet(viewsets.ModelViewSet):
+    def get_permissions(self):    
+        """
+            Overrides get_permissions to set GroupCatalogManager permission for CRUD actions
+            Only list and get actions authenticated, ther rest for GroupCatalogManager.
+        """
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            self.permission_classes = [permissions.IsAuthenticated, GroupCatalogManager]
+        else:# get and custome actions
+            self.permission_classes = [permissions.IsAuthenticated]
+        return viewsets.ModelViewSet.get_permissions(self)
+
 
 
 @permission_classes([permissions.IsAuthenticated, ])
@@ -255,10 +267,9 @@ class OrdersViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.OrdersSerializer
     permission_classes = [permissions.IsAuthenticated]  
 
-class OperationstypesViewSet(viewsets.ModelViewSet):
+class OperationstypesViewSet(CatalogModelViewSet):
     queryset = models.Operationstypes.objects.all()
     serializer_class = serializers.OperationstypesSerializer
-    permission_classes = [permissions.IsAuthenticated]  
 
 class StrategiesViewSet(viewsets.ModelViewSet):
     queryset = models.Strategies.objects.all()
