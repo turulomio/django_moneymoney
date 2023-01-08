@@ -225,7 +225,6 @@ class Accounts(models.Model):
 
 ## This model is not in Xulpymoney to avoid changing a lot of code
 class Stockmarkets(models.Model):
-    id = models.IntegerField(primary_key=True)
     name = models.TextField(blank=False, null=False)
     country=models.CharField(max_length=5, blank=False, null=False)
     starts=models.TimeField(blank=False, null=False)
@@ -782,7 +781,6 @@ class Investmentsaccountsoperations(models.Model):
 
     
 class Leverages(models.Model):
-    id = models.IntegerField(primary_key=True)
     name = models.TextField()
     multiplier = models.DecimalField(max_digits=100, decimal_places=2)
 
@@ -809,13 +807,6 @@ class Operationstypes(models.Model):
         
     def fullName(self):
         return _(self.name)
-        
-    @staticmethod
-    def dictionary():
-        d={}
-        for ot in Operationstypes.objects.all():
-            d[ot.id]=ot.fullName()
-        return d
 
 class Opportunities(models.Model):
     date = models.DateField()
@@ -974,7 +965,6 @@ class Productspairs(models.Model):
         db_table = 'productspairs'
 
 class Productstypes(models.Model):
-    id = models.IntegerField(primary_key=True)
     name = models.TextField()
 
     class Meta:
@@ -988,7 +978,6 @@ class Productstypes(models.Model):
         return _(self.name)
 
 class Quotes(models.Model):
-    id = models.AutoField(primary_key=True)
     datetime = models.DateTimeField(blank=True, null=True)
     quote = models.DecimalField(max_digits=18, decimal_places=6, blank=True, null=True)
     products = models.ForeignKey(Products, models.DO_NOTHING, blank=True, null=True)
