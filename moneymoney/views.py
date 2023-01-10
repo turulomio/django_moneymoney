@@ -1526,7 +1526,7 @@ def ReportAnnualIncome(request, year):
         dt_from=dtaware_month_start(year, month,  request.local_zone)
         dt_to=dtaware_month_end(year, month,  request.local_zone)
         gains=iom.historical_gains_net_user_between_dt(dt_from, dt_to)
-        total=incomes+gains+expenses+dividends
+        total=incomes+gains+expenses+dividends+fast_operations
         return month_name, month,  year,  incomes, expenses, gains, dividends, total, fast_operations
     
     list_=[]
