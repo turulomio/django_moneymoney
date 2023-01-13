@@ -1,2 +1,5 @@
 django
 unogenerator
+tabulate
+factory-boy
+faker
