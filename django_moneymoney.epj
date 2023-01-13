@@ -2,7 +2,7 @@
   "header": {
     "comment": "eric project file for project django_moneymoney",
     "copyright": "Copyright (C) 2023 , ",
-    "saved": "2023-01-08, 10:33:23"
+    "saved": "2023-01-13, 14:28:16"
   },
   "project": {
     "AUTHOR": "",
@@ -83,6 +83,8 @@
       "moneymoney/apps.py",
       "moneymoney/assetsreport.py",
       "moneymoney/database_update.py",
+      "moneymoney/factory.py",
+      "moneymoney/factory_helpers.py",
       "moneymoney/hardcoded_strings.py",
       "moneymoney/investing_com.py",
       "moneymoney/investmentsoperations.py",
