@@ -4,6 +4,8 @@ from django.test import tag
 from json import loads
 from rest_framework import status
 from moneymoney import models
+from moneymoney import factory
+from moneymoney import factory_helpers as fh
 from moneymoney.reusing.tests_helpers import print_list, hlu, TestModelManager, test_crud_unauthorized_anonymous, test_crud, test_only_retrieve_and_list_actions_allowed
 
 from rest_framework.test import APIClient, APITestCase
@@ -23,6 +25,10 @@ class CtTestCase(APITestCase):
         super().setUpClass()
         
         cls.tmm=TestModelManager.from_module_with_testmodels("moneymoney.tests_data")
+        cls.fm=fh.FactoriesManager()
+        ##Must be all models urls
+        cls.fm.append(factory.AccountsFactory, "Private", "/api/accounts/")
+        cls.fm.append(factory.BanksFactory, "Private", "/api/banks/")
         
         # User to test api
         cls.user_testing = User(
@@ -127,3 +133,19 @@ class CtTestCase(APITestCase):
         r= self.client_testing.post("/api/investments/", {"name":"My investment", "accounts": account["url"],  "active":True, "products": hlu("products", 79329), "selling_price": 23.12, "balance_percentage":100})
         #investment=loads(r.content)
         self.assertEqual(r.status_code, status.HTTP_201_CREATED,  "Error creating investment")
+
+
+
+    def test_factories(self):
+        print()
+        print("test_factories")
+        bank=factory.BanksFactory.create()
+        print(fh.serialize(bank))
+        account=factory.AccountsFactory.build(banks=bank)
+        print(fh.serialize(account))
+
+    def test_factory_private_crud(self):
+        print()
+        for f in self.fm.list_by_type("Private"):
+            print("test_crud_non_catalog", str(f.url))
+            f.test_crud(self, self.client_testing)
