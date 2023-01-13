@@ -13,7 +13,7 @@ print_list
 tag
 
 class CtTestCase(APITestCase):
-    fixtures=["other.json","products.json", "concepts.json"] #Para cargar datos por defecto
+    fixtures=["all.json"] #Para cargar datos por defecto
 
     @classmethod
     def setUpClass(cls):

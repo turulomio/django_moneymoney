@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 
 from django.core.management import call_command
+from moneymoney.reusing.file_functions import replace_in_file
 from moneymoney import models
 
 
@@ -22,7 +23,7 @@ from moneymoney import models
 
 ## Si se necesitara borrar abría que hacer una load_data comand específico
 
-
+from os import chdir, system
 class Command(BaseCommand):
     help = 'Dumpdata command for catalog models only'
         #Generate fixtures
@@ -69,3 +70,27 @@ class Command(BaseCommand):
             "-o", "moneymoney/fixtures/concepts.json"
         )
         
+        # Banks
+        call_command(
+            "dumpdata",
+            "moneymoney.banks", 
+            "--indent",  "4", 
+            "--pks",  "3", 
+            "-o", "moneymoney/fixtures/banks.json"
+        )        
+        # Accounts
+        call_command(
+            "dumpdata",
+            "moneymoney.accounts", 
+            "--indent",  "4", 
+            "--pks",  "4", 
+            "-o", "moneymoney/fixtures/accounts.json"
+        )
+
+
+        ## JOINS ALL FILES IN all.json
+        chdir("moneymoney/fixtures/")
+        files="other.json products.json concepts.json banks.json accounts.json"
+        system(f"cat {files} > all.json")
+        replace_in_file("all.json",  "\n]\n[", ",")
+        system(f"rm {files}")
