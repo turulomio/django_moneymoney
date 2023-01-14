@@ -115,25 +115,6 @@ def ConceptsMigration(request):
     return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def ConceptsUsed(request): 
-    """Returns concepts with use  and migration information"""
-    qs=models.Concepts.objects.all() 
-    r=[]
-    for o in qs:
-        r.append({
-            "id": o.id, 
-            "name": o.name, 
-            "url": request.build_absolute_uri(reverse('concepts-detail', args=(o.pk, ))), 
-            "localname": _(o.name), 
-            "editable": o.editable, 
-            "used": o.get_used(), 
-            "operationstypes": request.build_absolute_uri(reverse('operationstypes-detail', args=(o.operationstypes.pk, ))), 
-            "migrable": o.is_migrable(), 
-        })
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
-
 
 
 @extend_schema(
@@ -180,7 +161,24 @@ class ConceptsViewSet(viewsets.ModelViewSet):
     queryset = models.Concepts.objects.all()
     serializer_class = serializers.ConceptsSerializer
     permission_classes = [permissions.IsAuthenticated]  
-    
+
+    @action(detail=False, methods=["get"], name='Concepts list with use and migration information', url_path="used", url_name='used', permission_classes=[permissions.IsAuthenticated])
+    def used(self, request):
+        qs=models.Concepts.objects.all() 
+        r=[]
+        for o in qs:
+            r.append({
+                "id": o.id, 
+                "name": o.name, 
+                "url": request.build_absolute_uri(reverse('concepts-detail', args=(o.pk, ))), 
+                "localname": _(o.name), 
+                "editable": o.editable, 
+                "used": o.get_used(), 
+                "operationstypes": request.build_absolute_uri(reverse('operationstypes-detail', args=(o.operationstypes.pk, ))), 
+                "migrable": o.is_migrable(), 
+            })
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+
 
 class CreditcardsViewSet(viewsets.ModelViewSet):
     queryset = models.Creditcards.objects.all()
