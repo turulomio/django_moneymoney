@@ -42,7 +42,6 @@ urlpatterns=[
     path('creditcardsoperations/withbalance/', money_views.CreditcardsoperationsWithBalance, name='CreditcardsoperationsWithBalance'),
     path('creditcardsoperations/payment/<int:pk>/', money_views.CreditcardsoperationsPayments, name='CreditcardsoperationsPayments'),
     path('creditcardsoperations/payment/refund/', money_views.CreditcardsoperationsPaymentsRefund, name='CreditcardsoperationsPaymentsRefund'),
-    path('concepts/migration/', money_views.ConceptsMigration, name='ConceptsMigration'),
     path('derivatives/', money_views.Derivatives.as_view(), name='Derivatives'),
     path('estimations/dps/add/', money_views.EstimationsDps_add, name='EstimationsDps_add'),
     path('estimations/dps/delete/', money_views.EstimationsDps_delete, name='EstimationsDps_delete'),

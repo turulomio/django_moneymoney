@@ -95,26 +95,6 @@ def AssetsReport(request):
         return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 
-@extend_schema(
-    parameters=[
-        OpenApiParameter(name='from', description='Concept migration from', required=True, type=OpenApiTypes.URI), 
-        OpenApiParameter(name='to', description='Concept migration to', required=True, type=OpenApiTypes.URI), 
-    ],
-)
-@api_view(['POST', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-@transaction.atomic
-def ConceptsMigration(request):         
-    concept_from=RequestUrl(request, "from", models.Concepts)
-    concept_to=RequestUrl(request, "to", models.Concepts)
-    if concept_from is not None and concept_to is not None:
-        execute("update accountsoperations set concepts_id=%s where concepts_id=%s", (concept_to.id, concept_from.id))
-        execute("update creditcardsoperations set concepts_id=%s where concepts_id=%s", (concept_to.id, concept_from.id))
-        execute("update dividends set concepts_id=%s where concepts_id=%s", (concept_to.id, concept_from.id))
-        return Response({'status': 'details'}, status=status.HTTP_200_OK)
-    return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
-
-
 
 
 @extend_schema(
@@ -178,6 +158,18 @@ class ConceptsViewSet(viewsets.ModelViewSet):
                 "migrable": o.is_migrable(), 
             })
         return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+
+    @action(detail=True, methods=['POST'], name='Transfer data from a concept to other', url_path="data_transfer", url_name='data_transfer', permission_classes=[permissions.IsAuthenticated])
+    @transaction.atomic
+    def data_transfer(self, request, pk=None):
+        concept_to=RequestUrl(request, "to", models.Concepts)
+        if concept_to is not None:
+            concept_from=self.get_object()
+            execute("update accountsoperations set concepts_id=%s where concepts_id=%s", (concept_to.id, concept_from.id))
+            execute("update creditcardsoperations set concepts_id=%s where concepts_id=%s", (concept_to.id, concept_from.id))
+            execute("update dividends set concepts_id=%s where concepts_id=%s", (concept_to.id, concept_from.id))
+            return Response({'status': 'details'}, status=status.HTTP_200_OK)
+        return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CreditcardsViewSet(viewsets.ModelViewSet):
