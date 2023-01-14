@@ -522,7 +522,37 @@ class AccountsViewSet(viewsets.ModelViewSet):
             })
         return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
+            
 
+    @action(detail=True, methods=["get"], name='List accounts operations with balance calculations of an account', url_path="monthoperations", url_name='monthoperations', permission_classes=[permissions.IsAuthenticated])
+    def monthoperations(self, request, pk=None):
+        account=self.get_object()
+        year=RequestGetInteger(request, 'year')
+        month=RequestGetInteger(request, 'month')
+        
+        if all_args_are_not_none( year, month):
+            dt_initial=dtaware_month_start(year, month, request.local_zone)
+            initial_balance=account.balance( dt_initial, request.local_currency)[0]
+            qs=models.Accountsoperations.objects.select_related("accounts","concepts").filter(datetime__year=year, datetime__month=month, accounts=account).order_by("datetime")
+
+            r=[]
+            for o in qs:
+                r.append({
+                    "id": o.id,  
+                    "url": request.build_absolute_uri(reverse('accountsoperations-detail', args=(o.pk, ))), 
+                    "datetime":o.datetime, 
+                    "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(o.concepts.pk, ))), 
+                    "amount": o.amount, 
+                    "balance":  initial_balance + o.amount, 
+                    "comment": o.comment, 
+                    "comment_decoded": models.Comment().decode(o.comment), 
+                    "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.pk, ))), 
+                    "currency": o.accounts.currency, 
+                    "is_editable": o.is_editable(), 
+                })
+                initial_balance=initial_balance + o.amount
+            return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+        return JsonResponse( "Some parameters are missing", encoder=MyDjangoJSONEncoder, safe=False)
 
 class AccountsoperationsViewSet(viewsets.ModelViewSet):
     queryset = models.Accountsoperations.objects.all()
@@ -537,6 +567,7 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
             return self.queryset.select_related("accounts").filter(comment__icontains=search)
         else:
             return self.queryset.select_related("accounts").all()
+
             
 class BanksViewSet(viewsets.ModelViewSet):
     queryset = models.Banks.objects.all()
@@ -570,49 +601,6 @@ class BanksViewSet(viewsets.ModelViewSet):
         return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
         
 
-
-@extend_schema(
-        parameters=[
-            OpenApiParameter(name='account', description='Filter by account', required=True, type=int), 
-            OpenApiParameter(name='year', description='Filter by year', required=True, type=int), 
-            OpenApiParameter(name='month', description='Filter by month', required=True, type=int), 
-        ],
-    )
-@api_view(['GET', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def AccountsoperationsWithBalance(request):    
-    """
-        Shows accounts operations with balance
-    """
-    accounts_id=RequestGetInteger(request, 'account')
-    year=RequestGetInteger(request, 'year')
-    month=RequestGetInteger(request, 'month')
-    
-    
-    if all_args_are_not_none(accounts_id, year, month):
-        account=models.Accounts.objects.get(pk=accounts_id)
-        dt_initial=dtaware_month_start(year, month, request.local_zone)
-        initial_balance=account.balance( dt_initial, request.local_currency)[0]
-        qs=models.Accountsoperations.objects.select_related("accounts","concepts").filter(datetime__year=year, datetime__month=month, accounts__id=accounts_id).order_by("datetime")
-
-        r=[]
-        for o in qs:
-            r.append({
-                "id": o.id,  
-                "url": request.build_absolute_uri(reverse('accountsoperations-detail', args=(o.pk, ))), 
-                "datetime":o.datetime, 
-                "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(o.concepts.pk, ))), 
-                "amount": o.amount, 
-                "balance":  initial_balance + o.amount, 
-                "comment": o.comment, 
-                "comment_decoded": models.Comment().decode(o.comment), 
-                "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.pk, ))), 
-                "currency": o.accounts.currency, 
-                "is_editable": o.is_editable(), 
-            })
-            initial_balance=initial_balance + o.amount
-        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
-    return JsonResponse( "Some parameters are missing", encoder=MyDjangoJSONEncoder, safe=False)
 
 
 @api_view(['POST', ])    
