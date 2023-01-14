@@ -20,7 +20,7 @@ class CtTestCase(APITestCase):
         """
         super().setUpClass()
         
-        cls.factories_manager=factory_helpers.FactoriesManager()
+        cls.factories_manager=factory_helpers.MyFactoriesManager()
         ##Must be all models urls
         cls.factories_manager.append(factory.AccountsFactory, "Colaborative", "/api/accounts/")
         cls.factories_manager.append(factory.BanksFactory, "Colaborative", "/api/banks/")
@@ -89,7 +89,10 @@ class CtTestCase(APITestCase):
 
     def test_factory_by_type(self):
         print()
+        
+        self.factories_manager.find(factory.AccountsFactory).print_batch(3)
         for f in self.factories_manager:
             print("test_factory_by_type", f.type,  f)
             f.test_by_type(self, self.client_authorized_1, self.client_authorized_2, self.client_anonymous, self.client_catalog_manager)
         
+    

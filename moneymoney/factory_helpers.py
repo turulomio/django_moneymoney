@@ -71,6 +71,12 @@ class MyFactory:
         r=client.delete(self.hlu(id))
         apitestclass.assertEqual(r.status_code, delete, f"destroy method of {self.hlu(id)}")
         
+    def print_batch(self, number=3):
+        lod=[]
+        for i in range(3):
+            o=self.factory.create()
+            lod.append(serialize(o))
+        print(tabulate(lod, headers="keys", tablefmt="psql"))
         
     def tests_Collaborative(self, apitestclass, client_authenticated_1, client_authenticated_2, client_anonymous):
         """
@@ -142,7 +148,7 @@ class MyFactory:
 
 
             
-class FactoriesManager:
+class MyFactoriesManager:
     def __init__(self):
         self.arr=[]
         
@@ -184,6 +190,19 @@ class FactoriesManager:
                 r.append(mf)
         return r
         
+    def find(self, factory):
+        """
+        Public method Find by factory
+
+        @param factory DESCRIPTION
+        @type TYPE
+        @return DESCRIPTION
+        @rtype TYPE
+        """
+        for mf in self:
+            if mf.factory==factory:
+                return mf
+        return None
 
 
 def test_cross_user_data_with_post(apitestclass, client1,  client2,  tm):
@@ -276,10 +295,4 @@ def test_crud_unauthorized_anonymous(apitestclass, client_anonymous, client_auth
         r=client_anonymous.delete(tm.hlu(id))
         apitestclass.assertEqual(r.status_code, status.HTTP_401_UNAUTHORIZED, f"delete method of {tm.model_string()}")
 
-    
-def print_list(client, list_url, limit=10):
-    r=client.get(list_url)
-    print(f"\nPrinting {limit} rows of {list_url}")
-    lod=loads(r.content)[:limit]
-    print(tabulate(lod, headers="keys", tablefmt="psql"))
-        
+
