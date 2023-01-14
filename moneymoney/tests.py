@@ -25,8 +25,13 @@ class CtTestCase(APITestCase):
         cls.factories_manager.append(factory.AccountsFactory, "Colaborative", "/api/accounts/")
         cls.factories_manager.append(factory.BanksFactory, "Colaborative", "/api/banks/")
         cls.factories_manager.append(factory.ConceptsFactory, "Colaborative", "/api/concepts/")
+#        cls.factories_manager.append(factory.InvestmentsFactory, "Colaborative", "/api/investments/")
+        #cls.factories_manager.append(factory.InvestmentsoperationsFactory, "Colaborative", "/api/investmentsoperations/") #Needs quotes
         cls.factories_manager.append(factory.LeveragesFactory, "PrivateEditableCatalog", "/api/leverages/")
         cls.factories_manager.append(factory.OperationstypesFactory, "PrivateEditableCatalog", "/api/operationstypes/")
+#        cls.factories_manager.append(factory.ProductsFactory, "PrivateEditableCatalog", "/api/products/")
+        cls.factories_manager.append(factory.ProductstypesFactory, "PrivateEditableCatalog", "/api/productstypes/")
+        cls.factories_manager.append(factory.StockmarketsFactory, "PrivateEditableCatalog", "/api/stockmarkets/")
         
         # User to test api
         cls.user_authorized_1 = User(
@@ -91,12 +96,30 @@ class CtTestCase(APITestCase):
 
     def test_factory_by_type(self):
         print()
-        self.factories_manager.find(factory.ConceptsFactory).print_batch(3)
         for f in self.factories_manager:
             print("test_factory_by_type", f.type,  f)
             f.test_by_type(self, self.client_authorized_1, self.client_authorized_2, self.client_anonymous, self.client_catalog_manager)
             
     def test_investments_operations(self):
-        investment=factory.InvestmentsFactory.create()
+        #self.factories_manager.find(factory.InvestmentsFactory).print_batch(3)
+        ##Currencies must be the same
+        account=factory.AccountsFactory.create(currency="EUR")
+        product=factory.ProductsFactory.create(currency="EUR")
+        investment=factory.InvestmentsFactory.create(accounts=account, products=product)
+        print(account)
         print(investment)
+        print(product)
+        print(investment.products)
+        for i in range(100):
+            quote=factory.QuotesFactory.create(products=product)
+        print(quote)
+        mf_io=factory_helpers.MyFactory(factory.InvestmentsoperationsFactory, "Colaborative", "/api/investmentsoperations/")
+        io_payload=mf_io.post_payload(investments=investment, operationstypes=models.Operationstypes.objects.get(pk=models.eOperationType.SharesPurchase))
+        print(io_payload)
+        r=self.client_authorized_1.post("/api/investmentsoperations/", io_payload)
+        print(r.content)
+        qs_ao=models.Accountsoperations.objects.all()
+        for ao in qs_ao:
+            print(factory_helpers.serialize(ao))
+        
     

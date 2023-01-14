@@ -700,9 +700,18 @@ class Investmentsoperations(models.Model):
     def __str__(self):
         return "InvestmentOperation"
 
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+            models.Model.save(self)
 
+    @transaction.atomic
     def delete(self):
-        execute("delete from investmentsaccountsoperations where investmentsoperations_id=%s",(self.id, )) 
+#        execute("delete from investmentsaccountsoperations where investmentsoperations_id=%s",(self.id, )) 
+        
+        concepts=Concepts.objects.filter(pk__in=(eConcept.BuyShares, eConcept.SellShares, eConcept.BankCommissions))
+        qs_ao=Accountsoperations.objects.filter(concepts__in=concepts, comment=f'{eComment.InvestmentOperation},{self.id}')
+        print(qs_ao)
+        qs_ao.delete()
         models.Model.delete(self)
         
 
@@ -727,7 +736,7 @@ class Investmentsoperations(models.Model):
             return
         
         comment=Comment().encode(eComment.InvestmentOperation, self)
-        if self.operationstypes.id==4:#Compra Acciones
+        if self.operationstypes.id==eOperationType.SharesPurchase:#Compra Acciones
             c=Accountsoperations()
             c.datetime=self.datetime
             c.concepts=Concepts.objects.get(pk=eConcept.BuyShares)
@@ -735,7 +744,7 @@ class Investmentsoperations(models.Model):
             c.comment=comment
             c.accounts=self.investments.accounts
             c.save()
-        elif self.operationstypes.id==5:#// Venta Acciones
+        elif self.operationstypes.id==eOperationType.SharesSale:#// Venta Acciones
             c=Accountsoperations()
             c.datetime=self.datetime
             c.concepts=Concepts.objects.get(pk=eConcept.SellShares)
@@ -743,7 +752,7 @@ class Investmentsoperations(models.Model):
             c.comment=comment
             c.accounts=self.investments.accounts
             c.save()
-        elif self.operationstypes.id==6:#Added
+        elif self.operationstypes.id==eOperationType.SharesAdd:#Added
             if(self.commission!=0):
                 c=Accountsoperations()
                 c.datetime=self.datetime

@@ -33,9 +33,9 @@ class MyFactory:
     def hlu(self, id):
         return f'http://testserver{self.url}{id}/'
         
-    def post_payload(self):
+    def post_payload(self, *args, **kwargs):
         ## factory.create. Creates an object with all dependencies. Si le quito "id" y "url" sería uno nuevo
-        o=self.factory.create()
+        o=self.factory.create(**kwargs)
         o.delete()
         o.id=None
         payload=serialize(o)
@@ -63,6 +63,7 @@ class MyFactory:
             if qs.count()>0:
                 id=qs[0].id
             else:
+                print(created_json, self.url, self.post_payload())
                 raise "No objects to get an id"
 
 

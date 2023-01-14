@@ -1,8 +1,20 @@
 from factory import Faker, SubFactory, lazy_attribute
 from factory.django import DjangoModelFactory
 from moneymoney import models
+from django.utils import timezone
 #https://faker.readthedocs.io/en/master/providers/faker.providers.currency.html
 
+
+
+class LeveragesFactory(DjangoModelFactory):
+    class Meta:
+        model= models.Leverages
+        
+    multiplier = Faker("random_int")
+    
+    @lazy_attribute
+    def name(self):
+        return f'Leverage x{self.multiplier}'
 class BanksFactory(DjangoModelFactory):
     class Meta:
         model= models.Banks
@@ -26,16 +38,6 @@ class AccountsFactory(DjangoModelFactory):
         return f"{self.banks.name} Account"
         
         
-
-class LeveragesFactory(DjangoModelFactory):
-    class Meta:
-        model= models.Leverages
-        
-    multiplier = Faker("random_int")
-    
-    @lazy_attribute
-    def name(self):
-        return f'Leverage x{self.multiplier}'
 
 
 class ProductstypesFactory(DjangoModelFactory):
@@ -62,25 +64,33 @@ class ProductsFactory(DjangoModelFactory):
         
     name = Faker("bothify", text="Product ??????")
     isin=""
-    currency=""
+    currency=Faker("currency_code")
     productstypes=SubFactory(ProductstypesFactory)
-    agrupations=None
-    web=None
-    address=None
-    phone=None
-    mail=None
+    agrupations=""
+    web=Faker("uri")
+    address=Faker("address")
+    phone=Faker("phone_number")
+    mail=Faker("ascii_email")
     percentage=100
     pci="c"
     leverages=SubFactory(LeveragesFactory)
     stockmarkets = SubFactory(StockmarketsFactory)
-    comment = None
+    comment = Faker("sentence")
     obsolete = Faker("boolean")
-    ticker_google = None
-    ticker_yahoo = None
-    ticker_morningstar = None
-    ticker_quefondos = None
-    ticker_investingcom = None
+    ticker_google = ""
+    ticker_yahoo = ""
+    ticker_morningstar = ""
+    ticker_quefondos = ""
+    ticker_investingcom = ""
     decimals =2
+    
+
+class QuotesFactory(DjangoModelFactory):
+    class Meta:
+        model= models.Quotes
+    datetime = Faker("date_time", tzinfo=timezone.get_current_timezone())
+    quote = Faker("random_number")
+    products = SubFactory(ProductsFactory)
 
 class InvestmentsFactory(DjangoModelFactory):
     class Meta:
@@ -89,17 +99,34 @@ class InvestmentsFactory(DjangoModelFactory):
     name = Faker("bothify", text="Investment ??????")
     active = Faker("boolean")
     accounts = SubFactory(AccountsFactory)
-    selling_price = None
+    selling_price = Faker("random_int")
     products = SubFactory(ProductsFactory)
-    selling_expiration = None
+    selling_expiration = Faker("date")
     daily_adjustment = False
     balance_percentage= 100
         
+
 class OperationstypesFactory(DjangoModelFactory):
     class Meta:
         model= models.Operationstypes
         
     name = Faker("bothify", text="Operation type ??????")
+
+class InvestmentsoperationsFactory(DjangoModelFactory):
+    class Meta:
+        model= models.Investmentsoperations
+        
+    operationstypes = SubFactory(OperationstypesFactory)
+    investments = SubFactory(InvestmentsFactory,  operationstypes=models.Operationstypes.objects.get(pk=models.eOperationType.SharesPurchase))
+    shares=Faker("random_int")
+    price=Faker("random_number")
+    taxes=Faker("random_number")
+    commission=Faker("random_number")
+    datetime=timezone.now()
+    comment=Faker("sentence")
+    show_in_ranges=Faker("boolean")
+    currency_conversion=1
+    
 
 class ConceptsFactory(DjangoModelFactory):
     class Meta:
@@ -109,14 +136,3 @@ class ConceptsFactory(DjangoModelFactory):
     name = Faker("bothify", text="Concept ??????")
     editable = Faker("boolean")
 
-
-
-class LeveragesFactory(DjangoModelFactory):
-    class Meta:
-        model= models.Leverages
-        
-    multiplier = Faker("random_int")
-    
-    @lazy_attribute
-    def name(self):
-        return f'Leverage x{self.multiplier}'

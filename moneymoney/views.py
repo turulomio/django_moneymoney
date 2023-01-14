@@ -1306,11 +1306,9 @@ class ProductspairsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.ProductspairsSerializer
     permission_classes = [permissions.IsAuthenticated]  
 
-class ProductstypesViewSet(viewsets.ModelViewSet):
+class ProductstypesViewSet(CatalogModelViewSet):
     queryset = models.Productstypes.objects.all()
     serializer_class = serializers.ProductstypesSerializer
-    permission_classes = [permissions.IsAuthenticated]  
-
 
 @api_view(['POST', ])
 @permission_classes([permissions.IsAuthenticated, ])
@@ -2262,10 +2260,9 @@ def EstimationsDps_list(request):
         return JsonResponse(rows, safe=False)
     return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
 
-class StockmarketsViewSet(viewsets.ModelViewSet):
+class StockmarketsViewSet(CatalogModelViewSet):
     queryset = models.Stockmarkets.objects.all()
     serializer_class = serializers.StockmarketsSerializer
-    permission_classes = [permissions.IsAuthenticated]  
 
 
 def setGlobal(key, value):

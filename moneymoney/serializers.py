@@ -109,7 +109,7 @@ class CreditcardsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     
     class Meta:
         model = models.Creditcardsoperations
-        fields = ('url', 'id', 'datetime', 'concepts',  'operationstypes', 'amount','comment','creditcards', 'paid','paid_datetime', 'currency')
+        fields = ('url', 'id', 'datetime', 'concepts', 'amount','comment','creditcards', 'paid','paid_datetime', 'currency')
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):
         return  obj.creditcards.accounts.currency
@@ -136,7 +136,7 @@ class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     
     class Meta:
         model = models.Accountsoperations
-        fields = ('id','url', 'datetime', 'concepts',  'operationstypes', 'amount','comment','accounts',  'currency', 'comment_decoded')
+        fields = ('id','url', 'datetime', 'concepts', 'amount','comment','accounts',  'currency', 'comment_decoded')
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):
         return obj.accounts.currency
