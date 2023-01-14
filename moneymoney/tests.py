@@ -25,6 +25,7 @@ class CtTestCase(APITestCase):
         cls.factories_manager.append(factory.AccountsFactory, "Colaborative", "/api/accounts/")
         cls.factories_manager.append(factory.BanksFactory, "Colaborative", "/api/banks/")
         cls.factories_manager.append(factory.LeveragesFactory, "PrivateEditableCatalog", "/api/leverages/")
+        cls.factories_manager.append(factory.OperationstypesFactory, "PrivateEditableCatalog", "/api/operationstypes/")
         
         # User to test api
         cls.user_authorized_1 = User(
@@ -89,8 +90,7 @@ class CtTestCase(APITestCase):
 
     def test_factory_by_type(self):
         print()
-        
-        self.factories_manager.find(factory.AccountsFactory).print_batch(3)
+        self.factories_manager.find(factory.OperationstypesFactory).print_batch(3)
         for f in self.factories_manager:
             print("test_factory_by_type", f.type,  f)
             f.test_by_type(self, self.client_authorized_1, self.client_authorized_2, self.client_anonymous, self.client_catalog_manager)

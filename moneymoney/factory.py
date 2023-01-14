@@ -24,6 +24,13 @@ class AccountsFactory(DjangoModelFactory):
     @lazy_attribute
     def name(self):
         return f"{self.banks.name} Account"
+        
+class OperationstypesFactory(DjangoModelFactory):
+    class Meta:
+        model= models.Operationstypes
+        
+    name = Faker("bothify", text="Operation type ??????")
+
 
 
 class LeveragesFactory(DjangoModelFactory):

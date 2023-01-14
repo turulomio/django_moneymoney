@@ -25,7 +25,10 @@ class MyFactory:
         
     def __str__(self):
         return self.url
-            
+        
+    def model(self):        
+        return self.factory._meta.model
+
     #Hyperlinkurl
     def hlu(self, id):
         return f'http://testserver{self.url}{id}/'
@@ -55,9 +58,12 @@ class MyFactory:
         created_json=loads(r.content)
         try:
             id=created_json["id"]
-        except:#User couldn't post any, I look for a id in database
-            print("I must look for a id. Faking=1",  self.url)
-            id=1
+        except:#User couldn't post any, I look for a id in database  to check the rest of actions
+            qs=self.model().objects.all()
+            if qs.count()>0:
+                id=qs[0].id
+            else:
+                raise "No objects to get an id"
 
 
         r=client.get(self.url)
