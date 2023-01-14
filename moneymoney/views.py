@@ -618,7 +618,7 @@ def AccountsoperationsWithBalance(request):
         account=models.Accounts.objects.get(pk=accounts_id)
         dt_initial=dtaware_month_start(year, month, request.local_zone)
         initial_balance=account.balance( dt_initial, request.local_currency)[0]
-        qs=models.Accountsoperations.objects.select_related("accounts").select_related("operationstypes").select_related("concepts").filter(datetime__year=year, datetime__month=month, accounts__id=accounts_id).order_by("datetime")
+        qs=models.Accountsoperations.objects.select_related("accounts","concepts").filter(datetime__year=year, datetime__month=month, accounts__id=accounts_id).order_by("datetime")
 
         r=[]
         for o in qs:
@@ -627,7 +627,6 @@ def AccountsoperationsWithBalance(request):
                 "url": request.build_absolute_uri(reverse('accountsoperations-detail', args=(o.pk, ))), 
                 "datetime":o.datetime, 
                 "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(o.concepts.pk, ))), 
-                "operationstypes":request.build_absolute_uri(reverse('operationstypes-detail', args=(o.operationstypes.pk, ))), 
                 "amount": o.amount, 
                 "balance":  initial_balance + o.amount, 
                 "comment": o.comment, 

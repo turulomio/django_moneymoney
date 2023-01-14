@@ -713,7 +713,12 @@ class Investmentsoperations(models.Model):
     @transaction.atomic
     def update_associated_account_operation(self,  request):
         #/Borra de la tabla investmentsaccountsoperations los de la operinversión pasada como parámetro
-        execute("delete from investmentsaccountsoperations where investmentsoperations_id=%s",(self.id, )) 
+        #execute("delete from investmentsaccountsoperations where investmentsoperations_id=%s",(self.id, )) 
+        #Selecciona si existe una accountoperation con comment '10000,self.id' con id_concepts 35,29 y 38
+        concepts=Concepts.objects.filter(pk__in=(eConcept.BuyShares, eConcept.SellShares, eConcept.BankCommissions))
+        qs_ao=Accountsoperations.objects.filter(concepts__in=concepts, comment=f'{eComment.InvestmentOperation},{self.id}')
+        print(qs_ao)
+        qs_ao.delete()
 
         investment_operations=InvestmentsOperations.from_investment(request, self.investments, timezone.now(), request.local_currency)
         io=investment_operations.o_find_by_id(self.id)
@@ -723,38 +728,29 @@ class Investmentsoperations(models.Model):
         
         comment=Comment().encode(eComment.InvestmentOperation, self)
         if self.operationstypes.id==4:#Compra Acciones
-            c=Investmentsaccountsoperations()
+            c=Accountsoperations()
             c.datetime=self.datetime
-            c.concepts=Concepts.objects.get(pk=29)
-            c.operationstypes=c.concepts.operationstypes
+            c.concepts=Concepts.objects.get(pk=eConcept.BuyShares)
             c.amount=-io['net_account']
             c.comment=comment
             c.accounts=self.investments.accounts
-            c.investments=self.investments
-            c.investmentsoperations=self
             c.save()
         elif self.operationstypes.id==5:#// Venta Acciones
-            c=Investmentsaccountsoperations()
+            c=Accountsoperations()
             c.datetime=self.datetime
-            c.concepts=Concepts.objects.get(pk=35)
-            c.operationstypes=c.concepts.operationstypes
+            c.concepts=Concepts.objects.get(pk=eConcept.SellShares)
             c.amount=io['net_account']
             c.comment=comment
             c.accounts=self.investments.accounts
-            c.investments=self.investments
-            c.investmentsoperations=self
             c.save()
         elif self.operationstypes.id==6:#Added
             if(self.commission!=0):
-                c=Investmentsaccountsoperations()
+                c=Accountsoperations()
                 c.datetime=self.datetime
-                c.concepts=Concepts.objects.get(pk=38)
-                c.operationstypes=c.concepts.operationstypes
+                c.concepts=Concepts.objects.get(pk=eConcept.BankCommissions)
                 c.amount=-io['taxes_account']-io['commission_account']
                 c.comment=comment
                 c.accounts=self.investments.accounts
-                c.investments=self.investments
-                c.investmentsoperations=self
                 c.save()
 
     
@@ -1093,26 +1089,30 @@ def balance_user_by_operationstypes(year,  month,  operationstypes_id, local_cur
             select sum(amount) as amount 
             from 
                 accountsoperations,
-                accounts
+                accounts, 
+                concepts
             where 
-                operationstypes_id=%s and 
+                concepts.operationstypes_id=%s and 
                 date_part('year',datetime)=%s and
                 {strmonth}
                 accounts.currency=%s and
-                accounts.id=accountsoperations.accounts_id   
+                accounts.id=accountsoperations.accounts_id    AND
+                accountsoperations.concepts_id=concepts.id
         union all 
             select sum(amount) as amount 
             from 
                 creditcardsoperations ,
                 creditcards,
-                accounts
+                accounts, 
+                concepts
             where 
-                operationstypes_id=%s and 
+                concepts.operationstypes_id=%s and 
                 date_part('year',datetime)=%s and
                 {strmonth}
                 accounts.currency=%s and
                 accounts.id=creditcards.accounts_id and
-                creditcards.id=creditcardsoperations.creditcards_id""", parameters):
+                creditcards.id=creditcardsoperations.creditcards_id   AND
+                creditcardsoperations.concepts_id=concepts.id""", parameters):
 
             if row['amount'] is not None:
                 if local_currency==currency:
