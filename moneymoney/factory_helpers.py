@@ -2,6 +2,9 @@
 ## IF YOU NEED TO UPDATE IT PLEASE MAKE A PULL REQUEST IN THAT PROJECT AND DOWNLOAD FROM IT
 ## DO NOT UPDATE IT IN YOUR CODE
 
+## This module allows to automatizate tests that has a catalog, authorized users, private tables, public tables
+## If you need to addapt this code you can subclass all classes, even types
+
 from json import loads
 from rest_framework import status
 from tabulate import tabulate
@@ -21,61 +24,107 @@ class MyFactory:
         self.url=url
         
     def __str__(self):
-        return self.factory.__class__.__name__
+        return self.url
             
     #Hyperlinkurl
     def hlu(self, id):
         return f'http://testserver{self.url}{id}/'
         
-        
-    def test_crud(self, apitestclass, client):
-        """
-        Function Makes all action operations to factory with client to all examples
-
-        """
+    def post_payload(self):
         ## factory.create. Creates an object with all dependencies. Si le quito "id" y "url" sería uno nuevo
         o=self.factory.create()
         o.delete()
         o.id=None
-        new_payload=serialize(o)
-        del new_payload["id"]
-        del new_payload["url"]
+        payload=serialize(o)
+        del payload["id"]
+        del payload["url"]
+        return payload
+        
+    def test_by_type(self, apitestclass,  client_authenticated_1, client_authenticated_2, client_anonymous, client_catalog_manager):
+        if type=="Private":
+            self.tests_Collaborative(apitestclass, client_authenticated_1, client_authenticated_2)
+        
+        
+    def tests_Collaborative(self, apitestclass, client_authenticated_1, client_authenticated_2):
+        """
+        Function Makes all action operations to factory with client to all examples
 
-        r=client.post(self.url, new_payload)
+        """
+        print("Falta client2")
+
+        r=client_authenticated_1.post(self.url, self.post_payload())
         
         apitestclass.assertEqual(r.status_code, status.HTTP_201_CREATED, f"post method of {self}")
-        d=loads(r.content)
-        id=d["id"]
-        payload=d
+        created_json=loads(r.content)
+        id=created_json["id"]
         
         
-        r=client.put(self.hlu(id), payload)
+        r=client_authenticated_1.put(self.hlu(id), created_json)
         apitestclass.assertEqual(r.status_code, status.HTTP_200_OK, f"put method of {self}")
         
-        r=client.patch(self.hlu(id), payload)
+        r=client_authenticated_1.patch(self.hlu(id), created_json)
         apitestclass.assertEqual(r.status_code, status.HTTP_200_OK, f"patch method of {self}")
         
-        r=client.get(self.hlu(id))
+        r=client_authenticated_1.get(self.hlu(id))
         apitestclass.assertEqual(r.status_code, status.HTTP_200_OK, f"get method of {self}")
         
-        r=client.get(self.url)
+        r=client_authenticated_1.get(self.url)
         apitestclass.assertEqual(r.status_code, status.HTTP_200_OK, f"list method of {self}")
         
-        r=client.delete(self.hlu(id))
+        r=client_authenticated_1.delete(self.hlu(id))
         apitestclass.assertEqual(r.status_code, status.HTTP_204_NO_CONTENT, f"delete method of {self}")
+        
+    def tests_PrivateEditableCatalog(self, apitestclass,  client_authenticated_1, client_anonymous, client_catalog_manager, log=False):
+        """
+        Function make all checks to privatecatalogs factories with different clients
+        """
+        
+        if log is True:
+            print(f"+  {self.__name__}. test_only_retrive_and_list_actions_allowed. POST...")
+            
+        ### TEST OF CLIENT_AUTHENTICATED
+        
+        
+        r=client_authenticated_1.post(self.url, self.post_payload())
+        if log is True:
+            print(f"   - {r}")
+            print(f"   - {r.content}")
+        apitestclass.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN, f"create action of {self}")
 
-factory_types=[
-    "PublicCatalog", #Catalog can be listed  and retrieved LR without authentication. CatalogManager permisssión can CUD
-    "PrivateCatalog", #Catalog can be listed  and retrieved only with authentication. CatalogManager permisssión can CUD
-    "Private", #Table content  is filtered by authenticated user. User can¡t see other users content
-    "Colaborative",  # All authenticated user can LR and CUD
-    "Public",  # models can be LR for anonymous users
-    "Anonymous",  #Anonymous users can LR and CUD
-]
+        created_json=loads(r.content)
+        id=created_json["id"]
+
+
+        r=client_authenticated_1.get(self.url)
+        apitestclass.assertEqual(r.status_code, status.HTTP_200_OK, f"list method of {self}")
+        r=client_authenticated_1.get(self.hlu(id))
+        apitestclass.assertEqual(r.status_code, status.HTTP_200_OK, f"retrieve method of {self}")
+        r=client_authenticated_1.put(self.hlu(id))
+        apitestclass.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN, f"update method of {self}")
+        r=client_authenticated_1.patch(self.hlu(id))
+        apitestclass.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN, f"partial_update method of {self}")
+        r=client_authenticated_1.delete(self.hlu(id))
+        apitestclass.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN, f"destroy method of {self}")
+        
+
+
             
 class FactoriesManager:
     def __init__(self):
         self.arr=[]
+        
+        
+    def get_factory_types(self):
+        return [
+            "PublicCatalog", #Catalog can be listed  and retrieved LR without authentication. Nobody can CUD
+            "PrivateCatalog", #Catalog can be listed  and retrieved only with authentication. Nobody can CUD
+            "PublicEditableCatalog", #Catalog can be listed  and retrieved LR without authentication. CatalogManager group can CUD
+            "PrivateEditableCatalog", #Catalog can be listed  and retrieved only with authentication. CatalogManagert group can CUD
+            "Private", #Table content  is filtered by authenticated user. User can¡t see other users content
+            "Colaborative",  # All authenticated user can LR and CUD
+            "Public",  # models can be LR for anonymous users
+            "Anonymous",  #Anonymous users can LR and CUD
+        ]
         
 
     ## Method to iterate self.arr iterating object
@@ -85,7 +134,7 @@ class FactoriesManager:
         return len(self.arr)
         
     def append(self, o, type, url):
-        if type not in factory_types:
+        if type not in self.get_factory_types():
             raise ("Factory type is not recognized")
         self.arr.append(MyFactory(o, type, url))
         
@@ -150,33 +199,6 @@ def test_cross_user_data(apitestclass, client1,  client2,  url):
     r=client2.get(url)
     apitestclass.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND, f"{url}. WARNING: Client2 can access Client1 post")
     
-    
-def test_only_retrieve_and_list_actions_allowed(apitestclass,  client,  tm, log=False):
-    """
-    Function Checks api_model can be only accessed fot get and list views
-
-    @param api_model DESCRIPTION
-    @type TYPE
-    """
-    
-    if log is True:
-        print(f"+  {tm.__name__}. test_only_retrive_and_list_actions_allowed. POST...")
-    r=client.post(tm.hlu(), {})
-    if log is True:
-        print(f"   - {r}")
-        print(f"   - {r.content}")
-    apitestclass.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN, f"create action of {tm.model_string()}")
-
-    r=client.get(tm.hlu())
-    apitestclass.assertEqual(r.status_code, status.HTTP_200_OK, f"list method of {tm.model_string()}")
-    r=client.get(tm.hlu_first_fixture())
-    apitestclass.assertEqual(r.status_code, status.HTTP_200_OK, f"retrieve method of {tm.model_string()}")
-    r=client.put(tm.hlu_first_fixture())
-    apitestclass.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN, f"update method of {tm.model_string()}")
-    r=client.patch(tm.hlu_first_fixture())
-    apitestclass.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN, f"partial_update method of {tm.model_string()}")
-    r=client.delete(tm.hlu_first_fixture())
-    apitestclass.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN, f"destroy method of {tm.model_string()}")
     
 
         

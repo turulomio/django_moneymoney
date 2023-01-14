@@ -21,3 +21,10 @@ class AccountsFactory(DjangoModelFactory):
     currency="EUR"
     decimals=2
 
+
+class LeveragesFactory(DjangoModelFactory):
+    class Meta:
+        model= models.Leverages
+        
+    name = Faker("numerify", text='Levrage i%')
+    active = Faker("boolean")

@@ -1,17 +1,13 @@
 from django.contrib.auth.models import User
 from django.test import tag
-#from django.utils import timezone
 from json import loads
-from rest_framework import status
 from moneymoney import models
 from moneymoney import factory
-from moneymoney import factory_helpers as fh
-from moneymoney.reusing.tests_helpers import print_list, hlu, TestModelManager, test_crud_unauthorized_anonymous, test_crud, test_only_retrieve_and_list_actions_allowed
+from moneymoney import factory_helpers 
 
 from rest_framework.test import APIClient, APITestCase
 from django.contrib.auth.models import Group
 
-print_list    
 tag
 
 class CtTestCase(APITestCase):
@@ -24,31 +20,31 @@ class CtTestCase(APITestCase):
         """
         super().setUpClass()
         
-        cls.tmm=TestModelManager.from_module_with_testmodels("moneymoney.tests_data")
-        cls.fm=fh.FactoriesManager()
+        cls.factories_manager=factory_helpers.FactoriesManager()
         ##Must be all models urls
-        cls.fm.append(factory.AccountsFactory, "Private", "/api/accounts/")
-        cls.fm.append(factory.BanksFactory, "Private", "/api/banks/")
+        cls.factories_manager.append(factory.AccountsFactory, "Colaborative", "/api/accounts/")
+        cls.factories_manager.append(factory.BanksFactory, "Colaborative", "/api/banks/")
+        cls.factories_manager.append(factory.LeveragesFactory, "PrivateEditableCatalog", "/api/leverages/")
         
         # User to test api
-        cls.user_testing = User(
+        cls.user_authorized_1 = User(
             email='testing@testing.com',
             first_name='Testing',
             last_name='Testing',
             username='testing',
         )
-        cls.user_testing.set_password('testing123')
-        cls.user_testing.save()
+        cls.user_authorized_1.set_password('testing123')
+        cls.user_authorized_1.save()
         
         # User to confront security
-        cls.user_other = User(
+        cls.user_authorized_2 = User(
             email='other@other.com',
             first_name='Other',
             last_name='Other',
             username='other',
         )
-        cls.user_other.set_password('other123')
-        cls.user_other.save()
+        cls.user_authorized_2.set_password('other123')
+        cls.user_authorized_2.save()
         
                 
         # User to test api
@@ -63,23 +59,23 @@ class CtTestCase(APITestCase):
         cls.user_catalog_manager.groups.add(Group.objects.get(name='CatalogManager'))
 
         client = APIClient()
-        response = client.post('/login/', {'username': cls.user_testing.username, 'password': 'testing123',},format='json')
+        response = client.post('/login/', {'username': cls.user_authorized_1.username, 'password': 'testing123',},format='json')
         result = loads(response.content)
-        cls.token_user_testing = result
+        cls.token_user_authorized_1 = result
         
-        response = client.post('/login/', {'username': cls.user_other.username, 'password': 'other123',},format='json')
+        response = client.post('/login/', {'username': cls.user_authorized_2.username, 'password': 'other123',},format='json')
         result = loads(response.content)
-        cls.token_user_other = result
+        cls.token_user_authorized_2 = result
 
         response = client.post('/login/', {'username': cls.user_catalog_manager.username, 'password': 'catalog_manager123',},format='json')
         result = loads(response.content)
         cls.token_user_catalog_manager=result
         
-        cls.client_testing=APIClient()
-        cls.client_testing.credentials(HTTP_AUTHORIZATION='Token ' + cls.token_user_testing)
+        cls.client_authorized_1=APIClient()
+        cls.client_authorized_1.credentials(HTTP_AUTHORIZATION='Token ' + cls.token_user_authorized_1)
 
-        cls.client_other=APIClient()
-        cls.client_other.credentials(HTTP_AUTHORIZATION='Token ' + cls.token_user_other)
+        cls.client_authorized_2=APIClient()
+        cls.client_authorized_2.credentials(HTTP_AUTHORIZATION='Token ' + cls.token_user_authorized_2)
         
         cls.client_anonymous=APIClient()
         
@@ -89,63 +85,11 @@ class CtTestCase(APITestCase):
         cls.assertTrue(cls, models.Operationstypes.objects.all().count()>0,  "There aren't operationstypes")
         cls.assertTrue(cls, models.Products.objects.all().count()>0, "There aren't products")
         cls.assertTrue(cls, models.Concepts.objects.all().count()>0, "There aren't concepts")
+
+
+    def test_factory_by_type(self):
+        print()
+        for f in self.factories_manager:
+            print("test_factory_by_type", f.type,  f)
+            f.test_by_type(self, self.client_authorized_1, self.client_authorized_2, self.client_anonymous, self.client_catalog_manager)
         
-        
-    def test_anonymous_crud(self):
-        """
-            Anonymous user trys to crud
-        """
-        print()
-        for tm  in self.tmm.private():
-            print("test_anonymous_crud", tm.__name__)
-            test_crud_unauthorized_anonymous(self, self.client_anonymous, self.client_testing,  tm)
-
-    def test_catalog_only_retrieve_and_list_actions_allowed(self):
-        """
-            Checks that catalog table can be only accesed to GET method to normal users
-        """
-        print()
-        for tm  in self.tmm.catalogs():
-            print("test_catalog_only_retrieve_and_list_actions_allowed", tm.__name__)
-            test_only_retrieve_and_list_actions_allowed(self, self.client_testing, tm, log=False)
-
-  
-    def test_crud_non_catalog(self):
-        """
-            Checks crud operations to not catalog models
-        """
-        print()
-        for tm  in self.tmm.private():
-            print("test_crud_non_catalog", tm.__name__)
-            test_crud(self, self.client_testing, tm)
-
-    def test_investments(self):
-        print()
-        print("test_investments")
-        r= self.client_testing.post("/api/banks/", {"name":"My bank", "active":True})
-        bank=loads(r.content)
-        self.assertEqual(r.status_code, status.HTTP_201_CREATED,  "Error creating bank")
-
-        r= self.client_testing.post("/api/accounts/", {"name":"My account", "banks":bank["url"],  "active":True, "currency":"EUR", "decimals":2})
-        account=loads(r.content)
-        self.assertEqual(r.status_code, status.HTTP_201_CREATED,  "Error creating account")
-        
-        r= self.client_testing.post("/api/investments/", {"name":"My investment", "accounts": account["url"],  "active":True, "products": hlu("products", 79329), "selling_price": 23.12, "balance_percentage":100})
-        #investment=loads(r.content)
-        self.assertEqual(r.status_code, status.HTTP_201_CREATED,  "Error creating investment")
-
-
-
-    def test_factories(self):
-        print()
-        print("test_factories")
-        bank=factory.BanksFactory.create()
-        print(fh.serialize(bank))
-        account=factory.AccountsFactory.build(banks=bank)
-        print(fh.serialize(account))
-
-    def test_factory_private_crud(self):
-        print()
-        for f in self.fm.list_by_type("Private"):
-            print("test_crud_non_catalog", str(f.url))
-            f.test_crud(self, self.client_testing)
