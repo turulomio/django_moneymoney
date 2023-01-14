@@ -27,4 +27,4 @@ class LeveragesFactory(DjangoModelFactory):
         model= models.Leverages
         
     name = Faker("numerify", text='Levrage i%')
-    active = Faker("boolean")
+    multiplier=1

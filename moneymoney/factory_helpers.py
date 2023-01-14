@@ -41,71 +41,95 @@ class MyFactory:
         return payload
         
     def test_by_type(self, apitestclass,  client_authenticated_1, client_authenticated_2, client_anonymous, client_catalog_manager):
-        if type=="Private":
-            self.tests_Collaborative(apitestclass, client_authenticated_1, client_authenticated_2)
+        if self.type=="Colaborative":
+            self.tests_Collaborative(apitestclass, client_authenticated_1, client_authenticated_2, client_anonymous)
+        if self.type=="PrivateEditableCatalog":
+            self.tests_PrivateEditableCatalog(apitestclass, client_authenticated_1, client_authenticated_2, client_anonymous, client_catalog_manager)
         
         
-    def tests_Collaborative(self, apitestclass, client_authenticated_1, client_authenticated_2):
+    ## action can be None, to ignore test or status_code returned
+    def common_actions_tests(self, apitestclass,  client,  post=status.HTTP_200_OK, get=status.HTTP_200_OK, list=status.HTTP_200_OK,  put=status.HTTP_200_OK, patch=status.HTTP_200_OK, delete=status.HTTP_200_OK):
+        r=client.post(self.url, self.post_payload())
+        apitestclass.assertEqual(r.status_code, post, f"create action of {self}")
+
+        created_json=loads(r.content)
+        try:
+            id=created_json["id"]
+        except:#User couldn't post any, I look for a id in database
+            print("I must look for a id. Faking=1",  self.url)
+            id=1
+
+
+        r=client.get(self.url)
+        apitestclass.assertEqual(r.status_code, list, f"list method of {self.url}")
+        r=client.get(self.hlu(id))
+        apitestclass.assertEqual(r.status_code, get, f"retrieve method of {self.hlu(id)}")
+        r=client.put(self.hlu(id), created_json)
+        apitestclass.assertEqual(r.status_code, put, f"update method of {self.hlu(id)}. {self.hlu(id)}")
+        r=client.patch(self.hlu(id), created_json)
+        apitestclass.assertEqual(r.status_code, patch, f"partial_update method of {self.hlu(id)}")
+        r=client.delete(self.hlu(id))
+        apitestclass.assertEqual(r.status_code, delete, f"destroy method of {self.hlu(id)}")
+        
+        
+    def tests_Collaborative(self, apitestclass, client_authenticated_1, client_authenticated_2, client_anonymous):
         """
         Function Makes all action operations to factory with client to all examples
 
         """
-        print("Falta client2")
-
-        r=client_authenticated_1.post(self.url, self.post_payload())
+        ### TEST OF CLIENT_AUTHENTICATED_1
+        self.common_actions_tests(apitestclass, client_authenticated_1, 
+            post=status.HTTP_201_CREATED, 
+            get=status.HTTP_200_OK, 
+            list=status.HTTP_200_OK, 
+            put=status.HTTP_200_OK, 
+            patch=status.HTTP_200_OK, 
+            delete=status.HTTP_204_NO_CONTENT
+        )         
         
-        apitestclass.assertEqual(r.status_code, status.HTTP_201_CREATED, f"post method of {self}")
-        created_json=loads(r.content)
-        id=created_json["id"]
+        ### TEST OF CLIENT_AUTHENTICATED_2
+        self.common_actions_tests(apitestclass, client_authenticated_2, 
+            post=status.HTTP_201_CREATED, 
+            get=status.HTTP_200_OK, 
+            list=status.HTTP_200_OK, 
+            put=status.HTTP_200_OK, 
+            patch=status.HTTP_200_OK, 
+            delete=status.HTTP_204_NO_CONTENT
+        )
+        
+        ### TEST OF CLIENT_ANONYMOUS
+        self.common_actions_tests(apitestclass, client_anonymous, 
+            post=status.HTTP_401_UNAUTHORIZED, 
+            get=status.HTTP_401_UNAUTHORIZED, 
+            list=status.HTTP_401_UNAUTHORIZED, 
+            put=status.HTTP_401_UNAUTHORIZED, 
+            patch=status.HTTP_401_UNAUTHORIZED, 
+            delete=status.HTTP_401_UNAUTHORIZED
+        )     
         
         
-        r=client_authenticated_1.put(self.hlu(id), created_json)
-        apitestclass.assertEqual(r.status_code, status.HTTP_200_OK, f"put method of {self}")
-        
-        r=client_authenticated_1.patch(self.hlu(id), created_json)
-        apitestclass.assertEqual(r.status_code, status.HTTP_200_OK, f"patch method of {self}")
-        
-        r=client_authenticated_1.get(self.hlu(id))
-        apitestclass.assertEqual(r.status_code, status.HTTP_200_OK, f"get method of {self}")
-        
-        r=client_authenticated_1.get(self.url)
-        apitestclass.assertEqual(r.status_code, status.HTTP_200_OK, f"list method of {self}")
-        
-        r=client_authenticated_1.delete(self.hlu(id))
-        apitestclass.assertEqual(r.status_code, status.HTTP_204_NO_CONTENT, f"delete method of {self}")
-        
-    def tests_PrivateEditableCatalog(self, apitestclass,  client_authenticated_1, client_anonymous, client_catalog_manager, log=False):
+    def tests_PrivateEditableCatalog(self, apitestclass,  client_authenticated_1, client_authenticated_2,  client_anonymous, client_catalog_manager):
         """
         Function make all checks to privatecatalogs factories with different clients
         """
-        
-        if log is True:
-            print(f"+  {self.__name__}. test_only_retrive_and_list_actions_allowed. POST...")
-            
-        ### TEST OF CLIENT_AUTHENTICATED
-        
-        
-        r=client_authenticated_1.post(self.url, self.post_payload())
-        if log is True:
-            print(f"   - {r}")
-            print(f"   - {r.content}")
-        apitestclass.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN, f"create action of {self}")
-
-        created_json=loads(r.content)
-        id=created_json["id"]
-
-
-        r=client_authenticated_1.get(self.url)
-        apitestclass.assertEqual(r.status_code, status.HTTP_200_OK, f"list method of {self}")
-        r=client_authenticated_1.get(self.hlu(id))
-        apitestclass.assertEqual(r.status_code, status.HTTP_200_OK, f"retrieve method of {self}")
-        r=client_authenticated_1.put(self.hlu(id))
-        apitestclass.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN, f"update method of {self}")
-        r=client_authenticated_1.patch(self.hlu(id))
-        apitestclass.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN, f"partial_update method of {self}")
-        r=client_authenticated_1.delete(self.hlu(id))
-        apitestclass.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN, f"destroy method of {self}")
-        
+        ### TEST OF CLIENT_AUTHENTICATED_1
+        self.common_actions_tests(apitestclass, client_authenticated_1, 
+            post=status.HTTP_403_FORBIDDEN, 
+            get=status.HTTP_200_OK, 
+            list=status.HTTP_200_OK, 
+            put=status.HTTP_403_FORBIDDEN, 
+            patch=status.HTTP_403_FORBIDDEN, 
+            delete=status.HTTP_403_FORBIDDEN
+        )            
+        ### TEST OF CLIENT_ANONYMOUS
+        self.common_actions_tests(apitestclass, client_anonymous, 
+            post=status.HTTP_401_UNAUTHORIZED, 
+            get=status.HTTP_401_UNAUTHORIZED, 
+            list=status.HTTP_401_UNAUTHORIZED, 
+            put=status.HTTP_401_UNAUTHORIZED, 
+            patch=status.HTTP_401_UNAUTHORIZED, 
+            delete=status.HTTP_401_UNAUTHORIZED
+        )
 
 
             

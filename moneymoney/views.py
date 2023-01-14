@@ -887,10 +887,9 @@ def InvestmentsOperationsTotalManager_investments_same_product(request):
         return JsonResponse( iotm.json(), encoder=MyDjangoJSONEncoder,     safe=False)
     return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
 
-class LeveragesViewSet(viewsets.ModelViewSet):
+class LeveragesViewSet(CatalogModelViewSet):
     queryset = models.Leverages.objects.all()
     serializer_class = serializers.LeveragesSerializer
-    permission_classes = [permissions.IsAuthenticated]  
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
