@@ -173,7 +173,7 @@ class ConceptsViewSet(viewsets.ModelViewSet):
 
 
 class CreditcardsViewSet(viewsets.ModelViewSet):
-    queryset = models.Creditcards.objects.all()
+    queryset = models.Creditcards.objects.select_related("accounts").all()
     serializer_class = serializers.CreditcardsSerializer
     permission_classes = [permissions.IsAuthenticated]      
     
@@ -182,11 +182,33 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
         account_id=RequestGetInteger(self.request, 'account')
 
         if account_id is not None and active is not None:
-            return self.queryset.filter(accounts_id=account_id,  active=active)
+            return self.queryset.filter(accounts_id=account_id,  active=active).order_by("name")
         elif active is not None:
-            return self.queryset.filter(active=active)
-        else:
-            return self.queryset.all()
+            return self.queryset.filter(active=active).order_by("name")
+        return self.queryset.order_by("name")
+
+    @action(detail=False, methods=["get"], name='List creditcards with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
+    def withbalance(self, request):    
+        r=[]
+        for o in self.get_queryset():
+            if o.deferred==False:
+                balance=0
+            else:
+                balance=cursor_one_field("select coalesce(sum(amount),0) from creditcardsoperations where creditcards_id=%s and paid=false;", [o.id, ])
+            r.append({
+                "id": o.id,  
+                "url": request.build_absolute_uri(reverse('creditcards-detail', args=(o.pk, ))), 
+                "name":o.name, 
+                "number": o.number, 
+                "deferred": o.deferred, 
+                "active": o.active, 
+                "maximumbalance": o.maximumbalance, 
+                "balance": balance, 
+                "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.pk, ))), 
+                "account_currency": o.accounts.currency, 
+                "is_deletable": o.is_deletable()
+            })
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 
 class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
@@ -674,38 +696,6 @@ def CreditcardsoperationsWithBalance(request):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 
-
-@api_view(['GET', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def CreditcardsWithBalance(request):        
-    accounts_id=RequestGetInteger(request, 'account')
-    active=RequestGetBool(request, 'active')
-    
-    if accounts_id is not None and active is not None:
-        qs=models.Creditcards.objects.select_related("accounts").filter(accounts__id=accounts_id, active=active).order_by("name")
-    else:
-        qs=models.Creditcards.objects.select_related("accounts").order_by("name")
-
-    r=[]
-    for o in qs:
-        if o.deferred==False:
-            balance=0
-        else:
-            balance=cursor_one_field("select coalesce(sum(amount),0) from creditcardsoperations where creditcards_id=%s and paid=false;", [o.id, ])
-        r.append({
-            "id": o.id,  
-            "url": request.build_absolute_uri(reverse('creditcards-detail', args=(o.pk, ))), 
-            "name":o.name, 
-            "number": o.number, 
-            "deferred": o.deferred, 
-            "active": o.active, 
-            "maximumbalance": o.maximumbalance, 
-            "balance": balance, 
-            "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.pk, ))), 
-            "account_currency": o.accounts.currency, 
-            "is_deletable": o.is_deletable()
-        })
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 
 
