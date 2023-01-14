@@ -312,6 +312,7 @@ class Stockmarkets(models.Model):
 
 class Accountsoperations(models.Model):
     concepts = models.ForeignKey('Concepts', models.DO_NOTHING)
+    operationstypes =models.ForeignKey('Operationstypes', models.DO_NOTHING, blank=True, null=True)
     amount = models.DecimalField(max_digits=100, decimal_places=2)
     comment = models.TextField(blank=True, null=True)
     accounts = models.ForeignKey(Accounts, models.DO_NOTHING)
@@ -760,24 +761,6 @@ class Investmentsoperations(models.Model):
                 c.investmentsoperations=self
                 c.save()
 
-
-
-
-class Investmentsaccountsoperations(models.Model):
-    concepts = models.ForeignKey('Concepts', models.DO_NOTHING)
-    operationstypes =models.ForeignKey('Operationstypes', models.DO_NOTHING, blank=False, null=False)
-    amount = models.DecimalField(max_digits=100, decimal_places=2)
-    comment = models.TextField(blank=True, null=True)
-    accounts = models.ForeignKey(Accounts, models.DO_NOTHING)
-    datetime = models.DateTimeField(blank=True, null=True)
-    investmentsoperations = models.ForeignKey(Investmentsoperations, models.DO_NOTHING)
-    investments = models.ForeignKey(Investments, models.DO_NOTHING, blank=False, null=False)
-
-    class Meta:
-        managed = True
-        db_table = 'investmentsaccountsoperations'
-
-
     
 class Leverages(models.Model):
     name = models.TextField()
@@ -794,7 +777,6 @@ class Leverages(models.Model):
         return _(self.name)
 
 class Operationstypes(models.Model):
-    id = models.IntegerField(primary_key=True)
     name = models.TextField()
 
     class Meta:
