@@ -465,7 +465,7 @@ class Creditcardsoperations(models.Model):
     creditcards = models.ForeignKey(Creditcards, models.DO_NOTHING)
     paid = models.BooleanField()
     paid_datetime = models.DateTimeField(blank=True, null=True)
-    accountsoperations= models.ForeignKey('Operationstypes', models.DO_NOTHING, null=True,  related_name="paid_accountsoperations")
+    accountsoperations= models.ForeignKey(Accountsoperations, models.DO_NOTHING, null=True,  related_name="paid_accountsoperations")
     datetime = models.DateTimeField(blank=True, null=True)
 
     class Meta:
@@ -535,7 +535,6 @@ class Dividends(models.Model):
             c=Accountsoperations()
             c.datetime=self.datetime
             c.concepts=self.concepts
-            c.operationstypes=self.concepts.operationstypes
             c.amount=self.net
             #c.comment="Transaction not finished"
             c.comment=Comment().encode(eComment.Dividend, self)
@@ -545,7 +544,6 @@ class Dividends(models.Model):
         else:#update
             self.accountsoperations.datetime=self.datetime
             self.accountsoperations.concepts=self.concepts
-            self.accountsoperations.operationstypes=self.concepts.operationstypes
             self.accountsoperations.amount=self.net
             self.accountsoperations.comment=Comment().encode(eComment.Dividend, self)
             self.accountsoperations.accounts=self.investments.accounts
@@ -775,7 +773,6 @@ class Leverages(models.Model):
         return _(self.name)
 
 class Operationstypes(models.Model):
-    id = models.IntegerField(primary_key=True)
     name = models.TextField()
 
     class Meta:
