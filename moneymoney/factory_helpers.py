@@ -44,7 +44,7 @@ class MyFactory:
         if self.type=="Colaborative":
             self.tests_Collaborative(apitestclass, client_authenticated_1, client_authenticated_2, client_anonymous)
         if self.type=="PrivateEditableCatalog":
-            self.tests_PrivateEditableCatalog(apitestclass, client_authenticated_1, client_authenticated_2, client_anonymous, client_catalog_manager)
+            self.tests_PrivateEditableCatalog(apitestclass, client_authenticated_1, client_anonymous, client_catalog_manager)
         
         
     ## action can be None, to ignore test or status_code returned
@@ -108,7 +108,7 @@ class MyFactory:
         )     
         
         
-    def tests_PrivateEditableCatalog(self, apitestclass,  client_authenticated_1, client_authenticated_2,  client_anonymous, client_catalog_manager):
+    def tests_PrivateEditableCatalog(self, apitestclass,  client_authenticated_1, client_anonymous, client_catalog_manager):
         """
         Function make all checks to privatecatalogs factories with different clients
         """
@@ -129,6 +129,15 @@ class MyFactory:
             put=status.HTTP_401_UNAUTHORIZED, 
             patch=status.HTTP_401_UNAUTHORIZED, 
             delete=status.HTTP_401_UNAUTHORIZED
+        )    
+        ### TEST OF CLIENT_CATALOG_MANAGER
+        self.common_actions_tests(apitestclass, client_catalog_manager, 
+            post=status.HTTP_201_CREATED, 
+            get=status.HTTP_200_OK, 
+            list=status.HTTP_200_OK, 
+            put=status.HTTP_200_OK, 
+            patch=status.HTTP_200_OK, 
+            delete=status.HTTP_204_NO_CONTENT
         )
 
 
