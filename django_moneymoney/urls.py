@@ -37,7 +37,6 @@ urlpatterns=[
     path('accounts/transfer/', money_views.AccountTransfer, name='AccountTransfer'),
     path('assets/report/', money_views.AssetsReport, name='AssetsReport'),
     path('catalog_manager/', money_views.CatalogManager, name='CatalogManager'),
-    path('creditcards/payments/', money_views.CreditcardsPayments, name='CreditcardsPayments'),
     path('creditcardsoperations/withbalance/', money_views.CreditcardsoperationsWithBalance, name='CreditcardsoperationsWithBalance'),
     path('creditcardsoperations/payment/<int:pk>/', money_views.CreditcardsoperationsPayments, name='CreditcardsoperationsPayments'),
     path('creditcardsoperations/payment/refund/', money_views.CreditcardsoperationsPaymentsRefund, name='CreditcardsoperationsPaymentsRefund'),

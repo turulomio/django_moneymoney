@@ -97,46 +97,6 @@ def AssetsReport(request):
 
 
 
-@extend_schema(
-    parameters=[
-        OpenApiParameter(name='creditcard', description='Credit card to obtain historical payments', required=True, type=OpenApiTypes.URI), 
-    ],
-)
-@api_view(['GET', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def CreditcardsPayments(request): 
-    """
-        Returns information of historical credit card payments
-    """
-    creditcard=RequestGetUrl(request, "creditcard", models.Creditcards)
-    
-    if creditcard is not None:
-    
-        r=cursor_rows("""
-            select 
-                count(accountsoperations.id), 
-                accountsoperations.id as accountsoperations_id, 
-                accountsoperations.amount, 
-                accountsoperations.datetime 
-            from 
-                accountsoperations, 
-                creditcardsoperations 
-            where 
-                creditcardsoperations.accountsoperations_id=accountsoperations.id and 
-                creditcards_id=%s and 
-                accountsoperations.concepts_id=40 
-            group by 
-                accountsoperations.id, 
-                accountsoperations.amount, 
-                accountsoperations.datetime
-            order by 
-                accountsoperations.datetime
-            """, (creditcard.id, ))
-    else:
-        return Response({'status': 'Credit card not found'}, status=status.HTTP_400_BAD_REQUEST)
-
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
-
 class ConceptsViewSet(viewsets.ModelViewSet):
     queryset = models.Concepts.objects.all()
     serializer_class = serializers.ConceptsSerializer
@@ -210,6 +170,31 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
             })
         return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
+    @action(detail=True, methods=['GET'], name='Obtain historical payments of a credit card', url_path="payments", url_name='payments', permission_classes=[permissions.IsAuthenticated])
+    @transaction.atomic
+    def payments(self, request, pk=None):
+        creditcard=self.get_object()
+        r=cursor_rows("""
+            select 
+                count(accountsoperations.id), 
+                accountsoperations.id as accountsoperations_id, 
+                accountsoperations.amount, 
+                accountsoperations.datetime 
+            from 
+                accountsoperations, 
+                creditcardsoperations 
+            where 
+                creditcardsoperations.accountsoperations_id=accountsoperations.id and 
+                creditcards_id=%s and 
+                accountsoperations.concepts_id=40 
+            group by 
+                accountsoperations.id, 
+                accountsoperations.amount, 
+                accountsoperations.datetime
+            order by 
+                accountsoperations.datetime
+            """, (creditcard.id, ))
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
     queryset = models.Creditcardsoperations.objects.all().select_related("creditcards").select_related("creditcards__accounts")
@@ -675,7 +660,7 @@ def CreditcardsoperationsWithBalance(request):
     paid=RequestGetBool(request, 'paid')
     if creditcard_id is not None and paid is not None:
         initial_balance=0
-        qs=models.Creditcardsoperations.objects.select_related("creditcards").select_related("operationstypes").select_related("concepts").filter(paid=paid, creditcards__id=creditcard_id).order_by("datetime")
+        qs=models.Creditcardsoperations.objects.select_related("creditcards", "concepts").filter(paid=paid, creditcards__id=creditcard_id).order_by("datetime")
 
     r=[]
     for o in qs:
@@ -684,7 +669,6 @@ def CreditcardsoperationsWithBalance(request):
             "url": request.build_absolute_uri(reverse('creditcardsoperations-detail', args=(o.pk, ))), 
             "datetime":o.datetime, 
             "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(o.concepts.pk, ))), 
-            "operationstypes":request.build_absolute_uri(reverse('operationstypes-detail', args=(o.operationstypes.pk, ))), 
             "amount": o.amount, 
             "balance":  initial_balance + o.amount, 
             "comment": models.Comment().decode(o.comment), 
