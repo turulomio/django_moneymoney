@@ -312,7 +312,6 @@ class Stockmarkets(models.Model):
 
 class Accountsoperations(models.Model):
     concepts = models.ForeignKey('Concepts', models.DO_NOTHING)
-    operationstypes = models.ForeignKey('Operationstypes', models.DO_NOTHING)
     amount = models.DecimalField(max_digits=100, decimal_places=2)
     comment = models.TextField(blank=True, null=True)
     accounts = models.ForeignKey(Accounts, models.DO_NOTHING)
