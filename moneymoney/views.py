@@ -195,6 +195,41 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
                 accountsoperations.datetime
             """, (creditcard.id, ))
         return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+        
+
+
+    @action(detail=True, methods=['POST'], name='Pay cco of a credit card', url_path="pay", url_name='pay', permission_classes=[permissions.IsAuthenticated])
+    @transaction.atomic
+    def pay(self, request, pk=None):
+        creditcard=self.get_object()
+        dt_payment=RequestDtaware(request, "dt_payment")
+        cco_ids=RequestListOfIntegers(request, "cco")
+        
+        if dt_payment is not None and cco_ids is not None:
+            qs_cco=models.Creditcardsoperations.objects.all().filter(pk__in=(cco_ids))
+            sumamount=0
+            for o in qs_cco:
+                sumamount=sumamount+o.amount
+            
+            c=models.Accountsoperations()
+            c.datetime=dt_payment
+            c.concepts=models.Concepts.objects.get(pk=models.eConcept.CreditCardBilling)
+            c.amount=sumamount
+            c.accounts=creditcard.accounts
+            c.comment="Transaction in progress"
+            c.save()
+            c.comment=models.Comment().encode(models.eComment.CreditCardBilling, creditcard, c)
+            c.save()
+
+            #Modifica el registro y lo pone como paid y la datetime de pago y añade la opercuenta
+            for o in qs_cco:
+                o.paid_datetime=dt_payment
+                o.paid=True
+                o.accountsoperations_id=c.id
+                o.save()
+            return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
+        return JsonResponse( False, encoder=MyDjangoJSONEncoder,     safe=False)
+    
 
 class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
     queryset = models.Creditcardsoperations.objects.all().select_related("creditcards").select_related("creditcards__accounts")
@@ -211,6 +246,7 @@ class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
             return self.queryset.all()
 
 
+    
     
 class Derivatives(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -552,7 +588,7 @@ class AccountsViewSet(viewsets.ModelViewSet):
         return JsonResponse( "Some parameters are missing", encoder=MyDjangoJSONEncoder, safe=False)
 
 class AccountsoperationsViewSet(viewsets.ModelViewSet):
-    queryset = models.Accountsoperations.objects.all()
+    queryset = models.Accountsoperations.objects.select_related("accounts").all()
     serializer_class = serializers.AccountsoperationsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
@@ -561,10 +597,17 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
         search=RequestGetString(self.request, 'search')
 
         if search is not None:
-            return self.queryset.select_related("accounts").filter(comment__icontains=search)
-        else:
-            return self.queryset.select_related("accounts").all()
+            return self.queryse.filter(comment__icontains=search)
+        
+        return self.queryset
 
+    @action(detail=True, methods=['POST'], name='Refund all cco paid in an ao', url_path="ccpaymentrefund", url_name='ccpaymentrefund', permission_classes=[permissions.IsAuthenticated])
+    @transaction.atomic
+    def ccpaymentrefund(self, request, pk=None):
+        ao=self.get_object()
+        models.Creditcardsoperations.objects.filter(accountsoperations_id=ao.id).update(paid_datetime=None,  paid=False, accountsoperations_id=None)
+        ao.delete() #Must be at the end due to middle queries
+        return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
             
 class BanksViewSet(viewsets.ModelViewSet):
     queryset = models.Banks.objects.all()
@@ -599,59 +642,6 @@ class BanksViewSet(viewsets.ModelViewSet):
         
 
 
-
-@api_view(['POST', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-@transaction.atomic
-def CreditcardsoperationsPayments(request, pk):
-    creditcard=models.Creditcards.objects.get(pk=pk)
-    dt_payment=RequestDtaware(request, "dt_payment")
-    cco_ids=RequestListOfIntegers(request, "cco")
-    
-    if creditcard is not None and dt_payment is not None and cco_ids is not None:
-        qs_cco=models.Creditcardsoperations.objects.all().filter(pk__in=(cco_ids))
-        sumamount=0
-        for o in qs_cco:
-            sumamount=sumamount+o.amount
-        
-        c=models.Accountsoperations()
-        c.datetime=dt_payment
-        c.concepts=models.Concepts.objects.get(pk=models.eConcept.CreditCardBilling)
-        c.operationstypes=c.concepts.operationstypes
-        c.amount=sumamount
-        c.accounts=creditcard.accounts
-        c.comment="Transaction in progress"
-        c.save()
-        c.comment=models.Comment().encode(models.eComment.CreditCardBilling, creditcard, c)
-        c.save()
-
-        #Modifica el registro y lo pone como paid y la datetime de pago y añade la opercuenta
-        for o in qs_cco:
-            o.paid_datetime=dt_payment
-            o.paid=True
-            o.accountsoperations_id=c.id
-            o.save()
-        return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
-    return JsonResponse( False, encoder=MyDjangoJSONEncoder,     safe=False)
-    
-
-
-@api_view(['POST', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-@transaction.atomic
-def CreditcardsoperationsPaymentsRefund(request):
-    
-    accountsoperations_id=RequestInteger(request, 'accountsoperations_id')
-    if accountsoperations_id is not None:
-        ao=models.Accountsoperations.objects.get(pk=accountsoperations_id)
-    
-    if ao is not None:
-        models.Creditcardsoperations.objects.filter(accountsoperations_id=ao.id).update(paid_datetime=None,  paid=False, accountsoperations_id=None)
-        ao.delete() #Must be at the end due to middle queries
-
-        return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
-    return JsonResponse( False, encoder=MyDjangoJSONEncoder,     safe=False)
-    
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
