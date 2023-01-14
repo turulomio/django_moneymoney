@@ -491,26 +491,38 @@ class AccountsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.AccountsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
-        
-    @extend_schema(
-            parameters=[
-                OpenApiParameter(name='active', description='Filter by active accounts', required=False, type=bool), 
-                OpenApiParameter(name='bank', description='Filter by bank', required=False, type=int), 
-            ],
-        )
-    def list(self, request):
-        active=RequestGetBool(request, 'active')
-        bank_id=RequestGetInteger(request, 'bank')
+    
+    def get_queryset(self):
+        active=RequestGetBool(self.request, 'active')
+        bank_id=RequestGetInteger(self.request, 'bank')
 
         if bank_id is not None:
-            self.queryset=self.queryset.filter(banks__id=bank_id,   active=True)
+            return self.queryset.filter(banks__id=bank_id,   active=True)
         elif active is not None:
-            self.queryset=self.queryset.filter(active=active)
-        else:
-            self.queryset=self.queryset.all()
-        serializer = serializers.AccountsSerializer(self.queryset, many=True, context={'request': request})
-        return Response(serializer.data)
-        
+            return self.queryset.filter(active=active)
+        return self.queryset
+
+    @action(detail=False, methods=["get"], name='List accounts with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
+    def withbalance(self, request):
+        r=[]
+        for o in self.get_queryset():
+            balance_account, balance_user=o.balance(timezone.now(), request.local_currency ) 
+            r.append({
+                "id": o.id,  
+                "name": o.name, 
+                "active":o.active, 
+                "url":request.build_absolute_uri(reverse('accounts-detail', args=(o.pk, ))), 
+                "number": o.number, 
+                "balance_account": balance_account,  
+                "balance_user": balance_user, 
+                "is_deletable": o.is_deletable(), 
+                "currency": o.currency, 
+                "banks":request.build_absolute_uri(reverse('banks-detail', args=(o.banks.pk, ))), 
+                "localname": _(o.name), 
+            })
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+
+
 
 class AccountsoperationsViewSet(viewsets.ModelViewSet):
     queryset = models.Accountsoperations.objects.all()
@@ -565,36 +577,6 @@ def BanksWithBalance(request):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
         
 
-@api_view(['GET', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def AccountsWithBalance(request):
-    active=RequestGetBool(request, 'active')
-    bank_id=RequestGetInteger(request, 'bank')
-
-    if bank_id is not None:
-        qs=models.Accounts.objects.select_related("banks").filter(banks__id=bank_id,   active=True)
-    elif active is not None:
-        qs=models.Accounts.objects.select_related("banks").filter( active=active)
-    else:
-        qs=models.Accounts.objects.select_related("banks").all()
-            
-    r=[]
-    for o in qs:
-        balance_account, balance_user=o.balance(timezone.now(), request.local_currency ) 
-        r.append({
-            "id": o.id,  
-            "name": o.name, 
-            "active":o.active, 
-            "url":request.build_absolute_uri(reverse('accounts-detail', args=(o.pk, ))), 
-            "number": o.number, 
-            "balance_account": balance_account,  
-            "balance_user": balance_user, 
-            "is_deletable": o.is_deletable(), 
-            "currency": o.currency, 
-            "banks":request.build_absolute_uri(reverse('banks-detail', args=(o.banks.pk, ))), 
-            "localname": _(o.name), 
-        })
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 @extend_schema(
         parameters=[

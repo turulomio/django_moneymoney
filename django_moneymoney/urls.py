@@ -35,7 +35,6 @@ urlpatterns=[
     path('login/', money_views_login.login, name="login"), 
     path('logout/', money_views_login.logout, name="logout"), 
     
-    path('accounts/withbalance/', money_views.AccountsWithBalance, name='AccountsWithBalance'),
     path('accounts/transfer/', money_views.AccountTransfer, name='AccountTransfer'),
     path('accountsoperations/withbalance/', money_views.AccountsoperationsWithBalance, name='AccountsoperationsWithBalance'),
     path('assets/report/', money_views.AssetsReport, name='AssetsReport'),
