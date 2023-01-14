@@ -547,34 +547,27 @@ class BanksViewSet(viewsets.ModelViewSet):
         active=RequestGetBool(self.request, "active")
         if active is not None:
             return self.queryset.filter(active=active)
-        return self.queryset.all() #We need to rerun all(), because it cached results after CRUD operations
+        return self.queryset
 
 
-@api_view(['GET', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def BanksWithBalance(request):
-    active=RequestGetBool(request, 'active')
-    if active is None:
-        qs=models.Banks.objects.all() 
-    else:
-        qs=models.Banks.objects.filter(active=active)
-            
-    r=[]
-    for o in qs:
-        balance_accounts=o.balance_accounts()
-        balance_investments=o.balance_investments(request)
-        r.append({
-            "id": o.id,  
-            "name": o.name, 
-            "active":o.active, 
-            "url":request.build_absolute_uri(reverse('banks-detail', args=(o.pk, ))), 
-            "balance_accounts": balance_accounts, 
-            "balance_investments": balance_investments, 
-            "balance_total": balance_accounts+balance_investments, 
-            "is_deletable": o.is_deletable(), 
-            "localname": _(o.name), 
-        })
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+    @action(detail=False, methods=["get"], name='List banks with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
+    def withbalance(self, request):
+        r=[]
+        for o in self.get_queryset():
+            balance_accounts=o.balance_accounts()
+            balance_investments=o.balance_investments(request)
+            r.append({
+                "id": o.id,  
+                "name": o.name, 
+                "active":o.active, 
+                "url":request.build_absolute_uri(reverse('banks-detail', args=(o.pk, ))), 
+                "balance_accounts": balance_accounts, 
+                "balance_investments": balance_investments, 
+                "balance_total": balance_accounts+balance_investments, 
+                "is_deletable": o.is_deletable(), 
+                "localname": _(o.name), 
+            })
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
         
 
 

@@ -34,7 +34,6 @@ urlpatterns=[
     path('admin/', admin.site.urls),
     path('login/', money_views_login.login, name="login"), 
     path('logout/', money_views_login.logout, name="logout"), 
-    
     path('accounts/transfer/', money_views.AccountTransfer, name='AccountTransfer'),
     path('accountsoperations/withbalance/', money_views.AccountsoperationsWithBalance, name='AccountsoperationsWithBalance'),
     path('assets/report/', money_views.AssetsReport, name='AssetsReport'),
@@ -47,7 +46,6 @@ urlpatterns=[
     path('concepts/migration/', money_views.ConceptsMigration, name='ConceptsMigration'),
     path('concepts/used/', money_views.ConceptsUsed, name='ConceptsUsed'),
     path('derivatives/', money_views.Derivatives.as_view(), name='Derivatives'),
-    path('banks/withbalance/', money_views.BanksWithBalance, name='BanksWithBalance'),
     path('estimations/dps/add/', money_views.EstimationsDps_add, name='EstimationsDps_add'),
     path('estimations/dps/delete/', money_views.EstimationsDps_delete, name='EstimationsDps_delete'),
     path('estimations/dps/list/', money_views.EstimationsDps_list, name='EstimationsDps_list'),
