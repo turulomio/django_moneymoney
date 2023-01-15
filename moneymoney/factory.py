@@ -143,12 +143,12 @@ class ConceptsFactory(DjangoModelFactory):
     name = Faker("bothify", text="Concept ??????")
     editable = Faker("boolean")
 
-#
-#class EstimationsDpsFactory(DjangoModelFactory):
-#    class Meta:
-#        model= models.EstimationsDps
-#    
-#    year=Faker("year")
-#    estimation=("random_number")
-#    products=SubFactory(ProductsFactory)
-#    date_estimation=Faker("date")
+
+class EstimationsDpsFactory(DjangoModelFactory):
+    class Meta:
+        model= models.EstimationsDps
+    
+    year=Faker("year")
+    estimation=Faker("random_number")
+    products=SubFactory(ProductsFactory)
+    date_estimation=Faker("date")

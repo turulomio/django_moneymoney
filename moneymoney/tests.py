@@ -24,13 +24,13 @@ class CtTestCase(APITestCase):
         cls.factories_manager.append(factory.AccountsFactory, "Colaborative", "/api/accounts/")
         cls.factories_manager.append(factory.BanksFactory, "Colaborative", "/api/banks/")
         cls.factories_manager.append(factory.ConceptsFactory, "Colaborative", "/api/concepts/")
-#        cls.factories_manager.append(factory.EstimationsDpsFactory, "Colaborative", "/api/estimationsdps/")
-#        cls.factories_manager.append(factory.InvestmentsFactory, "Colaborative", "/api/investments/")
+        cls.factories_manager.append(factory.EstimationsDpsFactory, "Colaborative", "/api/estimationsdps/")
+        cls.factories_manager.append(factory.InvestmentsFactory, "Colaborative", "/api/investments/")
         #cls.factories_manager.append(factory.InvestmentsoperationsFactory, "Colaborative", "/api/investmentsoperations/") #Needs quotes
         cls.factories_manager.append(factory.LeveragesFactory, "PrivateEditableCatalog", "/api/leverages/")
         cls.factories_manager.append(factory.OperationstypesFactory, "PrivateEditableCatalog", "/api/operationstypes/")
         cls.factories_manager.append(factory.ProfileFactory, "Private", "/api/profile/")
-#        cls.factories_manager.append(factory.ProductsFactory, "PrivateEditableCatalog", "/api/products/")
+#        cls.factories_manager.append(factory.ProductsFactory, "PrivateEditableCatalog", "/api/products/")#Word system error
         cls.factories_manager.append(factory.ProductstypesFactory, "PrivateEditableCatalog", "/api/productstypes/")
         cls.factories_manager.append(factory.StockmarketsFactory, "PrivateEditableCatalog", "/api/stockmarkets/")
         
@@ -108,10 +108,7 @@ class CtTestCase(APITestCase):
         p=models.Products.objects.get(pk=79329)
         self.user_authorized_1.profile.favorites.add(p)
         self.user_authorized_1.profile.save()
-        self.assertEqual(self.user_authorized_1.profile.favorites.count(), 1)
-#        self.factories_manager.find(factory.ProfileFactory).print_batch(3)
-        
-        
+        self.assertEqual(self.user_authorized_1.profile.favorites.count(), 1)        
 
     def test_factory_by_type(self):
         print()
@@ -125,20 +122,39 @@ class CtTestCase(APITestCase):
         account=factory.AccountsFactory.create(currency="EUR")
         product=factory.ProductsFactory.create(currency="EUR")
         investment=factory.InvestmentsFactory.create(accounts=account, products=product)
-        print(account)
-        print(investment)
-        print(product)
-        print(investment.products)
+#        print(account)
+#        print(investment)
+#        print(product)
+#        print(investment.products)
         for i in range(100):
             quote=factory.QuotesFactory.create(products=product)
-        print(quote)
+#        print(quote)
         mf_io=factory_helpers.MyFactory(factory.InvestmentsoperationsFactory, "Colaborative", "/api/investmentsoperations/")
         io_payload=mf_io.post_payload(investments=investment, operationstypes=models.Operationstypes.objects.get(pk=eOperationType.SharesPurchase))
-        print(io_payload)
+#        print(io_payload)
         r=self.client_authorized_1.post("/api/investmentsoperations/", io_payload)
-        print(r.content)
+#        print(r.content)
         qs_ao=models.Accountsoperations.objects.all()
-        for ao in qs_ao:
-            print(factory_helpers.serialize(ao))
+#        for ao in qs_ao:
+#            print(factory_helpers.serialize(ao))
+            
+            
+        quote,  r, qs_ao
         
     
+    def test_estimations_dps(self):     
+        print()
+        print("test_estimations_dps")
+        mf=factory_helpers.MyFactory(factory.EstimationsDpsFactory, "Colaborative", "/api/estimationsdps/")
+        
+        #Trying to insert the same year and product twice. I alter date_estimation
+        payload=mf.post_payload()
+        self.assertEqual(mf.model_count(), 0)
+        self.client_authorized_1.post(mf.url, payload)
+        self.assertEqual(mf.model_count(), 1)
+        payload["date_estimation"]="1973-12-29"
+        r=self.client_authorized_1.post(mf.url, payload)
+        self.assertEqual(mf.model_count(), 1)
+        self.assertEqual(loads(r.content)["date_estimation"], "1973-12-29")
+
+        

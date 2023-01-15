@@ -28,6 +28,9 @@ class MyFactory:
         
     def model(self):        
         return self.factory._meta.model
+        
+    def model_count(self):
+        return self.model().objects.count()
 
     #Hyperlinkurl
     def hlu(self, id):
@@ -58,13 +61,16 @@ class MyFactory:
         created_json=loads(r.content)
         try:
             id=created_json["id"]
-        except:#User couldn't post any, I look for a id in database  to check the rest of actions
+        except:#User couldn't post any, I look for a id in database  to check the rest of actions, son in automatic test make a first post
             qs=self.model().objects.all()
             if qs.count()>0:
                 id=qs[0].id
+#                print("Using id ", id)
             else:
-                print(created_json, self.url, self.post_payload())
-                raise "No objects to get an id"
+                print(r,  r.content, self.url, self.post_payload())
+                self.print_model()
+                raise ("No objects to get an id,  assigning 1")
+                
 
 
         r=client.get(self.url)
@@ -83,6 +89,17 @@ class MyFactory:
         for i in range(3):
             o=self.factory.create()
             lod.append(serialize(o))
+        if len(lod)==0:
+            print("No data to print_batch")
+        print(tabulate(lod, headers="keys", tablefmt="psql"))
+
+        
+    def print_model(self):
+        lod=[]
+        for o in self.model().objects.all():
+            lod.append(serialize(o))
+        if len(lod)==0:
+            print("No data to print_model")
         print(tabulate(lod, headers="keys", tablefmt="psql"))
         
     def tests_Collaborative(self, apitestclass, client_authenticated_1, client_authenticated_2, client_anonymous):
@@ -90,6 +107,8 @@ class MyFactory:
         Function Makes all action operations to factory with client to all examples
 
         """
+        client_authenticated_1.post(self.url, self.post_payload()) #Always will be one to test anonymous
+        
         ### TEST OF CLIENT_AUTHENTICATED_1
         self.common_actions_tests(apitestclass, client_authenticated_1, 
             post=status.HTTP_201_CREATED, 
@@ -125,6 +144,7 @@ class MyFactory:
         """
         Function make all checks to privatecatalogs factories with different clients
         """
+        client_authenticated_1.post(self.url, self.post_payload()) #Always will be one to test anonymous
         ### TEST OF CLIENT_AUTHENTICATED_1
         self.common_actions_tests(apitestclass, client_authenticated_1, 
             post=status.HTTP_403_FORBIDDEN, 

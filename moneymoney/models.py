@@ -1105,3 +1105,10 @@ class EstimationsDps(models.Model):
         managed = True
         db_table = 'estimations_dps'
 
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        if self.id is None and EstimationsDps.objects.filter(year=self.year, products=self.products).exists(): 
+            old=EstimationsDps.objects.get(year=self.year, products=self.products)
+            self.id=old.id #To update it
+            print("Updated estimation dps")
+        models.Model.save(self)
