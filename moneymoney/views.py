@@ -823,41 +823,6 @@ class LeveragesViewSet(CatalogModelViewSet):
     queryset = models.Leverages.objects.all()
     serializer_class = serializers.LeveragesSerializer
 
-
-class ProductsFavorites(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    @extend_schema(
-        description="Returns an array with a list of favorites url", 
-        responses=OpenApiTypes.OBJECT
-    )
-    
-    
-    def get(self, request, *args, **kwargs):
-        r=[]
-        for favorite_id in getGlobalListOfIntegers(request, "favorites"):
-            r.append(request.build_absolute_uri(reverse('products-detail', args=(favorite_id, ))))
-        return json_data_response(True, r, "List of favorite products urls")
-
-    @extend_schema(
-        description="Returns an array with a list of favorites url", 
-        parameters=[
-            OpenApiParameter(name='product', description='Product url to add or remove from favorites', required=True, type=OpenApiTypes.URI), 
-        ],
-        responses=OpenApiTypes.OBJECT
-    )
-    def post(self, request):
-        product=RequestUrl(request, "product", models.Products)
-        if product is not None:
-            favorites = getGlobalListOfIntegers(request, "favorites")
-            if product.id in favorites:
-                favorites.remove(product.id)
-                answer=f"{product.id} removed from favorites"
-            else:
-                favorites.append(product.id)
-                answer=f"{product.id} added to favorites"
-            setGlobal("favorites", str(favorites)[1:-1])
-        return json_success_response(True, answer)
-
 class ProductsComparationByQuote(APIView):
     permission_classes = [permissions.IsAuthenticated]
     @extend_schema(
@@ -1091,7 +1056,7 @@ class ProductsViewSet(viewsets.ModelViewSet):
         if all_args_are_not_none(search):
             
             if search ==":FAVORITES":
-                ids=getGlobalListOfIntegers(request, "favorites")
+                ids=list(request.user.profile.favorites.all().values_list("id",  flat=True).distinct())
             elif search==":INVESTMENTS":
                 ids=list(models.Investments.objects.all().values_list("products__id",  flat=True).distinct())
             elif search==":ACTIVE_INVESTMENTS":
@@ -1284,12 +1249,20 @@ class Profile(APIView):
         }
         return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
         
+    @transaction.atomic
     def put(self, request):
-        p=models.Profile.objects.filter(user=request.user)[0]
+        p=models.Profile.objects.get(user=request.user)
         
         if "newp" in request.data and request.data["newp"]!="":
             p.user.set_password(request.data["newp"])
             print("PASSWORD SET")
+    
+        if "toggle_favorite" in request.data:
+            toggle_favorite=RequestUrl(request, "toggle_favorite", models.Products)
+            if p.favorites.contains(toggle_favorite):
+                p.favorites.remove(toggle_favorite)
+            else:
+                p.favorites.add(toggle_favorite)
         
         p.currency=request.data["currency"]
         p.user.email=request.data["email"]
@@ -1304,13 +1277,10 @@ class Profile(APIView):
         p.investing_com_cookie=request.data["investing_com_cookie"]
         p.investing_com_referer=request.data["investing_com_referer"]
         p.zone=request.data["zone"]
-        favorites=RequestListUrl(request, "favorites", models.Products)
-        p.favorites.set(favorites)
+
         p.user.save()
         p.save()
         return self.get(request)
-        
-
 
 class QuotesMassiveUpdate(APIView):
     permission_classes = [permissions.IsAuthenticated]

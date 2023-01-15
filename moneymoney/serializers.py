@@ -201,23 +201,6 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
     @extend_schema_field(OpenApiTypes.STR)
     def get_flag(self, obj):
         return  obj.stockmarkets.country
-#        
-#class ProfileSerializer(serializers.HyperlinkedModelSerializer):    
-##    user= serializers.HyperlinkedRelatedField(view_name='user-detail', queryset=User.objects.all() )
-#    first_name=serializers.SerializerMethodField()
-#    last_name=serializers.SerializerMethodField()
-#    email=serializers.SerializerMethodField()
-#    class Meta:
-#        model = models.Profile
-#        fields = ('url', 'zone', 'currency',  'investing_com_url', 'investing_com_cookie', 'investing_com_referer', 
-#        'favorites', 'invest_amount_1', 'invest_amount_2', 'invest_amount_3', 'invest_amount_4', 'invest_amount_5', 
-#        'first_name', 'last_name', 'email')
-#    def get_first_name(self, o):
-#        return o.user.first_name
-#    def get_last_name(self, o):
-#        return o.user.last_name
-#    def get_email(self, o):
-#        return o.user.email
 
 class ProductspairsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
