@@ -456,14 +456,53 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
         active=RequestGetBool(self.request, "active")
         bank_id=RequestGetInteger(self.request,"bank")
 
-        if bank_id is None and active is None:
-            return self.queryset.all()
-        elif bank_id is not None:
+        if bank_id is not None:
             return self.queryset.filter(accounts__banks__id=bank_id,  active=True)
         elif active is not None:
             return self.queryset.filter(active=active)
         else:
-            return self.queryset.all()
+            return self.queryset
+
+
+
+    @action(detail=False, methods=["get"], name='List investments with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
+    def withbalance(self, request): 
+        r=[]
+        for o in self.get_queryset().select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages"):
+            iot=InvestmentsOperationsTotals.from_investment(request, o, timezone.now(), request.local_currency)
+            percentage_invested=None if iot.io_total_current["invested_user"]==0 else  iot.io_total_current["gains_gross_user"]/iot.io_total_current["invested_user"]
+
+            r.append({
+                "id": o.id,  
+                "name":o.name, 
+                "fullname":o.fullName(), 
+                "active":o.active, 
+                "url":request.build_absolute_uri(reverse('investments-detail', args=(o.pk, ))), 
+                "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.id, ))), 
+                "products":request.build_absolute_uri(reverse('products-detail', args=(o.products.id, ))), 
+                "last_datetime": o.products.basic_results()['last_datetime'], 
+                "last": o.products.basic_results()['last'], 
+                "daily_difference": iot.current_last_day_diff(), 
+                "daily_percentage":percentage_between(o.products.basic_results()['penultimate'], o.products.basic_results()['last']), 
+                "invested_user": iot.io_total_current["invested_user"], 
+                "gains_user": iot.io_total_current["gains_gross_user"], 
+                "balance_user": iot.io_total_current["balance_user"], 
+                "currency": o.products.currency, 
+                "currency_account": o.accounts.currency, 
+                "percentage_invested": percentage_invested, 
+                "percentage_selling_point": models.percentage_to_selling_point(iot.io_total_current["shares"], iot.investment.selling_price, iot.investment.products.basic_results()['last']), 
+                "selling_expiration": o.selling_expiration, 
+                "shares":iot.io_total_current["shares"], 
+                "balance_percentage": o.balance_percentage, 
+                "daily_adjustment": o.daily_adjustment, 
+                "selling_price": o.selling_price, 
+                "is_deletable": o.is_deletable(), 
+                "flag": o.products.stockmarkets.country, 
+                "gains_at_selling_point_investment": o.selling_price*o.products.real_leveraged_multiplier()*iot.io_total_current["shares"]-iot.io_total_current["invested_investment"], 
+            })
+        show_queries_function()
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+
 
 
 class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
@@ -670,59 +709,6 @@ class BanksViewSet(viewsets.ModelViewSet):
             })
         return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
         
-
-
-
-@api_view(['GET', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def InvestmentsWithBalance(request):
-
-    active=RequestGetBool(request, 'active', None)
-    bank_id=RequestGetInteger(request, 'bank', None)
-
-    if bank_id is not None:
-        qs=models.Investments.objects.select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages").filter(accounts__banks__id=bank_id,   active=True)
-    elif active is not None:
-        qs=models.Investments.objects.select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages").filter( active=active)
-    else:
-        qs=models.Investments.objects.select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages").all()
-            
-    r=[]
-    for o in qs:
-        iot=InvestmentsOperationsTotals.from_investment(request, o, timezone.now(), request.local_currency)
-        percentage_invested=None if iot.io_total_current["invested_user"]==0 else  iot.io_total_current["gains_gross_user"]/iot.io_total_current["invested_user"]
-
-        r.append({
-            "id": o.id,  
-            "name":o.name, 
-            "fullname":o.fullName(), 
-            "active":o.active, 
-            "url":request.build_absolute_uri(reverse('investments-detail', args=(o.pk, ))), 
-            "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.id, ))), 
-            "products":request.build_absolute_uri(reverse('products-detail', args=(o.products.id, ))), 
-            "last_datetime": o.products.basic_results()['last_datetime'], 
-            "last": o.products.basic_results()['last'], 
-            "daily_difference": iot.current_last_day_diff(), 
-            "daily_percentage":percentage_between(o.products.basic_results()['penultimate'], o.products.basic_results()['last']), 
-            "invested_user": iot.io_total_current["invested_user"], 
-            "gains_user": iot.io_total_current["gains_gross_user"], 
-            "balance_user": iot.io_total_current["balance_user"], 
-            "currency": o.products.currency, 
-            "currency_account": o.accounts.currency, 
-            "percentage_invested": percentage_invested, 
-            "percentage_selling_point": models.percentage_to_selling_point(iot.io_total_current["shares"], iot.investment.selling_price, iot.investment.products.basic_results()['last']), 
-            "selling_expiration": o.selling_expiration, 
-            "shares":iot.io_total_current["shares"], 
-            "balance_percentage": o.balance_percentage, 
-            "daily_adjustment": o.daily_adjustment, 
-            "selling_price": o.selling_price, 
-            "is_deletable": o.is_deletable(), 
-            "flag": o.products.stockmarkets.country, 
-            "gains_at_selling_point_investment": o.selling_price*o.products.real_leveraged_multiplier()*iot.io_total_current["shares"]-iot.io_total_current["invested_investment"], 
-        })
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
-
-
 
 
 

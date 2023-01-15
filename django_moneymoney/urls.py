@@ -43,7 +43,6 @@ urlpatterns=[
     path('estimations/dps/list/', money_views.EstimationsDps_list, name='EstimationsDps_list'),
     path('binary/to/global/', money_views.Binary2Global, name='Binary2Global'),
     path('investments/classes/', money_views.InvestmentsClasses.as_view(), name='InvestmentsClasses'),
-    path('investments/withbalance/', money_views.InvestmentsWithBalance, name='InvestmentsWithBalance'),
     path('investments/changesellingprice/', money_views.InvestmentsChangeSellingPrice, name='InvestmentsChangeSellingPrice'),
     path('investmentsoperations/full/', money_views.InvestmentsoperationsFull, name='InvestmentsoperationsFull'),
     path('investmentsoperations/full/simulation/', money_views.InvestmentsoperationsFullSimulation, name='InvestmentsoperationsFullSimulation'),
