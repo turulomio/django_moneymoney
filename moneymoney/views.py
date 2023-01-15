@@ -500,10 +500,13 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "flag": o.products.stockmarkets.country, 
                 "gains_at_selling_point_investment": o.selling_price*o.products.real_leveraged_multiplier()*iot.io_total_current["shares"]-iot.io_total_current["invested_investment"], 
             })
-        show_queries_function()
         return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
-
+    @action(detail=True, methods=["get"], name='Investments operations evolution chart', url_path="operations_evolution_chart", url_name='operations_evolution_chart', permission_classes=[permissions.IsAuthenticated])
+    def operations_evolution_chart(self, request, pk=None):
+        investment=self.get_object()
+        io=InvestmentsOperations.from_investment(request, investment, timezone.now(), request.local_currency)
+        return JsonResponse( io.chart_evolution(), encoder=MyDjangoJSONEncoder, safe=False)
 
 class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
     queryset = models.Investmentsoperations.objects.select_related("investments").select_related("investments__products").all()
@@ -751,12 +754,6 @@ def StrategiesSimulation(request):
 
 
 
-@api_view(['GET', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def InvestmentsoperationsEvolutionChart(request):
-    id=RequestGetInteger(request, "investment")
-    io=InvestmentsOperations.from_investment(request, models.Investments.objects.get(pk=id), timezone.now(), request.local_currency)
-    return JsonResponse( io.chart_evolution(), encoder=MyDjangoJSONEncoder,     safe=False)
 
 
 @transaction.atomic
