@@ -430,18 +430,6 @@ class EstimationsDps(models.Model):
         unique_together = (('year', 'products'),)
 
 
-class EstimationsEps(models.Model):
-    year = models.IntegerField(primary_key=True)
-    estimation = models.DecimalField(max_digits=18, decimal_places=6)
-    date_estimation = models.DateField(blank=True, null=True)
-    source = models.TextField(blank=True, null=True)
-    manual = models.BooleanField(blank=True, null=True)
-    products= models.ForeignKey('Products', models.DO_NOTHING)
-
-    class Meta:
-        managed = True
-        db_table = 'estimations_eps'
-        unique_together = (('year', 'products'),)
 
 class Investments(models.Model):
     name = models.TextField()
