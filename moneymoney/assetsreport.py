@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from requests import get
+from django.conf import settings
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from json import loads
@@ -24,7 +25,7 @@ def request_get(absolute_url, authorization):
     
 
 def generate_assets_report(request, format):
-    from moneymoney.views import ReportAnnual, getGlobalBytes_from_base64
+    from moneymoney.views import ReportAnnual
     authorization=cursor_one_field("select * from authtoken_token where user_id=%s", (request.user.id, ))
     c=request.local_currency
     
@@ -81,8 +82,7 @@ def generate_assets_report(request, format):
         # Assets by bank
         doc.addParagraph(_("Assets by bank"), "Heading 2")
         
-        from moneymoney.views import BanksWithBalance
-        dict_bankswithbalance=loads(BanksWithBalance(request._request).content)
+        dict_bankswithbalance=request_get(request._request.build_absolute_uri(reverse('banks-withbalance')), authorization)
         bankswithbalance=[(_("Bank"), _("Accounts balance"), _("Investments balance"), _("Total balance"))]
         for o in dict_bankswithbalance:
             if o["active"]==True:
@@ -130,7 +130,7 @@ def generate_assets_report(request, format):
         ### Assets evolution graphic
         doc.addParagraph(_("Assets graphical evolution"), "Heading 2")
         
-        doc.addImageParagraph([bytes_after_trim_image(getGlobalBytes_from_base64(request,"base64_assetsreport_evolution.png"), "png"), ], 26, 14, "Illustration")
+        doc.addImageParagraph([bytes_after_trim_image(f"{settings.TMPDIR}/assetsreport_evolution.png", "png"), ], 26, 14, "Illustration")
         doc.pageBreak()
         
         
@@ -160,8 +160,8 @@ def generate_assets_report(request, format):
 
     ## Accounts
     doc.addParagraph(_("Current Accounts"), "Heading 1")
-    from moneymoney.views import AccountsWithBalance
-    dict_accountswithbalance=loads(AccountsWithBalance(request._request).content)
+    dict_accountswithbalance=request_get(request._request.build_absolute_uri(reverse('accounts-withbalance')), authorization)
+
     accountswithbalance=[(_("Name"), _("Number"), _("Balance account"), _("Balance user currency"))]
     for o in dict_accountswithbalance:
         if o["active"] is True:
@@ -185,7 +185,7 @@ def generate_assets_report(request, format):
     
     doc.addParagraph(_("Investments list"), "Heading 2")
     doc.addParagraph(_("Next list is sorted by the distance in percent to the selling point."), "MyStandard")
-    dict_investmentswithbalance=request_get(request._request.build_absolute_uri(reverse('InvestmentsWithBalance'))+"?active=true", authorization)
+    dict_investmentswithbalance=request_get(request._request.build_absolute_uri(reverse('investments-withbalance'))+"?active=true", authorization)
     dict_investmentswithbalance=listdict_order_by(dict_investmentswithbalance, "percentage_selling_point")
     investmentswithbalance=[(_("Name"), _("Invested"),  _("Balance"), _("Gains"), _("% invested"), _("% selling point"))]
     for o in dict_investmentswithbalance:
@@ -252,32 +252,28 @@ def generate_assets_report(request, format):
     doc.pageBreak("Landscape")
     ### Graphics wdgInvestments clases        
     doc.addParagraph(_("Investments group by variable percentage"), "Heading 2")
-
-  
-    with open("/tmp/global.png", "w+b") as file_:
-        file_.write(getGlobalBytes_from_base64(request, "base64_assetsreport_classes_by_percentage.png"))
   
     width=None
     height=12
-    doc.addImageParagraph([bytes_after_trim_image(getGlobalBytes_from_base64(request, "base64_assetsreport_classes_by_percentage.png"), "png"), ], width, height, "Illustration")
+    doc.addImageParagraph([bytes_after_trim_image(f"{settings.TMPDIR}/assetsreport_classes_by_percentage.png", "png")], width, height, "Illustration")
 
     doc.addParagraph(_("Investments group by investment type"), "Heading 2")
-    doc.addImageParagraph([bytes_after_trim_image(getGlobalBytes_from_base64(request, "base64_assetsreport_classes_by_producttype.png"), "png"), ], width, height, "Illustration")
+    doc.addImageParagraph([bytes_after_trim_image(f"{settings.TMPDIR}/assetsreport_classes_by_producttype.png", "png"), ], width, height, "Illustration")
 
     doc.addParagraph(_("Investments group by leverage"), "Heading 2")        
-    doc.addImageParagraph([bytes_after_trim_image(getGlobalBytes_from_base64(request, "base64_assetsreport_classes_by_leverage.png"), "png"), ], width, height, "Illustration")
+    doc.addImageParagraph([bytes_after_trim_image(f"{settings.TMPDIR}/assetsreport_classes_by_leverage.png", "png"), ], width, height, "Illustration")
 
     doc.addParagraph(_("Investments group by investment product"), "Heading 2")
-    doc.addImageParagraph([bytes_after_trim_image(getGlobalBytes_from_base64(request, "base64_assetsreport_classes_by_product.png"), "png"), ], width, height, "Illustration")
+    doc.addImageParagraph([bytes_after_trim_image(f"{settings.TMPDIR}/assetsreport_classes_by_product.png", "png"), ], width, height, "Illustration")
 
     doc.addParagraph(_("Investments group by Call/Put/Inline"), "Heading 2")
-    doc.addImageParagraph([bytes_after_trim_image(getGlobalBytes_from_base64(request, "base64_assetsreport_classes_by_pci.png"), "png"), ], width, height, "Illustration")
+    doc.addImageParagraph([bytes_after_trim_image(f"{settings.TMPDIR}/assetsreport_classes_by_pci.png", "png"),  ], width, height, "Illustration")
     
     doc.pageBreak("Landscape")
     
     #Orders report
     doc.addParagraph(_("Investments orders"), "Heading 1")
-    dict_orders_list=request_get(request._request.build_absolute_uri(reverse('OrdersList'))+"?active=true", authorization)
+    dict_orders_list=request_get(request._request.build_absolute_uri(reverse('orders-list'))+"?active=true", authorization)
     dict_orders_list=listdict_order_by(dict_orders_list, "percentage_from_price", reverse=True)
     orders_list=[( _("Date"), _("Expiration"), _("Investment"), _("Shares"), _("Price"), _("Amount"), _("% from current price"))]
     for o in dict_orders_list:

@@ -12,8 +12,8 @@ from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
-from moneymoney import models
-from moneymoney import serializers
+from mimetypes import guess_extension
+from moneymoney import models, serializers
 from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotals, InvestmentsOperationsTotalsManager, StrategyIO
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict, show_queries, show_queries_function
 from moneymoney.reusing.casts import string2list_of_integers
@@ -2101,20 +2101,20 @@ def Settings(request):
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated, ])
-## Stores a filename encoded to base64 in a global variable
-## Global: base64_{name}.{extension}
-## @param only binary data, don't have to include data:image/png;base64 or similar
-## Para guardarlo a ficheros se puede hacer
-##    f=open(f"/tmp/{filename}", "wb")
-##    f.write(b64decode(data))
-##    f.close()
-### @global_ For Example: base64_assetsreport_report_annual_chart.png
-def Binary2Global(request):
+## Stores a filename encoded to base64 in /TMPFILE
+## @param data     data:image/png;base64,ABVC
+## @filename photo Without extension
+def StoreFile(request):
     data=RequestString(request, "data")
-    global_=RequestString(request, "global")
-    if data is not None  and global_ is not None:
-        setGlobal(global_, data)
-    return JsonResponse(True, safe=False)  
+    filename=RequestString(request, "filename")
+    if all_args_are_not_none(data, filename):
+        mime=data.split(";")[0].split(":")[1]
+        extension=guess_extension(mime)
+        content=data.split(",")[1]
+        with open(f"{settings.TMPDIR}/{filename}{extension}", "wb") as f:
+            f.write(b64decode(content))
+        return JsonResponse(True, safe=False)  
+    return JsonResponse(False, safe=False)  
 
 
 @api_view(['POST'])
@@ -2169,15 +2169,6 @@ def setGlobal(key, value):
         execute("insert into globals (global, value) values (%s,%s)", (key, value))
     else:
         execute("update globals set value=%s where global=%s", (value,  key))
-    
-
-## @param type Type to cast str, int, float,...
-def getGlobalBytes_from_base64(request, key, default=None):
-    try:
-        return b64decode(request.globals.get(key, default))
-    except:
-        return default
-    
     
 def getGlobalListOfIntegers(request, key, default=[], separator=","):
     try:

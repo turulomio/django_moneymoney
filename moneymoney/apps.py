@@ -7,3 +7,9 @@ class MoneyMoneyConfig(AppConfig):
 
 
 
+
+
+    # add this
+    def ready(self):
+        print("Activating signals...")
+        import moneymoney.signals  # noqa

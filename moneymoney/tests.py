@@ -94,6 +94,23 @@ class CtTestCase(APITestCase):
         cls.assertTrue(cls, models.Concepts.objects.all().count()>0, "There aren't concepts")
 
 
+    def test_profile(self):
+        """
+            Test created users has its profile automatically generated
+        """
+        print()
+        print("test_profile")
+        self.assertNotEqual(self.user_authorized_1.profile, None)
+        self.assertNotEqual(self.user_authorized_2.profile, None)
+        self.assertNotEqual(self.user_catalog_manager.profile, None)
+        
+        p=models.Products.objects.get(pk=79329)
+        self.user_authorized_1.profile.favorites.add(p)
+        self.user_authorized_1.profile.save()
+        self.assertEqual(self.user_authorized_1.profile.favorites.count(), 1)
+        
+        
+
     def test_factory_by_type(self):
         print()
         for f in self.factories_manager:

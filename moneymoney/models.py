@@ -1,34 +1,22 @@
-# This is an auto-generated Django model module.
-# You'll have to do the following manually to clean this up:
-#   * Rearrange models' order
-#   * Make sure each model has one field with primary_key=True
-#   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
-#   * Remove `managed = True` lines if you wish to allow Django to create, modify, and delete the table
-# Feel free to rename the models, but don't rename db_table values or field names.
 from datetime import date, timedelta
 from decimal import Decimal
-Decimal()#Internal eval
-
+from django.contrib.auth.models import User # new
 from django.db import models, transaction
 from django.db.models import Case, When
 from django.db.models.expressions import RawSQL
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
-
-from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_column, cursor_one_row, cursor_rows, execute
-
+from enum import IntEnum
 from moneymoney.investmentsoperations import InvestmentsOperations
-
 from moneymoney.reusing.casts import string2list_of_integers
+from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_column, cursor_one_row, cursor_rows, execute
 from moneymoney.reusing.currency import Currency, currency_symbol
 from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string
 from moneymoney.reusing.percentage import Percentage
 
+Decimal
 
-from enum import IntEnum
-
-        
 class eProductType(IntEnum):
     """
         IntEnum permite comparar 1 to eProductType.Share
@@ -827,6 +815,8 @@ class Orders(models.Model):
             return True
         return False
 
+
+
 class Products(models.Model):
     name = models.TextField(blank=True, null=True)
     isin = models.TextField(blank=True, null=True)
@@ -1308,27 +1298,20 @@ class Comment:
                 money=Currency(cco.amount, cco.creditcards.accounts.currency)
                 return _("Refund of {} payment of which had an amount of {}").format(dtaware2string(cco.datetime), money)
 
-## Converts a value to a json strings, depending its value
-## str >> "str"
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
+    favorites= models.ManyToManyField(Products)
+    currency=models.CharField(max_length=4, blank=False, null=False, default="EUR")
+    zone=models.CharField(max_length=50, blank=False, null=False, default="Europe/Madrid")
+    investing_com_url=models.TextField(blank=True, null=True)
+    investing_com_cookie=models.TextField(blank=True, null=True)
+    investing_com_referer=models.TextField(blank=True, null=True)
+    invest_amount_1=models.DecimalField(max_digits=30, decimal_places=6, blank=False, null=False, default=2500)
+    invest_amount_2=models.DecimalField(max_digits=30, decimal_places=6, blank=False, null=False, default=3500)
+    invest_amount_3=models.DecimalField(max_digits=30, decimal_places=6, blank=False, null=False, default=7800)
+    invest_amount_4=models.DecimalField(max_digits=30, decimal_places=6, blank=False, null=False, default=7800)
+    invest_amount_5=models.DecimalField(max_digits=30, decimal_places=6, blank=False, null=False, default=7800)
 
-def jss(value):
-    if value is None:
-        return "null"
-    elif value.__class__.__name__=="str":
-        return f'"{value}"'
-    elif value.__class__.__name__ in ("int", "float", "Decimal"):
-        return f"{value}"
-    elif value.__class__.__name__=="time":
-        return f'"{value}"'
-    elif value.__class__.__name__=="bool":
-        return f"{str(value).lower()}"
-    else:
-        print(f"Rare value '{value}' ({value.__class__.__name__}) in jss")
-    
-
-#def queryset_investments_load_basic_results(qs_investments):
-#    products_ids=tuple(qs_investments.values_list('products__id',flat=True))
-#    basic_results=cursor_rows_as_dict("id", "select t.* from products, last_penultimate_lastyear(products.id, now()) as t where products.id in %s",  products_ids)
-#    print(basic_results)
-#    for investment in qs_investments:
-#        investment.products._basic_results=basic_results[investment.products.id]
+    class Meta:
+        managed = True
+        db_table = 'profiles'
