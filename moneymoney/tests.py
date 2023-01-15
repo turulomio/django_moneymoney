@@ -29,6 +29,7 @@ class CtTestCase(APITestCase):
         #cls.factories_manager.append(factory.InvestmentsoperationsFactory, "Colaborative", "/api/investmentsoperations/") #Needs quotes
         cls.factories_manager.append(factory.LeveragesFactory, "PrivateEditableCatalog", "/api/leverages/")
         cls.factories_manager.append(factory.OperationstypesFactory, "PrivateEditableCatalog", "/api/operationstypes/")
+        cls.factories_manager.append(factory.ProfileFactory, "Private", "/api/profile/")
 #        cls.factories_manager.append(factory.ProductsFactory, "PrivateEditableCatalog", "/api/products/")
         cls.factories_manager.append(factory.ProductstypesFactory, "PrivateEditableCatalog", "/api/productstypes/")
         cls.factories_manager.append(factory.StockmarketsFactory, "PrivateEditableCatalog", "/api/stockmarkets/")
@@ -108,6 +109,7 @@ class CtTestCase(APITestCase):
         self.user_authorized_1.profile.favorites.add(p)
         self.user_authorized_1.profile.save()
         self.assertEqual(self.user_authorized_1.profile.favorites.count(), 1)
+#        self.factories_manager.find(factory.ProfileFactory).print_batch(3)
         
         
 

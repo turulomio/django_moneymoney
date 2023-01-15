@@ -52,6 +52,7 @@ urlpatterns=[
     path('products/pairs/', money_views.ProductsPairs,  name='ProductsPairs'),
     path('products/ranges/', money_views.ProductsRanges, name='ProductsRanges'),
     path('products/update/', money_views.ProductsUpdate, name='ProductsUpdate'),
+    path('profile/', money_views.Profile.as_view(), name='Profile'),
     path('products/quotes/ohcl/', money_views.ProductsQuotesOHCL, name='ProductsQuotesOHCL'),
     path('quotes/massive_update/', money_views.QuotesMassiveUpdate.as_view(), name='QuotesMassiveUpdate'),
     path('recomendationmethods/', money_views.RecomendationMethods, name='RecomendationMethods'),

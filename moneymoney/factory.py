@@ -58,6 +58,11 @@ class StockmarketsFactory(DjangoModelFactory):
     closes_futures="20:00:00"
     zone="Europe/Madrid"
 
+
+class ProfileFactory(DjangoModelFactory):
+    class Meta:
+        model= models.Profile
+
 class ProductsFactory(DjangoModelFactory):
     class Meta:
         model= models.Products

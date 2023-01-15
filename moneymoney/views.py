@@ -1257,7 +1257,60 @@ def ProductsUpdate(request):
     r=ic.get()
     
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
-     
+    
+class Profile(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        p=models.Profile.objects.filter(user=request.user)[0]
+        favorites=[]
+        for product in p.favorites.all():
+            favorites.append(request.build_absolute_uri(reverse('products-detail', args=(product.id, ))))
+        r={
+            "currency": p.currency, 
+            "email": p.user.email, 
+            "favorites": favorites, 
+            "first_name":p.user.first_name, 
+            "last_name": p.user.last_name, 
+            "invest_amount_1": p.invest_amount_1, 
+            "invest_amount_2": p.invest_amount_2, 
+            "invest_amount_3": p.invest_amount_3, 
+            "invest_amount_4": p.invest_amount_4, 
+            "invest_amount_5": p.invest_amount_5, 
+            "investing_com_url": p.investing_com_url, 
+            "investing_com_cookie": p.investing_com_cookie, 
+            "investing_com_referer": p.investing_com_referer, 
+            "zone": p.zone, 
+        }
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+        
+    def put(self, request):
+        p=models.Profile.objects.filter(user=request.user)[0]
+        
+        if "newp" in request.data and request.data["newp"]!="":
+            p.user.set_password(request.data["newp"])
+            print("PASSWORD SET")
+        
+        p.currency=request.data["currency"]
+        p.user.email=request.data["email"]
+        p.user.first_name=request.data["first_name"]
+        p.user.last_name=request.data["last_name"]
+        p.invest_amount_1=request.data["invest_amount_1"]
+        p.invest_amount_2=request.data["invest_amount_2"]
+        p.invest_amount_3=request.data["invest_amount_3"]
+        p.invest_amount_4=request.data["invest_amount_4"]
+        p.invest_amount_5=request.data["invest_amount_5"]
+        p.investing_com_url=request.data["investing_com_url"]
+        p.investing_com_cookie=request.data["investing_com_cookie"]
+        p.investing_com_referer=request.data["investing_com_referer"]
+        p.zone=request.data["zone"]
+        favorites=RequestListUrl(request, "favorites", models.Products)
+        p.favorites.set(favorites)
+        p.user.save()
+        p.save()
+        return self.get(request)
+        
+
 
 class QuotesMassiveUpdate(APIView):
     permission_classes = [permissions.IsAuthenticated]
