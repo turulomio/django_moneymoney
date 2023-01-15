@@ -326,10 +326,44 @@ class DpsViewSet(viewsets.ModelViewSet):
         return self.queryset
 
 class OrdersViewSet(viewsets.ModelViewSet):
-    queryset = models.Orders.objects.all()
+    queryset = models.Orders.objects.select_related("investments","investments__accounts","investments__products","investments__products__productstypes","investments__products__leverages").all()
     serializer_class = serializers.OrdersSerializer
     permission_classes = [permissions.IsAuthenticated]  
 
+
+    def get_queryset(self):
+        active=RequestGetBool(self.request, 'active')
+        expired=RequestGetBool(self.request, 'expired')
+        executed=RequestGetBool(self.request, 'executed')
+        if active is not None:
+            return self.queryset.filter(expiration__gte=date.today(),  executed__isnull=True)
+        elif expired is not None:
+            return self.queryset.filter(expiration__lte=date.today(),  executed__isnull=True)
+        elif executed is not None:
+            return self.queryset.filter(executed__isnull=False)
+        else:
+            return self.queryset
+
+    def list(self, request):  
+        r=[]
+        for o in self.get_queryset():
+            r.append({
+                "id": o.id,  
+                "url": request.build_absolute_uri(reverse('orders-detail', args=(o.pk, ))), 
+                "date":o.date, 
+                "expiration": o.expiration, 
+                "investments": request.build_absolute_uri(reverse('investments-detail', args=(o.investments.pk, ))), 
+                "products": request.build_absolute_uri(reverse('products-detail', args=(o.investments.products.pk, ))), 
+                "investmentsname":o.investments.fullName(), 
+                "currency": o.investments.products.currency, 
+                "shares": o.shares, 
+                "price": o.price, 
+                "amount": o.shares*o.price*o.investments.products.real_leveraged_multiplier(), 
+                "percentage_from_price": percentage_between(o.investments.products.basic_results()["last"], o.price),
+               "executed": o.executed,  
+               "current_price": o.investments.products.basic_results()["last"], 
+            })
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 class OperationstypesViewSet(CatalogModelViewSet):
     queryset = models.Operationstypes.objects.all()
     serializer_class = serializers.OperationstypesSerializer
@@ -789,40 +823,6 @@ class LeveragesViewSet(CatalogModelViewSet):
     queryset = models.Leverages.objects.all()
     serializer_class = serializers.LeveragesSerializer
 
-@api_view(['GET', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def OrdersList(request):        
-    active=RequestGetBool(request, 'active')
-    expired=RequestGetBool(request, 'expired')
-    executed=RequestGetBool(request, 'executed')
-    if active is not None:
-        qs=models.Orders.objects.filter(expiration__gte=date.today(),  executed__isnull=True).select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__productstypes").select_related("investments__products__leverages")
-    elif expired is not None:
-        qs=models.Orders.objects.filter(expiration__lte=date.today(),  executed__isnull=True).select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__productstypes").select_related("investments__products__leverages")
-    elif executed is not None:
-        qs=models.Orders.objects.filter(executed__isnull=False).select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__productstypes").select_related("investments__products__leverages")
-    else:
-        qs=models.Orders.objects.all().select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__productstypes").select_related("investments__products__leverages")
-
-    r=[]
-    for o in qs:
-        r.append({
-            "id": o.id,  
-            "url": request.build_absolute_uri(reverse('orders-detail', args=(o.pk, ))), 
-            "date":o.date, 
-            "expiration": o.expiration, 
-            "investments": request.build_absolute_uri(reverse('investments-detail', args=(o.investments.pk, ))), 
-            "products": request.build_absolute_uri(reverse('products-detail', args=(o.investments.products.pk, ))), 
-            "investmentsname":o.investments.fullName(), 
-            "currency": o.investments.products.currency, 
-            "shares": o.shares, 
-            "price": o.price, 
-            "amount": o.shares*o.price*o.investments.products.real_leveraged_multiplier(), 
-            "percentage_from_price": percentage_between(o.investments.products.basic_results()["last"], o.price),
-           "executed": o.executed,  
-           "current_price": o.investments.products.basic_results()["last"], 
-        })
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 class ProductsFavorites(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -857,80 +857,6 @@ class ProductsFavorites(APIView):
                 answer=f"{product.id} added to favorites"
             setGlobal("favorites", str(favorites)[1:-1])
         return json_success_response(True, answer)
-
-@api_view(['GET', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def ProductsInformation(request):
-    first_year=RequestGetInteger(request, "first_year",  2005)
-    product=RequestGetUrl(request, "product", models.Products)
-    
-    if product is None:
-        return Response({'status': "Product wan't found"}, status=status.HTTP_404_NOT_FOUND)
-    
-     #Calculo 1 mes antes
-    rows_month=cursor_rows("""
-WITH quotes as (
-	SELECT 
-		dates::date - interval '1 day' date, 
-		(select quote from quote(%s, dates - interval '1 day')), 
-		lag((select quote from quote(%s, dates - interval '1 day')),1) over(order by dates::date) 
-	from 
-		generate_series('%s-01-01'::date - interval '1 day','%s-01-01'::date, '1 month') dates
-)
-select date,lag, quote, percentage(lag,quote)  from quotes;
-""", (product.id, product.id, first_year, date.today().year+1))
-    rows_month.pop(0)
-    
-    #Calculo 1 año antes
-    rows_year=cursor_rows("""
-WITH quotes as (
-	SELECT 
-		dates::date - interval '1 day' date, 
-		(select quote from quote(%s, dates - interval '1 day')), 
-		lag((select quote from quote(%s, dates - interval '1 day')),1) over(order by dates::date) 
-	from 
-		generate_series('%s-01-01'::date - interval '1 day','%s-01-02'::date, '1 year') dates
-)
-select date, lag, quote, percentage(lag,quote)  from quotes;
-""", (product.id, product.id, first_year, date.today().year+1))
-    rows_year.pop(0)
-#    ld_print(rows_month)
-#    ld_print(rows_year)
-    #PERCENTAGES
-    ld_percentage=[]
-    d={ 'm1': 0, 'm2': 0, 'm3': 0, 'm4': 0, 'm5': 0, 'm6': 0, 'm7': 0, 'm8': 0, 'm9': 0, 'm10': 0, 'm11': 0, 'm12': 0}
-    for i in range(0, len(rows_month)):
-        month=(i % 12 )+1
-        d[f"m{month}"]=Percentage(rows_month[i]["percentage"], 100)
-        if month==12:
-            ld_percentage.append(d)
-            d={ 'm1': 0, 'm2': 0, 'm3': 0, 'm4': 0, 'm5': 0, 'm6': 0, 'm7': 0, 'm8': 0, 'm9': 0, 'm10': 0, 'm11': 0, 'm12': 0}
-
-    if month!=12:
-        ld_percentage.append(d)
-
-    for i in range(0, len(rows_year)):
-        ld_percentage[i]["year"]=first_year+i 
-        ld_percentage[i]['m13']=Percentage(rows_year[i]["percentage"], 100) 
-        
-    #QUOTES
-    ld_quotes=[]
-    d={ 'm1': 0, 'm2': 0, 'm3': 0, 'm4': 0, 'm5': 0, 'm6': 0, 'm7': 0, 'm8': 0, 'm9': 0, 'm10': 0, 'm11': 0, 'm12': 0}
-    for i in range(0, len(rows_month)):
-        month=(i % 12 )+1
-        d[f"m{month}"]=rows_month[i]["quote"]
-        if month==12:
-            ld_quotes.append(d)
-            d={ 'm1': 0, 'm2': 0, 'm3': 0, 'm4': 0, 'm5': 0, 'm6': 0, 'm7': 0, 'm8': 0, 'm9': 0, 'm10': 0, 'm11': 0, 'm12': 0}
-    if month!=12:
-        ld_quotes.append(d)
-
-    for i in range(0, len(rows_year)):
-        ld_quotes[i]["year"]=first_year+i 
-
-    r={"quotes":ld_quotes, "percentages":ld_percentage}
-    
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 class ProductsComparationByQuote(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -1199,6 +1125,79 @@ class ProductsViewSet(viewsets.ModelViewSet):
                 row["percentage_last_year"]=None if row["lastyear"] is None else Percentage(row["last"]-row["lastyear"], row["lastyear"])
             return json_data_response(True, rows, "Products search done")
         return json_data_response(False, rows, "Products search error")
+
+
+    @action(detail=True, methods=['GET'], name='Get product historical information report', url_path="historical_information", url_name='historical_information', permission_classes=[permissions.IsAuthenticated])
+    def historical_information(self, request, pk=None):
+        first_year=RequestGetInteger(request, "first_year",  2005)
+        product=self.get_object()
+        
+        #Calculo 1 mes antes
+        rows_month=cursor_rows("""
+            WITH quotes as (
+                SELECT 
+                    dates::date - interval '1 day' date, 
+                    (select quote from quote(%s, dates - interval '1 day')), 
+                    lag((select quote from quote(%s, dates - interval '1 day')),1) over(order by dates::date) 
+                from 
+                    generate_series('%s-01-01'::date - interval '1 day','%s-01-01'::date, '1 month') dates
+            )
+            select date,lag, quote, percentage(lag,quote)  from quotes;
+        """, (product.id, product.id, first_year, date.today().year+1))
+        rows_month.pop(0)
+        
+        #Calculo 1 año antes
+        rows_year=cursor_rows("""
+            WITH quotes as (
+                SELECT 
+                    dates::date - interval '1 day' date, 
+                    (select quote from quote(%s, dates - interval '1 day')), 
+                    lag((select quote from quote(%s, dates - interval '1 day')),1) over(order by dates::date) 
+                from 
+                    generate_series('%s-01-01'::date - interval '1 day','%s-01-02'::date, '1 year') dates
+            )
+            select date, lag, quote, percentage(lag,quote)  from quotes;
+        """, (product.id, product.id, first_year, date.today().year+1))
+        rows_year.pop(0)
+    #    ld_print(rows_month)
+    #    ld_print(rows_year)
+        #PERCENTAGES
+        ld_percentage=[]
+        d={ 'm1': 0, 'm2': 0, 'm3': 0, 'm4': 0, 'm5': 0, 'm6': 0, 'm7': 0, 'm8': 0, 'm9': 0, 'm10': 0, 'm11': 0, 'm12': 0}
+        for i in range(0, len(rows_month)):
+            month=(i % 12 )+1
+            d[f"m{month}"]=Percentage(rows_month[i]["percentage"], 100)
+            if month==12:
+                ld_percentage.append(d)
+                d={ 'm1': 0, 'm2': 0, 'm3': 0, 'm4': 0, 'm5': 0, 'm6': 0, 'm7': 0, 'm8': 0, 'm9': 0, 'm10': 0, 'm11': 0, 'm12': 0}
+
+        if month!=12:
+            ld_percentage.append(d)
+
+        for i in range(0, len(rows_year)):
+            ld_percentage[i]["year"]=first_year+i 
+            ld_percentage[i]['m13']=Percentage(rows_year[i]["percentage"], 100) 
+            
+        #QUOTES
+        ld_quotes=[]
+        d={ 'm1': 0, 'm2': 0, 'm3': 0, 'm4': 0, 'm5': 0, 'm6': 0, 'm7': 0, 'm8': 0, 'm9': 0, 'm10': 0, 'm11': 0, 'm12': 0}
+        for i in range(0, len(rows_month)):
+            month=(i % 12 )+1
+            d[f"m{month}"]=rows_month[i]["quote"]
+            if month==12:
+                ld_quotes.append(d)
+                d={ 'm1': 0, 'm2': 0, 'm3': 0, 'm4': 0, 'm5': 0, 'm6': 0, 'm7': 0, 'm8': 0, 'm9': 0, 'm10': 0, 'm11': 0, 'm12': 0}
+        if month!=12:
+            ld_quotes.append(d)
+
+        for i in range(0, len(rows_year)):
+            ld_quotes[i]["year"]=first_year+i 
+
+        r={"quotes":ld_quotes, "percentages":ld_percentage}
+        
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+
+
 
 class ProductspairsViewSet(viewsets.ModelViewSet):
     queryset = models.Productspairs.objects.all()
