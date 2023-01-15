@@ -227,16 +227,6 @@ class Accountsoperations(models.Model):
             return True
         return False
 
-class Annualtargets(models.Model):
-    year = models.IntegerField(primary_key=True)
-    percentage = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
-
-    class Meta:
-        managed = True
-        db_table = 'annualtargets'
-
-
-
 class Banks(models.Model):
     name = models.TextField()
     active = models.BooleanField(default=True)
@@ -645,21 +635,6 @@ class Operationstypes(models.Model):
     def fullName(self):
         return _(self.name)
 
-class Opportunities(models.Model):
-    date = models.DateField()
-    removed = models.DateField(blank=True, null=True)
-    executed = models.DateField(blank=True, null=True)
-    entry = models.DecimalField(max_digits=100, decimal_places=2)
-    products = models.ForeignKey('Products', models.DO_NOTHING)
-    target = models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True)
-    stoploss = models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True)
-    short = models.BooleanField()
-
-    class Meta:
-        managed = True
-        db_table = 'opportunities'
-
-
 class Orders(models.Model):
     date = models.DateField()
     expiration = models.DateField()
@@ -841,17 +816,6 @@ class Quotes(models.Model):
             models.Model.save(self)
             return _("Inserting '{0}'").format(self)
 
-
-class Simulations(models.Model):
-    database = models.TextField(blank=True, null=True)
-    starting = models.DateTimeField(blank=True, null=True)
-    ending = models.DateTimeField(blank=True, null=True)
-    type = models.IntegerField(blank=True, null=True)
-    creation = models.DateTimeField(blank=True, null=True)
-
-    class Meta:
-        managed = True
-        db_table = 'simulations'
 
 
 class Splits(models.Model):
