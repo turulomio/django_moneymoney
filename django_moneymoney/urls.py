@@ -37,7 +37,6 @@ urlpatterns=[
     path('accounts/transfer/', money_views.AccountTransfer, name='AccountTransfer'),
     path('assets/report/', money_views.AssetsReport, name='AssetsReport'),
     path('catalog_manager/', money_views.CatalogManager, name='CatalogManager'),
-    path('creditcardsoperations/withbalance/', money_views.CreditcardsoperationsWithBalance, name='CreditcardsoperationsWithBalance'),
     path('derivatives/', money_views.Derivatives.as_view(), name='Derivatives'),
     path('estimations/dps/add/', money_views.EstimationsDps_add, name='EstimationsDps_add'),
     path('estimations/dps/delete/', money_views.EstimationsDps_delete, name='EstimationsDps_delete'),
@@ -81,7 +80,6 @@ urlpatterns=[
     path('timezones/', money_views.Timezones.as_view(), name='Timezones'),
     path('unogenerator/working/', money_views.UnogeneratorWorking.as_view()),
     
-
     path('schema/', SpectacularAPIView.as_view(), name='schema'),
     path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     

@@ -231,6 +231,36 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
         return JsonResponse( False, encoder=MyDjangoJSONEncoder,     safe=False)
     
 
+    
+
+    @action(detail=True, methods=['GET'], name='Get a list of creditcards operations with balance', url_path="operationswithbalance", url_name='operationswithbalance', permission_classes=[permissions.IsAuthenticated])
+    @transaction.atomic
+    def operationswithbalance(self, request, pk=None):   
+        creditcard=self.get_object()
+        paid=RequestGetBool(request, 'paid')
+        if paid is not None:
+            initial_balance=0
+            qs=models.Creditcardsoperations.objects.select_related("creditcards", "concepts").filter(paid=paid, creditcards=creditcard).order_by("datetime")
+
+        r=[]
+        for o in qs:
+            r.append({
+                "id": o.id,  
+                "url": request.build_absolute_uri(reverse('creditcardsoperations-detail', args=(o.pk, ))), 
+                "datetime":o.datetime, 
+                "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(o.concepts.pk, ))), 
+                "amount": o.amount, 
+                "balance":  initial_balance + o.amount, 
+                "comment": models.Comment().decode(o.comment), 
+                "creditcards":request.build_absolute_uri(reverse('creditcards-detail', args=(o.creditcards.pk, ))), 
+                "paid": o.paid, 
+                "paid_datetime": o.paid_datetime, 
+                "currency": o.creditcards.accounts.currency, 
+            })
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+
+
+
 class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
     queryset = models.Creditcardsoperations.objects.all().select_related("creditcards").select_related("creditcards__accounts")
     serializer_class = serializers.CreditcardsoperationsSerializer
@@ -246,7 +276,7 @@ class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
             return self.queryset.all()
 
 
-    
+
     
 class Derivatives(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -640,37 +670,6 @@ class BanksViewSet(viewsets.ModelViewSet):
             })
         return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
         
-
-
-
-@api_view(['GET', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def CreditcardsoperationsWithBalance(request):        
-    creditcard_id=RequestGetInteger(request, 'creditcard')
-    paid=RequestGetBool(request, 'paid')
-    if creditcard_id is not None and paid is not None:
-        initial_balance=0
-        qs=models.Creditcardsoperations.objects.select_related("creditcards", "concepts").filter(paid=paid, creditcards__id=creditcard_id).order_by("datetime")
-
-    r=[]
-    for o in qs:
-        r.append({
-            "id": o.id,  
-            "url": request.build_absolute_uri(reverse('creditcardsoperations-detail', args=(o.pk, ))), 
-            "datetime":o.datetime, 
-            "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(o.concepts.pk, ))), 
-            "amount": o.amount, 
-            "balance":  initial_balance + o.amount, 
-            "comment": models.Comment().decode(o.comment), 
-            "creditcards":request.build_absolute_uri(reverse('creditcards-detail', args=(o.creditcards.pk, ))), 
-            "paid": o.paid, 
-            "paid_datetime": o.paid_datetime, 
-            "currency": o.creditcards.accounts.currency, 
-        })
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
-
-
-
 
 
 
