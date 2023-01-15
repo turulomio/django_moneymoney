@@ -2079,6 +2079,15 @@ class EstimationsDpsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.EstimationsDpsSerializer
     permission_classes = [permissions.IsAuthenticated]      
     
+    
+    def get_queryset(self):
+        # To get active or inactive accounts
+        product=RequestGetUrl(self.request, "product", models.Products)
+        if product is not None:
+            return self.queryset.filter(products=product)
+        else:
+            return self.queryset
+    
 class StockmarketsViewSet(CatalogModelViewSet):
     queryset = models.Stockmarkets.objects.all()
     serializer_class = serializers.StockmarketsSerializer

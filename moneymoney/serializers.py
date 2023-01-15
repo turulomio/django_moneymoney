@@ -1,3 +1,4 @@
+from datetime import date
 from moneymoney import models
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -124,6 +125,11 @@ class EstimationsDpsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = models.EstimationsDps
         fields = ('url', 'id','year',  'estimation', 'products', 'date_estimation')
+    
+    def create(self, validated_data):
+        validated_data["date_estimation"]=date.today()
+        created=serializers.HyperlinkedModelSerializer.create(self,  validated_data)
+        return created
 
 class OperationstypesSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()
