@@ -1,9 +1,8 @@
 from django.contrib.auth.models import User
 from django.test import tag
 from json import loads
-from moneymoney import models
-from moneymoney import factory
-from moneymoney import factory_helpers 
+from moneymoney import models, factory, factory_helpers 
+from moneymoney.types import eOperationType
 
 from rest_framework.test import APIClient, APITestCase
 from django.contrib.auth.models import Group
@@ -133,7 +132,7 @@ class CtTestCase(APITestCase):
             quote=factory.QuotesFactory.create(products=product)
         print(quote)
         mf_io=factory_helpers.MyFactory(factory.InvestmentsoperationsFactory, "Colaborative", "/api/investmentsoperations/")
-        io_payload=mf_io.post_payload(investments=investment, operationstypes=models.Operationstypes.objects.get(pk=models.eOperationType.SharesPurchase))
+        io_payload=mf_io.post_payload(investments=investment, operationstypes=models.Operationstypes.objects.get(pk=eOperationType.SharesPurchase))
         print(io_payload)
         r=self.client_authorized_1.post("/api/investmentsoperations/", io_payload)
         print(r.content)

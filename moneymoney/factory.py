@@ -1,6 +1,7 @@
 from factory import Faker, SubFactory, lazy_attribute
 from factory.django import DjangoModelFactory
 from moneymoney import models
+from moneymoney.types import eOperationType
 from django.utils import timezone
 #https://faker.readthedocs.io/en/master/providers/faker.providers.currency.html
 
@@ -122,7 +123,7 @@ class InvestmentsoperationsFactory(DjangoModelFactory):
         model= models.Investmentsoperations
         
     operationstypes = SubFactory(OperationstypesFactory)
-    investments = SubFactory(InvestmentsFactory,  operationstypes=models.Operationstypes.objects.get(pk=models.eOperationType.SharesPurchase))
+    investments = SubFactory(InvestmentsFactory,  operationstypes=models.Operationstypes.objects.get(pk=eOperationType.SharesPurchase))
     shares=Faker("random_int")
     price=Faker("random_number")
     taxes=Faker("random_number")

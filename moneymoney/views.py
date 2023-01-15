@@ -14,6 +14,7 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 from mimetypes import guess_extension
 from moneymoney import models, serializers
+from moneymoney import eComment, eConcept, eProductType, eOperationType
 from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotals, InvestmentsOperationsTotalsManager, StrategyIO
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict, show_queries, show_queries_function
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date
@@ -212,12 +213,12 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
             
             c=models.Accountsoperations()
             c.datetime=dt_payment
-            c.concepts=models.Concepts.objects.get(pk=models.eConcept.CreditCardBilling)
+            c.concepts=models.Concepts.objects.get(pk=eConcept.CreditCardBilling)
             c.amount=sumamount
             c.accounts=creditcard.accounts
             c.comment="Transaction in progress"
             c.save()
-            c.comment=models.Comment().encode(models.eComment.CreditCardBilling, creditcard, c)
+            c.comment=models.Comment().encode(eComment.CreditCardBilling, creditcard, c)
             c.save()
 
             #Modifica el registro y lo pone como paid y la datetime de pago y añade la opercuenta
@@ -284,9 +285,9 @@ class Derivatives(APIView):
     )
     def get(self, request, *args, **kwargs):
         qs=models.Accountsoperations.objects.filter(concepts__id__in=(
-            models.eConcept.DerivativesAdjustment, 
-            models.eConcept.DerivativesCommission, 
-            models.eConcept.FastInvestmentOperations
+            eConcept.DerivativesAdjustment, 
+            eConcept.DerivativesCommission, 
+            eConcept.FastInvestmentOperations
             ))\
             .annotate(year=ExtractYear('datetime'), month=ExtractMonth('datetime'))\
             .values( 'year', 'month')\
@@ -570,7 +571,7 @@ def AccountTransfer(request):
             if commission >0:
                 ao_commission=models.Accountsoperations()
                 ao_commission.datetime=datetime
-                concept_commision=models.Concepts.objects.get(pk=models.eConcept.BankCommissions)
+                concept_commision=models.Concepts.objects.get(pk=eConcept.BankCommissions)
                 ao_commission.concepts=concept_commision
                 ao_commission.operationstypes=concept_commision.operationstypes
                 ao_commission.amount=-commission
@@ -580,7 +581,7 @@ def AccountTransfer(request):
             #Origin
             ao_origin=models.Accountsoperations()
             ao_origin.datetime=datetime
-            concept_transfer_origin=models.Concepts.objects.get(pk=models.eConcept.TransferOrigin)
+            concept_transfer_origin=models.Concepts.objects.get(pk=eConcept.TransferOrigin)
             ao_origin.concepts=concept_transfer_origin
             ao_origin.operationstypes=concept_transfer_origin.operationstypes
             ao_origin.amount=-amount
@@ -591,7 +592,7 @@ def AccountTransfer(request):
             #Destiny
             ao_destiny=models.Accountsoperations()
             ao_destiny.datetime=datetime
-            concept_transfer_destiny=models.Concepts.objects.get(pk=models.eConcept.TransferDestiny)
+            concept_transfer_destiny=models.Concepts.objects.get(pk=eConcept.TransferDestiny)
             ao_destiny.concepts=concept_transfer_destiny
             ao_destiny.operationstypes=concept_transfer_destiny.operationstypes
             ao_destiny.amount=amount
@@ -599,12 +600,12 @@ def AccountTransfer(request):
             ao_destiny.save()
 
             #Encoding comments
-            ao_origin.comment=models.Comment().encode(models.eComment.AccountTransferOrigin, ao_origin, ao_destiny, ao_commission)
+            ao_origin.comment=models.Comment().encode(eComment.AccountTransferOrigin, ao_origin, ao_destiny, ao_commission)
             ao_origin.save()
-            ao_destiny.comment=models.Comment().encode(models.eComment.AccountTransferDestiny, ao_origin, ao_destiny, ao_commission)
+            ao_destiny.comment=models.Comment().encode(eComment.AccountTransferDestiny, ao_origin, ao_destiny, ao_commission)
             ao_destiny.save()
             if ao_commission is not None:
-                ao_commission.comment=models.Comment().encode(models.eComment.AccountTransferOriginCommission, ao_origin, ao_destiny, ao_commission)
+                ao_commission.comment=models.Comment().encode(eComment.AccountTransferOriginCommission, ao_origin, ao_destiny, ao_commission)
                 ao_commission.save()
             return JsonResponse( True,  encoder=MyDjangoJSONEncoder,     safe=False)
         else:
@@ -1063,15 +1064,15 @@ class ProductsViewSet(viewsets.ModelViewSet):
             elif search==":PERSONAL":
                 ids=list(models.Products.objects.filter(id__lt=0).values_list('id', flat=True))
             elif search==":INDICES":
-                ids=list(models.Products.objects.filter(productstypes=models.Productstypes.objects.get(pk=models.eProductType.Index)).values_list('id', flat=True))
+                ids=list(models.Products.objects.filter(productstypes=models.Productstypes.objects.get(pk=eProductType.Index)).values_list('id', flat=True))
             elif search==":CFD_FUTURES":
-                ids=list(models.Products.objects.filter(productstypes__in=(models.Productstypes.objects.get(pk=models.eProductType.CFD), models.Productstypes.objects.get(pk=models.eProductType.Future))).values_list('id', flat=True))
+                ids=list(models.Products.objects.filter(productstypes__in=(models.Productstypes.objects.get(pk=eProductType.CFD), models.Productstypes.objects.get(pk=eProductType.Future))).values_list('id', flat=True))
             elif search==":ETF":
-                ids=list(models.Products.objects.filter(productstypes=models.Productstypes.objects.get(pk=models.eProductType.ETF)).values_list('id', flat=True))
+                ids=list(models.Products.objects.filter(productstypes=models.Productstypes.objects.get(pk=eProductType.ETF)).values_list('id', flat=True))
             elif search==":BONDS":
-                ids=list(models.Products.objects.filter(productstypes__in=(models.Productstypes.objects.get(pk=models.eProductType.PublicBond), models.Productstypes.objects.get(pk=models.eProductType.PrivateBond))).values_list('id', flat=True))
+                ids=list(models.Products.objects.filter(productstypes__in=(models.Productstypes.objects.get(pk=eProductType.PublicBond), models.Productstypes.objects.get(pk=eProductType.PrivateBond))).values_list('id', flat=True))
             elif search==":CURRENCIES":
-                ids=list(models.Products.objects.filter(productstypes=models.Productstypes.objects.get(pk=models.eProductType.Currency)).values_list('id', flat=True))
+                ids=list(models.Products.objects.filter(productstypes=models.Productstypes.objects.get(pk=eProductType.Currency)).values_list('id', flat=True))
  
             else: #use search text
                 ids=list(models.Products.objects.filter(
@@ -1436,9 +1437,9 @@ def ReportAnnual(request, year):
 def ReportAnnualIncome(request, year):   
     def month_results(year,  month, month_name):
         dividends=models.Dividends.netgains_dividends(year, month)
-        incomes=models.balance_user_by_operationstypes(year,  month,  models.eOperationType.Income, local_currency, local_zone)-dividends
-        expenses=models.balance_user_by_operationstypes(year,  month,  models.eOperationType.Expense, local_currency, local_zone)
-        fast_operations=models.balance_user_by_operationstypes(year,  month,  models.eOperationType.FastOperations, local_currency, local_zone)
+        incomes=models.balance_user_by_operationstypes(year,  month,  eOperationType.Income, local_currency, local_zone)-dividends
+        expenses=models.balance_user_by_operationstypes(year,  month,  eOperationType.Expense, local_currency, local_zone)
+        fast_operations=models.balance_user_by_operationstypes(year,  month,  eOperationType.FastOperations, local_currency, local_zone)
         dt_from=dtaware_month_start(year, month,  request.user.profile.zone)
         dt_to=dtaware_month_end(year, month,  request.user.profile.zone)
         gains=iom.historical_gains_net_user_between_dt(dt_from, dt_to)
@@ -1498,7 +1499,7 @@ def ReportAnnualIncomeDetails(request, year, month):
         # Expenses
         r=[]
         balance=0
-        for currency in models.currencies_in_accounts():
+        for currency in models.Accounts.currencies():
             for i,  op in enumerate(cursor_rows("""
                 select datetime,concepts_id, amount, comment, accounts.id as accounts_id
                 from 
@@ -1576,10 +1577,10 @@ def ReportAnnualIncomeDetails(request, year, month):
         return list_ioh
     ####
     r={}
-    r["expenses"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, models.eOperationType.Expense,  request.user.profile.currency, request.user.profile.zone)
-    r["incomes"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, models.eOperationType.Income,  request.user.profile.currency, request.user.profile.zone)
+    r["expenses"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, eOperationType.Expense,  request.user.profile.currency, request.user.profile.zone)
+    r["incomes"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, eOperationType.Income,  request.user.profile.currency, request.user.profile.zone)
     r["dividends"]=dividends()
-    r["fast_operations"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, models.eOperationType.FastOperations,  request.user.profile.currency, request.user.profile.zone)
+    r["fast_operations"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, eOperationType.FastOperations,  request.user.profile.currency, request.user.profile.zone)
     r["gains"]=listdict_investmentsoperationshistorical(request, year, month, request.user.profile.currency, request.user.profile.zone)
 
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
@@ -1643,7 +1644,7 @@ group by productstypes_id""", (year, ))
                 "dividends_net": dividends_net, 
         })      
         
-    fast_operations=models.balance_user_by_operationstypes(year,  None,  models.eOperationType.FastOperations, local_currency, local_zone)
+    fast_operations=models.balance_user_by_operationstypes(year,  None,  eOperationType.FastOperations, local_currency, local_zone)
 
     l.append({
             "id": -1000, #Fast operations
@@ -1844,8 +1845,8 @@ def ReportEvolutionAssets(request, from_year):
         
         iom=InvestmentsOperationsManager.from_investment_queryset(models.Investments.objects.all(), dt_to, request)
         dividends=models.Dividends.net_gains_baduser_between_datetimes(dt_from, dt_to)
-        incomes=models.balance_user_by_operationstypes(year, None,  models.eOperationType.Income, request.user.profile.currency, request.user.profile.zone)-dividends
-        expenses=models.balance_user_by_operationstypes(year, None,  models.eOperationType.Expense, request.user.profile.currency, request.user.profile.zone)
+        incomes=models.balance_user_by_operationstypes(year, None,  eOperationType.Income, request.user.profile.currency, request.user.profile.zone)-dividends
+        expenses=models.balance_user_by_operationstypes(year, None,  eOperationType.Expense, request.user.profile.currency, request.user.profile.zone)
         gains=iom.historical_gains_net_user_between_dt(dt_from, dt_to)
         list_.append({
             "year": year, 
@@ -1907,8 +1908,8 @@ def ReportEvolutionInvested(request, from_year):
         dt_from=dtaware_year_start(year, request.user.profile.zone)
         dt_to=dtaware_year_end(year, request.user.profile.zone)
         
-        custody_commissions=cursor_one_field("select sum(amount) from accountsoperations where concepts_id = %s and datetime>%s and datetime<= %s", (models.eConcept.CommissionCustody, dt_from, dt_to))
-        taxes=cursor_one_field("select sum(amount) from accountsoperations where concepts_id in( %s,%s) and datetime>%s and datetime<= %s", (models.eConcept.TaxesReturn, models.eConcept.TaxesPayment, dt_from, dt_to))
+        custody_commissions=cursor_one_field("select sum(amount) from accountsoperations where concepts_id = %s and datetime>%s and datetime<= %s", (eConcept.CommissionCustody, dt_from, dt_to))
+        taxes=cursor_one_field("select sum(amount) from accountsoperations where concepts_id in( %s,%s) and datetime>%s and datetime<= %s", (eConcept.TaxesReturn, eConcept.TaxesPayment, dt_from, dt_to))
         d={}
         d['year']=year
         d['invested']=iom.current_invested_user()

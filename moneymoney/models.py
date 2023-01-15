@@ -7,7 +7,7 @@ from django.db.models.expressions import RawSQL
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
-from enum import IntEnum
+from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.investmentsoperations import InvestmentsOperations
 from moneymoney.reusing.casts import string2list_of_integers
 from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_column, cursor_one_row, cursor_rows, execute
@@ -17,146 +17,6 @@ from moneymoney.reusing.percentage import Percentage
 
 Decimal
 
-class eProductType(IntEnum):
-    """
-        IntEnum permite comparar 1 to eProductType.Share
-    """
-    Share=1
-    Fund=2
-    Index=3
-    ETF=4
-    Warrant=5
-    Currency=6
-    PublicBond=7
-    PensionPlan=8
-    PrivateBond=9
-    Deposit=10
-    Account=11
-    CFD=12
-    Future=13
-    
-class eOHCLDuration:
-    Day=1
-    Week=2
-    Month=3
-    Year=4
-
-## Operation tipes
-class eOperationType:
-    Expense=1
-    Income=2
-    Transfer=3
-    SharesPurchase=4
-    SharesSale=5
-    SharesAdd=6
-    CreditCardBilling=7
-    TransferFunds=8
-    TransferSharesOrigin=9
-    TransferSharesDestiny=10
-    DerivativeManagement=11
-    FastOperations=12
-    
-class eTickerPosition(IntEnum):
-    """It's the number to access to a python list,  not to postgresql. In postgres it will be +1"""
-    Yahoo=0
-    Morningstar=1
-    Google=2
-    QueFondos=3
-    InvestingCom=4
-    
-    def postgresql(etickerposition):
-        return etickerposition.value+1
-        
-    ## Returns the number of atributes
-    def length():
-        return 5
-
-
-class eComment:
-    InvestmentOperation=10000
-    Dividend=10004
-    AccountTransferOrigin=10001
-    AccountTransferDestiny=10002
-    AccountTransferOriginCommission=10003
-    CreditCardBilling=10005
-    CreditCardRefund=10006
-
-## System concepts tipified
-class eConcept:
-    OpenAccount=1
-    TransferOrigin=4
-    TransferDestiny=5
-    TaxesReturn=6
-    BuyShares=29
-    SellShares=35
-    TaxesPayment=37
-    BankCommissions=38
-    Dividends=39
-    CreditCardBilling=40
-    AddShares=43
-    AssistancePremium=50
-    CommissionCustody=59
-    DividendsSaleRights=62
-    BondsCouponRunPayment=63
-    BondsCouponRunIncome=65
-    BondsCoupon=66
-    CreditCardRefund=67
-    DerivativesAdjustment=68
-    DerivativesGuarantee=70
-    DerivativesCommission=72
-    FastInvestmentOperations=74
-    RolloverPaid=75
-    RolloverReceived=76
-
-## Sets if a Historical Chart must adjust splits or dividends with splits or do nothing
-class eHistoricalChartAdjusts:
-    ## Without splits nor dividens
-    NoAdjusts=0
-    ## WithSplits
-    Splits=1
-    ##With splits and dividends
-    SplitsAndDividends=2#Dividends with splits.        
-
-
-class eLeverageType:
-    Variable=-1
-    NotLeveraged=1
-    X2=2
-    X3=3
-    X4=4
-    X5=5
-    X10=10
-    X20=20
-    X25=25
-    X50=50
-    X100=100
-    X200=200
-    X500=500
-    X1000=1000
-
-class eMoneyCurrency:
-    Product=1
-    Account=2
-    User=3
-
-## Type definition to refer to long /short invesment type positions
-class eInvestmentTypePosition:
-    Long=1
-    Short=2
-            
-    ## Return True if it's short. Due to postgres database has this definition
-    @classmethod
-    def to_boolean(self, einvestmenttypeposition):
-        if einvestmenttypeposition==1:
-            return False
-        return True
-
-    ## Returns Short if boolean is true
-    @classmethod
-    def to_eInvestmentTypePosition(self, boolean):
-        if boolean==True:
-            return eInvestmentTypePosition.Short
-        return eInvestmentTypePosition.Long
 
 
 RANGE_RECOMENDATION_CHOICES =( 
@@ -210,6 +70,16 @@ class Accounts(models.Model):
     def balance(self, dt,  local_currency):
         r=cursor_one_row("select * from account_balance(%s,%s,%s)", (self.id, dt, local_currency))
         return r['balance_account_currency'], r['balance_user_currency']
+            
+    @staticmethod
+    def currencies():
+        """
+        Returns a list with distinct currencies in accounts
+
+        @return DESCRIPTION
+        @rtype TYPE
+        """
+        return cursor_one_column("select distinct(currency) from accounts")
 
 ## This model is not in Xulpymoney to avoid changing a lot of code
 class Stockmarkets(models.Model):
@@ -1050,8 +920,6 @@ def percentage_to_selling_point(shares, selling_price, last_quote):
     else:#Long short products
         return Percentage(-(selling_price-last_quote), last_quote)
 
-def currencies_in_accounts():
-    return cursor_one_column("select distinct(currency) from accounts")
     
 ## @return accounts, investments, totals, invested
 def total_balance(dt, local_currency):
@@ -1069,7 +937,7 @@ def balance_user_by_operationstypes(year,  month,  operationstypes_id, local_cur
     strmonth="" if month is None else "date_part('month',datetime)=%s and "
     
     r=0
-    for currency in currencies_in_accounts():
+    for currency in Accounts.currencies():
         if month is  None:
             parameters=(operationstypes_id, year,  currency, operationstypes_id, year,  currency)
         else:
