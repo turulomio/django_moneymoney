@@ -2074,6 +2074,11 @@ def StoreFile(request):
     return JsonResponse(False, safe=False)  
 
 
+class EstimationsDpsViewSet(viewsets.ModelViewSet):
+    queryset = models.EstimationsDps.objects.all()
+    serializer_class = serializers.EstimationsDpsSerializer
+    permission_classes = [permissions.IsAuthenticated]      
+    
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated, ])
 @transaction.atomic

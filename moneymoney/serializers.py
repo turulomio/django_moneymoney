@@ -119,6 +119,11 @@ class DpsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = models.Dps
         fields = ('url', 'date',  'paydate', 'gross', 'products')
+        
+class EstimationsDpsSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = models.EstimationsDps
+        fields = ('url', 'id','year',  'estimation', 'products', 'date_estimation')
 
 class OperationstypesSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()

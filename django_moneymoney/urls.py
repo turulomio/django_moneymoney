@@ -1,12 +1,10 @@
-from django.urls import path,  include
-from django.conf.urls.i18n import i18n_patterns, set_language 
-from django.views.generic.base import RedirectView
 from django.contrib import admin
-
-from rest_framework import routers
+from django.urls import path,  include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from moneymoney import views as money_views
 from moneymoney import views_login as money_views_login
+from rest_framework import routers
+
 router = routers.DefaultRouter()
 router.register(r'accounts', money_views.AccountsViewSet)
 router.register(r'accountsoperations', money_views.AccountsoperationsViewSet)
@@ -16,6 +14,7 @@ router.register(r'creditcardsoperations', money_views.CreditcardsoperationsViewS
 router.register(r'concepts', money_views.ConceptsViewSet)
 router.register(r'dividends', money_views.DividendsViewSet)
 router.register(r'dps', money_views.DpsViewSet)
+router.register(r'estimationsdps', money_views.EstimationsDpsViewSet)
 router.register(r'investments', money_views.InvestmentsViewSet)
 router.register(r'investmentsoperations', money_views.InvestmentsoperationsViewSet)
 router.register(r'leverages', money_views.LeveragesViewSet)
@@ -30,7 +29,6 @@ router.register(r'stockmarkets', money_views.StockmarketsViewSet)
 
 urlpatterns=[
     path('api/', include(router.urls)),
-    path('favicon.ico', RedirectView.as_view(url='/static/images/favicon.ico')),
     path('admin/', admin.site.urls),
     path('login/', money_views_login.login, name="login"), 
     path('logout/', money_views_login.logout, name="logout"), 
@@ -77,12 +75,5 @@ urlpatterns=[
     
     path('schema/', SpectacularAPIView.as_view(), name='schema'),
     path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    
-    
-    
 ]
-
-urlpatterns=urlpatterns+ i18n_patterns(
-    path('i18n/setlang/',  set_language, name="set_language"), 
-)
 

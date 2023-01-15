@@ -21,7 +21,7 @@ class Migration(migrations.Migration):
                 ('products', models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, to='moneymoney.products')),
             ],
             options={
-                'db_table': 'estimations_dps',
+                'db_table': 'estimation_dps',
                 'managed': True,
             },
         ),

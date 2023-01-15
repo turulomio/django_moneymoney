@@ -16,6 +16,7 @@ class LeveragesFactory(DjangoModelFactory):
     @lazy_attribute
     def name(self):
         return f'Leverage x{self.multiplier}'
+        
 class BanksFactory(DjangoModelFactory):
     class Meta:
         model= models.Banks
@@ -142,3 +143,12 @@ class ConceptsFactory(DjangoModelFactory):
     name = Faker("bothify", text="Concept ??????")
     editable = Faker("boolean")
 
+#
+#class EstimationsDpsFactory(DjangoModelFactory):
+#    class Meta:
+#        model= models.EstimationsDps
+#    
+#    year=Faker("year")
+#    estimation=("random_number")
+#    products=SubFactory(ProductsFactory)
+#    date_estimation=Faker("date")

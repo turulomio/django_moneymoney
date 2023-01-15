@@ -24,6 +24,7 @@ class CtTestCase(APITestCase):
         cls.factories_manager.append(factory.AccountsFactory, "Colaborative", "/api/accounts/")
         cls.factories_manager.append(factory.BanksFactory, "Colaborative", "/api/banks/")
         cls.factories_manager.append(factory.ConceptsFactory, "Colaborative", "/api/concepts/")
+#        cls.factories_manager.append(factory.EstimationsDpsFactory, "Colaborative", "/api/estimationsdps/")
 #        cls.factories_manager.append(factory.InvestmentsFactory, "Colaborative", "/api/investments/")
         #cls.factories_manager.append(factory.InvestmentsoperationsFactory, "Colaborative", "/api/investmentsoperations/") #Needs quotes
         cls.factories_manager.append(factory.LeveragesFactory, "PrivateEditableCatalog", "/api/leverages/")

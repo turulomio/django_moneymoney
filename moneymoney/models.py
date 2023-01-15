@@ -1095,7 +1095,6 @@ class Profile(models.Model):
         managed = True
         db_table = 'profiles'
 
-## django no funciona con 2 primary keys, así que hago los inserts manuales
 class EstimationsDps(models.Model):
     year = models.IntegerField(blank=False, null=False)
     products= models.ForeignKey(Products, models.DO_NOTHING, blank=False, null=False)
@@ -1104,5 +1103,5 @@ class EstimationsDps(models.Model):
 
     class Meta:
         managed = True
-        db_table = 'estimations_dps'
+        db_table = 'estimation_dps'
 
