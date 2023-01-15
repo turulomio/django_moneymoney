@@ -68,7 +68,6 @@ urlpatterns=[
     path('reports/evolutioninvested/<int:from_year>/', money_views.ReportEvolutionInvested, name='ReportEvolutionInvested'),
     path('reports/ranking/', money_views.ReportRanking, name='ReportRanking'),
     path('reports/annual/gainsbyproductstypes/<int:year>/', money_views.ReportAnnualGainsByProductstypes, name='ReportAnnualGainsByProductstypes'),
-    path('settings/', money_views.Settings, name='Settings'),
     path('statistics/', money_views.Statistics, name='Statistics'),
     path('strategies/simulation/', money_views.StrategiesSimulation, name='StrategiesSimulation'),
     path('strategies/withbalance/', money_views.StrategiesWithBalance, name='StrategiesWithBalance'),

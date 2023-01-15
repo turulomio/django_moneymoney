@@ -576,16 +576,6 @@ class EstimationsEps(models.Model):
         db_table = 'estimations_eps'
         unique_together = (('year', 'products'),)
 
-
-class Globals(models.Model):
-    global_field = models.TextField(db_column='global', primary_key=True)  # Field renamed because it was a Python reserved word.
-    value = models.TextField(blank=True, null=True)
-
-    class Meta:
-        managed = True
-        db_table = 'globals'
-
-
 class Investments(models.Model):
     name = models.TextField()
     active = models.BooleanField()
@@ -717,7 +707,7 @@ class Investmentsoperations(models.Model):
         print(qs_ao)
         qs_ao.delete()
 
-        investment_operations=InvestmentsOperations.from_investment(request, self.investments, timezone.now(), request.local_currency)
+        investment_operations=InvestmentsOperations.from_investment(request, self.investments, timezone.now(), request.user.profile.currency)
         io=investment_operations.o_find_by_id(self.id)
         
         if self.investments.daily_adjustment is True: #Because it uses adjustment information

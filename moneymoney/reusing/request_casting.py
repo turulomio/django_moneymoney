@@ -115,14 +115,14 @@ def RequestListOfIntegers(request, field, default=None,  separator=","):
 
 def RequestGetDtaware(request, field, default=None):
     try:
-        r = string2dtaware(request.GET.get(field), "JsUtcIso", request.local_zone)
+        r = string2dtaware(request.GET.get(field), "JsUtcIso", request.user.profile.zone)
     except:
         r=default
     return r
 
 def RequestDtaware(request, field, default=None):
     try:
-        r = string2dtaware(request.data.get(field), "JsUtcIso", request.local_zone)
+        r = string2dtaware(request.data.get(field), "JsUtcIso", request.user.profile.zone)
     except:
         r=default
     return r

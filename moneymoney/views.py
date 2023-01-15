@@ -16,7 +16,6 @@ from mimetypes import guess_extension
 from moneymoney import models, serializers
 from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotals, InvestmentsOperationsTotalsManager, StrategyIO
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict, show_queries, show_queries_function
-from moneymoney.reusing.casts import string2list_of_integers
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date
 from moneymoney.reusing.decorators import ptimeit
 from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average, listdict_year_month_value_transposition
@@ -503,7 +502,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
     def withbalance(self, request): 
         r=[]
         for o in self.get_queryset().select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages"):
-            iot=InvestmentsOperationsTotals.from_investment(request, o, timezone.now(), request.local_currency)
+            iot=InvestmentsOperationsTotals.from_investment(request, o, timezone.now(), request.user.profile.currency)
             percentage_invested=None if iot.io_total_current["invested_user"]==0 else  iot.io_total_current["gains_gross_user"]/iot.io_total_current["invested_user"]
 
             r.append({
@@ -539,7 +538,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"], name='Investments operations evolution chart', url_path="operations_evolution_chart", url_name='operations_evolution_chart', permission_classes=[permissions.IsAuthenticated])
     def operations_evolution_chart(self, request, pk=None):
         investment=self.get_object()
-        io=InvestmentsOperations.from_investment(request, investment, timezone.now(), request.local_currency)
+        io=InvestmentsOperations.from_investment(request, investment, timezone.now(), request.user.profile.currency)
         return JsonResponse( io.chart_evolution(), encoder=MyDjangoJSONEncoder, safe=False)
 
 class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
@@ -645,7 +644,7 @@ class AccountsViewSet(viewsets.ModelViewSet):
     def withbalance(self, request):
         r=[]
         for o in self.get_queryset():
-            balance_account, balance_user=o.balance(timezone.now(), request.local_currency ) 
+            balance_account, balance_user=o.balance(timezone.now(), request.user.profile.currency ) 
             r.append({
                 "id": o.id,  
                 "name": o.name, 
@@ -670,8 +669,8 @@ class AccountsViewSet(viewsets.ModelViewSet):
         month=RequestGetInteger(request, 'month')
         
         if all_args_are_not_none( year, month):
-            dt_initial=dtaware_month_start(year, month, request.local_zone)
-            initial_balance=account.balance( dt_initial, request.local_currency)[0]
+            dt_initial=dtaware_month_start(year, month, request.user.profile.zone)
+            initial_balance=account.balance( dt_initial, request.user.profile.currency)[0]
             qs=models.Accountsoperations.objects.select_related("accounts","concepts").filter(datetime__year=year, datetime__month=month, accounts=account).order_by("datetime")
 
             r=[]
@@ -755,7 +754,7 @@ def InvestmentsoperationsFull(request):
     ids=RequestGetListOfIntegers(request, "investments")
     r=[]
     for o in models.Investments.objects.filter(id__in=ids).select_related("accounts", "products", "products__productstypes", "products__leverages"):
-        r.append(InvestmentsOperations.from_investment(request, o, timezone.now(), request.local_currency).json())
+        r.append(InvestmentsOperations.from_investment(request, o, timezone.now(), request.user.profile.currency).json())
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
 
@@ -767,7 +766,7 @@ def InvestmentsoperationsFullSimulation(request):
     local_currency=RequestString(request, "local_currency")
     listdict=request.data["operations"]
     for d in listdict:
-        d["datetime"]=string2dtaware(d["datetime"],  "JsUtcIso", request.local_zone)
+        d["datetime"]=string2dtaware(d["datetime"],  "JsUtcIso", request.user.profile.zone)
         d["investments_id"]=investments[0].id
         d["operationstypes_id"]=id_from_url(d["operationstypes"])
     r=InvestmentsOperations.from_investment_simulation(request, investments,  dt,  local_currency,  listdict).json()
@@ -923,7 +922,7 @@ def ProductsPairs(request):
     for row in common_quotes:#a worse, b better
         pr=row["b_open"]/row["a_open"]
         r["data"].append({
-            "datetime": dtaware_day_end_from_date(row["date"], request.local_zone), 
+            "datetime": dtaware_day_end_from_date(row["date"], request.user.profile.zone), 
             "price_worse": row["a_open"], 
             "price_better": row["b_open"], 
             "price_ratio": pr, 
@@ -1187,8 +1186,8 @@ def ProductsUpdate(request):
     --header="Accept-Encoding: gzip, deflate, br" \
     --header="Alt-Used: es.investing.com" \
     --header="Connection: keep-alive" \
-    --referer="{request.globals.get('investing_com_referer', '')}" \
-    --header="{request.globals.get('investing_com_cookie', '')}" \
+    --referer="{request.user.profile.investing_com_referer}" \
+    --header="{request.user.profile.investing_com_cookie}" \
     --header="Upgrade-Insecure-Requests: 1" \
     --header="Sec-Fetch-Dest: document" \
     --header="Sec-Fetch-Mode: navigate" \
@@ -1197,7 +1196,7 @@ def ProductsUpdate(request):
     --header="Pragma: no-cache" \
     --header="Cache-Control: no-cache" \
     --header="TE: trailers" \
-    "{request.globals.get('investing_com_url', '')}" -O {tmp}/portfolio.csv""", shell=True, capture_output=True)
+    "{request.user.profile.investing_com_url}" -O {tmp}/portfolio.csv""", shell=True, capture_output=True)
     
             ic=InvestingCom(request, product=None)
             ic.load_from_filename_in_disk(f"{tmp}/portfolio.csv")
@@ -1384,10 +1383,10 @@ def ReportAnnual(request, year):
         return month_end, month_name, models.total_balance(month_end, local_currency)
         
     #####################
-    local_zone=request.local_zone
-    local_currency=request.local_currency
+    local_zone=request.user.profile.zone
+    local_currency=request.user.profile.currency
     dtaware_last_year=dtaware_year_end(year-1, local_zone)
-    last_year_balance=models.total_balance(dtaware_last_year, request.local_currency)['total_user']
+    last_year_balance=models.total_balance(dtaware_last_year, request.user.profile.currency)['total_user']
     list_=[]
     futures=[]
     
@@ -1440,18 +1439,18 @@ def ReportAnnualIncome(request, year):
         incomes=models.balance_user_by_operationstypes(year,  month,  models.eOperationType.Income, local_currency, local_zone)-dividends
         expenses=models.balance_user_by_operationstypes(year,  month,  models.eOperationType.Expense, local_currency, local_zone)
         fast_operations=models.balance_user_by_operationstypes(year,  month,  models.eOperationType.FastOperations, local_currency, local_zone)
-        dt_from=dtaware_month_start(year, month,  request.local_zone)
-        dt_to=dtaware_month_end(year, month,  request.local_zone)
+        dt_from=dtaware_month_start(year, month,  request.user.profile.zone)
+        dt_to=dtaware_month_end(year, month,  request.user.profile.zone)
         gains=iom.historical_gains_net_user_between_dt(dt_from, dt_to)
         total=incomes+gains+expenses+dividends+fast_operations
         return month_name, month,  year,  incomes, expenses, gains, dividends, total, fast_operations
     
     list_=[]
     futures=[]
-    local_zone=request.local_zone
-    local_currency=request.local_currency
+    local_zone=request.user.profile.zone
+    local_currency=request.user.profile.currency
     #IOManager de final de año para luego calcular gains entre fechas
-    dt_year_to=dtaware_year_end(year, request.local_zone)
+    dt_year_to=dtaware_year_end(year, request.user.profile.zone)
     iom=InvestmentsOperationsManager.from_investment_queryset(models.Investments.objects.all(), dt_year_to, request)
 
     
@@ -1577,11 +1576,11 @@ def ReportAnnualIncomeDetails(request, year, month):
         return list_ioh
     ####
     r={}
-    r["expenses"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, models.eOperationType.Expense,  request.local_currency, request.local_zone)
-    r["incomes"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, models.eOperationType.Income,  request.local_currency, request.local_zone)
+    r["expenses"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, models.eOperationType.Expense,  request.user.profile.currency, request.user.profile.zone)
+    r["incomes"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, models.eOperationType.Income,  request.user.profile.currency, request.user.profile.zone)
     r["dividends"]=dividends()
-    r["fast_operations"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, models.eOperationType.FastOperations,  request.local_currency, request.local_zone)
-    r["gains"]=listdict_investmentsoperationshistorical(request, year, month, request.local_currency, request.local_zone)
+    r["fast_operations"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, models.eOperationType.FastOperations,  request.user.profile.currency, request.user.profile.zone)
+    r["gains"]=listdict_investmentsoperationshistorical(request, year, month, request.user.profile.currency, request.user.profile.zone)
 
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
     
@@ -1590,8 +1589,8 @@ def ReportAnnualIncomeDetails(request, year, month):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportAnnualGainsByProductstypes(request, year):
-    local_currency=request.local_currency
-    local_zone=request.local_zone
+    local_currency=request.user.profile.currency
+    local_zone=request.user.profile.zone
     gains=cursor_rows("""
 select 
     investments.id, 
@@ -1835,18 +1834,18 @@ def ReportDividends(request):
 def ReportEvolutionAssets(request, from_year):
     tb={}
     for year in range(from_year-1, date.today().year+1):
-        tb[year]=models.total_balance(dtaware_month_end(year, 12, request.local_zone), request.local_currency)
+        tb[year]=models.total_balance(dtaware_month_end(year, 12, request.user.profile.zone), request.user.profile.currency)
     
     
     list_=[]
     for year in range(from_year, date.today().year+1): 
-        dt_from=dtaware_year_start(year, request.local_zone)
-        dt_to=dtaware_year_end(year, request.local_zone)
+        dt_from=dtaware_year_start(year, request.user.profile.zone)
+        dt_to=dtaware_year_end(year, request.user.profile.zone)
         
         iom=InvestmentsOperationsManager.from_investment_queryset(models.Investments.objects.all(), dt_to, request)
         dividends=models.Dividends.net_gains_baduser_between_datetimes(dt_from, dt_to)
-        incomes=models.balance_user_by_operationstypes(year, None,  models.eOperationType.Income, request.local_currency, request.local_zone)-dividends
-        expenses=models.balance_user_by_operationstypes(year, None,  models.eOperationType.Expense, request.local_currency, request.local_zone)
+        incomes=models.balance_user_by_operationstypes(year, None,  models.eOperationType.Income, request.user.profile.currency, request.user.profile.zone)-dividends
+        expenses=models.balance_user_by_operationstypes(year, None,  models.eOperationType.Expense, request.user.profile.currency, request.user.profile.zone)
         gains=iom.historical_gains_net_user_between_dt(dt_from, dt_to)
         list_.append({
             "year": year, 
@@ -1882,7 +1881,7 @@ def ReportEvolutionAssetsChart(request):
     # HA MEJORADO UNOS 5 segundos de 10 segundos a 3 para 12 meses
     with ThreadPoolExecutor(max_workers=settings.CONCURRENCY_DB_CONNECTIONS_BY_USER) as executor:
         for year,  month in list_months:    
-            futures.append(executor.submit(month_results, year, month, request.local_currency,  request.local_zone))
+            futures.append(executor.submit(month_results, year, month, request.user.profile.currency,  request.user.profile.zone))
 
 #    futures= sorted(futures, key=lambda future: future.result()[0])#month_end
     for future in futures:
@@ -1904,9 +1903,9 @@ def ReportEvolutionInvested(request, from_year):
     list_=[]
     qs=models.Investments.objects.all()
     for year in range(from_year, date.today().year+1): 
-        iom=InvestmentsOperationsManager.from_investment_queryset(qs, dtaware_month_end(year, 12, request.local_zone), request)
-        dt_from=dtaware_year_start(year, request.local_zone)
-        dt_to=dtaware_year_end(year, request.local_zone)
+        iom=InvestmentsOperationsManager.from_investment_queryset(qs, dtaware_month_end(year, 12, request.user.profile.zone), request)
+        dt_from=dtaware_year_start(year, request.user.profile.zone)
+        dt_to=dtaware_year_end(year, request.user.profile.zone)
         
         custody_commissions=cursor_one_field("select sum(amount) from accountsoperations where concepts_id = %s and datetime>%s and datetime<= %s", (models.eConcept.CommissionCustody, dt_from, dt_to))
         taxes=cursor_one_field("select sum(amount) from accountsoperations where concepts_id in( %s,%s) and datetime>%s and datetime<= %s", (models.eConcept.TaxesReturn, models.eConcept.TaxesPayment, dt_from, dt_to))
@@ -2046,82 +2045,6 @@ def Statistics(request):
         r.append({"name": name, "value":cls.objects.all().count()})
     return JsonResponse(r, safe=False)
 
-
-@api_view(['GET', 'POST'])
-@permission_classes([permissions.IsAuthenticated, ])
-@transaction.atomic
-def Settings(request):
-    if request.method == 'GET':
-        r={}
-        r['local_zone']=request.local_zone
-        r['local_currency']=request.local_currency
-        r['investing_com_referer']=request.globals.get("investing_com_referer", "")
-        r['investing_com_cookie']=request.globals.get("investing_com_cookie", "")
-        r['investing_com_url']=request.globals.get("investing_com_url", "")
-        r['first_name']=request.user.first_name
-        r['last_name']=request.user.last_name
-        r['user_email']=request.user.email
-        r['invest_amount_1']=int(request.globals.get("invest_amount_1", "2500"))
-        r['invest_amount_2']=int(request.globals.get("invest_amount_2", "3500"))
-        r['invest_amount_3']=int(request.globals.get("invest_amount_3", "8400"))
-        r['invest_amount_4']=int(request.globals.get("invest_amount_4", "8400"))
-        r['invest_amount_5']=int(request.globals.get("invest_amount_5", "8400"))
-        return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
-    elif request.method == 'POST':
-        r={"local_settings":False, "investing_com":False,  "profile":False, "password":False, "invest_amounts":False}
-        
-        #Personal settings
-        local_currency=RequestString(request,"local_currency")
-        local_zone=RequestString(request,"local_zone")
-        if local_currency is not None and local_zone is not None:
-            setGlobal("mem/localcurrency", local_currency)
-            setGlobal("mem/localzone", local_zone)
-            r["local_settings"]=True
-            
-        # Investing.com
-        investing_com_referer=RequestString(request, "investing_com_referer")
-        investing_com_cookie=RequestString(request, "investing_com_cookie")
-        investing_com_url=RequestString(request, "investing_com_url")
-        if investing_com_referer is not None and investing_com_cookie is not None and investing_com_url is not None:
-            setGlobal("investing_com_url", investing_com_url)
-            setGlobal("investing_com_cookie", investing_com_cookie)
-            setGlobal("investing_com_referer", investing_com_referer)
-            r["investing_com"]=True
-            
-        first_name=RequestString(request, "first_name")
-        last_name=RequestString(request, "last_name")
-        user_email=RequestString(request, "user_email")
-        newp=RequestString(request, "newp")
-        if all_args_are_not_empty(first_name, last_name, user_email):
-            request.user.first_name=first_name
-            request.user.last_name=last_name
-            request.user.email=user_email
-            request.user.save()
-            r["profile"]=True
-            
-        invest_amount_1=RequestInteger(request, "invest_amount_1")
-        invest_amount_2=RequestInteger(request, "invest_amount_2")
-        invest_amount_3=RequestInteger(request, "invest_amount_3")
-        invest_amount_4=RequestInteger(request, "invest_amount_4")
-        invest_amount_5=RequestInteger(request, "invest_amount_5")
-        if all_args_are_not_empty(invest_amount_1, invest_amount_2, invest_amount_3, invest_amount_4, invest_amount_5):
-            setGlobal("invest_amount_1", invest_amount_1)
-            setGlobal("invest_amount_2", invest_amount_2)
-            setGlobal("invest_amount_3", invest_amount_3)
-            setGlobal("invest_amount_4", invest_amount_4)
-            setGlobal("invest_amount_5", invest_amount_5)
-            r["invest_amounts"]=True
-
-        if all_args_are_not_empty(newp):
-            request.user.set_password(newp)
-            request.user.save()
-            r["password"]=True
-            
-        
-            
-        return JsonResponse(r, safe=False)
-
-
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated, ])
 ## Stores a filename encoded to base64 in /TMPFILE
@@ -2184,18 +2107,3 @@ def EstimationsDps_list(request):
 class StockmarketsViewSet(CatalogModelViewSet):
     queryset = models.Stockmarkets.objects.all()
     serializer_class = serializers.StockmarketsSerializer
-
-
-def setGlobal(key, value):
-    number=cursor_one_field("select count(*) from globals where global=%s", (key, ))
-    if number==0:
-        execute("insert into globals (global, value) values (%s,%s)", (key, value))
-    else:
-        execute("update globals set value=%s where global=%s", (value,  key))
-    
-def getGlobalListOfIntegers(request, key, default=[], separator=","):
-    try:
-        r = string2list_of_integers(request.globals.get(key), separator)
-    except:
-        r=default
-    return r

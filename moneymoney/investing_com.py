@@ -176,7 +176,7 @@ class InvestingCom:
                         try:
                             quote=Quotes()
                             quote.products=product
-                            quote.datetime=string2dtaware(row[16],"%H:%M:%S", self.request.globals["mem__localzone"])
+                            quote.datetime=string2dtaware(row[16],"%H:%M:%S", self.request.user.profile.zone)
                             quote.quote=string2decimal(row[3])
                             quotes_count=quotes_count+1
                             d["log"]=quote.save()

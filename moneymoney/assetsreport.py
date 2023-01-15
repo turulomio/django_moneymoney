@@ -27,7 +27,7 @@ def request_get(absolute_url, authorization):
 def generate_assets_report(request, format):
     from moneymoney.views import ReportAnnual
     authorization=cursor_one_field("select * from authtoken_token where user_id=%s", (request.user.id, ))
-    c=request.local_currency
+    c=request.user.profile.currency
     
     year=date.today().year
     template=f"{path.dirname(__file__)}/templates/AssetsReport.odt"
@@ -65,7 +65,7 @@ def generate_assets_report(request, format):
     
     doc.addParagraph(_("Personal settings"), "Heading 1")
     doc.addParagraph(f(_("Your user currency is set to {c}.")),  "MyStandard")
-    doc.addParagraph(f(_("Your local time zone is set to {request.local_zone}.")),  "MyStandard")
+    doc.addParagraph(f(_("Your local time zone is set to {request.user.profile.zone}.")),  "MyStandard")
     doc.pageBreak()
     
     # Assets

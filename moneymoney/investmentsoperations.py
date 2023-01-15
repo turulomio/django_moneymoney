@@ -219,7 +219,7 @@ class InvestmentsOperations:
         account.name="Merging account"
         account.banks=bank
         account.active=True
-        account.currency=request.local_currency
+        account.currency=request.user.profile.currency
         account.id=-1
         investment=Investments()
         investment.name=f"Merging {investments[0].products.name}"
@@ -239,7 +239,7 @@ class InvestmentsOperations:
                     "investments_id": -1, 
                 })
         ld=listdict_order_by(ld, "datetime")
-        r=InvestmentsOperations.from_investment_simulation(request, [investment, ],  dt,  request.local_currency,  ld)
+        r=InvestmentsOperations.from_investment_simulation(request, [investment, ],  dt,  request.user.profile.currency,  ld)
         return r
 
     def json(self):
@@ -329,7 +329,7 @@ class InvestmentsOperations:
         """Calcula el precio medio de compra"""
         
         shares=self.current_shares()
-        currency=self.request.local_currency
+        currency=self.request.user.profile.currency
         sharesxprice=Decimal(0)
         for o in self.io_current:
             sharesxprice=sharesxprice+o["shares"]*o["price_user"]
@@ -438,7 +438,7 @@ class InvestmentsOperations:
         gains=[]
         
         for i, dt in enumerate(datetimes_list):
-            oper_dt=InvestmentsOperations.from_investment(self.request, self.investment, dt, self.request.local_currency)
+            oper_dt=InvestmentsOperations.from_investment(self.request, self.investment, dt, self.request.user.profile.currency)
             #Calculate dividends in datetime
             dividend_net=0
             for dividend in qs_dividends:
@@ -474,7 +474,7 @@ class InvestmentsOperationsManager:
         
         r=cls(request)
         if len(ids)>0:
-            rows=cursor_rows_as_dict("id","select id, t.* from investments, investment_operations(investments.id, %s, %s) as t where investments.id in %s;", (dt, request.local_currency, ids))
+            rows=cursor_rows_as_dict("id","select id, t.* from investments, investment_operations(investments.id, %s, %s) as t where investments.id in %s;", (dt, request.user.profile.currency, ids))
             for investment in qs_investments:  
                 row=rows[investment.id]
                 r.append(InvestmentsOperations(request, investment,  row["io"], row['io_current'],  row['io_historical']))
@@ -671,7 +671,7 @@ class InvestmentsOperationsTotalsManager:
         ids=tuple(qs_investments.values_list('pk',flat=True))
         r=cls(request)
         if len(ids)>0:
-            rows=cursor_rows_as_dict("id","select id, investment_operations_totals.* from investments, investment_operations_totals(investments.id, %s, %s ) as investment_operations_totals where investments.id in %s;", (dt, request.local_currency, ids))
+            rows=cursor_rows_as_dict("id","select id, investment_operations_totals.* from investments, investment_operations_totals(investments.id, %s, %s ) as investment_operations_totals where investments.id in %s;", (dt, request.user.profile.currency, ids))
             for investment in qs_investments:  
                 row=rows[investment.id]
                 r.append(InvestmentsOperationsTotals(request, investment,  row["io"], row['io_current'],  row['io_historical']))
