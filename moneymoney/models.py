@@ -1103,5 +1103,5 @@ class EstimationsDps(models.Model):
 
     class Meta:
         managed = True
-        db_table = 'estimation_dps'
+        db_table = 'estimations_dps'
 
