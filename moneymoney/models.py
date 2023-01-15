@@ -13,11 +13,8 @@ from moneymoney.reusing.casts import string2list_of_integers
 from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_column, cursor_one_row, cursor_rows, execute
 from moneymoney.reusing.currency import Currency, currency_symbol
 from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string
-from moneymoney.reusing.percentage import Percentage
 
 Decimal
-
-
 
 RANGE_RECOMENDATION_CHOICES =( 
     (1, "All"), 
@@ -70,6 +67,16 @@ class Accounts(models.Model):
     def balance(self, dt,  local_currency):
         r=cursor_one_row("select * from account_balance(%s,%s,%s)", (self.id, dt, local_currency))
         return r['balance_account_currency'], r['balance_user_currency']
+            
+            
+    @staticmethod
+    def balance_user_currency(qs, dt):
+        if len (qs)==0:
+            return 0
+            
+        ids=tuple(qs.values_list("id",  flat=True).distinct())
+        return cursor_one_field("select sum((account_balance(accounts.id,%s,'EUR')).balance_user_currency) from  accounts where id in %s", (dt, ids))
+
             
     @staticmethod
     def currencies():
@@ -244,7 +251,7 @@ class Banks(models.Model):
     def balance_accounts(self):
         if hasattr(self, "_balance_accounts") is False:
             qs=Accounts.objects.all().filter(banks_id=self.id, active=True)
-            self._balance_accounts=accounts_balance_user_currency(qs,  timezone.now())
+            self._balance_accounts=Accounts.balance_user_currency(qs,  timezone.now())
         return self._balance_accounts
 
     def balance_investments(self, request):
@@ -910,15 +917,6 @@ class Strategies(models.Model):
             return timezone.now().replace(hour=23, minute=59)#End of the current day if strategy is not closed
         return self.dt_to
 
-def percentage_to_selling_point(shares, selling_price, last_quote):       
-    """Función que calcula el tpc selling_price partiendo de las el last y el valor_venta
-    Necesita haber cargado mq getbasic y operinversionesactual"""
-    if selling_price==0 or selling_price==None or last_quote is None:
-        return Percentage()
-    if shares>0:
-        return Percentage(selling_price-last_quote, last_quote)
-    else:#Long short products
-        return Percentage(-(selling_price-last_quote), last_quote)
 
     
 ## @return accounts, investments, totals, invested
@@ -980,19 +978,6 @@ def balance_user_by_operationstypes(year,  month,  operationstypes_id, local_cur
                     else:
                         r=r+money_convert(dtaware_month_end(year, month, local_zone), row['amount'], currency, local_currency)
     return r
-
-def accounts_balance_user_currency(qs, dt):
-    if len (qs)==0:
-        return 0
-    return cursor_one_field("select sum((account_balance(accounts.id,%s,'EUR')).balance_user_currency) from  accounts where id in %s", (dt, qs_list_of_ids(qs)))
-
-
-
-def qs_list_of_ids(qs):
-    r=[]
-    for o in qs:
-        r.append(o.id)
-    return tuple(r)
 
 ## Class who controls all comments from accountsoperations, investmentsoperations ...
 class Comment:

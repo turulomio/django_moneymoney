@@ -14,7 +14,7 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 from mimetypes import guess_extension
 from moneymoney import models, serializers
-from moneymoney import eComment, eConcept, eProductType, eOperationType
+from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotals, InvestmentsOperationsTotalsManager, StrategyIO
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict, show_queries, show_queries_function
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date
@@ -501,6 +501,16 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], name='List investments with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
     def withbalance(self, request): 
+        def percentage_to_selling_point(shares, selling_price, last_quote):       
+            """Función que calcula el tpc selling_price partiendo de las el last y el valor_venta
+            Necesita haber cargado mq getbasic y operinversionesactual"""
+            if selling_price==0 or selling_price==None or last_quote is None:
+                return Percentage()
+            if shares>0:
+                return Percentage(selling_price-last_quote, last_quote)
+            else:#Long short products
+                return Percentage(-(selling_price-last_quote), last_quote)
+        #######################################
         r=[]
         for o in self.get_queryset().select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages"):
             iot=InvestmentsOperationsTotals.from_investment(request, o, timezone.now(), request.user.profile.currency)
@@ -524,7 +534,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "currency": o.products.currency, 
                 "currency_account": o.accounts.currency, 
                 "percentage_invested": percentage_invested, 
-                "percentage_selling_point": models.percentage_to_selling_point(iot.io_total_current["shares"], iot.investment.selling_price, iot.investment.products.basic_results()['last']), 
+                "percentage_selling_point": percentage_to_selling_point(iot.io_total_current["shares"], iot.investment.selling_price, iot.investment.products.basic_results()['last']), 
                 "selling_expiration": o.selling_expiration, 
                 "shares":iot.io_total_current["shares"], 
                 "balance_percentage": o.balance_percentage, 
