@@ -415,22 +415,6 @@ class Dps(models.Model):
         managed = True
         db_table = 'dps'
 
-## django no funciona con 2 primary keys, así que hago los inserts manuales
-class EstimationsDps(models.Model):
-    year = models.IntegerField(primary_key=True)
-    estimation = models.DecimalField(max_digits=18, decimal_places=6)
-    date_estimation = models.DateField(blank=True, null=True)
-    source = models.TextField(blank=True, null=True)
-    manual = models.BooleanField(blank=True, null=True)
-    products= models.ForeignKey('Products', models.DO_NOTHING)
-
-    class Meta:
-        managed = True
-        db_table = 'estimations_dps'
-        unique_together = (('year', 'products'),)
-
-
-
 class Investments(models.Model):
     name = models.TextField()
     active = models.BooleanField()
@@ -1110,3 +1094,15 @@ class Profile(models.Model):
     class Meta:
         managed = True
         db_table = 'profiles'
+
+## django no funciona con 2 primary keys, así que hago los inserts manuales
+class EstimationsDps(models.Model):
+    year = models.IntegerField(blank=False, null=False)
+    products= models.ForeignKey(Products, models.DO_NOTHING, blank=False, null=False)
+    estimation = models.DecimalField(max_digits=30, decimal_places=6, blank=False, null=False)
+    date_estimation = models.DateField(blank=False, null=False, default=timezone.now)
+
+    class Meta:
+        managed = True
+        db_table = 'estimations_dps'
+
