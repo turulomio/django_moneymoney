@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 from decimal import Decimal
-from django.contrib.auth.models import User # new
+from django.contrib.auth.models import User
 from django.db import models, transaction
 from django.db.models import Case, When
 from django.db.models.expressions import RawSQL
