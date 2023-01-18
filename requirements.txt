@@ -1,5 +1,12 @@
+coverage
 django
+djangocorsheaders
+djangorestframework
+drf-spectacular
+psycopg
+request
 unogenerator
 tabulate
 factory-boy
 faker
+unogenerator

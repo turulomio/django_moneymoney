@@ -38,9 +38,6 @@ class AccountsFactory(DjangoModelFactory):
     @lazy_attribute
     def name(self):
         return f"{self.banks.name} Account"
-        
-        
-
 
 class ProductstypesFactory(DjangoModelFactory):
     class Meta:
@@ -152,3 +149,14 @@ class EstimationsDpsFactory(DjangoModelFactory):
     estimation=Faker("random_number")
     products=SubFactory(ProductsFactory)
     date_estimation=Faker("date")
+        
+        
+class AccountsoperationsionsFactory(DjangoModelFactory):
+    class Meta:
+        model= models.Accountsoperations
+    concepts = SubFactory(ConceptsFactory)
+    amount=Faker("random_number")
+    comment=Faker("sentence")
+    accounts=SubFactory(AccountsFactory)
+    datetime=timezone.now()
+

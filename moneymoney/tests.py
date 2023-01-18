@@ -4,6 +4,7 @@ from json import loads
 from moneymoney import models, factory, factory_helpers 
 from moneymoney.types import eOperationType
 
+from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 from django.contrib.auth.models import Group
 
@@ -22,6 +23,7 @@ class CtTestCase(APITestCase):
         cls.factories_manager=factory_helpers.MyFactoriesManager()
         ##Must be all models urls
         cls.factories_manager.append(factory.AccountsFactory, "Colaborative", "/api/accounts/")
+        cls.factories_manager.append(factory.AccountsoperationsionsFactory, "Colaborative", "/api/accountsoperations/")
         cls.factories_manager.append(factory.BanksFactory, "Colaborative", "/api/banks/")
         cls.factories_manager.append(factory.ConceptsFactory, "Colaborative", "/api/concepts/")
         cls.factories_manager.append(factory.EstimationsDpsFactory, "Colaborative", "/api/estimationsdps/")
@@ -143,6 +145,9 @@ class CtTestCase(APITestCase):
         
     
     def test_estimations_dps(self):     
+        """
+            Checks estimationsdps loginc
+        """
         print()
         print("test_estimations_dps")
         mf=factory_helpers.MyFactory(factory.EstimationsDpsFactory, "Colaborative", "/api/estimationsdps/")
@@ -152,9 +157,34 @@ class CtTestCase(APITestCase):
         self.assertEqual(mf.model_count(), 0)
         self.client_authorized_1.post(mf.url, payload)
         self.assertEqual(mf.model_count(), 1)
-        payload["date_estimation"]="1973-12-29"
+        payload["estimation"]="12.3456"
         r=self.client_authorized_1.post(mf.url, payload)
         self.assertEqual(mf.model_count(), 1)
-        self.assertEqual(loads(r.content)["date_estimation"], "1973-12-29")
-
+        self.assertEqual(loads(r.content)["estimation"], 12.3456)
         
+    def test_accounts(self):
+        """
+            Checks accounts logic
+        """
+        mf=self.factories_manager.find(factory.AccountsFactory)
+        mfao=self.factories_manager.find(factory.AccountsoperationsionsFactory)
+        
+        #Checks there is one account
+        self.assertEqual(mf.model_count(), 1)
+        
+        #Create a new account
+        r=self.client_authorized_1.post(mf.url, mf.post_payload())
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED)
+        
+        #List accounts with balance
+        r=self.client_authorized_1.get(mf.url+"withbalance/")
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        
+        #Create a new account operation
+        r=self.client_authorized_1.post(mfao.url, mfao.post_payload())
+        print(r, r.content)
+        
+        
+        #
+        
+

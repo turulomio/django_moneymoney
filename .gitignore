@@ -7,3 +7,4 @@ dolt
 node_modules/
 django_moneymoney/presettings.py
 .jedi
+.coverage

@@ -26,4 +26,4 @@ class Command(BaseCommand):
         #Generate fixtures
                 
     def handle(self, *args, **options):
-        system("coverage run --omit=calories_tracker/reusing/* manage.py test --settings django_calories_tracker.presettings ; coverage html ; firefox htmlcov/index.html")
+        system("coverage run --omit=calories_tracker/reusing/* manage.py test --settings django_moneymoney.presettings ; coverage html ; firefox htmlcov/index.html")
