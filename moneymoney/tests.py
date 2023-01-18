@@ -161,7 +161,7 @@ class CtTestCase(APITestCase):
         r=self.client_authorized_1.post(mf.url, payload)
         self.assertEqual(mf.model_count(), 1)
         self.assertEqual(loads(r.content)["estimation"], 12.3456)
-        
+    
     def test_accounts(self):
         """
             Checks accounts logic
@@ -173,7 +173,7 @@ class CtTestCase(APITestCase):
         self.assertEqual(mf.model_count(), 1)
         
         #Create a new account
-        r=self.client_authorized_1.post(mf.url, mf.post_payload())
+        r=self.client_authorized_1.post(mf.url, mf.post_payload(currency="EUR"))
         self.assertEqual(r.status_code, status.HTTP_201_CREATED)
         
         #List accounts with balance
@@ -181,10 +181,18 @@ class CtTestCase(APITestCase):
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         
         #Create a new account operation
-        r=self.client_authorized_1.post(mfao.url, mfao.post_payload())
-        print(r, r.content)
+        r=self.client_authorized_1.post(mfao.url, mfao.post_payload(accounts__currency="EUR", comment="CAN YOU FIND ME?"))
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED)
+        ao =loads(r.content)
         
-        
-        #
-        
+        #Find account operation with search
+        r=self.client_authorized_1.get(mfao.url+"?search=FIND ME")
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+                
+        # Gets annual reports
+        year=ao["datetime"][0:4]
+        print(year)
+        #total=self.client_authorized_1.get(f"/reports/annual/{year}/")
+#        print(total)
 
+        print("SEEMS ERRORS ARE DUE PK ARE BIGINT AND FUNCTIONS INTEGER")

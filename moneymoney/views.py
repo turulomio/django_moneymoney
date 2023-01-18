@@ -713,7 +713,7 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
         search=RequestGetString(self.request, 'search')
 
         if search is not None:
-            return self.queryse.filter(comment__icontains=search)
+            return self.queryset.filter(comment__icontains=search)
         
         return self.queryset
 
@@ -1396,6 +1396,7 @@ def ReportAnnual(request, year):
     #####################
     local_zone=request.user.profile.zone
     local_currency=request.user.profile.currency
+    
     dtaware_last_year=dtaware_year_end(year-1, local_zone)
     last_year_balance=models.total_balance(dtaware_last_year, request.user.profile.currency)['total_user']
     list_=[]
