@@ -523,15 +523,10 @@ class Investmentsoperations(models.Model):
 
     @transaction.atomic
     def delete(self):
-#        execute("delete from investmentsaccountsoperations where investmentsoperations_id=%s",(self.id, )) 
-        
         concepts=Concepts.objects.filter(pk__in=(eConcept.BuyShares, eConcept.SellShares, eConcept.BankCommissions))
         qs_ao=Accountsoperations.objects.filter(concepts__in=concepts, comment=f'{eComment.InvestmentOperation},{self.id}')
-        print(qs_ao)
         qs_ao.delete()
         models.Model.delete(self)
-        
-
 
     ## Esta función actualiza la tabla investmentsaccountsoperations que es una tabla donde 
     ## se almacenan las accountsoperations automaticas por las operaciones con investments. Es una tabla 
@@ -611,7 +606,7 @@ class Orders(models.Model):
     date = models.DateField()
     expiration = models.DateField()
     shares = models.DecimalField(max_digits=100, decimal_places=6, blank=True, null=True)
-    price = models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True)
+    price = models.DecimalField(max_digits=100, decimal_places=6, blank=True, null=True)
     investments = models.ForeignKey(Investments, models.DO_NOTHING)
     executed = models.DateTimeField(blank=True, null=True)
 
