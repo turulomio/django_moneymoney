@@ -181,7 +181,7 @@ class CtTestCase(APITestCase):
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         
         #Create a new account operation
-        r=self.client_authorized_1.post(mfao.url, mfao.post_payload(accounts__currency="EUR", comment="CAN YOU FIND ME?"))
+        r=self.client_authorized_1.post(mfao.url, mfao.post_payload(accounts__currency="EUR", amount=-1492,  comment="CAN YOU FIND ME?", concepts=models.Concepts.objects.get(pk=7), accounts=models.Accounts.objects.get(pk=4)))
         self.assertEqual(r.status_code, status.HTTP_201_CREATED)
         ao =loads(r.content)
         
@@ -190,9 +190,15 @@ class CtTestCase(APITestCase):
         self.assertEqual(r.status_code, status.HTTP_200_OK)
                 
         # Gets annual reports
-        year=ao["datetime"][0:4]
-        print(year)
-        #total=self.client_authorized_1.get(f"/reports/annual/{year}/")
-#        print(total)
+        year=int(ao["datetime"][0:4])
+        month=int(ao["datetime"][5:7])
+        print(year, month)
+        r=self.client_authorized_1.get(f"/reports/annual/{year}/")
+        total=loads(r.content)
+        print(ao)
+        print(total)
+        r=self.client_authorized_1.get(f"/reports/annual/income/{year}/")
+        total=loads(r.content)
+        print(ao)
+        print(total)
 
-        print("SEEMS ERRORS ARE DUE PK ARE BIGINT AND FUNCTIONS INTEGER")

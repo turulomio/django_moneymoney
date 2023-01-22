@@ -852,7 +852,6 @@ class Strategies(models.Model):
     
 ## @return accounts, investments, totals, invested
 def total_balance(dt, local_currency):
-    print("AHORA",  local_currency)
     return cursor_one_row("select * from total_balance(%s,%s)", (dt, local_currency, ))
 
 def money_convert(dt, amount, from_,  to_):   
