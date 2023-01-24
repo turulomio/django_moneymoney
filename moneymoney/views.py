@@ -1512,29 +1512,39 @@ def ReportAnnualIncomeDetails(request, year, month):
         balance=0
         for currency in models.Accounts.currencies():
             for i,  op in enumerate(cursor_rows("""
-                select datetime,concepts_id, amount, comment, accounts.id as accounts_id
+                select 
+                    datetime,
+                    concepts_id, 
+                    amount, 
+                    comment, 
+                    accounts.id as accounts_id
                 from 
                     accountsoperations,
-                    accounts
+                    accounts,
+                    concepts
                 where 
-                    operationstypes_id=%s and 
+                    concepts.operationstypes_id=%s and 
                     date_part('year',datetime)=%s and
                     date_part('month',datetime)=%s and
                     accounts.currency=%s and
-                    accounts.id=accountsoperations.accounts_id   
+                    accounts.id=accountsoperations.accounts_id and
+                    accountsoperations.concepts_id=concepts.id
             union all 
                 select datetime,concepts_id, amount, comment, accounts.id as accounts_id
                 from 
                     creditcardsoperations ,
                     creditcards,
-                    accounts
+                    accounts,
+                    concepts
                 where 
-                    operationstypes_id=%s and 
+                    concepts.operationstypes_id=%s and 
                     date_part('year',datetime)=%s and
                     date_part('month',datetime)=%s and
                     accounts.currency=%s and
                     accounts.id=creditcards.accounts_id and
-                    creditcards.id=creditcardsoperations.creditcards_id""", (operationstypes_id, year, month,  currency, operationstypes_id, year, month,  currency))):
+                    creditcards.id=creditcardsoperations.creditcards_id and
+                    creditcardsoperations.concepts_id=concepts.id
+                """, (operationstypes_id, year, month,  currency, operationstypes_id, year, month,  currency))):
                 if local_currency==currency:
                     balance=balance+op["amount"]
                     r.append({
