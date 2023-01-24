@@ -1700,29 +1700,31 @@ def ReportConcepts(request):
     
     ## median
     for row in cursor_rows("""
-select
-    concepts_id as id, 
-    median(amount) as median
-from 
-    accountsoperations
-group by 
-    concepts_id
-"""):
+        select
+            concepts_id as id, 
+            median(amount) as median
+        from 
+            accountsoperations
+        group by 
+            concepts_id
+        """):
         dict_median[row['id']]=row['median']
     ## Data
     for row in cursor_rows("""
-select
-    concepts_id as id, 
-    sum(amount) as total
-from 
-    accountsoperations
-where 
-    date_part('year', datetime)=%s and
-    date_part('month', datetime)=%s and
-    operationstypes_id in (1,2)
-group by 
-    concepts_id
-""", (year, month)):
+        select
+            concepts_id as id, 
+            sum(amount) as total
+        from 
+            accountsoperations,
+            concepts
+        where 
+            date_part('year', datetime)=%s and
+            date_part('month', datetime)=%s and
+            concepts.operationstypes_id in (1,2) and
+            accountsoperations.concepts_id=concepts.id
+        group by 
+            concepts_id
+        """, (year, month)):
         if row['total']>=0:
             month_balance_positive+=row['total']
             dict_month_positive[row['id']]=row['total']
