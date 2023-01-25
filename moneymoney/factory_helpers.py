@@ -51,7 +51,8 @@ class MyFactory:
             self.tests_Collaborative(apitestclass, client_authenticated_1, client_authenticated_2, client_anonymous)
         if self.type=="PrivateEditableCatalog":
             self.tests_PrivateEditableCatalog(apitestclass, client_authenticated_1, client_anonymous, client_catalog_manager)
-        
+        if self.type=="Private":
+            self.tests_Private(apitestclass, client_authenticated_1, client_authenticated_2, client_anonymous)
         
     ## action can be None, to ignore test or status_code returned
     def common_actions_tests(self, apitestclass,  client,  post=status.HTTP_200_OK, get=status.HTTP_200_OK, list=status.HTTP_200_OK,  put=status.HTTP_200_OK, patch=status.HTTP_200_OK, delete=status.HTTP_200_OK):
@@ -109,6 +110,42 @@ class MyFactory:
         """
         client_authenticated_1.post(self.url, self.post_payload()) #Always will be one to test anonymous
         
+        ### TEST OF CLIENT_AUTHENTICATED_1
+        self.common_actions_tests(apitestclass, client_authenticated_1, 
+            post=status.HTTP_201_CREATED, 
+            get=status.HTTP_200_OK, 
+            list=status.HTTP_200_OK, 
+            put=status.HTTP_200_OK, 
+            patch=status.HTTP_200_OK, 
+            delete=status.HTTP_204_NO_CONTENT
+        )         
+        
+        ### TEST OF CLIENT_AUTHENTICATED_2
+        self.common_actions_tests(apitestclass, client_authenticated_2, 
+            post=status.HTTP_201_CREATED, 
+            get=status.HTTP_200_OK, 
+            list=status.HTTP_200_OK, 
+            put=status.HTTP_200_OK, 
+            patch=status.HTTP_200_OK, 
+            delete=status.HTTP_204_NO_CONTENT
+        )
+        
+        ### TEST OF CLIENT_ANONYMOUS
+        self.common_actions_tests(apitestclass, client_anonymous, 
+            post=status.HTTP_401_UNAUTHORIZED, 
+            get=status.HTTP_401_UNAUTHORIZED, 
+            list=status.HTTP_401_UNAUTHORIZED, 
+            put=status.HTTP_401_UNAUTHORIZED, 
+            patch=status.HTTP_401_UNAUTHORIZED, 
+            delete=status.HTTP_401_UNAUTHORIZED
+        )     
+        
+    def tests_Private(self, apitestclass, client_authenticated_1, client_authenticated_2, client_anonymous):
+        """
+           Make Private model tests
+        """
+        client_authenticated_1.post(self.url, self.post_payload()) #Always will be one to test anonymous
+
         ### TEST OF CLIENT_AUTHENTICATED_1
         self.common_actions_tests(apitestclass, client_authenticated_1, 
             post=status.HTTP_201_CREATED, 
