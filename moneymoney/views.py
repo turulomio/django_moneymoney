@@ -1512,29 +1512,39 @@ def ReportAnnualIncomeDetails(request, year, month):
         balance=0
         for currency in models.Accounts.currencies():
             for i,  op in enumerate(cursor_rows("""
-                select datetime,concepts_id, amount, comment, accounts.id as accounts_id
+                select 
+                    datetime,
+                    concepts_id, 
+                    amount, 
+                    comment, 
+                    accounts.id as accounts_id
                 from 
                     accountsoperations,
-                    accounts
+                    accounts,
+                    concepts
                 where 
-                    operationstypes_id=%s and 
+                    concepts.operationstypes_id=%s and 
                     date_part('year',datetime)=%s and
                     date_part('month',datetime)=%s and
                     accounts.currency=%s and
-                    accounts.id=accountsoperations.accounts_id   
+                    accounts.id=accountsoperations.accounts_id and
+                    accountsoperations.concepts_id=concepts.id
             union all 
                 select datetime,concepts_id, amount, comment, accounts.id as accounts_id
                 from 
                     creditcardsoperations ,
                     creditcards,
-                    accounts
+                    accounts,
+                    concepts
                 where 
-                    operationstypes_id=%s and 
+                    concepts.operationstypes_id=%s and 
                     date_part('year',datetime)=%s and
                     date_part('month',datetime)=%s and
                     accounts.currency=%s and
                     accounts.id=creditcards.accounts_id and
-                    creditcards.id=creditcardsoperations.creditcards_id""", (operationstypes_id, year, month,  currency, operationstypes_id, year, month,  currency))):
+                    creditcards.id=creditcardsoperations.creditcards_id and
+                    creditcardsoperations.concepts_id=concepts.id
+                """, (operationstypes_id, year, month,  currency, operationstypes_id, year, month,  currency))):
                 if local_currency==currency:
                     balance=balance+op["amount"]
                     r.append({
@@ -1690,29 +1700,31 @@ def ReportConcepts(request):
     
     ## median
     for row in cursor_rows("""
-select
-    concepts_id as id, 
-    median(amount) as median
-from 
-    accountsoperations
-group by 
-    concepts_id
-"""):
+        select
+            concepts_id as id, 
+            median(amount) as median
+        from 
+            accountsoperations
+        group by 
+            concepts_id
+        """):
         dict_median[row['id']]=row['median']
     ## Data
     for row in cursor_rows("""
-select
-    concepts_id as id, 
-    sum(amount) as total
-from 
-    accountsoperations
-where 
-    date_part('year', datetime)=%s and
-    date_part('month', datetime)=%s and
-    operationstypes_id in (1,2)
-group by 
-    concepts_id
-""", (year, month)):
+        select
+            concepts_id as id, 
+            sum(amount) as total
+        from 
+            accountsoperations,
+            concepts
+        where 
+            date_part('year', datetime)=%s and
+            date_part('month', datetime)=%s and
+            concepts.operationstypes_id in (1,2) and
+            accountsoperations.concepts_id=concepts.id
+        group by 
+            concepts_id
+        """, (year, month)):
         if row['total']>=0:
             month_balance_positive+=row['total']
             dict_month_positive[row['id']]=row['total']
