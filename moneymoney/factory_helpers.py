@@ -2,14 +2,29 @@
 ## IF YOU NEED TO UPDATE IT PLEASE MAKE A PULL REQUEST IN THAT PROJECT AND DOWNLOAD FROM IT
 ## DO NOT UPDATE IT IN YOUR CODE
 
-## This module allows to automatizate tests that has a catalog, authorized users, private tables, public tables
-## If you need to addapt this code you can subclass all classes, even types
+## It's used to autamatize common test classifing them by FACTORY_TYPES
+## You'll have to do your own tests
+
+## Some payloads are generated automatically. For complex payloads, you can pass your own function to autmatize this common tests
+
+## Client must have user attribute in instatntiation
 
 from json import loads
 from rest_framework import status
 from tabulate import tabulate
 from . import serializers
 from rest_framework.test import APIRequestFactory
+
+FACTORY_TYPES=        [
+            "PublicCatalog", #Catalog can be listed  and retrieved LR without authentication. Nobody can CUD
+            "PrivateCatalog", #Catalog can be listed  and retrieved only with authentication. Nobody can CUD
+            "PublicEditableCatalog", #Catalog can be listed  and retrieved LR without authentication. CatalogManager group can CUD
+            "PrivateEditableCatalog", #Catalog can be listed  and retrieved only with authentication. CatalogManagert group can CUD
+            "Private", #Table content  is filtered by authenticated user. User can¡t see other users content
+            "Colaborative",  # All authenticated user can LR and CUD
+            "Public",  # models can be LR for anonymous users
+            "Anonymous",  #Anonymous users can LR and CUD
+        ]
 
 def serialize( o, serializer=None):
     f = APIRequestFactory()
@@ -18,7 +33,11 @@ def serialize( o, serializer=None):
     return getattr(serializers, serializer)(o, context={'request': request}).data
 
 class MyFactory:
-    def __init__(self, factory, type, url):
+    def __init__(self, factory, type, url, post_payload_function=None):
+        """
+           @param post_payload_function Function that returns a dict that will be used to post_payload
+        """
+        self.post_payload_external_function=post_payload_function
         self.factory=factory
         self.type=type
         self.url=url
@@ -35,17 +54,19 @@ class MyFactory:
     #Hyperlinkurl
     def hlu(self, id):
         return f'http://testserver{self.url}{id}/'
-        
-    def post_payload(self, *args, **kwargs):
+
+    def post_payload(self, client):
+        if self.post_payload_external_function is not None:
+            return self.post_payload_external_function(client.user)
+
         ## factory.create. Creates an object with all dependencies. Si le quito "id" y "url" sería uno nuevo
-        o=self.factory.create(**kwargs)
+        o=self.factory.create()
         o.delete()
-        o.id=None
         payload=serialize(o)
         del payload["id"]
         del payload["url"]
         return payload
-        
+
     def test_by_type(self, apitestclass,  client_authenticated_1, client_authenticated_2, client_anonymous, client_catalog_manager):
         if self.type=="Colaborative":
             self.tests_Collaborative(apitestclass, client_authenticated_1, client_authenticated_2, client_anonymous)
@@ -56,7 +77,7 @@ class MyFactory:
         
     ## action can be None, to ignore test or status_code returned
     def common_actions_tests(self, apitestclass,  client,  post=status.HTTP_200_OK, get=status.HTTP_200_OK, list=status.HTTP_200_OK,  put=status.HTTP_200_OK, patch=status.HTTP_200_OK, delete=status.HTTP_200_OK):
-        r=client.post(self.url, self.post_payload())
+        r=client.post(self.url, self.post_payload(client),format="json")
         apitestclass.assertEqual(r.status_code, post, f"create action of {self}")
 
         created_json=loads(r.content)
@@ -73,14 +94,13 @@ class MyFactory:
                 raise ("No objects to get an id,  assigning 1")
                 
 
-
         r=client.get(self.url)
         apitestclass.assertEqual(r.status_code, list, f"list method of {self.url}")
         r=client.get(self.hlu(id))
         apitestclass.assertEqual(r.status_code, get, f"retrieve method of {self.hlu(id)}")
-        r=client.put(self.hlu(id), created_json)
+        r=client.put(self.hlu(id), created_json,format="json")
         apitestclass.assertEqual(r.status_code, put, f"update method of {self.hlu(id)}. {self.hlu(id)}")
-        r=client.patch(self.hlu(id), created_json)
+        r=client.patch(self.hlu(id), created_json,format="json")
         apitestclass.assertEqual(r.status_code, patch, f"partial_update method of {self.hlu(id)}")
         r=client.delete(self.hlu(id))
         apitestclass.assertEqual(r.status_code, delete, f"destroy method of {self.hlu(id)}")
@@ -144,7 +164,7 @@ class MyFactory:
         """
            Make Private model tests
         """
-        client_authenticated_1.post(self.url, self.post_payload()) #Always will be one to test anonymous
+        client_authenticated_1.post(self.url, self.post_payload(client_authenticated_1)) #Always will be one to test anonymous
 
         ### TEST OF CLIENT_AUTHENTICATED_1
         self.common_actions_tests(apitestclass, client_authenticated_1, 
@@ -154,8 +174,24 @@ class MyFactory:
             put=status.HTTP_200_OK, 
             patch=status.HTTP_200_OK, 
             delete=status.HTTP_204_NO_CONTENT
-        )         
-        
+        )
+
+        # 1 creates and 2 cant get
+        r1=client_authenticated_1.post(self.url, self.post_payload(client_authenticated_1), format="json")
+        apitestclass.assertEqual(r1.status_code, status.HTTP_201_CREATED, f"{self.url}, {r1.content}")
+        r1_id=loads(r1.content)["id"]
+    
+        r=client_authenticated_2.get(self.hlu(r1_id))
+        apitestclass.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND, f"{self.url}, {r.content}. WARNING: Client2 can access Client1 post")
+
+        # 2 creates and 1 cant get
+        r2=client_authenticated_2.post(self.url, self.post_payload(client_authenticated_2), format="json")
+        apitestclass.assertEqual(r2.status_code, status.HTTP_201_CREATED, f"{self.url}, {r2.content}")
+        r2_id=loads(r2.content)["id"]
+
+        r=client_authenticated_1.get(self.hlu(r2_id))
+        apitestclass.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND, f"{self.url}, {r.content}. WARNING: Client1 can access Client2 post")
+            
         ### TEST OF CLIENT_AUTHENTICATED_2
         self.common_actions_tests(apitestclass, client_authenticated_2, 
             post=status.HTTP_201_CREATED, 
@@ -181,7 +217,7 @@ class MyFactory:
         """
         Function make all checks to privatecatalogs factories with different clients
         """
-        client_authenticated_1.post(self.url, self.post_payload()) #Always will be one to test anonymous
+        client_authenticated_1.post(self.url, self.post_payload(client_authenticated_1.user)) #Always will be one to test anonymous
         ### TEST OF CLIENT_AUTHENTICATED_1
         self.common_actions_tests(apitestclass, client_authenticated_1, 
             post=status.HTTP_403_FORBIDDEN, 
@@ -218,16 +254,7 @@ class MyFactoriesManager:
         
         
     def get_factory_types(self):
-        return [
-            "PublicCatalog", #Catalog can be listed  and retrieved LR without authentication. Nobody can CUD
-            "PrivateCatalog", #Catalog can be listed  and retrieved only with authentication. Nobody can CUD
-            "PublicEditableCatalog", #Catalog can be listed  and retrieved LR without authentication. CatalogManager group can CUD
-            "PrivateEditableCatalog", #Catalog can be listed  and retrieved only with authentication. CatalogManagert group can CUD
-            "Private", #Table content  is filtered by authenticated user. User can¡t see other users content
-            "Colaborative",  # All authenticated user can LR and CUD
-            "Public",  # models can be LR for anonymous users
-            "Anonymous",  #Anonymous users can LR and CUD
-        ]
+        return FACTORY_TYPES
         
 
     ## Method to iterate self.arr iterating object
@@ -236,10 +263,10 @@ class MyFactoriesManager:
     def length(self):
         return len(self.arr)
         
-    def append(self, o, type, url):
+    def append(self, o, type, url,post_payload_function=None):
         if type not in self.get_factory_types():
             raise ("Factory type is not recognized")
-        self.arr.append(MyFactory(o, type, url))
+        self.arr.append(MyFactory(o, type, url,post_payload_function))
         
     def list(self):
         r=[]
