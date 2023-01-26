@@ -11,6 +11,17 @@ from django.contrib.auth.models import Group
 
 tag
 
+class PostPayload:
+    @staticmethod
+    def Account(user=None):
+        user.objects.get(username="testing") if user is None else user
+        account=factory.AccountsFactory.create(currency="EUR")
+        d=factory_helpers.serialize(account)
+        account.delete()
+        del d["id"]
+        del d["url"]
+        return d
+
 class CtTestCase(APITestCase):
     fixtures=["all.json"] #Para cargar datos por defecto
 
@@ -23,7 +34,7 @@ class CtTestCase(APITestCase):
         
         cls.factories_manager=factory_helpers.MyFactoriesManager()
         ##Must be all models urls
-        cls.factories_manager.append(factory.AccountsFactory, "Colaborative", "/api/accounts/")
+        cls.factories_manager.append(factory.AccountsFactory, "Colaborative", "/api/accounts/", PostPayload.Account)
         cls.factories_manager.append(factory.AccountsoperationsionsFactory, "Colaborative", "/api/accountsoperations/")
         cls.factories_manager.append(factory.BanksFactory, "Colaborative", "/api/banks/")
         cls.factories_manager.append(factory.ConceptsFactory, "Colaborative", "/api/concepts/")
@@ -174,7 +185,7 @@ class CtTestCase(APITestCase):
         self.assertEqual(mf.model_count(), 1)
         
         #Create a new account
-        r=self.client_authorized_1.post(mf.url, mf.post_payload(currency="EUR"))
+        r=self.client_authorized_1.post(mf.url, mf.post_payload(self.user_authorized_1))
         self.assertEqual(r.status_code, status.HTTP_201_CREATED)
         
         #Create a new account operation
