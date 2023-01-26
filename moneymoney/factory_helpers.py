@@ -56,6 +56,12 @@ class MyFactory:
         return f'http://testserver{self.url}{id}/'
 
     def post_payload(self, client):
+        """
+            Returns a dict with the client.post payload
+            If post_payload_external_function is defined, returns its value
+            Else generates a basic serialize payload
+        """
+    
         if self.post_payload_external_function is not None:
             return self.post_payload_external_function(client.user)
 
@@ -128,7 +134,7 @@ class MyFactory:
         Function Makes all action operations to factory with client to all examples
 
         """
-        client_authenticated_1.post(self.url, self.post_payload()) #Always will be one to test anonymous
+        client_authenticated_1.post(self.url, self.post_payload(client_authenticated_1)) #Always will be one to test anonymous
         
         ### TEST OF CLIENT_AUTHENTICATED_1
         self.common_actions_tests(apitestclass, client_authenticated_1, 
@@ -217,7 +223,7 @@ class MyFactory:
         """
         Function make all checks to privatecatalogs factories with different clients
         """
-        client_authenticated_1.post(self.url, self.post_payload(client_authenticated_1.user)) #Always will be one to test anonymous
+        client_authenticated_1.post(self.url, self.post_payload(client_authenticated_1), format="json") #Always will be one to test anonymous
         ### TEST OF CLIENT_AUTHENTICATED_1
         self.common_actions_tests(apitestclass, client_authenticated_1, 
             post=status.HTTP_403_FORBIDDEN, 
@@ -296,36 +302,6 @@ class MyFactoriesManager:
         return None
 
 
-def test_cross_user_data_with_post(apitestclass, client1,  client2,  tm):
-    """
-        Test to check if a recent post by client 1 is accessed by client2
-        
-        Returns the content of the post
-        
-        Serializers must have id field
-        
-        example:
-        test_cross_user_data_with_post(self, client1, client2, "/api/biometrics/", { "datetime": timezone.now(), "weight": 71, "height": 180, "activities": hlu("activities", 0), "weight_wishes": hlu("weightwishes", 0)})
-    """
-
-    
-    r=client1.post(tm.hlu(), tm.get_examples(0, client1), format="json")    
-    apitestclass.assertEqual(r.status_code, status.HTTP_201_CREATED, f"{tm.hlu()}, {r.content}")
-    return_=r.content
-    testing_id=loads(r.content)["id"]
-    
-    #other tries to access url
-    r=client1.get(tm.hlu(testing_id))
-    apitestclass.assertEqual(r.status_code, status.HTTP_200_OK,  f"{tm.hlu()}, {r.content}")
-    
-    #other tries to access url
-    r=client2.get(tm.hlu(testing_id))
-    apitestclass.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND, f"{tm.hlu()}, {r.content}. WARNING: Client2 can access Client1 post")
-    
-    return loads(return_)
-    
-    
-
 def test_cross_user_data(apitestclass, client1,  client2,  url):
     """
         Test to check if a hyperlinked model url can be accesed by client_belongs and not by client_other
@@ -341,49 +317,5 @@ def test_cross_user_data(apitestclass, client1,  client2,  url):
     #other tries to access url
     r=client2.get(url)
     apitestclass.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND, f"{url}. WARNING: Client2 can access Client1 post")
-    
-    
-
-        
-    
-def test_crud_unauthorized_anonymous(apitestclass, client_anonymous, client_authorized, tm):
-    """
-    Function Makes all action operations to tm with client to all examples
-
-    @param apitestclass DESCRIPTION
-    @type TYPE
-    @param client DESCRIPTION
-    @type TYPE
-    @param tm DESCRIPTION
-    @type TYPE
-    """
-    for i in range(len(tm.examples)):
-        r=client_anonymous.post(tm.hlu(), {})
-        
-        apitestclass.assertEqual(r.status_code, status.HTTP_401_UNAUTHORIZED, f"post method of {tm.model_string()}")
-        
-        
-        #Authorized client creates for testing purposes
-        payload=tm.get_examples(i, client_authorized)
-        r=client_authorized.post(tm.hlu(), payload)
-        apitestclass.assertEqual(r.status_code, status.HTTP_201_CREATED, f"post method of {tm.model_string()}")
-        d=loads(r.content)
-        id=d["id"]
-        
-        r=client_anonymous.put(tm.hlu(id), payload)
-        apitestclass.assertEqual(r.status_code, status.HTTP_401_UNAUTHORIZED, f"put method of {tm.model_string()}")
-        
-        r=client_anonymous.patch(tm.hlu(id), payload)
-        apitestclass.assertEqual(r.status_code, status.HTTP_401_UNAUTHORIZED, f"patch method of {tm.model_string()}")
-        
-        
-        r=client_anonymous.get(tm.hlu(id))
-        apitestclass.assertEqual(r.status_code, status.HTTP_401_UNAUTHORIZED, f"get method of {tm.model_string()}")
-        
-        r=client_anonymous.get(tm.hlu())
-        apitestclass.assertEqual(r.status_code, status.HTTP_401_UNAUTHORIZED, f"list method of {tm.model_string()}")
-        
-        r=client_anonymous.delete(tm.hlu(id))
-        apitestclass.assertEqual(r.status_code, status.HTTP_401_UNAUTHORIZED, f"delete method of {tm.model_string()}")
 
 
