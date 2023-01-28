@@ -668,6 +668,7 @@ class AccountsViewSet(viewsets.ModelViewSet):
                 "currency": o.currency, 
                 "banks":request.build_absolute_uri(reverse('banks-detail', args=(o.banks.pk, ))), 
                 "localname": _(o.name), 
+                "decimals": o.decimals, 
             })
         return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
