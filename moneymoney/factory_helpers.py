@@ -170,7 +170,7 @@ class MyFactory:
         """
            Make Private model tests
         """
-        client_authenticated_1.post(self.url, self.post_payload(client_authenticated_1)) #Always will be one to test anonymous
+        client_authenticated_1.post(self.url, self.post_payload(client_authenticated_1), format="json") #Always will be one to test anonymous
 
         ### TEST OF CLIENT_AUTHENTICATED_1
         self.common_actions_tests(apitestclass, client_authenticated_1, 
