@@ -711,10 +711,16 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         search=RequestGetString(self.request, 'search')
+        concept=RequestGetUrl(self.request, 'concept', models.Concepts)
+        year=RequestGetInteger(self.request, 'year')
+        month=RequestGetInteger(self.request, 'month')
 
         if search is not None:
             return self.queryset.filter(comment__icontains=search)
-        
+        if all_args_are_not_none(concept, year, month):
+            return self.queryset.filter(concepts=concept, datetime__year=year, datetime__month=month)
+        if all_args_are_not_none(concept, year):
+            return self.queryset.filter(concepts=concept, datetime__year=year)
         return self.queryset
 
     @action(detail=True, methods=['POST'], name='Refund all cco paid in an ao', url_path="ccpaymentrefund", url_name='ccpaymentrefund', permission_classes=[permissions.IsAuthenticated])
