@@ -1,11 +1,8 @@
 from factory import Faker, SubFactory, lazy_attribute
 from factory.django import DjangoModelFactory
 from moneymoney import models
-from moneymoney.types import eOperationType
 from django.utils import timezone
 #https://faker.readthedocs.io/en/master/providers/faker.providers.currency.html
-
-
 
 class LeveragesFactory(DjangoModelFactory):
     class Meta:
@@ -121,7 +118,7 @@ class InvestmentsoperationsFactory(DjangoModelFactory):
         model= models.Investmentsoperations
         
     operationstypes = SubFactory(OperationstypesFactory)
-    investments = SubFactory(InvestmentsFactory,  operationstypes=models.Operationstypes.objects.get(pk=eOperationType.SharesPurchase))
+    investments = SubFactory(InvestmentsFactory)
     shares=Faker("random_int")
     price=Faker("random_number")
     taxes=Faker("random_number")
@@ -160,3 +157,46 @@ class AccountsoperationsionsFactory(DjangoModelFactory):
     accounts=SubFactory(AccountsFactory)
     datetime=timezone.now()
 
+
+class CreditcardsFactory(DjangoModelFactory):
+    class Meta:
+        model= models.Creditcards
+    name = Faker("bothify", text="Credit Card ??????")
+    accounts=SubFactory(AccountsFactory)
+    deferred= Faker("boolean")
+    maximumbalance=Faker("random_number")
+    active = Faker("boolean")
+    number=Faker("random_number", digits=16,  fix_len=True)
+    
+    
+    
+    
+
+class CreditcardsoperationsFactory(DjangoModelFactory):
+    class Meta:
+        model= models.Creditcardsoperations
+    datetime=timezone.now()
+    concepts = SubFactory(ConceptsFactory)
+    amount = Faker("random_number")
+    comment= Faker("sentence")
+    creditcards= SubFactory(CreditcardsFactory)
+    paid=False
+    paid_datetime=None
+    accountsoperations=None
+    
+    
+    
+
+class DividendsFactory(DjangoModelFactory):
+    class Meta:
+        model= models.Dividends
+    investments = SubFactory(InvestmentsFactory)
+    gross = Faker("random_number")
+    taxes = Faker("random_number")
+    net = Faker("random_number")
+    dps = Faker("random_number")
+    datetime = timezone.now()
+    accountsoperations = None
+    commission = Faker("random_number")
+    concepts = SubFactory(ConceptsFactory)
+    currency_conversion = 1

@@ -561,8 +561,7 @@ class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         self.perform_destroy(instance)
         instance.investments.set_attributes_after_investmentsoperations_crud()
-        return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
-    
+        return Response(status=status.HTTP_204_NO_CONTENT)    
 
 @api_view(['POST', 'PUT', 'DELETE' ])    
 @permission_classes([permissions.IsAuthenticated, ])

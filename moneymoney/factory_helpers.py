@@ -83,8 +83,10 @@ class MyFactory:
         
     ## action can be None, to ignore test or status_code returned
     def common_actions_tests(self, apitestclass,  client,  post=status.HTTP_200_OK, get=status.HTTP_200_OK, list=status.HTTP_200_OK,  put=status.HTTP_200_OK, patch=status.HTTP_200_OK, delete=status.HTTP_200_OK):
+#        print(self.post_payload(client))
         r=client.post(self.url, self.post_payload(client),format="json")
-        apitestclass.assertEqual(r.status_code, post, f"create action of {self}")
+#        print(r, r.content)
+        apitestclass.assertEqual(r.status_code, post, f"create action of {self}. {r}. {r.content}")
 
         created_json=loads(r.content)
         try:
@@ -134,7 +136,7 @@ class MyFactory:
         Function Makes all action operations to factory with client to all examples
 
         """
-        client_authenticated_1.post(self.url, self.post_payload(client_authenticated_1)) #Always will be one to test anonymous
+        client_authenticated_1.post(self.url, self.post_payload(client_authenticated_1), format="json") #Always will be one to test anonymous
         
         ### TEST OF CLIENT_AUTHENTICATED_1
         self.common_actions_tests(apitestclass, client_authenticated_1, 

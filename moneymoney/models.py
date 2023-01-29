@@ -10,7 +10,7 @@ from django.utils import timezone
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.investmentsoperations import InvestmentsOperations
 from moneymoney.reusing.casts import string2list_of_integers
-from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_column, cursor_one_row, cursor_rows, execute
+from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_column, cursor_one_row, cursor_rows
 from moneymoney.reusing.currency import Currency, currency_symbol
 from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string
 
@@ -87,6 +87,19 @@ class Accounts(models.Model):
         @rtype TYPE
         """
         return cursor_one_column("select distinct(currency) from accounts")
+
+class Operationstypes(models.Model):
+    name = models.TextField()
+
+    class Meta:
+        managed = True
+        db_table = 'operationstypes'
+        
+    def __str__(self):
+        return self.fullName()
+        
+    def fullName(self):
+        return _(self.name)
 
 ## This model is not in Xulpymoney to avoid changing a lot of code
 class Stockmarkets(models.Model):
@@ -335,7 +348,7 @@ class Dividends(models.Model):
     net = models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True)
     dps = models.DecimalField(max_digits=100, decimal_places=6, blank=True, null=True)
     datetime = models.DateTimeField(blank=True, null=True)
-    accountsoperations = models.ForeignKey('Accountsoperations', models.DO_NOTHING, null=True)
+    accountsoperations = models.ForeignKey(Accountsoperations, models.DO_NOTHING, null=True)
     commission = models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True)
     concepts = models.ForeignKey(Concepts, models.DO_NOTHING)
     currency_conversion = models.DecimalField(max_digits=10, decimal_places=6)
@@ -344,8 +357,9 @@ class Dividends(models.Model):
         managed = True
         db_table = 'dividends'
 
+    @transaction.atomic
     def delete(self):
-        execute("delete from accountsoperations where id=%s",(self.accountsoperations.id, )) 
+        self.accountsoperations.delete()
         models.Model.delete(self)
        
         
@@ -382,10 +396,8 @@ class Dividends(models.Model):
             dividends=0
         return dividends
 
-    ## Esta función actualiza la tabla investmentsaccountsoperations que es una tabla donde 
-    ## se almacenan las accountsoperations automaticas por las operaciones con investments. Es una tabla 
-    ## que se puede actualizar en cualquier momento con esta función
-    def update_associated_account_operation(self):
+    @transaction.atomic
+    def save(self, *args, **kwargs):
         if self.accountsoperations is None:#Insert
             c=Accountsoperations()
             c.datetime=self.datetime
@@ -403,7 +415,7 @@ class Dividends(models.Model):
             self.accountsoperations.comment=Comment().encode(eComment.Dividend, self)
             self.accountsoperations.accounts=self.investments.accounts
             self.accountsoperations.save()
-        self.save()
+        models.Model.save(self)
 
 class Dps(models.Model):
     date = models.DateField(blank=False, null=False)
@@ -499,7 +511,7 @@ class Investments(models.Model):
         self.save()
         
 class Investmentsoperations(models.Model):
-    operationstypes = models.ForeignKey('Operationstypes', models.DO_NOTHING, blank=False, null=False)
+    operationstypes = models.ForeignKey(Operationstypes, models.DO_NOTHING, blank=False, null=False)
     investments = models.ForeignKey(Investments, models.DO_NOTHING, blank=False, null=False)
     shares = models.DecimalField(max_digits=100, decimal_places=6, blank=False, null=False)
     taxes = models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False)
@@ -538,7 +550,6 @@ class Investmentsoperations(models.Model):
         #Selecciona si existe una accountoperation con comment '10000,self.id' con id_concepts 35,29 y 38
         concepts=Concepts.objects.filter(pk__in=(eConcept.BuyShares, eConcept.SellShares, eConcept.BankCommissions))
         qs_ao=Accountsoperations.objects.filter(concepts__in=concepts, comment=f'{eComment.InvestmentOperation},{self.id}')
-        print(qs_ao)
         qs_ao.delete()
 
         investment_operations=InvestmentsOperations.from_investment(request, self.investments, timezone.now(), request.user.profile.currency)
@@ -583,19 +594,6 @@ class Leverages(models.Model):
         managed = True
         db_table = 'leverages'
 
-    def __str__(self):
-        return self.fullName()
-        
-    def fullName(self):
-        return _(self.name)
-
-class Operationstypes(models.Model):
-    name = models.TextField()
-
-    class Meta:
-        managed = True
-        db_table = 'operationstypes'
-        
     def __str__(self):
         return self.fullName()
         
