@@ -146,8 +146,7 @@ class EstimationsDpsFactory(DjangoModelFactory):
     estimation=Faker("random_number")
     products = Iterator(models.Products.objects.all())
     date_estimation=Faker("date")
-        
-        
+
 class AccountsoperationsionsFactory(DjangoModelFactory):
     class Meta:
         model= models.Accountsoperations
@@ -156,7 +155,6 @@ class AccountsoperationsionsFactory(DjangoModelFactory):
     comment=Faker("sentence")
     accounts=SubFactory(AccountsFactory)
     datetime=timezone.now()
-
 
 class CreditcardsFactory(DjangoModelFactory):
     class Meta:
@@ -167,10 +165,6 @@ class CreditcardsFactory(DjangoModelFactory):
     maximumbalance=Faker("random_number")
     active = Faker("boolean")
     number=Faker("random_number", digits=16,  fix_len=True)
-    
-    
-    
-    
 
 class CreditcardsoperationsFactory(DjangoModelFactory):
     class Meta:
@@ -183,9 +177,6 @@ class CreditcardsoperationsFactory(DjangoModelFactory):
     paid=False
     paid_datetime=None
     accountsoperations=None
-    
-    
-    
 
 class DividendsFactory(DjangoModelFactory):
     class Meta:
@@ -221,10 +212,7 @@ class OrdersFactory(DjangoModelFactory):
     price = Faker("random_number")
     investments = SubFactory(InvestmentsFactory)
     executed = None
-    
-    
-    
-    
+
 class ProductspairsFactory(DjangoModelFactory):
     class Meta:
         model= models.Productspairs
@@ -232,3 +220,22 @@ class ProductspairsFactory(DjangoModelFactory):
     a = Iterator(models.Products.objects.all())
     b = Iterator(models.Products.objects.all())
     
+class StrategiesFactory(DjangoModelFactory):
+    class Meta:
+        model= models.Strategies
+    name = Faker("bothify", text="Strategy ??????")
+    investments = SubFactory(InvestmentsFactory)
+    dt_from=timezone.now()
+    dt_to=None
+    type=models.StrategiesTypes.Ranges
+    comment= Faker("sentence")
+    additional1=Faker("random_int")
+    additional2=Faker("random_int")
+    additional3=Faker("random_int")
+    additional4=Faker("random_int")
+    additional5=Faker("random_int")
+    additional6=Faker("random_int")
+    additional7=Faker("random_int")
+    additional8=Faker("random_int")
+    additional9=Faker("random_int")
+    additional10=Faker("random_int")
