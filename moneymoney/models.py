@@ -417,15 +417,6 @@ class Dividends(models.Model):
             self.accountsoperations.save()
         models.Model.save(self)
 
-class Dps(models.Model):
-    date = models.DateField(blank=False, null=False)
-    gross = models.DecimalField(max_digits=18, decimal_places=6, blank=False, null=False)
-    products = models.ForeignKey('Products', models.DO_NOTHING, blank=False, null=False)
-    paydate = models.DateField(blank=False, null=False)
-
-    class Meta:
-        managed = True
-        db_table = 'dps'
 
 class Investments(models.Model):
     name = models.TextField()
@@ -1105,3 +1096,13 @@ class EstimationsDps(models.Model):
             self.id=old.id #To update it
             print("Updated estimation dps")
         models.Model.save(self)
+
+class Dps(models.Model):
+    date = models.DateField(blank=False, null=False)
+    gross = models.DecimalField(max_digits=18, decimal_places=6, blank=False, null=False)
+    products = models.ForeignKey(Products, models.DO_NOTHING, blank=False, null=False)
+    paydate = models.DateField(blank=False, null=False)
+
+    class Meta:
+        managed = True
+        db_table = 'dps'

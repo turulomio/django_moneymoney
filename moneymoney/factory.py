@@ -1,8 +1,8 @@
-from factory import Faker, SubFactory, lazy_attribute
+from factory import Faker, SubFactory, lazy_attribute, Iterator
 from factory.django import DjangoModelFactory
 from moneymoney import models
 from django.utils import timezone
-#https://faker.readthedocs.io/en/master/providers/faker.providers.currency.html
+# https://faker.readthedocs.io/en/master/providers/faker.providers.currency.html
 
 class LeveragesFactory(DjangoModelFactory):
     class Meta:
@@ -200,3 +200,12 @@ class DividendsFactory(DjangoModelFactory):
     commission = Faker("random_number")
     concepts = SubFactory(ConceptsFactory)
     currency_conversion = 1
+
+class DpsFactory(DjangoModelFactory):
+    class Meta:
+        model= models.Dps
+    
+    date = Faker("date")
+    gross = Faker("random_number")
+    products = Iterator(models.Products.objects.all())
+    paydate = Faker("date")

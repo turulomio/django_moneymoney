@@ -64,6 +64,7 @@ class CtTestCase(APITestCase):
         cls.factories_manager.append(factory.CreditcardsFactory, "Colaborative", "/api/creditcards/")
         cls.factories_manager.append(factory.CreditcardsoperationsFactory, "Colaborative", "/api/creditcardsoperations/")
         cls.factories_manager.append(factory.DividendsFactory, "Colaborative", "/api/dividends/", PostPayload.Dividend)
+        cls.factories_manager.append(factory.DpsFactory, "Colaborative", "/api/dps/")
         cls.factories_manager.append(factory.EstimationsDpsFactory, "Colaborative", "/api/estimationsdps/")
         cls.factories_manager.append(factory.InvestmentsFactory, "Colaborative", "/api/investments/")
         cls.factories_manager.append(factory.InvestmentsoperationsFactory, "Colaborative", "/api/investmentsoperations/", PostPayload.Investmentsoperations)

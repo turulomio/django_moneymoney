@@ -119,7 +119,7 @@ class CreditcardsoperationsSerializer(serializers.HyperlinkedModelSerializer):
 class DpsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = models.Dps
-        fields = ('url', 'date',  'paydate', 'gross', 'products')
+        fields = ('url', 'id',  'date',  'paydate', 'gross', 'products')
         
 class EstimationsDpsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
