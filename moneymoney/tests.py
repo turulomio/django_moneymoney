@@ -208,29 +208,32 @@ class CtTestCase(APITestCase):
         r=self.client_authorized_1.post(mf.url, mf.post_payload(self.client_authorized_1))
         self.assertEqual(r.status_code, status.HTTP_201_CREATED)
         
-#        #Create a new account operation
-#        r=self.client_authorized_1.post(mfao.url, mfao.post_payload(accounts__currency="EUR", amount=-1492,  comment="CAN YOU FIND ME?", concepts=models.Concepts.objects.get(pk=7), accounts=models.Accounts.objects.get(pk=4)))
-#        self.assertEqual(r.status_code, status.HTTP_201_CREATED)
-#        ao =loads(r.content)
-#        
-#        #Find account operation with search
-#        r=self.client_authorized_1.get(mfao.url+"?search=FIND ME")
-#        self.assertEqual(r.status_code, status.HTTP_200_OK)
-#                
-#        #List accounts with balance
-#        r=self.client_authorized_1.get(mf.url+"withbalance/")
-#        self.assertEqual(r.status_code, status.HTTP_200_OK)
-#        accounts=loads(r.content)
-#        self.assertEqual(accounts[0]["balance_account"], -1492)
-#        
-#        account_balance=cursor_one_row("select * from account_balance(%s,%s,%s)", (4, timezone.now(), 'EUR'))
-#        self.assertEqual(account_balance["balance_account_currency"], -1492)
-#        accounts_balance=cursor_one_row("select * from accounts_balance(%s,%s)", (timezone.now(), 'EUR'))
-#        self.assertEqual(accounts_balance["accounts_balance"], -1492)
-#        total_balance=cursor_one_row("select * from total_balance(%s,%s)", (timezone.now(), 'EUR'))
-#        self.assertEqual(total_balance["total_user"], -1492)
-#        
-#        # Gets annual reports
+        #Create a new account operation
+        ao=mfao.factory.build(accounts__currency="EUR", amount=-1492,  comment="CAN YOU FIND ME?", concepts=models.Concepts.objects.get(pk=7), accounts=models.Accounts.objects.get(pk=4))
+        
+        
+        r=self.client_authorized_1.post(mfao.url, mfao.serialize(ao, remove_id_url=True))
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED)
+        ao =loads(r.content)
+        
+        #Find account operation with search
+        r=self.client_authorized_1.get(mfao.url+"?search=FIND ME")
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+                
+        #List accounts with balance
+        r=self.client_authorized_1.get(mf.url+"withbalance/")
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        accounts=loads(r.content)
+        self.assertEqual(accounts[0]["balance_account"], -1492)
+        
+        account_balance=cursor_one_row("select * from account_balance(%s,%s,%s)", (4, timezone.now(), 'EUR'))
+        self.assertEqual(account_balance["balance_account_currency"], -1492)
+        accounts_balance=cursor_one_row("select * from accounts_balance(%s,%s)", (timezone.now(), 'EUR'))
+        self.assertEqual(accounts_balance["accounts_balance"], -1492)
+        total_balance=cursor_one_row("select * from total_balance(%s,%s)", (timezone.now(), 'EUR'))
+        self.assertEqual(total_balance["total_user"], -1492)
+        
+#        # Gets annual reports NO FUNCIONAN POR THREATS DB SESSIONS DIFERENT
 #        year=int(ao["datetime"][0:4])
 ##        month=int(ao["datetime"][5:7])
 #        r=self.client_authorized_1.get(f"/reports/annual/{year}/")
