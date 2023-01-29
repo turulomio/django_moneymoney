@@ -72,7 +72,6 @@ class CtTestCase(APITestCase):
         cls.factories_manager.append(factory.OperationstypesFactory, "PrivateEditableCatalog", "/api/operationstypes/")
         cls.factories_manager.append(factory.OrdersFactory, "Colaborative", "/api/orders/")
         cls.factories_manager.append(factory.ProductspairsFactory, "Colaborative", "/api/productspairs/")
-        #cls.factories_manager.append(factory.ProfileFactory, "Private", "/api/profile/", PostPayload.Profile) #Doesn't work due to profile is created by signal and has duplicity when testing
         #cls.factories_manager.append(factory.ProductsFactory, "PrivateEditableCatalog", "/api/products/", PostPayload.Product) #Doesn't work due to products has id<0 Personal and id>0 System. Too specific for generic tests
         cls.factories_manager.append(factory.ProductstypesFactory, "PrivateEditableCatalog", "/api/productstypes/")
         cls.factories_manager.append(factory.QuotesFactory, "Colaborative", "/api/quotes/")
@@ -166,30 +165,16 @@ class CtTestCase(APITestCase):
             f.test_by_type(self, self.client_authorized_1, self.client_authorized_2, self.client_anonymous, self.client_catalog_manager)
             
     def test_investments_operations(self):
-        #self.factories_manager.find(factory.InvestmentsFactory).print_batch(3)
         ##Currencies must be the same
         account=factory.AccountsFactory.create(currency="EUR")
         product=factory.ProductsFactory.create(currency="EUR")
         investment=factory.InvestmentsFactory.create(accounts=account, products=product)
-#        print(account)
-#        print(investment)
-#        print(product)
-#        print(investment.products)
-        for i in range(100):
-            quote=factory.QuotesFactory.create(products=product)
-#        print(quote)
-#        mf_io=factory_helpers.MyFactory(factory.InvestmentsoperationsFactory, "Colaborative", "/api/investmentsoperations/")
-#        io_payload=mf_io.post_payload(investments=investment, operationstypes=models.Operationstypes.objects.get(pk=eOperationType.SharesPurchase))
-##        print(io_payload)
-#        r=self.client_authorized_1.post("/api/investmentsoperations/", io_payload)
-##        print(r.content)
-#        qs_ao=models.Accountsoperations.objects.all()
-##        for ao in qs_ao:
-##            print(factory_helpers.serialize(ao))
-#            
-            
-        quote,    investment
-        
+        for i in range(3):
+            factory.QuotesFactory.create(products=product)
+        mf_io=factory_helpers.MyFactory(factory.InvestmentsoperationsFactory, "Colaborative", "/api/investmentsoperations/")
+        io_payload=mf_io.factory.build(investments=investment, operationstypes=models.Operationstypes.objects.get(pk=eOperationType.SharesPurchase))
+        r=self.client_authorized_1.post("/api/investmentsoperations/", mf_io.serialize(io_payload, remove_id_url=True))
+        self.assertTrue(models.Accountsoperations.objects.filter(comment=f"10000,{loads(r.content)['id']}").exists())
     
     def test_estimations_dps(self):     
         """

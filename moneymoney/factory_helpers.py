@@ -26,11 +26,17 @@ FACTORY_TYPES=        [
             "Anonymous",  #Anonymous users can LR and CUD
         ]
 
-def serialize( o, serializer=None):
+def serialize( o, remove_id_url=False, serializer=None):
     f = APIRequestFactory()
     request = f.post('/', {})
     serializer=o.__class__.__name__+"Serializer" if serializer is None else serializer
-    return getattr(serializers, serializer)(o, context={'request': request}).data
+    r=getattr(serializers, serializer)(o, context={'request': request}).data
+    if remove_id_url is True:
+        if "id" in r:
+            del r["id"]
+        if "url" in r:
+            del r["url"]
+    return r
 
 class MyFactory:
     def __init__(self, factory, type, url, post_payload_function=None):
@@ -54,6 +60,9 @@ class MyFactory:
     #Hyperlinkurl
     def hlu(self, id):
         return f'http://testserver{self.url}{id}/'
+        
+    def serialize(self, o, remove_id_url):
+        return serialize(o, remove_id_url)
 
     def post_payload(self, client):
         """
@@ -68,9 +77,7 @@ class MyFactory:
         ## factory.create. Creates an object with all dependencies. Si le quito "id" y "url" sería uno nuevo
         o=self.factory.create()
         o.delete()
-        payload=serialize(o)
-        del payload["id"]
-        del payload["url"]
+        payload=serialize(o, remove_id_url=True)
         return payload
 
     def test_by_type(self, apitestclass,  client_authenticated_1, client_authenticated_2, client_anonymous, client_catalog_manager):
