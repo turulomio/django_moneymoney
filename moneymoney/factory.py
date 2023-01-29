@@ -101,7 +101,7 @@ class InvestmentsFactory(DjangoModelFactory):
     active = Faker("boolean")
     accounts = SubFactory(AccountsFactory)
     selling_price = Faker("random_int")
-    products = SubFactory(ProductsFactory)
+    products = Iterator(models.Products.objects.all())
     selling_expiration = Faker("date")
     daily_adjustment = False
     balance_percentage= 100
@@ -144,7 +144,7 @@ class EstimationsDpsFactory(DjangoModelFactory):
     
     year=Faker("year")
     estimation=Faker("random_number")
-    products=SubFactory(ProductsFactory)
+    products = Iterator(models.Products.objects.all())
     date_estimation=Faker("date")
         
         
@@ -209,3 +209,26 @@ class DpsFactory(DjangoModelFactory):
     gross = Faker("random_number")
     products = Iterator(models.Products.objects.all())
     paydate = Faker("date")
+    
+    
+class OrdersFactory(DjangoModelFactory):
+    class Meta:
+        model= models.Orders
+    
+    date = Faker("date")
+    expiration = Faker("date")
+    shares= Faker("random_number")
+    price = Faker("random_number")
+    investments = SubFactory(InvestmentsFactory)
+    executed = None
+    
+    
+    
+    
+class ProductspairsFactory(DjangoModelFactory):
+    class Meta:
+        model= models.Productspairs
+    name = Faker("bothify", text="Product Pair ??????")
+    a = Iterator(models.Products.objects.all())
+    b = Iterator(models.Products.objects.all())
+    

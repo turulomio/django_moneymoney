@@ -70,6 +70,8 @@ class CtTestCase(APITestCase):
         cls.factories_manager.append(factory.InvestmentsoperationsFactory, "Colaborative", "/api/investmentsoperations/", PostPayload.Investmentsoperations)
         cls.factories_manager.append(factory.LeveragesFactory, "PrivateEditableCatalog", "/api/leverages/")
         cls.factories_manager.append(factory.OperationstypesFactory, "PrivateEditableCatalog", "/api/operationstypes/")
+        cls.factories_manager.append(factory.OrdersFactory, "Colaborative", "/api/orders/")
+        cls.factories_manager.append(factory.ProductspairsFactory, "Colaborative", "/api/productspairs/")
         #cls.factories_manager.append(factory.ProfileFactory, "Private", "/api/profile/", PostPayload.Profile) #Doesn't work due to profile is created by signal and has duplicity when testing
         #cls.factories_manager.append(factory.ProductsFactory, "PrivateEditableCatalog", "/api/products/", PostPayload.Product) #Doesn't work due to products has id<0 Personal and id>0 System. Too specific for generic tests
         cls.factories_manager.append(factory.ProductstypesFactory, "PrivateEditableCatalog", "/api/productstypes/")
