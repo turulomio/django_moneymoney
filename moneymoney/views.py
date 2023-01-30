@@ -1262,6 +1262,7 @@ class Profile(APIView):
             "investing_com_cookie": p.investing_com_cookie, 
             "investing_com_referer": p.investing_com_referer, 
             "zone": p.zone, 
+            "annual_gains_target": p.annual_gains_target, 
         }
         return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
         
@@ -1293,6 +1294,7 @@ class Profile(APIView):
         p.investing_com_cookie=request.data["investing_com_cookie"]
         p.investing_com_referer=request.data["investing_com_referer"]
         p.zone=request.data["zone"]
+        p.annual_gains_target=request.data["annual_gains_target"]
 
         p.user.save()
         p.save()

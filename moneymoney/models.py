@@ -1074,6 +1074,7 @@ class Profile(models.Model):
     invest_amount_3=models.DecimalField(max_digits=30, decimal_places=6, blank=False, null=False, default=7800)
     invest_amount_4=models.DecimalField(max_digits=30, decimal_places=6, blank=False, null=False, default=7800)
     invest_amount_5=models.DecimalField(max_digits=30, decimal_places=6, blank=False, null=False, default=7800)
+    annual_gains_target=models.DecimalField(max_digits=30, decimal_places=6, blank=False, null=False, default=4)
 
     class Meta:
         managed = True
