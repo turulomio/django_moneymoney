@@ -43,17 +43,7 @@ class DividendsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = models.Dividends
         fields = ('url', 'id', 'investments', 'gross','taxes','net', 'dps', 'datetime', 'accountsoperations', 'commission', 'concepts', 'currency_conversion')
-#
-#    
-#    def create(self, validated_data):
-#        created=serializers.HyperlinkedModelSerializer.create(self,  validated_data)
-#        created.update_associated_account_operation()
-#        return created
-#    
-#    def update(self, instance, validated_data):
-#        updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
-#        updated.update_associated_account_operation()
-#        return updated
+
 
 class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
     fullname = serializers.SerializerMethodField()
