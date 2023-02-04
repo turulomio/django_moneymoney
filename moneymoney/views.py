@@ -21,7 +21,7 @@ from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_
 from moneymoney.reusing.decorators import ptimeit
 from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average, listdict_year_month_value_transposition
 from moneymoney.reusing.percentage import Percentage,  percentage_between
-from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetArrayOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestGetListOfIntegers, RequestString, RequestListUrl, id_from_url, all_args_are_not_none,  all_args_are_not_empty,  RequestGetDecimal
+from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestGetListOfIntegers, RequestString, RequestListUrl, id_from_url, all_args_are_not_none,  all_args_are_not_empty,  RequestGetDecimal
 from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEncoder, json_success_response
 from moneymoney.reusing.sqlparser import sql_in_one_line
 from requests import delete, post
@@ -305,7 +305,7 @@ class DividendsViewSet(viewsets.ModelViewSet):
     ##            var headers={...this.myheaders(),params:{investments: [1,2,3],otra:"OTTRA"}}
     ##            return axios.get(`${this.$store.state.apiroot}/api/dividends/`, headers)
     def get_queryset(self):
-        investments_ids=RequestGetArrayOfIntegers(self.request,"investments[]") 
+        investments_ids=RequestGetListOfIntegers(self.request,"investments[]") 
         datetime=RequestGetDtaware(self.request, 'from')
         if len(investments_ids)>0 and datetime is None:
             return self.queryset.filter(investments__in=investments_ids).order_by("datetime")
@@ -1004,7 +1004,7 @@ def ProductsRanges(request):
         percentage_gains=percentage_gains/1000
     amount_to_invest=RequestGetInteger(request, "amount_to_invest")
     recomendation_methods=RequestGetInteger(request, "recomendation_methods")
-    investments_ids=RequestGetArrayOfIntegers(request,"investments[]") 
+    investments_ids=RequestGetListOfIntegers(request,"investments[]") 
     if len(investments_ids)>0:
         qs_investments=models.Investments.objects.filter(id__in=investments_ids)
     else:
