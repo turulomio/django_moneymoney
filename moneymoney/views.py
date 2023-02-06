@@ -1563,7 +1563,7 @@ def ReportAnnualIncomeDetails(request, year, month):
                         "balance": balance,
                         "comment_decoded":models.Comment().decode(op["comment"]), 
                         "currency": currency, 
-                        "account": request.build_absolute_uri(reverse('accounts-detail', args=(op["accounts_id"], ))), 
+                        "accounts": request.build_absolute_uri(reverse('accounts-detail', args=(op["accounts_id"], ))), 
                     })
                 else:
                     print("TODO")
