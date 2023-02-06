@@ -202,7 +202,7 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def pay(self, request, pk=None):
         creditcard=self.get_object()
-        dt_payment=RequestDtaware(request, "dt_payment")
+        dt_payment=RequestDtaware(request, "dt_payment", request.user.profile.zone)
         cco_ids=RequestListOfIntegers(request, "cco")
         
         if dt_payment is not None and cco_ids is not None:
@@ -306,7 +306,7 @@ class DividendsViewSet(viewsets.ModelViewSet):
     ##            return axios.get(`${this.$store.state.apiroot}/api/dividends/`, headers)
     def get_queryset(self):
         investments_ids=RequestGetListOfIntegers(self.request,"investments[]") 
-        datetime=RequestGetDtaware(self.request, 'from')
+        datetime=RequestGetDtaware(self.request, 'from', self.request.user.profile.zone)
         if len(investments_ids)>0 and datetime is None:
             return self.queryset.filter(investments__in=investments_ids).order_by("datetime")
         elif len(investments_ids)>0 and datetime is not None:
@@ -569,20 +569,21 @@ class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
 def AccountTransfer(request): 
     account_origin=RequestUrl(request, 'account_origin', models.Accounts)#Returns an account object
     account_destiny=RequestUrl(request, 'account_destiny', models.Accounts)
-    datetime=RequestDtaware(request, 'datetime')
+    print(request.user.profile.zone)
+    datetime=RequestDtaware(request, 'datetime', request.user.profile.zone)
     amount=RequestDecimal(request, 'amount')
     commission=RequestDecimal(request, 'commission',  0)
     ao_origin=RequestUrl(request, 'ao_origin', models.Accountsoperations)
     ao_destiny=RequestUrl(request, 'ao_destiny', models.Accountsoperations)
     ao_commission=RequestUrl(request, 'ao_commission', models.Accountsoperations)
     if request.method=="POST":
+        print(amount, commission, datetime)
         if ( account_destiny is not None and account_origin is not None and datetime is not None and amount is not None and amount >=0 and commission is not None and commission >=0 and account_destiny!=account_origin):
             if commission >0:
                 ao_commission=models.Accountsoperations()
                 ao_commission.datetime=datetime
                 concept_commision=models.Concepts.objects.get(pk=eConcept.BankCommissions)
                 ao_commission.concepts=concept_commision
-                ao_commission.operationstypes=concept_commision.operationstypes
                 ao_commission.amount=-commission
                 ao_commission.accounts=account_origin
                 ao_commission.save()
@@ -592,7 +593,6 @@ def AccountTransfer(request):
             ao_origin.datetime=datetime
             concept_transfer_origin=models.Concepts.objects.get(pk=eConcept.TransferOrigin)
             ao_origin.concepts=concept_transfer_origin
-            ao_origin.operationstypes=concept_transfer_origin.operationstypes
             ao_origin.amount=-amount
             ao_origin.accounts=account_origin
             ao_origin.save()
@@ -603,7 +603,6 @@ def AccountTransfer(request):
             ao_destiny.datetime=datetime
             concept_transfer_destiny=models.Concepts.objects.get(pk=eConcept.TransferDestiny)
             ao_destiny.concepts=concept_transfer_destiny
-            ao_destiny.operationstypes=concept_transfer_destiny.operationstypes
             ao_destiny.amount=amount
             ao_destiny.accounts=account_destiny
             ao_destiny.save()
@@ -779,7 +778,7 @@ def InvestmentsoperationsFull(request):
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsoperationsFullSimulation(request):
     investments=RequestListUrl(request, "investments", models.Investments)
-    dt=RequestDtaware(request, "dt")
+    dt=RequestDtaware(request, "dt", request.user.profile.zone)
     local_currency=RequestString(request, "local_currency")
     listdict=request.data["operations"]
     for d in listdict:
@@ -794,7 +793,7 @@ def InvestmentsoperationsFullSimulation(request):
 @permission_classes([permissions.IsAuthenticated, ])
 def StrategiesSimulation(request):
     strategy=RequestGetUrl(request, "strategy", models.Strategies)
-    dt=RequestGetDtaware(request, "dt")
+    dt=RequestGetDtaware(request, "dt", request.user.profile.zone)
     temporaltable=RequestGetString(request, "temporaltable")
     simulated_operations=[]
     if strategy is not None:

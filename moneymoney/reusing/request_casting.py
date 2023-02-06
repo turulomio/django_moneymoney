@@ -140,9 +140,9 @@ def RequestGetDtaware(request, field, default=None):
         r=default
     return r
 
-def RequestDtaware(request, field, default=None):
+def RequestDtaware(request, field, timezone_string, default=None):
     try:
-        r = string2dtaware(request.data.get(field), "JsUtcIso", request.local_zone)
+        r = string2dtaware(request.data.get(field), "JsUtcIso", timezone_string)
     except:
         r=default
     return r
