@@ -133,9 +133,9 @@ def RequestListOfIntegers(request, field, default=None,  separator=","):
         r=default
     return r
 
-def RequestGetDtaware(request, field, default=None):
+def RequestGetDtaware(request, field, timezone_string, default=None):
     try:
-        r = string2dtaware(request.GET.get(field), "JsUtcIso", request.local_zone)
+        r = string2dtaware(request.GET.get(field), "JsUtcIso", timezone_string)
     except:
         r=default
     return r
