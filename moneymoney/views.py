@@ -132,6 +132,60 @@ class ConceptsViewSet(viewsets.ModelViewSet):
         return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
 
 
+    @action(detail=True, methods=["get"], name='Returns historical concept report', url_path="historical_report", url_name='historical_report', permission_classes=[permissions.IsAuthenticated])
+    def historical_report(self, request, pk=None):
+        concept= self.get_object()
+        r={}
+        json_concepts_historical=[]
+        
+        rows=cursor_rows("""
+        select date_part('year',datetime)::int as year,  date_part('month',datetime)::int as month, sum(amount) as value 
+        from ( 
+                    SELECT accountsoperations.datetime, accountsoperations.concepts_id,  accountsoperations.amount  FROM accountsoperations where concepts_id={0} 
+                        UNION ALL 
+                    SELECT creditcardsoperations.datetime, creditcardsoperations.concepts_id, creditcardsoperations.amount FROM creditcardsoperations where concepts_id={0}
+                ) as uni 
+        group by date_part('year',datetime), date_part('month',datetime) order by 1,2 ;
+        """.format(concept.id))
+
+        firstyear=int(rows[0]['year'])
+        # Create all data spaces filling year
+        for year in range(firstyear, date.today().year+1):
+            json_concepts_historical.append({"year": year, "m1":0, "m2":0, "m3":0, "m4":0, "m5":0, "m6":0, "m7":0, "m8":0, "m9":0, "m10":0, "m11":0, "m12":0, "total":0})
+        # Fills spaces with values
+        for row in rows:
+            j_row=json_concepts_historical[row['year']-firstyear]
+            j_row[f"m{row['month']}"]=float(row['value'])
+        
+        for d in json_concepts_historical:
+            d["total"]=d["m1"]+d["m2"]+d["m3"]+d["m4"]+d["m5"]+d["m6"]+d["m7"]+d["m8"]+d["m9"]+d["m10"]+d["m11"]+d["m12"]
+
+        r["data"]=json_concepts_historical
+        r["total"]=listdict_sum(json_concepts_historical, "total")
+        r["median"]=listdict_median(rows, 'value')
+        r["average"]=listdict_average(rows, 'value')
+        
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+    @action(detail=True, methods=["get"], name='Returns historical concept report detail', url_path="historical_report_detail", url_name='historical_report_detail', permission_classes=[permissions.IsAuthenticated])
+    def ReportConceptsHistoricalDetail(self, request, pk=None):
+        concept= self.get_object()
+        year=RequestGetInteger(request, "year")
+        month=RequestGetInteger(request, "month")
+        if all_args_are_not_none(concept, year, month) is False:
+            return Response({'status': 'year,month or concept is None'}, status=status.HTTP_400_BAD_REQUEST)
+    
+        qs_ao=models.Accountsoperations.objects.filter(concepts=concept, datetime__year=year, datetime__month=month)
+        qs_cco=models.Creditcardsoperations.objects.filter(concepts=concept, datetime__year=year, datetime__month=month)
+        
+        data={
+            "ao":  serializers.AccountsoperationsSerializer(qs_ao, many=True, context={'request': request}).data, 
+            "cco":  serializers.CreditcardsoperationsSerializer(qs_cco, many=True, context={'request': request}).data, 
+        }        
+        return json_data_response(True, data,  "Ok")
+        
+
+
+
 class CreditcardsViewSet(viewsets.ModelViewSet):
     queryset = models.Creditcards.objects.select_related("accounts").all()
     serializer_class = serializers.CreditcardsSerializer
@@ -1765,45 +1819,6 @@ def ReportConcepts(request):
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
 
-
-@api_view(['GET', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def ReportConceptsHistorical(request):
-    concept=RequestGetUrl(request, "concept", models.Concepts)
-    if concept is None:
-        return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
-    r={}
-    json_concepts_historical=[]
-    
-    rows=cursor_rows("""
-    select date_part('year',datetime)::int as year,  date_part('month',datetime)::int as month, sum(amount) as value 
-    from ( 
-                SELECT accountsoperations.datetime, accountsoperations.concepts_id,  accountsoperations.amount  FROM accountsoperations where concepts_id={0} 
-                    UNION ALL 
-                SELECT creditcardsoperations.datetime, creditcardsoperations.concepts_id, creditcardsoperations.amount FROM creditcardsoperations where concepts_id={0}
-            ) as uni 
-    group by date_part('year',datetime), date_part('month',datetime) order by 1,2 ;
-    """.format(concept.id))
-
-    firstyear=int(rows[0]['year'])
-    # Create all data spaces filling year
-    for year in range(firstyear, date.today().year+1):
-        json_concepts_historical.append({"year": year, "m1":0, "m2":0, "m3":0, "m4":0, "m5":0, "m6":0, "m7":0, "m8":0, "m9":0, "m10":0, "m11":0, "m12":0, "total":0})
-    # Fills spaces with values
-    for row in rows:
-        j_row=json_concepts_historical[row['year']-firstyear]
-        j_row[f"m{row['month']}"]=float(row['value'])
-    
-    for d in json_concepts_historical:
-        d["total"]=d["m1"]+d["m2"]+d["m3"]+d["m4"]+d["m5"]+d["m6"]+d["m7"]+d["m8"]+d["m9"]+d["m10"]+d["m11"]+d["m12"]
-
-    r["data"]=json_concepts_historical
-    r["total"]=listdict_sum(json_concepts_historical, "total")
-    r["median"]=listdict_median(rows, 'value')
-    r["average"]=listdict_average(rows, 'value')
-    
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
-    
 
 
 @api_view(['GET', ])    
