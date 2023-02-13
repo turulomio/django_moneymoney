@@ -335,12 +335,13 @@ class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
 class Derivatives(APIView):
     permission_classes = [permissions.IsAuthenticated]
     @extend_schema(
-        description="return 'Derivatives and Fast InvestmentOperations' accounts operations", 
+        description="Return 'Derivatives and Fast InvestmentOperations' accounts operations", 
     )
     def get(self, request, *args, **kwargs):
         qs=models.Accountsoperations.objects.filter(concepts__id__in=(
             eConcept.DerivativesAdjustment, 
             eConcept.DerivativesCommission, 
+            eConcept.DerivativesSwap, 
             eConcept.FastInvestmentOperations
             ))\
             .annotate(year=ExtractYear('datetime'), month=ExtractMonth('datetime'))\
