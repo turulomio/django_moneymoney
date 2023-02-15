@@ -3,7 +3,8 @@ from django.core.management.base import BaseCommand
 from django.core.management import call_command
 from moneymoney.reusing.file_functions import replace_in_file
 from moneymoney import models
-
+from json import load, dumps
+from os import remove
 
 ## Pruebas con dumpdata y load data
 ## Creo un registro en systemproducts id=342
@@ -28,6 +29,27 @@ class Command(BaseCommand):
     help = 'Dumpdata command for catalog models only'
         #Generate fixtures
                 
+    def remove_items_with_condition(self, filename, condition):
+        """
+            Public method Condition is a lambda
+        """        
+        ## Loads json
+        dict_=load(open(filename, "r"))
+        remove(filename)
+        print("Before remove", len(dict_))
+        to_remove=[]
+        for p in dict_:
+            if condition(p) is True:
+                to_remove.append(p)
+        
+        for o in to_remove:
+            dict_.remove(o)
+        print("After remove",  len(dict_))
+        #Rewrites file
+        j = dumps(dict_, indent=4)
+        with open(filename, 'w') as f:
+            print(j, file=f)
+                
     def handle(self, *args,**options):
         
         
@@ -41,21 +63,16 @@ class Command(BaseCommand):
             "-o", "moneymoney/fixtures/other.json"
         )
         
-        # Personal products are generated with id<0 in products table, so I pass pks as --pks parameter
-        products_ids=list(models.Products.objects.filter(id__gt=0).values_list('id', flat=True))
-        s=""
-        for id in products_ids:
-            s=s+f"{id},"
-        s=s[:-1]
-        
+        # Due to ids are negative I made a total dump but I must delete positive ids
+        filename="moneymoney/fixtures/products.json"
         call_command(
             "dumpdata",
             "moneymoney.products", 
             "--indent",  "4", 
-            "--pks",  s, 
-            "-o", "moneymoney/fixtures/products.json"
+            "-o", filename
         )
-                
+        self.remove_items_with_condition(filename, lambda x: x["pk"]>0)
+
         # System concepts are generated with id<100 in concepts table, so I pass pks as --pks parameter
         concepts_ids=list(models.Concepts.objects.filter(id__lt=100).values_list('id', flat=True))
         s=""
