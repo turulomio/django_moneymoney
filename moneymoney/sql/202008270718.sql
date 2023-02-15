@@ -1,1 +1,0 @@
-ALTER TABLE public.investments RENAME COLUMN guarantee_percentage TO balance_percentage;
