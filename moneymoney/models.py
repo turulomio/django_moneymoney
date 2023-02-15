@@ -11,7 +11,7 @@ from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.investmentsoperations import InvestmentsOperations
 from moneymoney.reusing.casts import string2list_of_integers
 from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_column, cursor_one_row, cursor_rows
-from moneymoney.reusing.currency import Currency, currency_symbol
+from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string
 
 Decimal
@@ -648,19 +648,11 @@ class Products(models.Model):
 
     def fullName(self):
         return "{} ({})".format(self.name, _(self.stockmarkets.name))
-        
-    def currency_symbol(self):
-        return currency_symbol(self.currency)
 
     def basic_results(self):
         if hasattr(self, "_basic_results") is False:
             self._basic_results=cursor_one_row("select * from last_penultimate_lastyear(%s,%s)", (self.id, timezone.now() ))
         return self._basic_results
-        
-        
-    @staticmethod
-    def get_d_product_with_basics(id):
-        return cursor_one_row("select * from products,last_penultimate_lastyear(products.id, now()) where products.id=%s", (id, ))
         
     ## IBEXA es x2 pero esta en el pricio
     ## CFD DAX no está en el precio
@@ -668,15 +660,6 @@ class Products(models.Model):
         if self.productstypes.id in (eProductType.CFD, eProductType.Future):
             return self.leverages.multiplier
         return 1
-        
-    def stockmarket_close_time(self):
-        if self.productstypes.id==eProductType.CFD or self.productstypes.id==eProductType.Future:
-            return self.stockmarkets.closes_futures
-        return self.stockmarkets.closes
-    def stockmarket_start_time(self):
-        if self.productstypes.id==eProductType.CFD or self.productstypes.id==eProductType.Future:
-            return self.stockmarkets.starts_futures
-        return self.stockmarkets.starts
 
     def quote(self, dt):
         return cursor_one_row("select * from quote(%s,%s)", (self.id, dt ))
@@ -690,40 +673,10 @@ class Products(models.Model):
         if hasattr(self, "_ohcl_daily_before_splits") is False:
             self._ohcl_daily_before_splits=cursor_rows("select * from ohcldailybeforesplits(%s)", (self.id, ))
         return self._ohcl_daily_before_splits
-        
-    @staticmethod
-    def qs_products_of_investments():
-        return Products.objects.filter(id__in=RawSQL('select products.id from products, investments where products.id=investments.products_id', ()))
-        
+
     @staticmethod
     def qs_products_of_active_investments():
         return Products.objects.filter(id__in=RawSQL('select distinct(products.id) from products, investments where products.id=investments.products_id and investments.active is true', ()))
-
-
-    def highest_investment_operation_price(self):
-        return cursor_one_field("""
-select 
-    max(price) 
-from 
-    investmentsoperations, 
-    investments 
-where 
-    products_id=%s and 
-    investmentsoperations.investments_id=investments.id
-""", (self.id, ))    
-
-    def lowest_investment_operation_price(self):
-        return cursor_one_field("""
-select 
-    min(price) 
-from 
-    investmentsoperations, 
-    investments 
-where 
-    products_id=%s and 
-    investmentsoperations.investments_id=investments.id
-""", (self.id, ))
-        
 
 class Productspairs(models.Model):
     name = models.CharField(max_length=200, blank=False, null=False)

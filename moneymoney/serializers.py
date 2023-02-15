@@ -173,12 +173,12 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
     def create(self, validated_data):
         request=self.context.get("request")
         if request.data["system"] is True :
-            validated_data["id"]=models.Products.objects.latest('id').id+1
-        else:
             validated_data["id"]=models.Products.objects.earliest('id').id-1
+        else:
+            validated_data["id"]=models.Products.objects.latest('id').id+1
             
         
-        if  request.user.groups.filter(name="CatalogManager").exists() is False and validated_data["id"]>0:
+        if  request.user.groups.filter(name="CatalogManager").exists() is False and validated_data["id"]<0:
             raise ValidationError(_("You cant edit a system product if you're not a Catalog Manager (only developers)"))
             
         created=serializers.HyperlinkedModelSerializer.create(self,  validated_data)
@@ -186,7 +186,7 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
         
     def update(self, instance, validated_data):
         request=self.context.get("request")       
-        if  request.user.groups.filter(name="CatalogManager").exists() is False and id_from_url(request.data["url"])>0:
+        if  request.user.groups.filter(name="CatalogManager").exists() is False and id_from_url(request.data["url"])<0:
             raise ValidationError(_("You cant edit a system product if you're not a Catalog Manager (only developers)"))
         updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
         return updated
