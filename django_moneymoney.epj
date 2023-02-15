@@ -2,7 +2,7 @@
   "header": {
     "comment": "eric project file for project django_moneymoney",
     "copyright": "Copyright (C) 2023 , ",
-    "saved": "2023-02-13, 05:32:40"
+    "saved": "2023-02-15, 12:22:02"
   },
   "project": {
     "AUTHOR": "",
@@ -124,6 +124,7 @@
       "moneymoney/migrations/0028_alter_orders_price.py",
       "moneymoney/migrations/0029_auto_20230122_0550_bigint_to_integer.py",
       "moneymoney/migrations/0030_profile_annual_gains_target.py",
+      "moneymoney/migrations/0031_data_inverting_products_id.py",
       "moneymoney/migrations/__init__.py",
       "moneymoney/models.py",
       "moneymoney/paginators.py",

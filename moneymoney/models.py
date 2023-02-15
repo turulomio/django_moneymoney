@@ -398,6 +398,10 @@ class Dividends(models.Model):
 
     @transaction.atomic
     def save(self, *args, **kwargs):
+        if self.commission <0 or self.taxes<0:
+            raise _("Taxes and commissions must be equal or greater than zero")
+            return 
+        
         if self.accountsoperations is None:#Insert
             c=Accountsoperations()
             c.datetime=self.datetime
