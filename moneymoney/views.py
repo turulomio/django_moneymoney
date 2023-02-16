@@ -924,78 +924,103 @@ class ProductsComparationByQuote(APIView):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsPairs(request):
+    """
+#        @param currency_conversion Boolean. If product's hasn't currency conversion this can help
+    """
     product_better=RequestGetUrl(request, "a", models.Products)
     product_worse=RequestGetUrl(request, "b", models.Products)
+#    currency_conversion=RequestGetBool(request, "currency_conversion",  False)
+#    interval="00:01:00"
+
+#    if currency_conversion is False:
+#        common_quotes=cursor_rows("""
+#            select 
+#                a as date, 
+#                a.products_id as a, 
+#                a.open as a_open, 
+#                b.products_id as b, 
+#                b.open as b_open 
+#            from 
+#                ohcldailybeforesplits(%s) as a ,
+#                ohcldailybeforesplits(%s) as b 
+#            where 
+#                a.date=b.date and 
+#                a.month=b.month and
+#                a.day=b.day 
+#        UNION ALL
+#            select
+#                now()::date as date,
+#                %s as a, 
+#                (select last from last_penultimate_lastyear(%s,now())) as a_open, 
+#                %s as b, 
+#                (select last from last_penultimate_lastyear(%s,now())) as b_open
+#                """, (product_worse.id, product_better.id, product_worse.id, product_worse.id, product_better.id, product_better.id))
+#    else: #Uses worse currency
+#        #Fist condition in where it's to remove quotes without money_convert due to no data
+#        common_quotes=cursor_rows("""
+#            select 
+#                make_date(a.year,a.month,1) as date, 
+#                a.products_id as a, 
+#                a.open as a_open, 
+#                b.products_id as b, 
+#                money_convert(make_date(a.year,a.month,1)::timestamp with time zone, b.open, %s, %s) as b_open
+#            from 
+#                ohcldailybeforesplits(%s) as a 
+#                ,ohcldailybeforesplits(%s) as b 
+#            where 
+#                b.open != money_convert(make_date(a.year,a.month,1)::timestamp with time zone, b.open, %s, %s)  and
+#                a.year=b.year and 
+#                a.month=b.month
+#        UNION ALL
+#            select
+#                now()::date as date,
+#                %s as a, 
+#                (select last from last_penultimate_lastyear(%s,now())) as a_open, 
+#                %s as b, 
+#                money_convert(now(), (select last from last_penultimate_lastyear(%s,now())), %s,%s) as b_open
+#                """, ( product_better.currency,  product_worse.currency, 
+#                        product_worse.id, 
+#                        product_better.id, 
+#                        product_better.currency,  product_worse.currency, 
+#                        
+#                        product_worse.id,
+#                        product_worse.id,
+#                        product_better.id, 
+#                        product_better.id, product_better.currency,  product_worse.currency))
+
     
-    if product_better.currency==product_worse.currency:
-        common_quotes=cursor_rows("""
-            select 
-                make_date(a.year, a.month,1) as date, 
-                a.products_id as a, 
-                a.open as a_open, 
-                b.products_id as b, 
-                b.open as b_open 
-            from 
-                ohclmonthlybeforesplits(%s) as a ,
-                ohclmonthlybeforesplits(%s) as b 
-            where 
-                a.year=b.year and 
-                a.month=b.month
-        UNION ALL
-            select
-                now()::date as date,
-                %s as a, 
-                (select last from last_penultimate_lastyear(%s,now())) as a_open, 
-                %s as b, 
-                (select last from last_penultimate_lastyear(%s,now())) as b_open
-                """, (product_worse.id, product_better.id, 
-                product_worse.id, product_worse.id, product_better.id, product_better.id))
-    else: #Uses worse currency
-        #Fist condition in where it's to remove quotes without money_convert due to no data
-        common_quotes=cursor_rows("""
-            select 
-                make_date(a.year,a.month,1) as date, 
-                a.products_id as a, 
-                a.open as a_open, 
-                b.products_id as b, 
-                money_convert(make_date(a.year,a.month,1)::timestamp with time zone, b.open, %s, %s) as b_open
-            from 
-                ohclmonthlybeforesplits(%s) as a 
-                ,ohclmonthlybeforesplits(%s) as b 
-            where 
-                b.open != money_convert(make_date(a.year,a.month,1)::timestamp with time zone, b.open, %s, %s)  and
-                a.year=b.year and 
-                a.month=b.month
-        UNION ALL
-            select
-                now()::date as date,
-                %s as a, 
-                (select last from last_penultimate_lastyear(%s,now())) as a_open, 
-                %s as b, 
-                money_convert(now(), (select last from last_penultimate_lastyear(%s,now())), %s,%s) as b_open
-                """, ( product_better.currency,  product_worse.currency, 
-                        product_worse.id, 
-                        product_better.id, 
-                        product_better.currency,  product_worse.currency, 
-                        
-                        product_worse.id,
-                        product_worse.id,
-                        product_better.id, 
-                        product_better.id, product_better.currency,  product_worse.currency))
-#def listdict_products_pairs_evolution_from_datetime(product_worse, product_better, common_quotes, basic_results_worse,   basic_results_better):
+    common_quotes=cursor_rows("""
+        select 
+            a.datetime, 
+            a.datetime-b.datetime as diff, 
+            a.quote as quote_a, 
+            b.quote as quote_b, 
+            a.products_id as product_a, 
+            b.products_id as product_b  
+        from 
+            (select * from quotes where products_id=%s) as a, 
+            (select * from quotes where products_id=%s) as b 
+        where 
+            date_trunc('hour',a.datetime)=date_trunc('hour',b.datetime) and 
+            a.datetime-b.datetime between '-0:01' and '0:01'     
+        order by
+            a.datetime
+    """, [product_worse.id, product_better.id])
+    
+    show_queries_function()
 
     r={}
     r["product_a"]={"name":product_better.fullName(), "currency": product_better.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_better.id, ))), "current_price": product_better.basic_results()["last"]}
     r["product_b"]={"name":product_worse.fullName(), "currency": product_worse.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_worse.id, ))), "current_price": product_worse.basic_results()["last"]}
     r["data"]=[]
     last_pr=Percentage(0, 1)
-    first_pr=common_quotes[0]["b_open"]/common_quotes[0]["a_open"]
+    first_pr=common_quotes[0]["quote_b"]/common_quotes[0]["quote_a"]
     for row in common_quotes:#a worse, b better
-        pr=row["b_open"]/row["a_open"]
+        pr=row["quote_b"]/row["quote_a"]
         r["data"].append({
-            "datetime": dtaware_day_end_from_date(row["date"], request.user.profile.zone), 
-            "price_worse": row["a_open"], 
-            "price_better": row["b_open"], 
+            "datetime": row["datetime"], 
+            "price_worse": row["quote_a"], 
+            "price_better": row["quote_b"], 
             "price_ratio": pr, 
             "price_ratio_percentage_from_start": percentage_between(first_pr, pr), 
             "price_ratio_percentage_month_diff": percentage_between(last_pr, pr), 
