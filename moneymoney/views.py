@@ -35,10 +35,7 @@ from zoneinfo import available_timezones
 from tempfile import TemporaryDirectory
 from unogenerator.server import is_server_working
 
-
 ptimeit, show_queries, show_queries_function
-
-
 
 class GroupCatalogManager(permissions.BasePermission):
     """Permiso que comprueba si pertenece al grupo CatalogManager """
@@ -897,7 +894,7 @@ class LeveragesViewSet(CatalogModelViewSet):
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsPairs(request):
     """
-#        @param currency_conversion Boolean. If product's hasn't currency conversion this can help
+        @param currency_conversion Boolean. If product's hasn't currency conversion this can help
     """
     product_better=RequestGetUrl(request, "a", models.Products)
     product_worse=RequestGetUrl(request, "b", models.Products)
@@ -925,19 +922,19 @@ def ProductsPairs(request):
     r["product_a"]={"name":product_better.fullName(), "currency": product_better.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_better.id, ))), "current_price": product_better.basic_results()["last"]}
     r["product_b"]={"name":product_worse.fullName(), "currency": product_worse.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_worse.id, ))), "current_price": product_worse.basic_results()["last"]}
     r["data"]=[]
-    first_pr=common_quotes[0]["quote_b"]/common_quotes[0]["quote_a"]
-    for row in common_quotes:#a worse, b better
-        pr=row["quote_b"]/row["quote_a"]
-        r["data"].append({
-            "datetime": row["datetime"], 
-            "diff": int(row["diff"].total_seconds()), 
-            "price_worse": row["quote_a"], 
-            "price_better": row["quote_b"], 
-            "price_ratio": pr, 
-            "price_ratio_percentage_from_start": percentage_between(first_pr, pr), 
-        })
+    if len(common_quotes)>0:
+        first_pr=common_quotes[0]["quote_b"]/common_quotes[0]["quote_a"]
+        for row in common_quotes:#a worse, b better
+            pr=row["quote_b"]/row["quote_a"]
+            r["data"].append({
+                "datetime": row["datetime"], 
+                "diff": int(row["diff"].total_seconds()), 
+                "price_worse": row["quote_a"], 
+                "price_better": row["quote_b"], 
+                "price_ratio": pr, 
+                "price_ratio_percentage_from_start": percentage_between(first_pr, pr), 
+            })
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
-
 
 @api_view(['GET', 'DELETE' ])    
 @permission_classes([permissions.IsAuthenticated, ])
