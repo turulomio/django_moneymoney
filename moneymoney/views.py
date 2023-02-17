@@ -17,11 +17,11 @@ from moneymoney import models, serializers
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotals, InvestmentsOperationsTotalsManager, StrategyIO
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict, show_queries, show_queries_function
-from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months, dtaware_day_end_from_date
+from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
 from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average, listdict_year_month_value_transposition
 from moneymoney.reusing.percentage import Percentage,  percentage_between
-from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestString, RequestListUrl, id_from_url, all_args_are_not_none,  all_args_are_not_empty,  RequestGetDecimal
+from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestString, RequestListUrl, id_from_url, all_args_are_not_none
 from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEncoder, json_success_response
 from moneymoney.reusing.sqlparser import sql_in_one_line
 from requests import delete, post
@@ -893,34 +893,6 @@ class LeveragesViewSet(CatalogModelViewSet):
     queryset = models.Leverages.objects.all()
     serializer_class = serializers.LeveragesSerializer
 
-class ProductsComparationByQuote(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    @extend_schema(
-        description="Compares 2 products setting a range of quotes in a. Gets all datetime in a, and searches them in b to answer quotes", 
-        request=None, 
-        responses=OpenApiTypes.OBJECT
-    )
-    def get(self, request, *args, **kwargs):
-        product_better=RequestGetUrl(request, "a", models.Products)
-        product_worse=RequestGetUrl(request, "b", models.Products)
-        quote_better_from=RequestGetDecimal(request, "quote_better_from")
-        quote_better_to=RequestGetDecimal(request, "quote_better_to")
-        if all_args_are_not_empty(product_better, product_worse, quote_better_from, quote_better_to):
-            quotes_better=models.Quotes.objects.filter(products=product_better, quote__gte=quote_better_from, quote__lte=quote_better_to).order_by("datetime")
-            d=[]
-            for better in quotes_better:
-                worse=product_worse.quote(better.datetime)
-                minutes_apart=int((better.datetime-worse["datetime"]).total_seconds()/60)
-                d.append({
-                    "better_datetime": better.datetime, 
-                    "better_quote":better.quote, 
-                    "worse_datetime":worse["datetime"], 
-                    "worse_quote":worse["quote"], 
-                    "minutes_apart": minutes_apart, 
-                })            
-            return json_data_response(True, d, "Products comparation by quote done")
-        return json_data_response(False, None,"Products comparation by quote failed")
-
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsPairs(request):
@@ -929,65 +901,7 @@ def ProductsPairs(request):
     """
     product_better=RequestGetUrl(request, "a", models.Products)
     product_worse=RequestGetUrl(request, "b", models.Products)
-#    currency_conversion=RequestGetBool(request, "currency_conversion",  False)
-#    interval="00:01:00"
-
-#    if currency_conversion is False:
-#        common_quotes=cursor_rows("""
-#            select 
-#                a as date, 
-#                a.products_id as a, 
-#                a.open as a_open, 
-#                b.products_id as b, 
-#                b.open as b_open 
-#            from 
-#                ohcldailybeforesplits(%s) as a ,
-#                ohcldailybeforesplits(%s) as b 
-#            where 
-#                a.date=b.date and 
-#                a.month=b.month and
-#                a.day=b.day 
-#        UNION ALL
-#            select
-#                now()::date as date,
-#                %s as a, 
-#                (select last from last_penultimate_lastyear(%s,now())) as a_open, 
-#                %s as b, 
-#                (select last from last_penultimate_lastyear(%s,now())) as b_open
-#                """, (product_worse.id, product_better.id, product_worse.id, product_worse.id, product_better.id, product_better.id))
-#    else: #Uses worse currency
-#        #Fist condition in where it's to remove quotes without money_convert due to no data
-#        common_quotes=cursor_rows("""
-#            select 
-#                make_date(a.year,a.month,1) as date, 
-#                a.products_id as a, 
-#                a.open as a_open, 
-#                b.products_id as b, 
-#                money_convert(make_date(a.year,a.month,1)::timestamp with time zone, b.open, %s, %s) as b_open
-#            from 
-#                ohcldailybeforesplits(%s) as a 
-#                ,ohcldailybeforesplits(%s) as b 
-#            where 
-#                b.open != money_convert(make_date(a.year,a.month,1)::timestamp with time zone, b.open, %s, %s)  and
-#                a.year=b.year and 
-#                a.month=b.month
-#        UNION ALL
-#            select
-#                now()::date as date,
-#                %s as a, 
-#                (select last from last_penultimate_lastyear(%s,now())) as a_open, 
-#                %s as b, 
-#                money_convert(now(), (select last from last_penultimate_lastyear(%s,now())), %s,%s) as b_open
-#                """, ( product_better.currency,  product_worse.currency, 
-#                        product_worse.id, 
-#                        product_better.id, 
-#                        product_better.currency,  product_worse.currency, 
-#                        
-#                        product_worse.id,
-#                        product_worse.id,
-#                        product_better.id, 
-#                        product_better.id, product_better.currency,  product_worse.currency))
-
+    interval_minutes=RequestGetInteger(request, "interval_minutes", 1)
     
     common_quotes=cursor_rows("""
         select 
@@ -1002,34 +916,26 @@ def ProductsPairs(request):
             (select * from quotes where products_id=%s) as b 
         where 
             date_trunc('hour',a.datetime)=date_trunc('hour',b.datetime) and 
-            a.datetime-b.datetime between '-0:01' and '0:01'     
+            a.datetime-b.datetime between %s and %s     
         order by
             a.datetime
-    """, [product_worse.id, product_better.id])
+    """, [product_worse.id, product_better.id, timedelta(minutes=-interval_minutes), timedelta(minutes=interval_minutes) ])
     
-    show_queries_function()
-
     r={}
     r["product_a"]={"name":product_better.fullName(), "currency": product_better.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_better.id, ))), "current_price": product_better.basic_results()["last"]}
     r["product_b"]={"name":product_worse.fullName(), "currency": product_worse.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_worse.id, ))), "current_price": product_worse.basic_results()["last"]}
     r["data"]=[]
-    last_pr=Percentage(0, 1)
     first_pr=common_quotes[0]["quote_b"]/common_quotes[0]["quote_a"]
     for row in common_quotes:#a worse, b better
         pr=row["quote_b"]/row["quote_a"]
         r["data"].append({
             "datetime": row["datetime"], 
+            "diff": int(row["diff"].total_seconds()), 
             "price_worse": row["quote_a"], 
             "price_better": row["quote_b"], 
             "price_ratio": pr, 
             "price_ratio_percentage_from_start": percentage_between(first_pr, pr), 
-            "price_ratio_percentage_month_diff": percentage_between(last_pr, pr), 
         })
-        last_pr=pr
-    
-    #list_products_evolution=listdict_products_pairs_evolution_from_datetime(product_worse, product_better, common_monthly_quotes, basic_results_worse,  basic_results_better)
-
-    
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 

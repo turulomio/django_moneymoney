@@ -42,7 +42,6 @@ urlpatterns=[
     path('investmentsoperations/full/', money_views.InvestmentsoperationsFull, name='InvestmentsoperationsFull'),
     path('investmentsoperations/full/simulation/', money_views.InvestmentsoperationsFullSimulation, name='InvestmentsoperationsFullSimulation'),
     path('investmentsoperationstotalmanager/investments/sameproduct/', money_views.InvestmentsOperationsTotalManager_investments_same_product, name='InvestmentsOperationsTotalManager_investments_same_product'),
-    path('products/comparation/by_quote/', money_views.ProductsComparationByQuote.as_view(), name='ProductsComparationByQuote'),
     path('products/pairs/', money_views.ProductsPairs,  name='ProductsPairs'),
     path('products/ranges/', money_views.ProductsRanges, name='ProductsRanges'),
     path('products/update/', money_views.ProductsUpdate, name='ProductsUpdate'),
