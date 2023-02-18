@@ -10,7 +10,7 @@ from django.utils import timezone
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.investmentsoperations import InvestmentsOperations
 from moneymoney.reusing.casts import string2list_of_integers
-from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_column, cursor_one_row, cursor_rows
+from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_row, cursor_rows
 from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string
 
@@ -82,11 +82,8 @@ class Accounts(models.Model):
     def currencies():
         """
         Returns a list with distinct currencies in accounts
-
-        @return DESCRIPTION
-        @rtype TYPE
         """
-        return cursor_one_column("select distinct(currency) from accounts")
+        return list(Accounts.objects.order_by().values_list("currency",flat=True).distinct())
 
 class Operationstypes(models.Model):
     name = models.TextField()
@@ -504,6 +501,14 @@ class Investments(models.Model):
         if self.selling_expiration is not None and self.selling_expiration>=date.today() and self.shares_from_db_investmentsoperations()==0:
             self.selling_expiration=date.today()-timedelta(days=1)
         self.save()
+        
+
+    @staticmethod
+    def currencies():
+        """
+        Returns a list with distinct currencies in accounts
+        """
+        return list(Investments.objects.order_by().values_list("products__currency",flat=True).distinct())
         
 class Investmentsoperations(models.Model):
     operationstypes = models.ForeignKey(Operationstypes, models.DO_NOTHING, blank=False, null=False)
@@ -1064,3 +1069,12 @@ class Dps(models.Model):
     class Meta:
         managed = True
         db_table = 'dps'
+
+
+class Assets:    
+    @staticmethod
+    def currencies():
+        """
+        Returns a list with distinct currencies in accounts
+        """
+        return list(set(Accounts.currencies()) | set(Investments.currencies()))

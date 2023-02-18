@@ -12,6 +12,7 @@ from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
+from itertools import permutations
 from mimetypes import guess_extension
 from moneymoney import models, serializers
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
@@ -894,6 +895,45 @@ def InvestmentsChangeSellingPrice(request):
         return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
     return Response({'status': 'Investment or selling_price is None'}, status=status.HTTP_404_NOT_FOUND)
 
+
+
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def Currencies(request):
+    """
+        Function REturns a list of used currencies, last change and if it's supported
+        a/b=factor a=factor b. EUR/USD= 1.09 => 1 EUR =1.09 USD
+    """
+    supported=[
+        ("EUR", "USD", -74747)
+    ]
+    r=[]
+    for a,  b in list(permutations(models.Assets.currencies(), 2)):
+        is_supported=False
+        can_add_quote=False
+        for (sa, sb, products_id) in supported:
+            if a==sa and b==sb:
+                is_supported=True
+                can_add_quote=True
+                break
+            elif a==sb and b==sa:
+                is_supported=True
+                can_add_quote=False
+                break
+
+        product= None if not is_supported else request.build_absolute_uri(reverse('products-detail', args=(products_id, )))
+        factor=cursor_one_field("select * from currency_factor(now(), %s, %s)", (a, b))
+        r.append({
+            "from": a, 
+            "to": b, 
+            "product": product, 
+            "datetime": None if factor is None else timezone.now(), 
+            "factor": factor, 
+            "supported": is_supported, 
+            "can_add_quote": can_add_quote, 
+        })
+    
+    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 
 @transaction.atomic
