@@ -596,8 +596,8 @@ class Leverages(models.Model):
         return _(self.name)
 
 class Orders(models.Model):
-    date = models.DateField()
-    expiration = models.DateField()
+    date = models.DateField(blank=False, null=False)
+    expiration = models.DateField(blank=True, null=True) #An order can be permanent in some brokers
     shares = models.DecimalField(max_digits=100, decimal_places=6, blank=True, null=True)
     price = models.DecimalField(max_digits=100, decimal_places=6, blank=True, null=True)
     investments = models.ForeignKey(Investments, models.DO_NOTHING)
