@@ -388,7 +388,7 @@ class OrdersViewSet(viewsets.ModelViewSet):
         expired=RequestGetBool(self.request, 'expired')
         executed=RequestGetBool(self.request, 'executed')
         if active is not None:
-            return self.queryset.filter(expiration__gte=date.today(),  executed__isnull=True)
+            return self.queryset.filter(Q(expiration__gte=date.today()) | Q(expiration__isnull=True), executed__isnull=True)
         elif expired is not None:
             return self.queryset.filter(expiration__lte=date.today(),  executed__isnull=True)
         elif executed is not None:
