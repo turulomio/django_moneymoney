@@ -3,91 +3,118 @@ from .casts import str2bool, string2list_of_integers
 from .datetime_functions import string2dtaware, string2date
 from urllib import parse
 
+
+class RequestCastingError(Exception):
+    pass
+
 ## Returns a model obect
 def RequestGetUrl(request, field, class_,  default=None):
-    try:
-        r = object_from_url(request.GET.get(field), class_)
-    except:
-        r=default
-    return r
+    """
+        If field doesn't exists return default
+    """
+    if not field in request.GET:
+        return default
+    return object_from_url(request.GET.get(field), class_)
  
 ## Returns a model obect
 def RequestUrl(request, field, class_,  default=None, select_related=[], prefetch_related=[]):
-#    try:
-        r = object_from_url(request.data.get(field), class_, select_related, prefetch_related)
-#    except:
-#        r=default
-        return r 
+    if not field in request.GET:
+        return default
+    return  object_from_url(request.data.get(field), class_, select_related, prefetch_related)
 
 ## Returns a query_set obect
 def RequestListUrl(request, field, class_,  default=None,select_related=[],prefetch_related=[]):
-    try:
-       r=queryset_from_list_of_urls(request.data.get(field), class_, select_related, prefetch_related)
-    except:
-        r=default
+    if not field in request.GET:
+        return default
+
+    r=queryset_from_list_of_urls(request.data.get(field), class_, select_related, prefetch_related)
     return r
 
 def RequestDate(request, field, default=None):
+    if not field in request.data:
+        return default
     try:
         r = string2date(request.data.get(field))
     except:
-        r=default
+        raise RequestCastingError("Error in RequestDate")
     return r
 
 def RequestGetDate(request, field, default=None):
+    if not field in request.GET:
+        return default
+
     try:
         r = string2date(request.GET.get(field))
     except:
-        r=default
+        raise RequestCastingError("Error in RequestGetDate")
     return r
 
 
 def RequestBool(request, field, default=None):
+    if not field in request.data:
+        return default
+
     try:
-        r = str2bool(str(request.data.get(field)))
+        return str2bool(str(request.data.get(field)))
     except:
-        r=default
-    return r        
+        raise RequestCastingError("Error in RequestBool")
+
 def RequestGetBool(request, field, default=None):
+    if not field in request.GET:
+        return default
+
     try:
-        r = str2bool(request.GET.get(field))
+        return  str2bool(request.GET.get(field))
     except:
-        r=default
-    return r
+        raise RequestCastingError("Error in RequestGetBool")
 
 def RequestGetDecimal(request, field, default=None):
+    if not field in request.GET:
+        return default
+
     try:
-        r = Decimal(request.GET.get(field))
+        return Decimal(request.GET.get(field))
     except:
-        r=default
-    return r
+        raise RequestCastingError("Error in RequestGetDate")
 
 def RequestGetInteger(request, field, default=None):
+    if not field in request.GET:
+        return default
+
     try:
-        r = int(request.GET.get(field))
+        return int(request.GET.get(field))
     except:
-        r=default
-    return r
+        raise RequestCastingError("Error in RequestGetInteger")
+
+
 def RequestInteger(request, field, default=None):
+    if not field in request.data:
+        return default
+
     try:
-        r = int(request.data.get(field))
+        return int(request.data.get(field))
     except:
-        r=default
-    return r
-    
+        raise RequestCastingError("Error in RequestInteger")
+
 def RequestGetString(request, field, default=None):
+    if not field in request.GET:
+        return default
+
     try:
-        r = request.GET.get(field, default)
+        return request.GET.get(field, default)
     except:
-        r=default
-    return r
+        raise RequestCastingError("Error in RequestGetDate")
+
 
 def RequestGetListOfStringIntegers(request, field, default=None, separator=","):    
+    if not field in request.GET:
+        return default
+
     try:
-        r = string2list_of_integers(request.GET.get(field), separator)
+        return string2list_of_integers(request.GET.get(field), separator)
     except:
-        r=default
-    return r
+        raise RequestCastingError("Error in RequestGetListOfStringIntegers")
+
     
     
 ## Used to get array in this situation calls when investments is an array of integers
@@ -97,67 +124,95 @@ def RequestGetListOfStringIntegers(request, field, default=None, separator=","):
     ## request.GET returns <QueryDict: {'investments[]': ['428', '447'], 'otra': ['OTRA']}>
 
 def RequestGetListOfIntegers(request, field, default=[]):    
+    if not field in request.GET:
+        return default
+
     try:
         r=[]
         items=request.GET.getlist(field, [])
         for i in items:
             r.append(int(i))
+        return r
     except:
-        r=default
-    return r
+        raise RequestCastingError("Error in RequestGetListOfIntegers")
 
 def RequestGetListOfStrings(request, field, default=[]):    
+    if not field in request.GET:
+        return default
+
     try:
         r=[]
         items=request.GET.getlist(field, [])
         for i in items:
             r.append(str(i))
+        return r
     except:
-        r=default
-    return r
+        raise RequestCastingError("Error in RequestGetListOfStrings")
 
 def RequestGetListOfBooleans(request, field, default=[]):    
+    if not field in request.GET:
+        return default
+
     try:
         r=[]
         items=request.GET.getlist(field, [])
         for i in items:
             r.append(str2bool(i))
+        return r
     except:
-        r=default
-    return r
+        raise RequestCastingError("Error in RequestGetListOfBooleans")
 
 def RequestListOfIntegers(request, field, default=None,  separator=","):
+    if not field in request.data:
+        return default
+
     try:
-        r = string2list_of_integers(str(request.data.get(field))[1:-1], separator)
+        return string2list_of_integers(str(request.data.get(field))[1:-1], separator)
     except:
-        r=default
-    return r
+        raise RequestCastingError("Error in RequestListOfIntegers")
 
 def RequestGetDtaware(request, field, timezone_string, default=None):
+    if not field in request.GET:
+        return default
+
     try:
-        r = string2dtaware(request.GET.get(field), "JsUtcIso", timezone_string)
+        return string2dtaware(request.GET.get(field), "JsUtcIso", timezone_string)
     except:
-        r=default
-    return r
+        raise RequestCastingError("Error in RequestGetDtaware")
+
 
 def RequestDtaware(request, field, timezone_string, default=None):
+    if not field in request.data:
+        return default
+
     try:
-        r = string2dtaware(request.data.get(field), "JsUtcIso", timezone_string)
+        return string2dtaware(request.data.get(field), "JsUtcIso", timezone_string)
     except:
-        r=default
-    return r
+        raise RequestCastingError("Error in RequestDtaware")
+
 
 def RequestDecimal(request, field, default=None):
+    if not field in request.data:
+        return default
+
     try:
-        r = Decimal(request.data.get(field))
+        return Decimal(request.data.get(field))
     except:
-        r=default
-    return r
+        raise RequestCastingError("Error in RequestDecimal")
+
 def RequestString(request, field, default=None):
+    if not field in request.data:
+        return default
+
     try:
-        r = request.data.get(field)        
+        r = request.data.get(field)
     except:
-        r=default
+        raise RequestCastingError("Error in RequestString")
+
+def ids_from_list_of_urls(list_):
+    r=[]
+    for url in list_:
+        r.append(id_from_url(url))
     return r
 
 def id_from_url(url):
@@ -166,22 +221,40 @@ def id_from_url(url):
     parts=url.split("/")
     return int(parts[len(parts)-2])
 
+def parse_from_url(url):
+    """
+        Returns a tuple (model_url and id) from a django hyperlinked url
+        For example https://localhost/api/products/1/ ==> ('products', 1)
+    """
+    if url is None:
+        return None
+    parts=url.split("/")
+    return parts[len(parts)-3], int(parts[len(parts)-2])
 
-def ids_from_list_of_urls(list_):
-    r=[]
-    for url in list_:
-        r.append(id_from_url(url))
-    return r
 
-def object_from_url(url, class_, select_related=[], prefetch_related=[]):
-    id_=id_from_url(url)
+def object_from_url(url, class_, select_related=[], prefetch_related=[], model_url=None):
+    """
+        By default this method validates that url has the name of the class_ in lowercase as model_url
+        For example. Products model should contain /products/ in url and then its id
+        If we woudn't validate a param could pass other model with the same id and give wrong results
+    """
+    
+    # Get id and model_url
+    if model_url is None:
+        model_url, id_=parse_from_url(url)
+    else:
+        id_=id_from_url(url)
+
+    #Validation
     if id_ is None:
         return None
-    else:
-        try:
-            return class_.objects.prefetch_related(*prefetch_related).select_related(*select_related).get(pk=id_from_url(url))
-        except e:
-            print (e)
+
+    if class_.__name__.lower() != model_url:
+        comment=f"url couldn't be validated {url} ==> {class_.__name__} {model_url} {id_}"
+        raise RequestCastingError(comment)
+
+    #Get result
+    return class_.objects.prefetch_related(*prefetch_related).select_related(*select_related).get(pk=id_from_url(url))
 
 def queryset_from_list_of_urls(list_, class_, select_related=[], prefetch_related=[]):
     ids=ids_from_list_of_urls(list_)

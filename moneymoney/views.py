@@ -21,7 +21,7 @@ from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_
 from moneymoney.reusing.decorators import ptimeit
 from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average, listdict_year_month_value_transposition
 from moneymoney.reusing.percentage import Percentage,  percentage_between
-from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestString, RequestListUrl, id_from_url, all_args_are_not_none
+from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestString, RequestListUrl, id_from_url, all_args_are_not_none, RequestCastingError
 from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEncoder, json_success_response
 from moneymoney.reusing.sqlparser import sql_in_one_line
 from requests import delete, post
@@ -372,7 +372,11 @@ class DpsViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]      
     
     def get_queryset(self):
-        product=RequestGetUrl(self.request, 'product', models.Products)
+        try:
+            product=RequestGetUrl(self.request, 'product', models.Products)
+        except RequestCastingError as e:
+            print(e)
+            return self.queryset.none()
         if all_args_are_not_none(product):
             return self.queryset.filter(products=product)
         return self.queryset
