@@ -567,6 +567,23 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
             else:#Long short products
                 return Percentage(-(selling_price-last_quote), last_quote)
         #######################################
+        
+        
+#        #DELTE Me
+#        inv=models.Investments.objects.all()
+#        for i,  o in enumerate(inv):
+#            a=inv[i]
+#            b=inv[i+1]
+#            print(a, b)
+#            r=cursor_rows("select * from investments,  investment_operations_totals(investments.id, '2020-12-31T23:59:59.999999+01:00'::timestamptz,'EUR') where investments.id in %s", [(a.id, b.id), ])
+#            print(i, r)
+#        
+#        
+        
+        #####
+        
+        
+        
         r=[]
         for o in self.get_queryset().select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages"):
             iot=InvestmentsOperationsTotals.from_investment(request, o, timezone.now(), request.user.profile.currency)
@@ -1813,6 +1830,7 @@ def ReportDividends(request):
 def ReportEvolutionAssets(request, from_year):
     tb={}
     for year in range(from_year-1, date.today().year+1):
+        print((dtaware_month_end(year, 12, request.user.profile.zone), request.user.profile.currency))
         tb[year]=models.total_balance(dtaware_month_end(year, 12, request.user.profile.zone), request.user.profile.currency)
     
     

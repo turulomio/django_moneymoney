@@ -203,9 +203,8 @@ def RequestDecimal(request, field, default=None):
 def RequestString(request, field, default=None):
     if not field in request.data:
         return default
-
     try:
-        r = request.data.get(field)
+        return request.data.get(field)
     except:
         raise RequestCastingError("Error in RequestString")
 
