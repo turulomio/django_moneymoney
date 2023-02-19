@@ -236,13 +236,6 @@ class QuotesSerializer(serializers.HyperlinkedModelSerializer):
     def get_currency(self, obj):
         return  obj.products.currency
     
-    def create(self, validated_data):
-        quotes=models.Quotes.objects.all().filter(datetime=validated_data['datetime'], products=validated_data['products'])
-        if quotes.count()!=0:
-            quotes.delete()
-        created=serializers.HyperlinkedModelSerializer.create(self,  validated_data)
-        return created
-
 class StockmarketsSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()
     class Meta:

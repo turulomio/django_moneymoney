@@ -654,6 +654,10 @@ class Products(models.Model):
 
     def __str__(self):
         return self.fullName()
+        
+    @staticmethod
+    def hurl(request, id):
+        return request.build_absolute_uri(reverse('products-detail', args=(id, )))
 
     def fullName(self):
         return "{} ({})".format(self.name, _(self.stockmarkets.name))
@@ -721,18 +725,21 @@ class Quotes(models.Model):
     def __str__(self):
         return f"Quote ({self.id}) of '{self.products.name}' at {self.datetime} is {self.quote}"
         
+    @transaction.atomic
     def save(self, *args, **kwargs):
         if self.datetime-timezone.now()>timedelta(days=1):
             return _("Error saving '{0}'. Datetime it's in the future").format(self)
-        quotes=Quotes.objects.all().filter(datetime=self.datetime, products=self.products)
-        if quotes.count()>0:
-            for quote in quotes:
-                quote.quote=self.quote
-                models.Model.save(quote)
-                return _("Updating '{0}'").format(quote)
+        quotes=Quotes.objects.filter(datetime=self.datetime, products=self.products)
+        if quotes.exists():
+            quotes.update(quote=self.quote)
+            return _("Updating '{0}'").format(quotes)
         else:
             models.Model.save(self)
             return _("Inserting '{0}'").format(self)
+
+    @staticmethod
+    def hurl(request, id): ##Do not use url, conflicts with self.url in drf
+        return request.build_absolute_uri(reverse('quotes-detail', args=(id, )))
 
 
 

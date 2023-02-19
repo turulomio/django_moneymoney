@@ -905,32 +905,53 @@ def Currencies(request):
         a/b=factor a=factor b. EUR/USD= 1.09 => 1 EUR =1.09 USD
     """
     supported=[
-        ("EUR", "USD", -74747)
+        ("EUR", "USD", -74747),
     ]
     r=[]
     for a,  b in list(permutations(models.Assets.currencies(), 2)):
+        final_product_id=None
+        final_inverted=True
+        can_c=False
         is_supported=False
-        can_add_quote=False
         for (sa, sb, products_id) in supported:
             if a==sa and b==sb:
+                can_c = True
+                final_product_id=products_id
+                final_inverted=False
                 is_supported=True
-                can_add_quote=True
                 break
-            elif a==sb and b==sa:
+            if a==sb and b==sa:
+                can_c = False
+                final_product_id=products_id
+                final_inverted=True
                 is_supported=True
-                can_add_quote=False
                 break
-
-        product= None if not is_supported else request.build_absolute_uri(reverse('products-detail', args=(products_id, )))
-        factor=cursor_one_field("select * from currency_factor(now(), %s, %s)", (a, b))
+        price=None
+        datetime_=None
+        quote_url=None
+        product_url=None
+        if final_product_id is not None:
+            qs=models.Quotes.objects.filter(datetime__lte=timezone.now(), products__id=products_id).order_by("-datetime")
+            quote= qs[0] if qs.exists() else None
+            if quote is not None:
+                datetime_=quote.datetime
+                if final_inverted is False:
+                    price=quote.quote
+                    quote_url=models.Quotes.hurl(request, quote.id)
+                    product_url=models.Products.hurl(request, quote.products.id)
+                else:
+                    price=1/quote.quote
+        
         r.append({
             "from": a, 
             "to": b, 
-            "product": product, 
-            "datetime": None if factor is None else timezone.now(), 
-            "factor": factor, 
+            "can_c": can_c, 
+            "can_rud": True if quote_url else False, 
+            "datetime": datetime_, 
+            "quote": price, 
+            "quote_url": quote_url, 
             "supported": is_supported, 
-            "can_add_quote": can_add_quote, 
+            "product_url": product_url, 
         })
     
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
@@ -1417,11 +1438,11 @@ class QuotesViewSet(viewsets.ModelViewSet):
             prefetch_related_objects(qs, 'products')
             return qs
 
-        if product is not None and year is not None and month is not None:
-            return models.Quotes.objects.all().filter(products=product, datetime__year=year, datetime__month=month).select_related("products").order_by("datetime")
+        if all_args_are_not_none(product, year, month):
+            return self.queryset.filter(products=product, datetime__year=year, datetime__month=month).order_by("datetime")
         if product is not None:
-            return models.Quotes.objects.all().filter(products=product).select_related("products").order_by("datetime")
-            
+            return self.queryset.filter(products=product).order_by("datetime")
+
         return self.queryset
 
 
