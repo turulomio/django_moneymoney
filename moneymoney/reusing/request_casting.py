@@ -205,7 +205,7 @@ def RequestString(request, field, default=None):
         return default
 
     try:
-        r = request.data.get(field)
+        return request.data.get(field)
     except:
         raise RequestCastingError("Error in RequestString")
 
