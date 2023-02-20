@@ -8,7 +8,7 @@ class RequestCastingError(Exception):
     pass
 
 ## Returns a model obect
-def RequestGetUrl(request, field, class_,  default=None):
+def RequestGetUrl(request, field, class_,  default=None, select_related=[], prefetch_related=[]):
     """
         If field doesn't exists return default
     """
@@ -18,13 +18,13 @@ def RequestGetUrl(request, field, class_,  default=None):
  
 ## Returns a model obect
 def RequestUrl(request, field, class_,  default=None, select_related=[], prefetch_related=[]):
-    if not field in request.GET:
+    if not field in request.data:
         return default
     return  object_from_url(request.data.get(field), class_, select_related, prefetch_related)
 
 ## Returns a query_set obect
 def RequestListUrl(request, field, class_,  default=None,select_related=[],prefetch_related=[]):
-    if not field in request.GET:
+    if not field in request.data:
         return default
 
     r=queryset_from_list_of_urls(request.data.get(field), class_, select_related, prefetch_related)
@@ -203,8 +203,9 @@ def RequestDecimal(request, field, default=None):
 def RequestString(request, field, default=None):
     if not field in request.data:
         return default
+
     try:
-        return request.data.get(field)
+        r = request.data.get(field)
     except:
         raise RequestCastingError("Error in RequestString")
 
