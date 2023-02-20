@@ -1,8 +1,9 @@
+## THIS IS FILE IS FROM https://github.com/turulomio/reusingcode/python/request_casting.py
+## IF YOU NEED TO UPDATE IT PLEASE MAKE A PULL REQUEST IN THAT PROJECT AND DOWNLOAD FROM IT
+## DO NOT UPDATE IT IN YOUR CODE
 from decimal import Decimal
 from .casts import str2bool, string2list_of_integers
 from .datetime_functions import string2dtaware, string2date
-from urllib import parse
-
 
 class RequestCastingError(Exception):
     pass
@@ -203,7 +204,6 @@ def RequestDecimal(request, field, default=None):
 def RequestString(request, field, default=None):
     if not field in request.data:
         return default
-
     try:
         return request.data.get(field)
     except:
@@ -238,7 +238,8 @@ def object_from_url(url, class_, select_related=[], prefetch_related=[], model_u
         For example. Products model should contain /products/ in url and then its id
         If we woudn't validate a param could pass other model with the same id and give wrong results
     """
-    
+    if url is None:
+        return None
     # Get id and model_url
     if model_url is None:
         model_url, id_=parse_from_url(url)
