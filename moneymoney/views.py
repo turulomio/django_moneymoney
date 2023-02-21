@@ -1057,7 +1057,9 @@ def ProductsQuotesOHCL(request):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsRanges(request):
+    print(request.data)
     product=RequestGetUrl(request, "product", models.Products)
+    print(product)
     totalized_operations=RequestGetBool(request, "totalized_operations") 
     percentage_between_ranges=RequestGetInteger(request, "percentage_between_ranges")
 
@@ -2052,7 +2054,8 @@ def ReportCurrentInvestmentsOperations(request):
                 "gains_gross_user": ioc.d['gains_gross_user'], 
                 "percentage_annual_user": ioc.percentage_annual_user().value, 
                 "percentage_apr_user": ioc.percentage_apr_user().value, 
-                "percentage_total_user": ioc.percentage_total_user().value,   
+                "percentage_total_user": ioc.percentage_total_user().value,
+                "currency_user": ioc.d["currency_user"], 
             })
     ld=listdict_order_by(ld, "datetime")
     return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
