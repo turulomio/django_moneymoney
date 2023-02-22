@@ -1943,16 +1943,16 @@ def ReportEvolutionAssetsChart(request):
 @ptimeit
 def ReportEvolutionInvested(request, from_year):
     list_=[]
-    qs=models.Investments.objects.all()
+    qs=models.Investments.objects.all().select_related("products")
     d_dividends=listdict2dict(models.Dividends.lod_ym_netgains_dividends(request), "year")
+    d_custody_commissions=listdict2dict(models.Assets.lod_ym_balance_user_by_concepts(request, [eConcept.CommissionCustody, ] ), "year")
+    d_taxes=listdict2dict(models.Assets.lod_ym_balance_user_by_concepts(request, [eConcept.TaxesReturn, eConcept.TaxesPayment, ] ), "year")
 
     for year in range(from_year, date.today().year+1): 
         iom=InvestmentsOperationsManager.from_investment_queryset(qs, dtaware_month_end(year, 12, request.user.profile.zone), request)
         dt_from=dtaware_year_start(year, request.user.profile.zone)
         dt_to=dtaware_year_end(year, request.user.profile.zone)
         
-        custody_commissions=cursor_one_field("select sum(amount) from accountsoperations where concepts_id = %s and datetime>%s and datetime<= %s", (eConcept.CommissionCustody, dt_from, dt_to))
-        taxes=cursor_one_field("select sum(amount) from accountsoperations where concepts_id in( %s,%s) and datetime>%s and datetime<= %s", (eConcept.TaxesReturn, eConcept.TaxesPayment, dt_from, dt_to))
         d={}
         d['year']=year
         d['invested']=iom.current_invested_user()
@@ -1960,11 +1960,12 @@ def ReportEvolutionInvested(request, from_year):
         d['diff']=d['balance']-d['invested']
         d['percentage']=percentage_between(d['invested'], d['balance'])
         d['net_gains_plus_dividends']=iom.historical_gains_net_user_between_dt(dt_from, dt_to)+d_dividends[year]["total"]
-        d['custody_commissions']=0 if custody_commissions is None else custody_commissions
-        d['taxes']=0 if taxes is None else taxes
+        d['custody_commissions']=d_custody_commissions[year]["total"]
+        d['taxes']=d_taxes[year]["total"]
         d['investment_commissions']=iom.o_commissions_account_between_dt(dt_from, dt_to)
         list_.append(d)
-    return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
+    show_queries_function()
+    return JsonResponse( list_, encoder=MyDjangoJSONEncoder, safe=False)
 
 
 
