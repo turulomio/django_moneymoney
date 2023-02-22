@@ -284,10 +284,6 @@ def listdict2listofordereddicts(ld, keys):
     return r
 
 
-## Returns the dictionary that has the max value of a key. Not necessary is unique
-def listdict_max(ld, key):
-     print("TODO")
-
 ## Returns maximum value of a given key. Is unique. REturns NOne if listdict is empty
 def listdict_max_value(ld, key):
      if len(ld)>0:
@@ -328,7 +324,7 @@ def listdict_year_month_value_transposition(ld, key_year="year", key_month="mont
 
     #Assign values
     for d in ld:
-        r[d[key_year]-min_year]["m"+str(d[key_month])]=d[key_value]
+        r[d[key_year]-min_year]["m"+str(d[key_month])]=r[d[key_year]-min_year]["m"+str(d[key_month])]+d[key_value]
 
     #Calculate totals
     for year in range(min_year,max_year+1):

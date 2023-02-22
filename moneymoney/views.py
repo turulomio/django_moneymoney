@@ -1,5 +1,5 @@
 from base64 import  b64encode, b64decode
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 from decimal import Decimal
 from django.conf import settings
@@ -474,7 +474,7 @@ def StrategiesWithBalance(request):
         s=StrategyIO(request, strategy)
         gains_current_net_user=s.current_gains_net_user() 
         gains_historical_net_user=s.historical_gains_net_user()
-        dividends_net_user=models.Dividends.net_gains_baduser_between_datetimes_for_some_investments(strategy.investments_ids(), strategy.dt_from, strategy.dt_to_for_comparations())
+        lod_dividends_net_user=models.Dividends.lod_ym_netgains_dividends(request, ids=strategy.investments_ids(), dt_from=strategy.dt_from, dt_to=strategy.dt_to_for_comparations())
         r.append({
             "id": strategy.id,  
             "url": request.build_absolute_uri(reverse('strategies-detail', args=(strategy.pk, ))), 
@@ -484,7 +484,7 @@ def StrategiesWithBalance(request):
             "invested": s.current_invested_user(), 
             "gains_current_net_user":  gains_current_net_user,  
             "gains_historical_net_user": gains_historical_net_user, 
-            "dividends_net_user": dividends_net_user, 
+            "dividends_net_user": listdict_sum(lod_dividends_net_user, "total"), 
             "total_net_user":gains_current_net_user + gains_historical_net_user + dividends_net_user, 
             "investments":strategy.investments_ids(), 
             "type": strategy.type, 
@@ -543,6 +543,7 @@ class Timezones(APIView):
 
 
 class InvestmentsViewSet(viewsets.ModelViewSet):
+    
     queryset = models.Investments.objects.select_related("accounts").all()
     serializer_class = serializers.InvestmentsSerializer
     permission_classes = [permissions.IsAuthenticated]  
@@ -1468,43 +1469,41 @@ def RecomendationMethods(request):
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
+@ptimeit
 def ReportAnnual(request, year):
     def month_results(month_end, month_name, local_currency):
         return month_end, month_name, models.total_balance(month_end, local_currency)
         
     #####################
-    local_zone=request.user.profile.zone
-    local_currency=request.user.profile.currency
     
-    dtaware_last_year=dtaware_year_end(year-1, local_zone)
+    dtaware_last_year=dtaware_year_end(year-1, request.user.profile.zone)
     last_year_balance=models.total_balance(dtaware_last_year, request.user.profile.currency)['total_user']
     list_=[]
     futures=[]
     
     # HA MEJORADO UNOS 5 segundos de 7 a 2
-    with ThreadPoolExecutor(max_workers=settings.CONCURRENCY_DB_CONNECTIONS_BY_USER) as executor:
-        for month_name, month in (
-            (_("January"), 1), 
-            (_("February"), 2), 
-            (_("March"), 3), 
-            (_("April"), 4), 
-            (_("May"), 5), 
-            (_("June"), 6), 
-            (_("July"), 7), 
-            (_("August"), 8), 
-            (_("September"), 9), 
-            (_("October"), 10), 
-            (_("November"), 11), 
-            (_("December"), 12), 
-        ):
-        
-            month_end=dtaware_month_end(year, month, local_zone)
-            futures.append(executor.submit(month_results, month_end,  month_name, local_currency))
+    for month_name, month in (
+        (_("January"), 1), 
+        (_("February"), 2), 
+        (_("March"), 3), 
+        (_("April"), 4), 
+        (_("May"), 5), 
+        (_("June"), 6), 
+        (_("July"), 7), 
+        (_("August"), 8), 
+        (_("September"), 9), 
+        (_("October"), 10), 
+        (_("November"), 11), 
+        (_("December"), 12), 
+    ):
+        month_end=dtaware_month_end(year, month, request.user.profile.zone)
+        future= month_results(month_end,  month_name, request.user.profile.currency)
+        futures.append(future)
 
-    futures= sorted(futures, key=lambda future: future.result()[0])#month_end
+    futures= sorted(futures, key=lambda future: future[0])#month_end
     last_month=last_year_balance
     for future in futures:
-        month_end, month_name,  total = future.result()
+        month_end, month_name,  total = future
         list_.append({
             "month_number":month_end, 
             "month": month_name,
@@ -1524,63 +1523,51 @@ def ReportAnnual(request, year):
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-def ReportAnnualIncome(request, year):   
-    def month_results(year,  month, month_name):
-        dividends=models.Dividends.netgains_dividends(year, month)
-        incomes=models.balance_user_by_operationstypes(year,  month,  eOperationType.Income, local_currency, local_zone)-dividends
-        expenses=models.balance_user_by_operationstypes(year,  month,  eOperationType.Expense, local_currency, local_zone)
-        fast_operations=models.balance_user_by_operationstypes(year,  month,  eOperationType.FastOperations, local_currency, local_zone)
+@ptimeit
+def ReportAnnualIncome(request, year):
+    list_=[]
+    #IOManager de final de año para luego calcular gains entre fechas
+    dt_year_from=dtaware_year_start(year, request.user.profile.zone)
+    dt_year_to=dtaware_year_end(year, request.user.profile.zone)
+    iom=InvestmentsOperationsManager.from_investment_queryset(models.Investments.objects.all().select_related("products"), dt_year_to, request)
+    d_dividends=listdict2dict(models.Dividends.lod_ym_netgains_dividends(request, dt_from=dt_year_from, dt_to=dt_year_to), "year")
+    d_incomes=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Income, year=year), "year")
+    d_expenses=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Expense, year=year), "year")
+    d_fast_operations=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.FastOperations, year=year), "year")
+
+    for month_name, month in (
+        (_("January"), 1), 
+        (_("February"), 2), 
+        (_("March"), 3), 
+        (_("April"), 4), 
+        (_("May"), 5), 
+        (_("June"), 6), 
+        (_("July"), 7), 
+        (_("August"), 8), 
+        (_("September"), 9), 
+        (_("October"), 10), 
+        (_("November"), 11), 
+        (_("December"), 12), 
+    ):
+        dividends=d_dividends[year][f"m{month}"]
+        incomes=d_incomes[year][f"m{month}"]-dividends
+        expenses=d_expenses[year][f"m{month}"]
+        fast_operations=d_fast_operations[year][f"m{month}"]
         dt_from=dtaware_month_start(year, month,  request.user.profile.zone)
         dt_to=dtaware_month_end(year, month,  request.user.profile.zone)
         gains=iom.historical_gains_net_user_between_dt(dt_from, dt_to)
-        total=incomes+gains+expenses+dividends+fast_operations
-        return month_name, month,  year,  incomes, expenses, gains, dividends, total, fast_operations
-    
-    list_=[]
-    futures=[]
-    local_zone=request.user.profile.zone
-    local_currency=request.user.profile.currency
-    #IOManager de final de año para luego calcular gains entre fechas
-    dt_year_to=dtaware_year_end(year, request.user.profile.zone)
-    iom=InvestmentsOperationsManager.from_investment_queryset(models.Investments.objects.all(), dt_year_to, request)
-
-    
-    # HA MEJORADO UNOS 3 segundos de 16 a 13
-    with ThreadPoolExecutor(max_workers=settings.CONCURRENCY_DB_CONNECTIONS_BY_USER) as executor:
-        for month_name, month in (
-            (_("January"), 1), 
-            (_("February"), 2), 
-            (_("March"), 3), 
-            (_("April"), 4), 
-            (_("May"), 5), 
-            (_("June"), 6), 
-            (_("July"), 7), 
-            (_("August"), 8), 
-            (_("September"), 9), 
-            (_("October"), 10), 
-            (_("November"), 11), 
-            (_("December"), 12), 
-        ):
-            futures.append(executor.submit(month_results, year, month, month_name))
-        
-        for future in as_completed(futures):
-            month_name, month,  year,  incomes, expenses, gains, dividends, total,  fast_operations= future.result()
-            list_.append({
-                "id": f"{year}/{month}/", 
-                "month_number":month, 
-                "month": month_name,
-                "incomes":incomes, 
-                "expenses":expenses, 
-                "gains":gains,  
-                "fast_operations": fast_operations, 
-                "dividends":dividends, 
-                "total":total,  
-            })
-            
-    list_= sorted(list_, key=lambda item: item["month_number"])
-    return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
-    
-
+        list_.append({
+            "id": f"{year}/{month}/", 
+            "month_number":month, 
+            "month": month_name,
+            "incomes":incomes, 
+            "expenses":expenses, 
+            "gains":gains,  
+            "fast_operations": fast_operations, 
+            "dividends":dividends, 
+            "total":incomes+gains+expenses+dividends+fast_operations,  
+        })
+    return JsonResponse( list_, encoder=MyDjangoJSONEncoder, safe=False)
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -1678,8 +1665,6 @@ def ReportAnnualIncomeDetails(request, year, month):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportAnnualGainsByProductstypes(request, year):
-    local_currency=request.user.profile.currency
-    local_zone=request.user.profile.zone
     gains=cursor_rows("""
 select 
     investments.id, 
@@ -1688,7 +1673,7 @@ select
 from  
     investments, 
     products 
-where investments.products_id=products.id""", (year, local_currency, ))
+where investments.products_id=products.id""", (year, request.user.profile.currency, ))
     
     #This inner joins its made to see all productstypes_id even if they are Null.
     # Subquery for dividends is used due to if I make a where from dividends table I didn't get null productstypes_id
@@ -1732,14 +1717,14 @@ group by productstypes_id""", (year, ))
                 "dividends_net": dividends_net, 
         })      
         
-    fast_operations=models.balance_user_by_operationstypes(year,  None,  eOperationType.FastOperations, local_currency, local_zone)
+    d_fast_operations=models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.FastOperations, year=year)
 
     l.append({
             "id": -1000, #Fast operations
             "name":_("Fast operations"), 
-            "gains_gross": fast_operations, 
+            "gains_gross": d_fast_operations[0]["total"], 
             "dividends_gross":0, 
-            "gains_net":fast_operations, 
+            "gains_net":d_fast_operations[0]["total"], 
             "dividends_net": 0, 
     })
     return JsonResponse( l, encoder=MyDjangoJSONEncoder,     safe=False)
@@ -1883,22 +1868,25 @@ def ReportDividends(request):
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
+@ptimeit
 def ReportEvolutionAssets(request, from_year):
     tb={}
     for year in range(from_year-1, date.today().year+1):
-        print((dtaware_month_end(year, 12, request.user.profile.zone), request.user.profile.currency))
         tb[year]=models.total_balance(dtaware_month_end(year, 12, request.user.profile.zone), request.user.profile.currency)
-    
+        
+    d_incomes=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Income), "year")
+    d_expenses=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Expense), "year")
+    d_dividends=listdict2dict(models.Dividends.lod_ym_netgains_dividends(request), "year")
     
     list_=[]
     for year in range(from_year, date.today().year+1): 
         dt_from=dtaware_year_start(year, request.user.profile.zone)
         dt_to=dtaware_year_end(year, request.user.profile.zone)
         
-        iom=InvestmentsOperationsManager.from_investment_queryset(models.Investments.objects.all(), dt_to, request)
-        dividends=models.Dividends.net_gains_baduser_between_datetimes(dt_from, dt_to)
-        incomes=models.balance_user_by_operationstypes(year, None,  eOperationType.Income, request.user.profile.currency, request.user.profile.zone)-dividends
-        expenses=models.balance_user_by_operationstypes(year, None,  eOperationType.Expense, request.user.profile.currency, request.user.profile.zone)
+        iom=InvestmentsOperationsManager.from_investment_queryset(models.Investments.objects.all().select_related("products"), dt_to, request)
+        dividends=d_dividends[year]["total"]
+        incomes=d_incomes[year]["total"]-dividends
+        expenses=d_expenses[year]["total"]
         gains=iom.historical_gains_net_user_between_dt(dt_from, dt_to)
         list_.append({
             "year": year, 
@@ -1911,7 +1899,7 @@ def ReportEvolutionAssets(request, from_year):
             "expenses":expenses, 
             "total":incomes+gains+dividends+expenses, 
         })
-
+    show_queries_function()
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
     
 @api_view(['GET', ])    
@@ -1952,9 +1940,12 @@ def ReportEvolutionAssetsChart(request):
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
+@ptimeit
 def ReportEvolutionInvested(request, from_year):
     list_=[]
     qs=models.Investments.objects.all()
+    d_dividends=listdict2dict(models.Dividends.lod_ym_netgains_dividends(request), "year")
+
     for year in range(from_year, date.today().year+1): 
         iom=InvestmentsOperationsManager.from_investment_queryset(qs, dtaware_month_end(year, 12, request.user.profile.zone), request)
         dt_from=dtaware_year_start(year, request.user.profile.zone)
@@ -1968,7 +1959,7 @@ def ReportEvolutionInvested(request, from_year):
         d['balance']=iom.current_balance_futures_user()
         d['diff']=d['balance']-d['invested']
         d['percentage']=percentage_between(d['invested'], d['balance'])
-        d['net_gains_plus_dividends']=iom.historical_gains_net_user_between_dt(dt_from, dt_to)+models.Dividends.net_gains_baduser_between_datetimes_for_some_investments(iom.list_of_investments_ids(), dt_from, dt_to)
+        d['net_gains_plus_dividends']=iom.historical_gains_net_user_between_dt(dt_from, dt_to)+d_dividends[year]["total"]
         d['custody_commissions']=0 if custody_commissions is None else custody_commissions
         d['taxes']=0 if taxes is None else taxes
         d['investment_commissions']=iom.o_commissions_account_between_dt(dt_from, dt_to)

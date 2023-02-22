@@ -34,11 +34,14 @@ def RequestListUrl(request, field, class_,  default=None,select_related=[],prefe
 def RequestDate(request, field, default=None):
     if not field in request.data:
         return default
+
+    if request.data.get(field) is None:
+        return default
+
     try:
-        r = string2date(request.data.get(field))
+        return string2date(request.data.get(field))
     except:
         raise RequestCastingError("Error in RequestDate")
-    return r
 
 def RequestGetDate(request, field, default=None):
     if not field in request.GET:

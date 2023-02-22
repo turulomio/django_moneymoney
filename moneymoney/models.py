@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from django.contrib.auth.models import User
 from django.db import models, transaction
-from django.db.models import Case, When
+from django.db.models import Case, When, Sum
 from django.db.models.expressions import RawSQL
 from django.urls import reverse
 from django.utils.translation import gettext as _
@@ -13,6 +13,7 @@ from moneymoney.reusing.casts import string2list_of_integers
 from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_row, cursor_rows
 from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string
+from moneymoney.reusing.listdict_functions import listdict_year_month_value_transposition
 
 Decimal
 
@@ -358,46 +359,29 @@ class Dividends(models.Model):
     def delete(self):
         self.accountsoperations.delete()
         models.Model.delete(self)
-       
-        
-    ## TODO This method should take care of diffrent currencies in accounts. Dividens are in account currency
-    @staticmethod
-    def netgains_dividends(year, month):
-        dividends=cursor_one_field("""
-    select 
-        sum(net) 
-    from 
-        dividends 
-    where 
-        date_part('year',datetime)=%s and
-        date_part('month',datetime)=%s
-    """, (year, month))
-        print(dividends)
-        
-#        sumdividends=0
-#        for currency in Accounts.currencies():
-#            qs=Dividends.objects.filter(datetime__year=year, datetime__month=month).annotate(net=Sum("net"))
-#            print(qs)
-        if dividends is None:
-            dividends=0
-        return dividends
 
-    ## TODO This method should take care of diffrent currencies in accounts. Dividens are in account currency
     @staticmethod
-    def net_gains_baduser_between_datetimes_for_some_investments(ids, from_dt,  to_dt):
-        dividends=cursor_one_field("""select sum(net) from dividends where datetime>=%s and datetime<=%s  and investments_id in %s""", (from_dt, to_dt, tuple(ids) ))
-        if dividends is None:
-            dividends=0
-        return dividends
-        
-
-    ## TODO This method should take care of diffrent currencies in accounts. Dividens are in account currency
-    @staticmethod
-    def net_gains_baduser_between_datetimes(from_dt,  to_dt):
-        dividends=cursor_one_field("""select sum(net) from dividends where datetime>=%s and datetime<=%s""", (from_dt, to_dt ))
-        if dividends is None:
-            dividends=0
-        return dividends
+    def lod_ym_netgains_dividends(request,  dt_from=None,  dt_to=None, ids=None):
+        """
+            Returns a list of rows with a structure as in listdict_year_month_value_transposition
+            if dt_from and dt_to is not None only shows this range dividends, else all database registers
+            if ids is None returns all investments dividends, else return some investments ids List of ids
+        """
+            
+        ld=[]
+        for currency in Accounts.currencies():
+            d=Dividends.objects.filter(investments__accounts__currency=currency)
+            if ids is not None:
+                d=d.filter(investments__id__in=ids)
+            if dt_from is not None:
+                d=d.filter(datetime__gte=dt_from)
+            if dt_to is not None:
+                d=d.filter(datetime__lte=dt_to)
+            
+            d=d.values("datetime__year","datetime__month").annotate(sum=Sum("net"))
+            for o in  d:
+                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["sum"], currency, request.user.profile.currency)})
+        return listdict_year_month_value_transposition(ld)
 
     @transaction.atomic
     def save(self, *args, **kwargs):
@@ -823,56 +807,6 @@ def money_convert(dt, amount, from_,  to_):
         return amount
     return cursor_one_field("select * from money_convert(%s, %s, %s, %s)", (dt, amount, from_,  to_))
 
-## This method should take care of diffrent currenciesç
-## @param month can be None to calculate all year
-def balance_user_by_operationstypes(year,  month,  operationstypes_id, local_currency, local_zone):
-    
-    strmonth="" if month is None else "date_part('month',datetime)=%s and "
-    
-    r=0
-    for currency in Accounts.currencies():
-        if month is  None:
-            parameters=(operationstypes_id, year,  currency, operationstypes_id, year,  currency)
-        else:
-            parameters=(operationstypes_id, year, month,  currency, operationstypes_id, year, month,  currency)
-        for row in cursor_rows(f"""
-            select sum(amount) as amount 
-            from 
-                accountsoperations,
-                accounts, 
-                concepts
-            where 
-                concepts.operationstypes_id=%s and 
-                date_part('year',datetime)=%s and
-                {strmonth}
-                accounts.currency=%s and
-                accounts.id=accountsoperations.accounts_id    AND
-                accountsoperations.concepts_id=concepts.id
-        union all 
-            select sum(amount) as amount 
-            from 
-                creditcardsoperations ,
-                creditcards,
-                accounts, 
-                concepts
-            where 
-                concepts.operationstypes_id=%s and 
-                date_part('year',datetime)=%s and
-                {strmonth}
-                accounts.currency=%s and
-                accounts.id=creditcards.accounts_id and
-                creditcards.id=creditcardsoperations.creditcards_id   AND
-                creditcardsoperations.concepts_id=concepts.id""", parameters):
-
-            if row['amount'] is not None:
-                if local_currency==currency:
-                    r=r+row['amount']
-                else:
-                    if month is None:                      
-                        r=r+money_convert(dtaware_month_end(year, 12, local_zone), row['amount'], currency, local_currency)
-                    else:
-                        r=r+money_convert(dtaware_month_end(year, month, local_zone), row['amount'], currency, local_currency)
-    return r
 
 ## Class who controls all comments from accountsoperations, investmentsoperations ...
 class Comment:
@@ -1091,3 +1025,57 @@ class Assets:
         Returns a list with distinct currencies in accounts
         """
         return list(set(Accounts.currencies()) | set(Investments.currencies()))
+
+    ## This method should take care of diffrent currenciesç
+    ## @param month can be None to calculate all year
+    def lod_ym_balance_user_by_operationstypes(request, operationstypes_id, year=None):
+        """
+            Returns a list of rows with a structure as in listdict_year_month_value_transposition
+            if year only shows this year, else all database registers
+        """
+            
+        ld=[]
+        for currency in Accounts.currencies():
+            ao=Accountsoperations.objects.filter(concepts__operationstypes__id=operationstypes_id, accounts__currency=currency)
+            
+            if year is not None:
+                ao=ao.filter(datetime__year=year)
+            
+            ao=ao.values("datetime__year","datetime__month").annotate(Sum("amount")).order_by("datetime__year", "datetime__month")
+            for o in  ao:
+                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
+
+            cc=Creditcardsoperations.objects.filter(concepts__operationstypes__id=operationstypes_id, creditcards__accounts__currency=currency)
+            if year is not None:
+                cc=cc.filter(datetime__year=year)
+            cc=cc.values("datetime__year","datetime__month").annotate(Sum("amount")) 
+            for o in  cc:
+                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
+        return listdict_year_month_value_transposition(ld)
+
+    ## This method should take care of diffrent currenciesç
+    ## @param month can be None to calculate all year
+    def lod_ym_balance_user_by_concepts(request, concepts_ids, year=None):
+        """
+            Returns a list of rows with a structure as in listdict_year_month_value_transposition
+            if year only shows this year, else all database registers
+        """
+            
+        ld=[]
+        for currency in Accounts.currencies():
+            ao=Accountsoperations.objects.filter(concepts__id__in=concepts_ids, accounts__currency=currency)
+            
+            if year is not None:
+                ao=ao.filter(datetime__year=year)
+            
+            ao=ao.values("datetime__year","datetime__month").annotate(Sum("amount")).order_by("datetime__year", "datetime__month")
+            for o in  ao:
+                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
+
+            cc=Creditcardsoperations.objects.filter(concepts__id__in=concepts_ids, creditcards__accounts__currency=currency)
+            if year is not None:
+                cc=cc.filter(datetime__year=year)
+            cc=cc.values("datetime__year","datetime__month").annotate(Sum("amount")) 
+            for o in  cc:
+                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
+        return listdict_year_month_value_transposition(ld)
