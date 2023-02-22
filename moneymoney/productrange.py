@@ -1,4 +1,5 @@
 from datetime import date
+from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
 from moneymoney.reusing.libmanagers import ObjectManager, DatetimeValueManager
@@ -113,7 +114,9 @@ class ProductRangeManager(ObjectManager):
         self.method=0
         
         self.iom=InvestmentsOperationsManager.from_investment_queryset(self.qs_investments, timezone.now(), self.request)
-        self.orders=Orders.objects.select_related("investments").select_related("investments__accounts").select_related("investments__products").select_related("investments__products__leverages").select_related("investments__products__productstypes").filter(investments__in=self.qs_investments, executed=None, expiration__gte=date.today())
+        self.orders=Orders.objects.select_related("investments", "investments__accounts","investments__products","investments__products__leverages","investments__products__productstypes")\
+            .filter(investments__in=self.qs_investments, executed=None)\
+            .filter(Q(expiration__gte=date.today()) | Q(expiration__isnull=True))
 
         self.tmp=[]
         self.highest_range_value=10000000

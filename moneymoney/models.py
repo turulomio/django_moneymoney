@@ -266,7 +266,7 @@ class Banks(models.Model):
         return self.balance_accounts()+self.balance_investments(request)
 
     def investments(self, active):
-        investments= Investments.objects.all().select_related("products").select_related("products__productstypes").select_related("accounts").filter(accounts__banks__id=self.id, active=active)
+        investments= Investments.objects.all().select_related("products","products__productstypes","accounts").filter(accounts__banks__id=self.id, active=active)
         return investments
 
     def is_deletable(self):
