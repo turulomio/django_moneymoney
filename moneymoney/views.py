@@ -369,7 +369,7 @@ class DividendsViewSet(viewsets.ModelViewSet):
     
     def list(self, request):
         r= viewsets.ModelViewSet.list(self, request)
-        show_queries_function()
+        
         return r
     
 class DpsViewSet(viewsets.ModelViewSet):
@@ -1472,12 +1472,12 @@ def RecomendationMethods(request):
 @ptimeit
 def ReportAnnual(request, year):
     def month_results(month_end, month_name, local_currency):
-        return month_end, month_name, models.total_balance(month_end, local_currency)
+        return month_end, month_name, models.Assets.total_balance(month_end, local_currency)
         
     #####################
     
     dtaware_last_year=dtaware_year_end(year-1, request.user.profile.zone)
-    last_year_balance=models.total_balance(dtaware_last_year, request.user.profile.currency)['total_user']
+    last_year_balance=models.Assets.total_balance(dtaware_last_year, request.user.profile.currency)['total_user']
     list_=[]
     futures=[]
     
@@ -1872,7 +1872,7 @@ def ReportDividends(request):
 def ReportEvolutionAssets(request, from_year):
     tb={}
     for year in range(from_year-1, date.today().year+1):
-        tb[year]=models.total_balance(dtaware_month_end(year, 12, request.user.profile.zone), request.user.profile.currency)
+        tb[year]=models.Assets.total_balance(dtaware_month_end(year, 12, request.user.profile.zone), request.user.profile.currency)
         
     d_incomes=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Income), "year")
     d_expenses=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Expense), "year")
@@ -1899,7 +1899,7 @@ def ReportEvolutionAssets(request, from_year):
             "expenses":expenses, 
             "total":incomes+gains+dividends+expenses, 
         })
-    show_queries_function()
+    
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
     
 @api_view(['GET', ])    
@@ -1907,7 +1907,7 @@ def ReportEvolutionAssets(request, from_year):
 def ReportEvolutionAssetsChart(request):
     def month_results(year, month,  local_currency, local_zone):
         dt=dtaware_month_end(year, month, local_zone)
-        return dt, models.total_balance(dt, local_currency)
+        return dt, models.Assets.total_balance(dt, local_currency)
     #####################
     year_from=RequestGetInteger(request, "from")
     if year_from==date.today().year:
@@ -1964,7 +1964,7 @@ def ReportEvolutionInvested(request, from_year):
         d['taxes']=d_taxes[year]["total"]
         d['investment_commissions']=iom.o_commissions_account_between_dt(dt_from, dt_to)
         list_.append(d)
-    show_queries_function()
+    
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder, safe=False)
 
 

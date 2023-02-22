@@ -380,7 +380,7 @@ class Dividends(models.Model):
             
             d=d.values("datetime__year","datetime__month").annotate(sum=Sum("net"))
             for o in  d:
-                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["sum"], currency, request.user.profile.currency)})
+                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["sum"], currency, request.user.profile.currency)})
         return listdict_year_month_value_transposition(ld)
 
     @transaction.atomic
@@ -797,15 +797,6 @@ class Strategies(models.Model):
         return self.dt_to
 
 
-    
-## @return accounts, investments, totals, invested
-def total_balance(dt, local_currency):
-    return cursor_one_row("select * from total_balance(%s,%s)", (dt, local_currency, ))
-
-def money_convert(dt, amount, from_,  to_):   
-    if from_==to_:
-        return amount
-    return cursor_one_field("select * from money_convert(%s, %s, %s, %s)", (dt, amount, from_,  to_))
 
 
 ## Class who controls all comments from accountsoperations, investmentsoperations ...
@@ -1043,14 +1034,14 @@ class Assets:
             
             ao=ao.values("datetime__year","datetime__month").annotate(Sum("amount")).order_by("datetime__year", "datetime__month")
             for o in  ao:
-                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
+                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
 
             cc=Creditcardsoperations.objects.filter(concepts__operationstypes__id=operationstypes_id, creditcards__accounts__currency=currency)
             if year is not None:
                 cc=cc.filter(datetime__year=year)
             cc=cc.values("datetime__year","datetime__month").annotate(Sum("amount")) 
             for o in  cc:
-                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
+                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
         return listdict_year_month_value_transposition(ld)
 
     ## This method should take care of diffrent currenciesç
@@ -1070,12 +1061,25 @@ class Assets:
             
             ao=ao.values("datetime__year","datetime__month").annotate(Sum("amount")).order_by("datetime__year", "datetime__month")
             for o in  ao:
-                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
+                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
 
             cc=Creditcardsoperations.objects.filter(concepts__id__in=concepts_ids, creditcards__accounts__currency=currency)
             if year is not None:
                 cc=cc.filter(datetime__year=year)
             cc=cc.values("datetime__year","datetime__month").annotate(Sum("amount")) 
             for o in  cc:
-                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
+                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
         return listdict_year_month_value_transposition(ld)
+
+    @staticmethod
+    def money_convert(dt, amount, from_,  to_):   
+        if from_==to_:
+            return amount
+        return cursor_one_field("select * from money_convert(%s, %s, %s, %s)", (dt, amount, from_,  to_))
+
+
+
+    @staticmethod
+    ## @return accounts, investments, totals, invested
+    def total_balance(dt, local_currency):
+        return cursor_one_row("select * from total_balance(%s,%s)", (dt, local_currency, ))
