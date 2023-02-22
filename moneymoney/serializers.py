@@ -40,10 +40,14 @@ class AccountsSerializer(serializers.HyperlinkedModelSerializer):
         
         
 class DividendsSerializer(serializers.HyperlinkedModelSerializer):
+    currency = serializers.SerializerMethodField()
     class Meta:
         model = models.Dividends
-        fields = ('url', 'id', 'investments', 'gross','taxes','net', 'dps', 'datetime', 'accountsoperations', 'commission', 'concepts', 'currency_conversion')
+        fields = ('url', 'id', 'investments', 'gross','taxes','net', 'dps', 'datetime', 'accountsoperations', 'commission', 'concepts', 'currency_conversion',  'currency')
 
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_currency(self, obj):
+        return  _(obj.investments.accounts.currency)
 
 class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
     fullname = serializers.SerializerMethodField()

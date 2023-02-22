@@ -372,6 +372,12 @@ class Dividends(models.Model):
         date_part('year',datetime)=%s and
         date_part('month',datetime)=%s
     """, (year, month))
+        print(dividends)
+        
+#        sumdividends=0
+#        for currency in Accounts.currencies():
+#            qs=Dividends.objects.filter(datetime__year=year, datetime__month=month).annotate(net=Sum("net"))
+#            print(qs)
         if dividends is None:
             dividends=0
         return dividends

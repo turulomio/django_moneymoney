@@ -349,7 +349,7 @@ class Derivatives(APIView):
         return json_data_response(True, listdict_year_month_value_transposition(list(qs.values('year', 'month', 'amount')), key_value="amount"), "Derivatives query done")
 
 class DividendsViewSet(viewsets.ModelViewSet):
-    queryset = models.Dividends.objects.all()
+    queryset = models.Dividends.objects.all().select_related("investments", "investments__accounts")
     serializer_class = serializers.DividendsSerializer
     permission_classes = [permissions.IsAuthenticated] 
     
@@ -366,6 +366,11 @@ class DividendsViewSet(viewsets.ModelViewSet):
             return self.queryset.filter(investments__in=investments_ids,  datetime__gte=datetime).order_by("datetime")
         else:
             return self.queryset.order_by("datetime")
+    
+    def list(self, request):
+        r= viewsets.ModelViewSet.list(self, request)
+        show_queries_function()
+        return r
     
 class DpsViewSet(viewsets.ModelViewSet):
     queryset = models.Dps.objects.all()
@@ -1638,20 +1643,9 @@ def ReportAnnualIncomeDetails(request, year, month):
     #            r=r+money_convert(dtaware_month_end(year, month, local_zone), balance, currency, local_currency)
         return r
     def dividends():
-        r=[]
-        for o in models.Dividends.objects.all().filter(datetime__year=year, datetime__month=month).order_by('datetime'):
-            r.append({
-                "id":o.id, 
-                "url":request.build_absolute_uri(reverse('dividends-detail', args=(o.id, ))), 
-                "investments":request.build_absolute_uri(reverse('investments-detail', args=(o.investments.id, ))), 
-                "datetime":o.datetime, 
-                "concepts": request.build_absolute_uri(reverse('concepts-detail', args=(o.concepts.id, ))), 
-                "gross":o.gross, 
-                "net":o.net, 
-                "taxes":o.taxes, 
-                "commission":o.commission
-            })
-        return r
+        #TODO: Should use all currencies
+        qs=models.Dividends.objects.filter(datetime__year=year, datetime__month=month).order_by('datetime').select_related("investments").select_related("investments__accounts")
+        return serializers.DividendsSerializer(qs, many=True, context={'request': request}).data
     def listdict_investmentsoperationshistorical(request, year, month, local_currency, local_zone):
         #Git investments with investmentsoperations in this year, month
         list_ioh=[]
@@ -1677,7 +1671,6 @@ def ReportAnnualIncomeDetails(request, year, month):
     r["dividends"]=dividends()
     r["fast_operations"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, eOperationType.FastOperations,  request.user.profile.currency, request.user.profile.zone)
     r["gains"]=listdict_investmentsoperationshistorical(request, year, month, request.user.profile.currency, request.user.profile.zone)
-
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
     
 
