@@ -1453,7 +1453,6 @@ def RecomendationMethods(request):
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-@ptimeit
 def ReportAnnual(request, year):
     def month_results(month_end, month_name, local_currency):
         return month_end, month_name, models.Assets.total_balance(month_end, local_currency)
