@@ -86,7 +86,7 @@ TEMPLATES = [
 
 CORS_ORIGIN_WHITELIST =  "http://localhost:8005",
 
-WSGI_APPLICATION = 'django_moneymoney.asgi.application'
+WSGI_APPLICATION = 'django_moneymoney.wsgi.application'
 
 ## Database connection definitions
 DATABASES = {

@@ -574,7 +574,46 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
             else:#Long short products
                 return Percentage(-(selling_price-last_quote), last_quote)
         #######################################
+        #PL
+        from moneymoney_pl import core
+
+        pia=cursor_rows("""SELECT products.id as products_id, investments.id as investments_id, multiplier, accounts.currency as accounts_currency,
+products.currency as products_currency, productstypes_id 
+from accounts, investments, products, leverages 
+where accounts.id=investments.accounts_id and investments.products_id=products.id and leverages.id=products.leverages_id and investments.id=%s""", (69,))[0]
+        dt=timezone.now()
+        rows=cursor_rows("select * from investmentsoperations where investments_id=69 order by datetime")
+        d=core.calculate_io_lazy(dt,pia,rows,"EUR")
         
+        for products_id, dt in d["lazy_quotes"].keys():
+            d["lazy_quotes"][(products_id, dt)]=cursor_rows("select quote from quote(%s,%s)", [products_id, dt])[0]['quote']
+            
+        for k, v in d["lazy_quotes"].items():
+            print("AHORA", k, "==>",  v)        
+        for from_,  to_, dt in d["lazy_factors"].keys():
+            d["lazy_factors"][(from_, to_, dt)]=cursor_rows("select currency_factor from currency_factor(%s,%s,%s)", [dt, from_, to_])[0]['currency_factor']
+            
+        for k, v in d["lazy_factors"].items():
+            print("AHORA", k, "==>",  v)
+        
+        
+        r=core.calculate_io_finish(d)
+        
+        
+        r=cursor_rows("select * from pl_investment_operations(69, now(), 'EUR');")[0]['pl_investment_operations']
+        print(r)
+        
+        with open("borrar.txt", "w") as doc:
+            doc.write(r)
+        print(r)
+        from json import loads
+        dict_=loads(r)
+        print(dict_["pia"]["dt"])
+        
+ 
+        
+        
+        ##########
         r=[]
         for o in self.get_queryset().select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages"):
             iot=InvestmentsOperationsTotals.from_investment(request, o, timezone.now(), request.user.profile.currency)
