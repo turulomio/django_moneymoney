@@ -598,17 +598,21 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
 #        
 #        
 #        r=core.calculate_io_finish(d)
+#        
+#        
+#        r=cursor_rows("select * from pl_investment_operations(now(), 'EUR', '{69}', false,false,true);")[0]['pl_investment_operations']
+#        from json import loads,  dumps
+#        dict_=loads(r)
+#        print (dumps(dict_,  cls=MyDjangoJSONEncoder,  indent=4))        
+#        
+#        r=cursor_rows("select * from pl_total_balance(now(), 'EUR');")[0]['pl_total_balance']
+#        from json import loads,  dumps
+#        dict_=loads(r)
+#        print (dumps(dict_,  cls=MyDjangoJSONEncoder,  indent=4))
         
         
-        r=cursor_rows("select * from pl_investment_operations(now(), 'EUR', '{69}', false,false,true);")[0]['pl_investment_operations']
-        from json import loads,  dumps
-        dict_=loads(r)
-        print (dumps(dict_,  cls=MyDjangoJSONEncoder,  indent=4))        
         
-        r=cursor_rows("select * from pl_total_balance(now(), 'EUR');")[0]['pl_total_balance']
-        from json import loads,  dumps
-        dict_=loads(r)
-        print (dumps(dict_,  cls=MyDjangoJSONEncoder,  indent=4))
+        print(models.Assets.pl_investment_operations(timezone.now(), request.user.profile.currency, [69, ], True, True, True))
         
  
         
@@ -1492,14 +1496,15 @@ def RecomendationMethods(request):
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
+@ptimeit
 def ReportAnnual(request, year):
     def month_results(month_end, month_name, local_currency):
-        return month_end, month_name, models.Assets.total_balance(month_end, local_currency)
+        return month_end, month_name, models.Assets.pl_total_balance(month_end, local_currency)
         
     #####################
     
     dtaware_last_year=dtaware_year_end(year-1, request.user.profile.zone)
-    last_year_balance=models.Assets.total_balance(dtaware_last_year, request.user.profile.currency)['total_user']
+    last_year=models.Assets.pl_total_balance(dtaware_last_year, request.user.profile.currency)
     list_=[]
     futures=[]
     
@@ -1523,7 +1528,7 @@ def ReportAnnual(request, year):
         futures.append(future)
 
     futures= sorted(futures, key=lambda future: future[0])#month_end
-    last_month=last_year_balance
+    last_month=last_year['total_user']
     for future in futures:
         month_end, month_name,  total = future
         list_.append({
@@ -1532,12 +1537,12 @@ def ReportAnnual(request, year):
             "account_balance":total['accounts_user'], 
             "investment_balance":total['investments_user'], 
             "total":total['total_user'] , 
-            "percentage_year": percentage_between(last_year_balance, total['total_user'] ), 
+            "percentage_year": percentage_between(last_year['total_user'], total['total_user'] ), 
             "diff_lastmonth": total['total_user']-last_month, 
         })
         last_month=total['total_user']
         
-    r={"last_year_balance": last_year_balance,  "dtaware_last_year": dtaware_last_year,  "data": list_}
+    r={"last_year_balance": last_year['total_user'],  "dtaware_last_year": dtaware_last_year,  "data": list_}
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
  
  
@@ -1894,7 +1899,7 @@ def ReportDividends(request):
 def ReportEvolutionAssets(request, from_year):
     tb={}
     for year in range(from_year-1, date.today().year+1):
-        tb[year]=models.Assets.total_balance(dtaware_month_end(year, 12, request.user.profile.zone), request.user.profile.currency)
+        tb[year]=models.Assets.pl_total_balance(dtaware_month_end(year, 12, request.user.profile.zone), request.user.profile.currency)
         
     d_incomes=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Income), "year")
     d_expenses=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Expense), "year")
@@ -1926,10 +1931,11 @@ def ReportEvolutionAssets(request, from_year):
     
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
+@ptimeit
 def ReportEvolutionAssetsChart(request):
     def month_results(year, month,  local_currency, local_zone):
         dt=dtaware_month_end(year, month, local_zone)
-        return dt, models.Assets.total_balance(dt, local_currency)
+        return dt, models.Assets.pl_total_balance(dt, local_currency)
     #####################
     year_from=RequestGetInteger(request, "from")
     if year_from==date.today().year:

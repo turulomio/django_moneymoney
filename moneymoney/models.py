@@ -7,6 +7,7 @@ from django.db.models.expressions import RawSQL
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
+from json import loads
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.investmentsoperations import InvestmentsOperations
 from moneymoney.reusing.casts import string2list_of_integers
@@ -1076,10 +1077,20 @@ class Assets:
         if from_==to_:
             return amount
         return cursor_one_field("select * from money_convert(%s, %s, %s, %s)", (dt, amount, from_,  to_))
-
-
-
+        
     @staticmethod
-    ## @return accounts, investments, totals, invested
-    def total_balance(dt, local_currency):
-        return cursor_one_row("select * from total_balance(%s,%s)", (dt, local_currency, ))
+    def pl_total_balance(dt, local_currency):
+        """
+            Returns a dict with the following keys:
+            {'accounts_user': 0, 'investments_user': 0, 'total_user': 0, 'investments_invested_user': 0}
+        """
+        return loads(cursor_rows("select * from pl_total_balance(%s,%s)", (dt, local_currency, ))[0]["pl_total_balance"])[0]
+        
+    @staticmethod
+    def pl_investment_operations(dt, local_currency, list_ids=None, show_data=False, show_totals=False, show_sum_totals=True):
+        """
+            If list_ids is None returns investment_operations for all investments
+            Returns a dict with the following keys:
+        """
+        return loads(cursor_rows("select * from pl_investment_operations(%s,%s,%s,%s,%s,%s)", (dt, local_currency, list_ids, show_data, show_totals, show_sum_totals))[0]["pl_investment_operations"])
+
