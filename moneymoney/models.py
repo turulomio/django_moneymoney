@@ -1279,6 +1279,10 @@ class PlInvestmentOperations():
         return self._t[str(id_)]["total_io_current"]
     def d_total_io_historical(self, id_):
         return self._t[str(id_)]["total_io_historical"]
+    def sum_total_io_current(self):
+        return self._t["sum_total_io_current"]
+    def sum_total_io_historical(self, id_):
+        return self._t["sum_total_io_historical"]
         
     def investment(self, id_):
         return Investments.objects.get(pk=id_)
@@ -1289,7 +1293,7 @@ class PlInvestmentOperations():
     def print(self):
         print(self.dumps())
         
-    def historical_gains_between_dates(self, dt_from, dt_to,  key, productstypes_id=None):
+    def o_historical_gains_between_dates(self, dt_from, dt_to,  key, productstypes_id=None):
         r=0
         for investments_id in self.list_investments_id():
             for ioh in self.d_io_historical(investments_id):
@@ -1301,3 +1305,11 @@ class PlInvestmentOperations():
                             r=r+ioh[key]
         return r
 
+    def o_commissions_account_between_dt(self, dt_from, dt_to):
+        r=0
+        for investments_id in self.list_investments_id():
+            for o in self.d_io(investments_id):
+                o_dt=postgres_datetime_string_2_dtaware(o["datetime"])
+                if dt_from<=o_dt and o_dt<=dt_to:
+                    r=r - o["commission_account"]
+        return r

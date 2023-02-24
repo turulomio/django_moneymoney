@@ -1685,8 +1685,8 @@ group by productstypes_id""", (year, ))
     dividends_dict=listdict2dict(dividends, "productstypes_id")
     l=[]
     for pt in models.Productstypes.objects.all():
-        gains_net=plio.historical_gains_between_dates(dt_from, dt_to, "gains_net_user", pt.id)
-        gains_gross=plio.historical_gains_between_dates(dt_from, dt_to, "gains_gross_user", pt.id)
+        gains_net=plio.o_historical_gains_between_dates(dt_from, dt_to, "gains_net_user", pt.id)
+        gains_gross=plio.o_historical_gains_between_dates(dt_from, dt_to, "gains_gross_user", pt.id)
 #        gains_net, gains_gross= 0, 0
         dividends_gross, dividends_net=0, 0
 #        for row in gains:
@@ -1947,20 +1947,20 @@ def ReportEvolutionInvested(request, from_year):
     d_taxes=listdict2dict(models.Assets.lod_ym_balance_user_by_concepts(request, [eConcept.TaxesReturn, eConcept.TaxesPayment, ] ), "year")
 
     for year in range(from_year, date.today().year+1): 
-        iom=InvestmentsOperationsManager.from_investment_queryset(qs, dtaware_month_end(year, 12, request.user.profile.zone), request)
         dt_from=dtaware_year_start(year, request.user.profile.zone)
         dt_to=dtaware_year_end(year, request.user.profile.zone)
+        plio=models.PlInvestmentOperations.from_qs(dt_to, request.user.profile.currency, qs, 1)
         
         d={}
         d['year']=year
-        d['invested']=iom.current_invested_user()
-        d['balance']=iom.current_balance_futures_user()
+        d['invested']=plio.sum_total_io_current()["invested_user"]
+        d['balance']=plio.sum_total_io_current()["balance_futures_user"]
         d['diff']=d['balance']-d['invested']
         d['percentage']=percentage_between(d['invested'], d['balance'])
-        d['net_gains_plus_dividends']=iom.historical_gains_net_user_between_dt(dt_from, dt_to)+d_dividends[year]["total"]
+        d['net_gains_plus_dividends']=Decimal(plio.o_historical_gains_between_dates(dt_from, dt_to, "gains_net_user"))+d_dividends[year]["total"]
         d['custody_commissions']=d_custody_commissions[year]["total"]
         d['taxes']=d_taxes[year]["total"]
-        d['investment_commissions']=iom.o_commissions_account_between_dt(dt_from, dt_to)
+        d['investment_commissions']=plio.o_commissions_account_between_dt(dt_from, dt_to)
         list_.append(d)
     
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder, safe=False)
