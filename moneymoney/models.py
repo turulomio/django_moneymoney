@@ -1088,7 +1088,7 @@ class Assets:
         return loads(cursor_rows("select * from pl_total_balance(%s,%s)", (dt, local_currency, ))[0]["pl_total_balance"])[0]
         
     @staticmethod
-    def pl_investment_operations(dt, local_currency, list_ids=None, mode=3):
+    def pl_investment_operations(dt, local_currency, list_ids, mode):
         """
             If list_ids is None returns investment_operations for all investments
             Returns a dict with the following keys:
@@ -1104,7 +1104,7 @@ class PlInvestmentOperations():
         self._t=t
     
     @classmethod
-    def from_ids(cls, dt,  local_currency,  list_ids=None,  mode=3):
+    def from_ids(cls, dt,  local_currency,  list_ids,  mode):
         plio=Assets.pl_investment_operations(dt, local_currency, list_ids, mode)
         return cls(plio)
         
@@ -1182,7 +1182,7 @@ class PlInvestmentOperations():
 
 
     @classmethod
-    def simulation(cls, dt,  local_currency,  qs_investments, list_unsaved_io, mode=3):
+    def simulation(cls, dt,  local_currency,  qs_investments, list_unsaved_io, mode):
         lod_investments=cls.qs_investments_to_lod(qs_investments)
         lod_ios=cls.qs_investments_to_lod_ios(qs_investments) + cls.list_unsaved_io_to_lod(list_unsaved_io)
         lod_ios= sorted(lod_ios,  key=lambda item: item['datetime'])
@@ -1220,8 +1220,6 @@ class PlInvestmentOperations():
     def d_total_io(self, id_):
         return self._t[str(id_)]["total_io"]
     def d_total_io_current(self, id_):
-#        print(id_ in self._t) #False
-#        print(str(id_) in self._t, "str") #True
         return self._t[str(id_)]["total_io_current"]
     def d_total_io_historical(self, id_):
         return self._t[str(id_)]["total_io_historical"]

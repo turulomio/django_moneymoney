@@ -17,7 +17,7 @@ from mimetypes import guess_extension
 from moneymoney import models, serializers
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotalsManager, StrategyIO
-from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict, show_queries, show_queries_function
+from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_rows_as_dict, show_queries, show_queries_function
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
 from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average, listdict_year_month_value_transposition
@@ -1668,7 +1668,7 @@ def ReportAnnualGainsByProductstypes(request, year):
     dt_from=dtaware_year_start(year, request.user.profile.zone)
     dt_to=dtaware_year_end(year, request.user.profile.zone)
 
-    plio=models.PlInvestmentOperations.from_ids(dt_to, request.user.profile.currency, mode=1)
+    plio=models.PlInvestmentOperations.from_ids(dt_to, request.user.profile.currency, None, 1)
     
     #This inner joins its made to see all productstypes_id even if they are Null.
     # Subquery for dividends is used due to if I make a where from dividends table I didn't get null productstypes_id
@@ -2047,13 +2047,13 @@ def ReportCurrentInvestmentsOperations(request):
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
+@ptimeit
 def ReportRanking(request):
-    iotm=InvestmentsOperationsTotalsManager.from_all_investments(request, timezone.now())
-    products_ids=cursor_one_column('select distinct(products_id) from investments')
-    products=models.Products.objects.all().filter(id__in=products_ids)
+    plio=models.PlInvestmentOperations.from_ids(timezone.now(), request.user.profile.currency, None, mode=2)
+
     ld=[]
     dividends=cursor_rows_as_dict("investments_id","select investments_id, sum(net) from dividends group by investments_id")
-    for product in products:
+    for product in models.Products.objects.order_by().distinct("investments__products").select_related("stockmarkets"):
         d={}
         d["id"]=product.id
         d["name"]=product.fullName()
@@ -2061,16 +2061,14 @@ def ReportRanking(request):
         d["historical_net_gains"]=0
         d["dividends"]=0
         d["investments"]=[]#List of all urls of investments
-        for iot in iotm.list:
-            if iot.investment.products.id==product.id:
-                d["investments"].append(request.build_absolute_uri(reverse('investments-detail', args=(iot.investment.id, ))))
-                d["current_net_gains"]=d["current_net_gains"]+iot.io_total_current["gains_net_user"]
-                d["historical_net_gains"]=d["historical_net_gains"]+iot.io_total_historical["gains_net_user"]
-                try:
-                    d["dividends"]=d["dividends"]+dividends[iot.investment.id]["sum"]
-                except:
-                    pass
-        d["total"]=d["current_net_gains"]+d["historical_net_gains"]+d["dividends"]
+        for investments_id in plio.list_investments_id():
+            if plio.d_data(investments_id)["products_id"]==product.id:
+                d["investments"].append(request.build_absolute_uri(reverse('investments-detail', args=(investments_id, ))))
+                d["current_net_gains"]=d["current_net_gains"]+plio.d_total_io_current(investments_id)["gains_net_user"]
+                d["historical_net_gains"]=d["historical_net_gains"]+plio.d_total_io_historical(investments_id)["gains_net_user"]
+                if int(investments_id) in dividends:
+                    d["dividends"]=d["dividends"]+dividends[int(investments_id)]["sum"]
+        d["total"]=Decimal(d["current_net_gains"])+Decimal(d["historical_net_gains"])+Decimal(d["dividends"])
         ld.append(d)
         
     ld=listdict_order_by(ld, "total", True)
