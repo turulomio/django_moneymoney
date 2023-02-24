@@ -574,28 +574,16 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 return Percentage(-(selling_price-last_quote), last_quote)
         #######################################      
         start=datetime.now()
-#        
-#        
-#        plio=models.PlInvestmentOperations.from_ids(timezone.now(),  'EUR',  list_ids=[69, ],  mode=1)
-#        print(plio.d_io_current(69)[0])
-#        
-#        plio2=models.PlInvestmentOperations.simulation(timezone.now(),  'EUR',  models.Investments.objects.filter(pk=69), [],  mode=1)
-#        print(plio.keys(), "from_ids")
-#        print(plio2.keys(), "simulate")
-#        print(plio2.d_io_current(69)[0])
- 
-        
-        
-        ##########
+
         
         plio=models.PlInvestmentOperations.from_ids(timezone.now(),  'EUR',  None,  mode=2)
         r=[]
         for o in self.get_queryset().select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages"):
             percentage_invested=None if plio.d_total_io_current(o.id)["invested_user"]==0 else  plio.d_total_io_current(o.id)["gains_gross_user"]/plio.d_total_io_current(o.id)["invested_user"]
-#            try:                
-            last_day_diff= (o.products.basic_results()['last']-o.products.basic_results()['penultimate'])*Decimal(plio.d_total_io_current(o.id)["shares"])*o.products.real_leveraged_multiplier()
-#            except:
-#                last_day_diff=0
+            try:                
+                last_day_diff= (o.products.basic_results()['last']-o.products.basic_results()['penultimate'])*Decimal(plio.d_total_io_current(o.id)["shares"])*o.products.real_leveraged_multiplier()
+            except:
+                last_day_diff=0
 
             r.append({
                 "id": o.id,  
@@ -1666,20 +1654,21 @@ def ReportAnnualIncomeDetails(request, year, month):
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
+@ptimeit
 def ReportAnnualGainsByProductstypes(request, year):
-    gains=cursor_rows("""
-select 
-    investments.id, 
-    productstypes_id, 
-    (investment_operations(investments.id, make_timestamp(%s,12,31,23,59,59)::timestamp with time zone, %s, 'investmentsoperations')).io_historical 
-from  
-    investments, 
-    products 
-where investments.products_id=products.id""", (year, request.user.profile.currency, ))
-#    dt_from=dtaware_year_start(year, request.user.profile.zone)
-#    dt_to=dtaware_year_end(year, request.user.profile.zone)
-#
-#    plio=models.PlInvestmentOperations.from_ids(dt_to, request.user.profile.currency)
+#    gains=cursor_rows("""
+#select 
+#    investments.id, 
+#    productstypes_id, 
+#    (investment_operations(investments.id, make_timestamp(%s,12,31,23,59,59)::timestamp with time zone, %s, 'investmentsoperations')).io_historical 
+#from  
+#    investments, 
+#    products 
+#where investments.products_id=products.id""", (year, request.user.profile.currency, ))
+    dt_from=dtaware_year_start(year, request.user.profile.zone)
+    dt_to=dtaware_year_end(year, request.user.profile.zone)
+
+    plio=models.PlInvestmentOperations.from_ids(dt_to, request.user.profile.currency, mode=1)
     
     #This inner joins its made to see all productstypes_id even if they are Null.
     # Subquery for dividends is used due to if I make a where from dividends table I didn't get null productstypes_id
@@ -1696,17 +1685,17 @@ group by productstypes_id""", (year, ))
     dividends_dict=listdict2dict(dividends, "productstypes_id")
     l=[]
     for pt in models.Productstypes.objects.all():
-#        gains_net=plio.historical_gains_between_dates(dt_from, dt_to, "gains_net_user", pt)
-#        gains_gross=plio.historical_gains_between_dates(dt_from, dt_to, "gains_gross_user", pt)
-        gains_net, gains_gross= 0, 0
+        gains_net=plio.historical_gains_between_dates(dt_from, dt_to, "gains_net_user", pt.id)
+        gains_gross=plio.historical_gains_between_dates(dt_from, dt_to, "gains_gross_user", pt.id)
+#        gains_net, gains_gross= 0, 0
         dividends_gross, dividends_net=0, 0
-        for row in gains:
-            if row["productstypes_id"]==pt.id:
-                io_historical=eval(row["io_historical"])
-                for ioh in io_historical:
-                    if int(ioh["dt_end"][0:4])==year:
-                        gains_net=gains_net+ioh["gains_net_user"]
-                        gains_gross=gains_gross+ioh["gains_gross_user"]
+#        for row in gains:
+#            if row["productstypes_id"]==pt.id:
+#                io_historical=eval(row["io_historical"])
+#                for ioh in io_historical:
+#                    if int(ioh["dt_end"][0:4])==year:
+#                        gains_net=gains_net+ioh["gains_net_user"]
+#                        gains_gross=gains_gross+ioh["gains_gross_user"]
         try:
             dividends_gross=dividends_dict[pt.id]["gross"]
         except:

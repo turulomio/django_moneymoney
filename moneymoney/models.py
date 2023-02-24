@@ -15,7 +15,7 @@ from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_row, c
 from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string
 from moneymoney.reusing.listdict_functions import listdict_year_month_value_transposition
-from moneymoney_pl.core import t_keys_not_investment,  calculate_ios_lazy,  calculate_ios_finish, MyDjangoJSONEncoder
+from moneymoney_pl.core import t_keys_not_investment,  calculate_ios_lazy,  calculate_ios_finish, MyDjangoJSONEncoder, postgres_datetime_string_2_dtaware
 
 Decimal
 
@@ -1199,7 +1199,6 @@ class PlInvestmentOperations():
         for key in self.keys():
             if key not in t_keys_not_investment():
                 r.append(key)
-        print(r)
         return r
         
     def d(self, id_):
@@ -1239,10 +1238,8 @@ class PlInvestmentOperations():
     def historical_gains_between_dates(self, dt_from, dt_to,  key, productstypes_id=None):
         r=0
         for investments_id in self.list_investments_id():
-            print(investments_id)
             for ioh in self.d_io_historical(investments_id):
-                print(ioh)
-                if dt_from < ioh["dt_end"] and ioh["dt_end"]< dt_to:
+                if dt_from < postgres_datetime_string_2_dtaware(ioh["dt_end"]) and postgres_datetime_string_2_dtaware(ioh["dt_end"])< dt_to:
                     if productstypes_id is None:
                         r=r+ioh[key]
                     else:
