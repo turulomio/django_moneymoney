@@ -15,6 +15,7 @@ from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_row, c
 from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string
 from moneymoney.reusing.listdict_functions import listdict_year_month_value_transposition
+from moneymoney.reusing.percentage import Percentage
 from moneymoney_pl.core import t_keys_not_investment,  calculate_ios_lazy,  calculate_ios_finish, MyDjangoJSONEncoder, postgres_datetime_string_2_dtaware
 
 Decimal
@@ -1104,8 +1105,18 @@ class PlInvestmentOperations():
         self._t=t
     
     @classmethod
+    def from_qs(cls, dt,  local_currency,  qs_investments,  mode):
+        ids=list(qs_investments.values_list('pk',flat=True))
+        return cls.from_ids(dt, local_currency, ids, mode)
+
+    @classmethod
     def from_ids(cls, dt,  local_currency,  list_ids,  mode):
         plio=Assets.pl_investment_operations(dt, local_currency, list_ids, mode)
+        return cls(plio)
+
+    @classmethod
+    def from_all(cls, dt,  local_currency,  mode):
+        plio=Assets.pl_investment_operations(dt, local_currency, None, mode)
         return cls(plio)
         
     @staticmethod
@@ -1191,6 +1202,48 @@ class PlInvestmentOperations():
         t=calculate_ios_finish(t, mode)
         return cls(t)
         
+    def basic_results(self, id):
+        """
+        Public method Id is investments id
+        """
+        if not "basic_results" in self._t:
+            self._t["basic_results"]={}
+            
+        products_id=str(self.d_data(str(id))["products_id"])
+        if not products_id in self._t["basic_results"]:
+            self._t["basic_results"][products_id]=cursor_one_row("select * from last_penultimate_lastyear(%s,%s)", (products_id, timezone.now() ))
+        return self._t["basic_results"][products_id]
+        
+    def ioc_percentage_annual_user(self, ioc):
+        """
+        Public method ioc is a io_current dictionary
+        """
+        if postgres_datetime_string_2_dtaware(ioc["datetime"]).year==date.today().year:
+            lastyear=ioc["price_user"] #Product value, self.money_price(type) not needed.
+        else:
+            lastyear=self.basic_results(ioc["investments_id"])["lastyear"]
+        if self.basic_results(ioc["investments_id"])["lastyear"] is None or lastyear is None:
+            return Percentage()
+
+        if ioc["shares"]>0:
+            return Percentage(self.basic_results(ioc["investments_id"])["last"]-Decimal(lastyear), lastyear)
+        else:
+            return Percentage(-(self.basic_results(ioc["investments_id"])["last"]-Decimal(lastyear)), lastyear)
+
+    def ioc_age(self, ioc):
+            return (date.today()-postgres_datetime_string_2_dtaware(ioc["datetime"]).date()).days
+
+    def ioc_percentage_apr_user(self, ioc):
+            dias=self.ioc_age(ioc)
+            if dias==0:
+                dias=1
+            return Percentage(self.ioc_percentage_total_user(ioc)*365,  dias)
+
+    def ioc_percentage_total_user(self, ioc):
+        if ioc["invested_user"] is None:#initiating xulpymoney
+            return Percentage()
+        return Percentage(ioc['gains_gross_user'], ioc["invested_user"])
+        
     def mode(self):
         return self._t["mode"]
         
@@ -1200,6 +1253,9 @@ class PlInvestmentOperations():
             if key not in t_keys_not_investment():
                 r.append(key)
         return r
+        
+    def qs_investments(self):
+        return Investments.objects.filter(id__in = self.list_investments_id()).select_related("accounts")
         
     def d(self, id_):
         return self._t[str(id_)]
@@ -1225,7 +1281,7 @@ class PlInvestmentOperations():
         return self._t[str(id_)]["total_io_historical"]
         
     def investment(self, id_):
-        return Investments.object.get(pk=id_)
+        return Investments.objects.get(pk=id_)
         
     def dumps(self):
         return dumps(self._t,  indent=4,  cls=MyDjangoJSONEncoder )

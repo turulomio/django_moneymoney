@@ -2019,28 +2019,28 @@ def ReportsInvestmentsLastOperation(request):
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportCurrentInvestmentsOperations(request):
     ld=[]
-    investments=models.Investments.objects.filter(active=True).select_related("accounts").select_related("products")
-    iom=InvestmentsOperationsManager.from_investment_queryset(investments, timezone.now(), request)
+    investments=models.Investments.objects.filter(active=True).select_related("accounts","products")
+    plio=models.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, investments, 1)
     
-    for io in iom:
-        for o in io.io_current:
-            ioc=IOC(io.investment, o )
+    for inv in plio.qs_investments():
+        for o in plio.d_io_current(inv.id):
             ld.append({
-                "investments": request.build_absolute_uri(reverse('investments-detail', args=(io.investment.pk, ))),
-                "name": io.investment.fullName(), # Needed for AssetsReport
-                "operationstypes":ioc.d["operationstypes"], 
-                "datetime": ioc.d["datetime"], 
-                "shares": ioc.d['shares'], 
-                "price_user": ioc.d['price_user'], 
-                "invested_user": ioc.d['invested_user'], 
-                "balance_user": ioc.d["balance_user"], 
-                "gains_gross_user": ioc.d['gains_gross_user'], 
-                "percentage_annual_user": ioc.percentage_annual_user().value, 
-                "percentage_apr_user": ioc.percentage_apr_user().value, 
-                "percentage_total_user": ioc.percentage_total_user().value,
-                "currency_user": ioc.d["currency_user"], 
+                "investments": request.build_absolute_uri(reverse('investments-detail', args=(inv.id, ))),
+                "name": inv.fullName(), # Needed for AssetsReport
+                "operationstypes": request.build_absolute_uri(reverse('operationstypes-detail', args=(o["operationstypes_id"], ))), 
+                "datetime": o["datetime"], 
+                "shares": o['shares'], 
+                "price_user": o['price_user'], 
+                "invested_user": o['invested_user'], 
+                "balance_user": o["balance_user"], 
+                "gains_gross_user": o['gains_gross_user'], 
+                "percentage_annual_user": plio.ioc_percentage_annual_user(o).value, 
+                "percentage_apr_user": plio.ioc_percentage_apr_user(o).value, 
+                "percentage_total_user": plio.ioc_percentage_total_user(o).value,
+                "currency_user": plio.d_data(inv.id)["currency_user"], 
             })
     ld=listdict_order_by(ld, "datetime")
+    show_queries_function()
     return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
 
 
