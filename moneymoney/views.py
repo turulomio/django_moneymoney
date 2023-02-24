@@ -612,8 +612,15 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
         
         
         
-        print(models.Assets.pl_investment_operations(timezone.now(), request.user.profile.currency, [69, ], True, True, True))
+        #print(models.Assets.pl_investment_operations(timezone.now(), request.user.profile.currency, [69, ], 1))
+        plio=models.PlInvestmentOperations.from_ids(timezone.now(),  'EUR',  list_ids=[69, ],  mode=1)
+        print(plio.d_total_io_current(69))
         
+        plio2=models.PlInvestmentOperations.simulation(timezone.now(),  'EUR',  models.Investments.objects.filter(pk=69), [],  mode=1)
+#        plio2.print()
+        print(plio.keys(), "from_ids")
+        print(plio2.keys(), "simulate")
+        print(plio2.d_total_io_current(69))
  
         
         

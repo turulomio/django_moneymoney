@@ -7,7 +7,7 @@ from django.db.models.expressions import RawSQL
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
-from json import loads
+from json import loads, dumps
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.investmentsoperations import InvestmentsOperations
 from moneymoney.reusing.casts import string2list_of_integers
@@ -15,6 +15,7 @@ from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_row, c
 from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string
 from moneymoney.reusing.listdict_functions import listdict_year_month_value_transposition
+from moneymoney_pl.core import t_keys_not_investment,  calculate_ios_lazy,  calculate_ios_finish, MyDjangoJSONEncoder
 
 Decimal
 
@@ -1087,10 +1088,149 @@ class Assets:
         return loads(cursor_rows("select * from pl_total_balance(%s,%s)", (dt, local_currency, ))[0]["pl_total_balance"])[0]
         
     @staticmethod
-    def pl_investment_operations(dt, local_currency, list_ids=None, show_data=False, show_totals=False, show_sum_totals=True):
+    def pl_investment_operations(dt, local_currency, list_ids=None, mode=3):
         """
             If list_ids is None returns investment_operations for all investments
             Returns a dict with the following keys:
         """
-        return loads(cursor_rows("select * from pl_investment_operations(%s,%s,%s,%s,%s,%s)", (dt, local_currency, list_ids, show_data, show_totals, show_sum_totals))[0]["pl_investment_operations"])
+        return loads(cursor_rows("select * from pl_investment_operations(%s,%s,%s,%s)", (dt, local_currency, list_ids, mode))[0]["pl_investment_operations"])
 
+
+class PlInvestmentOperations():
+    """
+        Class to operate with Assets.pl_investment_operations result
+    """
+    def __init__(self, t):
+        self._t=t
+    
+    @classmethod
+    def from_ids(cls, dt,  local_currency,  list_ids=None,  mode=3):
+        plio=Assets.pl_investment_operations(dt, local_currency, list_ids, mode)
+        return cls(plio)
+        
+    @staticmethod
+    def qs_investments_to_lod(qs):
+        """
+            Converts a qs to a lod investments used in moneymoney_pl
+        """
+        r=[]
+        for i in qs:
+            r.append({
+                "products_id": i.products.id, 
+                "investments_id": str(i.id), 
+                "multiplier": i.products.leverages.multiplier, 
+                "currency_account": i.accounts.currency, 
+                "currency_product": i.products.currency, 
+                "productstypes_id": i.products.productstypes.id, 
+            })
+        return r        
+    @staticmethod
+    def list_unsaved_io_to_lod(list_):
+        """
+            Converts a list of unsaved investmentsoperations to a lod_ios used in moneymoney_pl
+        """
+        r=[]
+        for i, io in enumerate(list_):
+            r.append({
+                "id":-i, 
+                "operationstypes_id": io.operationstypes.id, 
+                "investments_id": str(i.investments.id), 
+                "shares": io.shares, 
+                "taxes": io.taxes, 
+                "commission": io.commission, 
+                "price": io.price, 
+                "datetime": io.datetime, 
+                "comment": io.comment, 
+                "show_in_ranges": io.show_in_ranges, 
+                "currency_conversion":io.currency_conversion
+            })
+        return r
+        
+    @staticmethod
+    def qs_investments_to_lod_ios(qs):
+        """
+            Converts a list of unsaved investmentsoperations to a lod_ios used in moneymoney_pl
+        """
+        r=[]
+        ids=tuple(qs.values_list('pk',flat=True))
+        for i, io in enumerate(Investmentsoperations.objects.filter(investments_id__in=ids).order_by("datetime")):
+            r.append({
+                "id":-i, 
+                "operationstypes_id": io.operationstypes.id, 
+                "investments_id": str(io.investments.id), 
+                "shares": io.shares, 
+                "taxes": io.taxes, 
+                "commission": io.commission, 
+                "price": io.price, 
+                "datetime": io.datetime, 
+                "comment": io.comment, 
+                "show_in_ranges": io.show_in_ranges, 
+                "currency_conversion":io.currency_conversion
+            })
+        return r
+    @staticmethod
+    def external_query_factors_quotes(t):
+                
+        # Get quotes and factors
+        for products_id, dt in t["lazy_quotes"].keys():
+            quote=cursor_rows("select quote from quote(%s, %s)", (products_id, dt))[0]['quote']
+            t["lazy_quotes"][(products_id,dt)]=quote if quote is not None else 0
+
+        for from_,  to_, dt in t["lazy_factors"].keys():
+            factor=cursor_rows("SELECT * FROM currency_factor(%s,%s,%s)", [dt, from_, to_])[0]['currency_factor']
+            t["lazy_factors"][(from_, to_, dt)]=factor if factor is not None else 0
+
+
+    @classmethod
+    def simulation(cls, dt,  local_currency,  qs_investments, list_unsaved_io, mode=3):
+        lod_investments=cls.qs_investments_to_lod(qs_investments)
+        lod_ios=cls.qs_investments_to_lod_ios(qs_investments) + cls.list_unsaved_io_to_lod(list_unsaved_io)
+        lod_ios= sorted(lod_ios,  key=lambda item: item['datetime'])
+        t=calculate_ios_lazy(dt, lod_investments, lod_ios, local_currency)
+        cls.external_query_factors_quotes(t)
+        t=calculate_ios_finish(t, mode)
+        return cls(t)
+        
+    def mode(self):
+        return self._t["mode"]
+        
+    def list_investments_id(self):
+        r=[]
+        for key in self._t.keys():
+            if key not in t_keys_not_investment():
+                r.append(key)
+        return r
+        
+    def d(self, id_):
+        return self._t[str(id_)]
+        
+    def t(self):
+        return self._t
+        
+    def keys(self):
+        return list(self._t.keys())
+    def d_data(self, id_):
+        return self._t[str(id_)]["data"]
+    def d_io(self, id_):
+        return self._t[str(id_)]["io"]
+    def d_io_current(self, id_):
+        return self._t[str(id_)]["io_current"]
+    def d_io_historical(self, id_):
+        return self._t[str(id_)]["io_historical"]
+    def d_total_io(self, id_):
+        return self._t[str(id_)]["total_io"]
+    def d_total_io_current(self, id_):
+        print(id_ in self._t) #False
+        print(str(id_) in self._t, "str") #True
+        return self._t[str(id_)]["total_io_current"]
+    def d_total_io_historical(self, id_):
+        return self._t[str(id_)]["total_io_historical"]
+        
+    def investment(self, id_):
+        return Investments.object.get(pk=id_)
+        
+    def dumps(self):
+        return dumps(self._t,  indent=4,  cls=MyDjangoJSONEncoder )
+        
+    def print(self):
+        print(self.dumps())
