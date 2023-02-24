@@ -1,6 +1,6 @@
 from base64 import  b64encode, b64decode
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from decimal import Decimal
 from django.conf import settings
 from django.db import transaction
@@ -16,7 +16,7 @@ from itertools import permutations
 from mimetypes import guess_extension
 from moneymoney import models, serializers
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
-from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotals, InvestmentsOperationsTotalsManager, StrategyIO
+from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotalsManager, StrategyIO
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_one_column, cursor_rows_as_dict, show_queries, show_queries_function
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
@@ -561,7 +561,6 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
             return self.queryset
 
 
-
     @action(detail=False, methods=["get"], name='List investments with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
     def withbalance(self, request): 
         def percentage_to_selling_point(shares, selling_price, last_quote):       
@@ -573,62 +572,30 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 return Percentage(selling_price-last_quote, last_quote)
             else:#Long short products
                 return Percentage(-(selling_price-last_quote), last_quote)
-        #######################################
-        #PL
-#        from moneymoney_pl import core
-
-#        pia=cursor_rows("""SELECT products.id as products_id, investments.id as investments_id, multiplier, accounts.currency as accounts_currency,
-#products.currency as products_currency, productstypes_id 
-#from accounts, investments, products, leverages 
-#where accounts.id=investments.accounts_id and investments.products_id=products.id and leverages.id=products.leverages_id and investments.id=%s""", (69,))[0]
-#        dt=timezone.now()
-#        rows=cursor_rows("select * from investmentsoperations where investments_id=69 order by datetime")
-#        d=core.calculate_io_lazy(dt,pia,rows,"EUR")
-#        
-#        for products_id, dt in d["lazy_quotes"].keys():
-#            d["lazy_quotes"][(products_id, dt)]=cursor_rows("select quote from quote(%s,%s)", [products_id, dt])[0]['quote']
-#            
-#        for k, v in d["lazy_quotes"].items():
-#            print("AHORA", k, "==>",  v)        
-#        for from_,  to_, dt in d["lazy_factors"].keys():
-#            d["lazy_factors"][(from_, to_, dt)]=cursor_rows("select currency_factor from currency_factor(%s,%s,%s)", [dt, from_, to_])[0]['currency_factor']
-#            
-#        for k, v in d["lazy_factors"].items():
-#            print("AHORA", k, "==>",  v)
+        #######################################      
+        start=datetime.now()
 #        
 #        
-#        r=core.calculate_io_finish(d)
+#        plio=models.PlInvestmentOperations.from_ids(timezone.now(),  'EUR',  list_ids=[69, ],  mode=1)
+#        print(plio.d_io_current(69)[0])
 #        
-#        
-#        r=cursor_rows("select * from pl_investment_operations(now(), 'EUR', '{69}', false,false,true);")[0]['pl_investment_operations']
-#        from json import loads,  dumps
-#        dict_=loads(r)
-#        print (dumps(dict_,  cls=MyDjangoJSONEncoder,  indent=4))        
-#        
-#        r=cursor_rows("select * from pl_total_balance(now(), 'EUR');")[0]['pl_total_balance']
-#        from json import loads,  dumps
-#        dict_=loads(r)
-#        print (dumps(dict_,  cls=MyDjangoJSONEncoder,  indent=4))
-        
-        
-        
-        #print(models.Assets.pl_investment_operations(timezone.now(), request.user.profile.currency, [69, ], 1))
-        plio=models.PlInvestmentOperations.from_ids(timezone.now(),  'EUR',  list_ids=[69, ],  mode=1)
-        print(plio.d_total_io_current(69))
-        
-        plio2=models.PlInvestmentOperations.simulation(timezone.now(),  'EUR',  models.Investments.objects.filter(pk=69), [],  mode=1)
-#        plio2.print()
-        print(plio.keys(), "from_ids")
-        print(plio2.keys(), "simulate")
-        print(plio2.d_total_io_current(69))
+#        plio2=models.PlInvestmentOperations.simulation(timezone.now(),  'EUR',  models.Investments.objects.filter(pk=69), [],  mode=1)
+#        print(plio.keys(), "from_ids")
+#        print(plio2.keys(), "simulate")
+#        print(plio2.d_io_current(69)[0])
  
         
         
         ##########
+        
+        plio=models.PlInvestmentOperations.from_ids(timezone.now(),  'EUR',  None,  mode=2)
         r=[]
         for o in self.get_queryset().select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages"):
-            iot=InvestmentsOperationsTotals.from_investment(request, o, timezone.now(), request.user.profile.currency)
-            percentage_invested=None if iot.io_total_current["invested_user"]==0 else  iot.io_total_current["gains_gross_user"]/iot.io_total_current["invested_user"]
+            percentage_invested=None if plio.d_total_io_current(o.id)["invested_user"]==0 else  plio.d_total_io_current(o.id)["gains_gross_user"]/plio.d_total_io_current(o.id)["invested_user"]
+#            try:                
+            last_day_diff= (o.products.basic_results()['last']-o.products.basic_results()['penultimate'])*Decimal(plio.d_total_io_current(o.id)["shares"])*o.products.real_leveraged_multiplier()
+#            except:
+#                last_day_diff=0
 
             r.append({
                 "id": o.id,  
@@ -640,24 +607,25 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "products":request.build_absolute_uri(reverse('products-detail', args=(o.products.id, ))), 
                 "last_datetime": o.products.basic_results()['last_datetime'], 
                 "last": o.products.basic_results()['last'], 
-                "daily_difference": iot.current_last_day_diff(), 
+                "daily_difference": last_day_diff, 
                 "daily_percentage":percentage_between(o.products.basic_results()['penultimate'], o.products.basic_results()['last']), 
-                "invested_user": iot.io_total_current["invested_user"], 
-                "gains_user": iot.io_total_current["gains_gross_user"], 
-                "balance_user": iot.io_total_current["balance_user"], 
+                "invested_user": plio.d_total_io_current(o.id)["invested_user"], 
+                "gains_user": plio.d_total_io_current(o.id)["gains_gross_user"], 
+                "balance_user": plio.d_total_io_current(o.id)["balance_user"], 
                 "currency": o.products.currency, 
                 "currency_account": o.accounts.currency, 
                 "percentage_invested": percentage_invested, 
-                "percentage_selling_point": percentage_to_selling_point(iot.io_total_current["shares"], iot.investment.selling_price, iot.investment.products.basic_results()['last']), 
+                "percentage_selling_point": percentage_to_selling_point(plio.d_total_io_current(o.id)["shares"], o.selling_price, o.products.basic_results()['last']), 
                 "selling_expiration": o.selling_expiration, 
-                "shares":iot.io_total_current["shares"], 
+                "shares":plio.d_total_io_current(o.id)["shares"], 
                 "balance_percentage": o.balance_percentage, 
                 "daily_adjustment": o.daily_adjustment, 
                 "selling_price": o.selling_price, 
                 "is_deletable": o.is_deletable(), 
                 "flag": o.products.stockmarkets.country, 
-                "gains_at_selling_point_investment": o.selling_price*o.products.real_leveraged_multiplier()*iot.io_total_current["shares"]-iot.io_total_current["invested_investment"], 
+                "gains_at_selling_point_investment": Decimal(o.selling_price)*Decimal(o.products.real_leveraged_multiplier())*Decimal(plio.d_total_io_current(o.id)["shares"])-Decimal(plio.d_total_io_current(o.id)["invested_investment"]), 
             })
+        print(datetime.now()-start, "balance")
         return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
     @action(detail=True, methods=["get"], name='Investments operations evolution chart', url_path="operations_evolution_chart", url_name='operations_evolution_chart', permission_classes=[permissions.IsAuthenticated])
@@ -1708,6 +1676,10 @@ from
     investments, 
     products 
 where investments.products_id=products.id""", (year, request.user.profile.currency, ))
+#    dt_from=dtaware_year_start(year, request.user.profile.zone)
+#    dt_to=dtaware_year_end(year, request.user.profile.zone)
+#
+#    plio=models.PlInvestmentOperations.from_ids(dt_to, request.user.profile.currency)
     
     #This inner joins its made to see all productstypes_id even if they are Null.
     # Subquery for dividends is used due to if I make a where from dividends table I didn't get null productstypes_id
@@ -1724,6 +1696,8 @@ group by productstypes_id""", (year, ))
     dividends_dict=listdict2dict(dividends, "productstypes_id")
     l=[]
     for pt in models.Productstypes.objects.all():
+#        gains_net=plio.historical_gains_between_dates(dt_from, dt_to, "gains_net_user", pt)
+#        gains_gross=plio.historical_gains_between_dates(dt_from, dt_to, "gains_gross_user", pt)
         gains_net, gains_gross= 0, 0
         dividends_gross, dividends_net=0, 0
         for row in gains:

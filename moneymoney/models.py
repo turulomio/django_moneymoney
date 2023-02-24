@@ -1196,9 +1196,10 @@ class PlInvestmentOperations():
         
     def list_investments_id(self):
         r=[]
-        for key in self._t.keys():
+        for key in self.keys():
             if key not in t_keys_not_investment():
                 r.append(key)
+        print(r)
         return r
         
     def d(self, id_):
@@ -1220,8 +1221,8 @@ class PlInvestmentOperations():
     def d_total_io(self, id_):
         return self._t[str(id_)]["total_io"]
     def d_total_io_current(self, id_):
-        print(id_ in self._t) #False
-        print(str(id_) in self._t, "str") #True
+#        print(id_ in self._t) #False
+#        print(str(id_) in self._t, "str") #True
         return self._t[str(id_)]["total_io_current"]
     def d_total_io_historical(self, id_):
         return self._t[str(id_)]["total_io_historical"]
@@ -1234,3 +1235,18 @@ class PlInvestmentOperations():
         
     def print(self):
         print(self.dumps())
+        
+    def historical_gains_between_dates(self, dt_from, dt_to,  key, productstypes_id=None):
+        r=0
+        for investments_id in self.list_investments_id():
+            print(investments_id)
+            for ioh in self.d_io_historical(investments_id):
+                print(ioh)
+                if dt_from < ioh["dt_end"] and ioh["dt_end"]< dt_to:
+                    if productstypes_id is None:
+                        r=r+ioh[key]
+                    else:
+                        if int(self.d_data(investments_id)["productstypes_id"])==int(productstypes_id):
+                            r=r+ioh[key]
+        return r
+
