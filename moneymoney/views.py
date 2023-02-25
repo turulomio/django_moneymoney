@@ -974,10 +974,11 @@ class BanksViewSet(viewsets.ModelViewSet):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsoperationsFull(request):
-    ids=RequestGetListOfIntegers(request, "investments")
-    plio=models.PlInvestmentOperations.from_ids(timezone.now(), request.user.profile.currency, ids, 1)
-    show_queries_function()
-    return JsonResponse( plio.t(), encoder=MyDjangoJSONEncoder,     safe=False)
+    ids=RequestGetListOfIntegers(request, "investments[]")
+    mode=RequestGetInteger(request, "mode", 1)
+    print(ids, mode)
+    plio=models.PlInvestmentOperations.from_ids(timezone.now(), request.user.profile.currency, ids, mode)
+    return JsonResponse( plio.t(), encoder=MyDjangoJSONEncoder, safe=False)
 
 
 @api_view(['POST', ]) 
@@ -1088,18 +1089,18 @@ def Currencies(request):
     
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
-
-@transaction.atomic
-@api_view(['GET', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def InvestmentsOperationsTotalManager_investments_same_product(request):
-    product=RequestGetUrl(request, "product", models.Products)
-    if product is not None:
-        qs_investments=models.Investments.objects.filter(products=product, active=True)
-        
-        plio=models.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, qs_investments,  2)
-        return JsonResponse( plio.t(), encoder=MyDjangoJSONEncoder, safe=False)
-    return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
+#
+#@transaction.atomic
+#@api_view(['GET', ])    
+#@permission_classes([permissions.IsAuthenticated, ])
+#def InvestmentsOperationsTotalManager_investments_same_product(request):
+#    product=RequestGetUrl(request, "product", models.Products)
+#    if product is not None:
+#        qs_investments=models.Investments.objects.filter(products=product, active=True)
+#        
+#        plio=models.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, qs_investments,  2)
+#        return JsonResponse( plio.t(), encoder=MyDjangoJSONEncoder, safe=False)
+#    return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
 
 class LeveragesViewSet(CatalogModelViewSet):
     queryset = models.Leverages.objects.all()
