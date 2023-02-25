@@ -9,7 +9,6 @@ from django.utils.translation import gettext as _
 from django.utils import timezone
 from json import loads, dumps
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
-from moneymoney.investmentsoperations import InvestmentsOperations
 from moneymoney.reusing.casts import string2list_of_integers
 from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_row, cursor_rows
 from moneymoney.reusing.currency import Currency
@@ -432,11 +431,6 @@ class Investments(models.Model):
 
     def fullName(self):
         return "{} ({})".format(self.name, self.accounts.name)
-            
-    def operations(self, request, local_currency):
-        if hasattr(self, "_operations") is False:
-            self._operations=InvestmentsOperations.from_investment(request, self, timezone.now(), local_currency)
-        return self._operations
 
     ## Función que devuelve un booleano si una cuenta es borrable, es decir, que no tenga registros dependientes.
     def is_deletable(self):
@@ -543,9 +537,12 @@ class Investmentsoperations(models.Model):
         concepts=Concepts.objects.filter(pk__in=(eConcept.BuyShares, eConcept.SellShares, eConcept.BankCommissions))
         qs_ao=Accountsoperations.objects.filter(concepts__in=concepts, comment=f'{eComment.InvestmentOperation},{self.id}')
         qs_ao.delete()
-
-        investment_operations=InvestmentsOperations.from_investment(request, self.investments, timezone.now(), request.user.profile.currency)
-        io=investment_operations.o_find_by_id(self.id)
+        plio=PlInvestmentOperations.from_ids(timezone.now(), request.user.profile.currency, [self.investments.id, ], 1)
+        #Searches io investments operations of the comment
+        io=None
+        for o in plio.d_io(self.investments.id):
+            if o["id"]==self.id:
+                io=o
         
         if self.investments.daily_adjustment is True: #Because it uses adjustment information
             return
