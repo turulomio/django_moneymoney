@@ -757,7 +757,6 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
             "dividends": dividends, 
             "gains": gains, 
         }
-        show_queries_function()
         return JsonResponse( d, encoder=MyDjangoJSONEncoder, safe=False)
 
 class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
@@ -1654,12 +1653,10 @@ def ReportAnnual(request, year):
 
 def ReportAnnualIncome(request, year):
     list_=[]
-    #IOManager de final de año para luego calcular gains entre fechas
     dt_year_from=dtaware_year_start(year, request.user.profile.zone)
     dt_year_to=dtaware_year_end(year, request.user.profile.zone)
     
     plio=models.PlInvestmentOperations.from_all(dt_year_to, request.user.profile.currency, 1)
-    #iom=InvestmentsOperationsManager.from_investment_queryset(models.Investments.objects.all().select_related("products"), dt_year_to, request)
     d_dividends=listdict2dict(models.Dividends.lod_ym_netgains_dividends(request, dt_from=dt_year_from, dt_to=dt_year_to), "year")
     d_incomes=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Income, year=year), "year")
     d_expenses=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Expense, year=year), "year")
@@ -1686,7 +1683,6 @@ def ReportAnnualIncome(request, year):
         dt_from=dtaware_month_start(year, month,  request.user.profile.zone)
         dt_to=dtaware_month_end(year, month,  request.user.profile.zone)
         gains=plio.sum_ioh_between_dt(dt_from, dt_to, "gains_net_user")
-        #iom.historical_gains_net_user_between_dt(dt_from, dt_to)
         list_.append({
             "id": f"{year}/{month}/", 
             "month_number":month, 
@@ -2021,12 +2017,11 @@ def ReportEvolutionAssets(request, from_year):
     for year in range(from_year, date.today().year+1): 
         dt_from=dtaware_year_start(year, request.user.profile.zone)
         dt_to=dtaware_year_end(year, request.user.profile.zone)
-        
-        iom=InvestmentsOperationsManager.from_investment_queryset(models.Investments.objects.all().select_related("products"), dt_to, request)
+        plio=models.PlInvestmentOperations.from_all(dt_to, request.user.profile.currency, 1)
         dividends=d_dividends[year]["total"]
         incomes=d_incomes[year]["total"]-dividends
         expenses=d_expenses[year]["total"]
-        gains=iom.historical_gains_net_user_between_dt(dt_from, dt_to)
+        gains=plio.sum_ioh_between_dt(dt_from, dt_to, "gains_net_user")
         list_.append({
             "year": year, 
             "balance_start": tb[year-1]["total_user"], 
@@ -2038,7 +2033,7 @@ def ReportEvolutionAssets(request, from_year):
             "expenses":expenses, 
             "total":incomes+gains+dividends+expenses, 
         })
-    
+    show_queries_function()
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
     
 @api_view(['GET', ])    
@@ -2080,7 +2075,6 @@ def ReportEvolutionAssetsChart(request):
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-
 def ReportEvolutionInvested(request, from_year):
     list_=[]
     qs=models.Investments.objects.all().select_related("products")
@@ -2102,7 +2096,7 @@ def ReportEvolutionInvested(request, from_year):
         d['net_gains_plus_dividends']=plio.sum_ioh_between_dt(dt_from, dt_to, "gains_net_user")+d_dividends[year]["total"]
         d['custody_commissions']=d_custody_commissions[year]["total"]
         d['taxes']=d_taxes[year]["total"]
-        d['investment_commissions']=plio.sum_io_between_dt(dt_from, dt_to, "commissions_account")
+        d['investment_commissions']=plio.sum_io_between_dt(dt_from, dt_to, "commission_account")
         list_.append(d)
     
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder, safe=False)
