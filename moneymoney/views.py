@@ -598,7 +598,7 @@ class InvestmentsClasses(APIView):
         d["by_percentage"]=json_classes_by_percentage()
         d["by_product"]=json_classes_by_product()
         d["by_producttype"]=json_classes_by_producttype()
-        show_queries_function()
+        
         return JsonResponse( d, encoder=MyDjangoJSONEncoder,     safe=False)
 
 class UnogeneratorWorking(APIView):
@@ -712,8 +712,53 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"], name='Investments operations evolution chart', url_path="operations_evolution_chart", url_name='operations_evolution_chart', permission_classes=[permissions.IsAuthenticated])
     def operations_evolution_chart(self, request, pk=None):
         investment=self.get_object()
-        io=InvestmentsOperations.from_investment(request, investment, timezone.now(), request.user.profile.currency)
-        return JsonResponse( io.chart_evolution(), encoder=MyDjangoJSONEncoder, safe=False)
+        plio=models.PlInvestmentOperations.from_ids(timezone.now(), request.user.profile.currency, [investment.id, ], 1)
+        if len(plio.d_io(investment.id))==0:
+            return JsonResponse( _("Insuficient data") , encoder=MyDjangoJSONEncoder, safe=False)
+        
+        qs_dividends=models.Dividends.objects.all().filter(investments=investment).order_by('datetime')
+        #Gets investment important datetimes: operations, dividends, init and current time. For each datetime adds another at the beginning of the day, to get mountains in graph
+        datetimes=set()
+        datetimes.add(plio.d_io(investment.id)[0]["datetime"]-timedelta(seconds=1))
+        for op in plio.d_io(investment.id):
+            datetimes.add(op["datetime"])
+            datetimes.add(op["datetime"]+timedelta(seconds=1))
+        for dividend in qs_dividends:
+            datetimes.add(dividend.datetime)
+        datetimes.add(timezone.now())
+        datetimes_list=list(datetimes)
+        datetimes_list.sort()
+        
+        invested=[]
+        gains_dividends=[]
+        balance=[]
+        dividends=[]
+        gains=[]
+        
+        for i, dt in enumerate(datetimes_list):
+            plio_dt=models.PlInvestmentOperations.from_ids(dt, request.user.profile.currency, [investment.id, ], 2)
+            #Calculate dividends in datetime
+            dividend_net=0
+            for dividend in qs_dividends:
+                if dividend.datetime<=dt:
+                    dividend_net=dividend_net+dividend.net
+    
+            #Append data of that datetime
+            invested.append(plio_dt.d_total_io_current(investment.id)["invested_user"])
+            balance.append(plio_dt.d_total_io_current(investment.id)["balance_futures_user"])
+            gains_dividends.append(plio_dt.d_total_io_historical(investment.id)["gains_net_user"]+dividend_net)
+            dividends.append(dividend_net)
+            gains.append(plio_dt.d_total_io_historical(investment.id)["gains_net_user"])
+        d= {
+            "datetimes": datetimes_list, 
+            "invested": invested, 
+            "balance":balance, 
+            "gains_dividends":gains_dividends, 
+            "dividends": dividends, 
+            "gains": gains, 
+        }
+        show_queries_function()
+        return JsonResponse( d, encoder=MyDjangoJSONEncoder, safe=False)
 
 class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
     queryset = models.Investmentsoperations.objects.select_related("investments").select_related("investments__products").all()
@@ -1552,7 +1597,7 @@ def RecomendationMethods(request):
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-@ptimeit
+
 def ReportAnnual(request, year):
     def month_results(month_end, month_name, local_currency):
         return month_end, month_name, models.Assets.pl_total_balance(month_end, local_currency)
@@ -1606,7 +1651,7 @@ def ReportAnnual(request, year):
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-@ptimeit
+
 def ReportAnnualIncome(request, year):
     list_=[]
     #IOManager de final de año para luego calcular gains entre fechas
@@ -1653,7 +1698,7 @@ def ReportAnnualIncome(request, year):
             "dividends":dividends, 
             "total":incomes+gains+expenses+dividends+fast_operations,  
         })
-    show_queries_function()
+    
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder, safe=False)
 
 @api_view(['GET', ])    
@@ -1751,7 +1796,7 @@ def ReportAnnualIncomeDetails(request, year, month):
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-@ptimeit
+
 def ReportAnnualGainsByProductstypes(request, year):
 #    gains=cursor_rows("""
 #select 
@@ -1962,7 +2007,7 @@ def ReportDividends(request):
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-@ptimeit
+
 def ReportEvolutionAssets(request, from_year):
     tb={}
     for year in range(from_year-1, date.today().year+1):
@@ -1998,7 +2043,7 @@ def ReportEvolutionAssets(request, from_year):
     
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-@ptimeit
+
 def ReportEvolutionAssetsChart(request):
     def month_results(year, month,  local_currency, local_zone):
         dt=dtaware_month_end(year, month, local_zone)
@@ -2035,7 +2080,7 @@ def ReportEvolutionAssetsChart(request):
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-@ptimeit
+
 def ReportEvolutionInvested(request, from_year):
     list_=[]
     qs=models.Investments.objects.all().select_related("products")
@@ -2137,14 +2182,14 @@ def ReportCurrentInvestmentsOperations(request):
                 "currency_user": plio.d_data(inv.id)["currency_user"], 
             })
     ld=listdict_order_by(ld, "datetime")
-    show_queries_function()
+    
     return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
 
 
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-@ptimeit
+
 def ReportRanking(request):
     plio=models.PlInvestmentOperations.from_ids(timezone.now(), request.user.profile.currency, None, mode=2)
 
