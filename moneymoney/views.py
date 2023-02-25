@@ -975,10 +975,9 @@ class BanksViewSet(viewsets.ModelViewSet):
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsoperationsFull(request):
     ids=RequestGetListOfIntegers(request, "investments")
-    r=[]
-    for o in models.Investments.objects.filter(id__in=ids).select_related("accounts", "products", "products__productstypes", "products__leverages"):
-        r.append(InvestmentsOperations.from_investment(request, o, timezone.now(), request.user.profile.currency).json())
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+    plio=models.PlInvestmentOperations.from_ids(timezone.now(), request.user.profile.currency, ids, 1)
+    show_queries_function()
+    return JsonResponse( plio.t(), encoder=MyDjangoJSONEncoder,     safe=False)
 
 
 @api_view(['POST', ]) 
