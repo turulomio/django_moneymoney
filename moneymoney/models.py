@@ -1230,11 +1230,13 @@ class PlInvestmentOperations():
         else:
             return Percentage(-(self.basic_results(ioc["investments_id"])["last"]-Decimal(lastyear)), lastyear)
 
-    def ioc_age(self, ioc):
+    def ioc_days(self, ioc):
             return (date.today()-postgres_datetime_string_2_dtaware(ioc["datetime"]).date()).days
+    def ioh_years(self, ioh):
+        return round(Decimal((postgres_datetime_string_2_dtaware(ioh["dt_end"])-postgres_datetime_string_2_dtaware(ioh["dt_start"])).days/365), 2)
 
     def ioc_percentage_apr_user(self, ioc):
-            dias=self.ioc_age(ioc)
+            dias=self.ioc_days(ioc)
             if dias==0:
                 dias=1
             return Percentage(self.ioc_percentage_total_user(ioc)*365,  dias)
@@ -1293,11 +1295,12 @@ class PlInvestmentOperations():
     def print(self):
         print(self.dumps())
         
-    def o_historical_gains_between_dates(self, dt_from, dt_to,  key, productstypes_id=None):
+    def sum_ioh_between_dt(self, dt_from, dt_to,  key, productstypes_id=None):
         r=0
         for investments_id in self.list_investments_id():
             for ioh in self.d_io_historical(investments_id):
-                if dt_from < postgres_datetime_string_2_dtaware(ioh["dt_end"]) and postgres_datetime_string_2_dtaware(ioh["dt_end"])< dt_to:
+                dt_end=postgres_datetime_string_2_dtaware(ioh["dt_end"])
+                if dt_from <= dt_end and dt_end<=dt_to:
                     if productstypes_id is None:
                         r=r+ioh[key]
                     else:
@@ -1305,11 +1308,11 @@ class PlInvestmentOperations():
                             r=r+ioh[key]
         return r
 
-    def o_commissions_account_between_dt(self, dt_from, dt_to):
+    def sum_io_between_dt(self, dt_from, dt_to, key):
         r=0
         for investments_id in self.list_investments_id():
             for o in self.d_io(investments_id):
                 o_dt=postgres_datetime_string_2_dtaware(o["datetime"])
                 if dt_from<=o_dt and o_dt<=dt_to:
-                    r=r - o["commission_account"]
+                    r=r - o[key]
         return r

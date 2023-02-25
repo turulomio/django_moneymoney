@@ -25,6 +25,7 @@ from moneymoney.reusing.percentage import Percentage,  percentage_between
 from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestString, RequestListUrl, id_from_url, all_args_are_not_none, RequestCastingError
 from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEncoder, json_success_response
 from moneymoney.reusing.sqlparser import sql_in_one_line
+from moneymoney_pl.core import postgres_datetime_string_2_dtaware
 from requests import delete, post
 from subprocess import run
 from os import path
@@ -1624,19 +1625,20 @@ def ReportAnnualIncomeDetails(request, year, month):
         qs=models.Dividends.objects.filter(datetime__year=year, datetime__month=month).order_by('datetime').select_related("investments").select_related("investments__accounts")
         return serializers.DividendsSerializer(qs, many=True, context={'request': request}).data
     def listdict_investmentsoperationshistorical(request, year, month, local_currency, local_zone):
-        #Git investments with investmentsoperations in this year, month
         list_ioh=[]
         dt_year_month=dtaware_month_end(year, month, local_zone)
         ioh_id=0#To avoid vue.js warnings
-        for investment in models.Investments.objects.raw("select distinct(investments.*) from investmentsoperations, investments where date_part('year', datetime)=%s and date_part('month', datetime)=%s and investments.id=investmentsoperations.investments_id", (year, month)):
-            investments_operations=InvestmentsOperations.from_investment(request, investment, dt_year_month, local_currency)
-            
-            for ioh in investments_operations.io_historical:
-                if ioh['dt_end'].year==year and ioh['dt_end'].month==month:
+        
+        plio=models.PlInvestmentOperations.from_all(dt_year_month, request.user.profile.currency, 1)
+        for investment in plio.qs_investments():
+            for ioh in plio.d_io_historical(investment.id):
+                dt_end=postgres_datetime_string_2_dtaware(ioh["dt_end"])
+                if dt_end.year==year and dt_end.month==month:
                     ioh["id"]=ioh_id
                     ioh["name"]=investment.fullName()
                     ioh["operationstypes"]=request.build_absolute_uri(reverse('operationstypes-detail', args=(ioh["operationstypes_id"],  )))
-                    ioh["years"]=round(Decimal((ioh["dt_end"]-ioh["dt_start"]).days/365), 2)
+                    ioh["years"]=plio.ioh_years(ioh)
+                    ioh["currency_user"]=request.user.profile.currency
                     list_ioh.append(ioh)
                     ioh_id=ioh_id+1
         list_ioh= sorted(list_ioh,  key=lambda item: item['dt_end'])
@@ -1685,8 +1687,8 @@ group by productstypes_id""", (year, ))
     dividends_dict=listdict2dict(dividends, "productstypes_id")
     l=[]
     for pt in models.Productstypes.objects.all():
-        gains_net=plio.o_historical_gains_between_dates(dt_from, dt_to, "gains_net_user", pt.id)
-        gains_gross=plio.o_historical_gains_between_dates(dt_from, dt_to, "gains_gross_user", pt.id)
+        gains_net=plio.sum_ioh_between_dt(dt_from, dt_to, "gains_net_user", pt.id)
+        gains_gross=plio.sum_ioh_between_dt(dt_from, dt_to, "gains_gross_user", pt.id)
 #        gains_net, gains_gross= 0, 0
         dividends_gross, dividends_net=0, 0
 #        for row in gains:
@@ -1957,10 +1959,10 @@ def ReportEvolutionInvested(request, from_year):
         d['balance']=plio.sum_total_io_current()["balance_futures_user"]
         d['diff']=d['balance']-d['invested']
         d['percentage']=percentage_between(d['invested'], d['balance'])
-        d['net_gains_plus_dividends']=Decimal(plio.o_historical_gains_between_dates(dt_from, dt_to, "gains_net_user"))+d_dividends[year]["total"]
+        d['net_gains_plus_dividends']=Decimal(plio.sum_ioh_between_dt(dt_from, dt_to, "gains_net_user"))+d_dividends[year]["total"]
         d['custody_commissions']=d_custody_commissions[year]["total"]
         d['taxes']=d_taxes[year]["total"]
-        d['investment_commissions']=plio.o_commissions_account_between_dt(dt_from, dt_to)
+        d['investment_commissions']=plio.sum_io_between_dt(dt_from, dt_to, "commissions_account")
         list_.append(d)
     
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder, safe=False)

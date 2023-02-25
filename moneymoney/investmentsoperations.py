@@ -394,7 +394,7 @@ class InvestmentsOperations:
             o["operationstypes"]=request.operationstypes[o["operationstypes_id"]]
         return self.io        
         
-    def o_commissions_account_between_dt(self, dt_from, dt_to):
+    def sum_io_commissions_account_between_dt(self, dt_from, dt_to):
         r=0
         for o in self.io:
             if dt_from<=o["datetime"] and o["datetime"]<=dt_to:
@@ -595,10 +595,10 @@ class InvestmentsOperationsManager:
         r.order_by("dt_end")
         return r
         
-    def o_commissions_account_between_dt(self, dt_from, dt_to):
+    def sum_io_commissions_account_between_dt(self, dt_from, dt_to):
         r=0
         for o in self.list:
-                r=r + o.o_commissions_account_between_dt(dt_from, dt_to)
+                r=r + o.sum_io_commissions_account_between_dt(dt_from, dt_to)
         return r
 
 
