@@ -1086,7 +1086,15 @@ class Assets:
             Returns a dict with the following keys:
             {'accounts_user': 0, 'investments_user': 0, 'total_user': 0, 'investments_invested_user': 0}
         """
-        return loads(cursor_rows("select * from pl_total_balance(%s,%s)", (dt, local_currency, ))[0]["pl_total_balance"])[0]
+        return loads(cursor_rows("select * from pl_total_balance(%s,%s)", (dt, local_currency, ))[0]["pl_total_balance"], object_hook=Assets.loads_hooks_tb)[0]
+        
+    @staticmethod
+    def old_pl_investment_operations(dt, local_currency, list_ids, mode):
+        """
+            If list_ids is None returns investment_operations for all investments
+            Returns a dict with the following keys:
+        """
+        return loads(cursor_rows("select * from pl_investment_operations(%s,%s,%s,%s)", (dt, local_currency, list_ids, mode))[0]["pl_investment_operations"])
         
     @staticmethod
     def pl_investment_operations(dt, local_currency, list_ids, mode):
@@ -1094,8 +1102,52 @@ class Assets:
             If list_ids is None returns investment_operations for all investments
             Returns a dict with the following keys:
         """
-        return loads(cursor_rows("select * from pl_investment_operations(%s,%s,%s,%s)", (dt, local_currency, list_ids, mode))[0]["pl_investment_operations"])
+        return loads(cursor_rows("select * from pl_investment_operations(%s,%s,%s,%s)", (dt, local_currency, list_ids, mode))[0]["pl_investment_operations"], object_hook=Assets.loads_hooks_io)
 
+    @staticmethod
+    def cast_dict(iter_value, decimal_fields, datetime_fields):
+        def cast(k, v):
+            if k in decimal_fields and v.__class__==str:
+                return Decimal(v)
+            if k in datetime_fields and v.__class__==str:
+                return postgres_datetime_string_2_dtaware(v)
+            return v
+        #####
+        if isinstance(iter_value, dict):
+            for k, v in iter_value.items():
+                if isinstance(v, dict):
+                    iter_value[k]=Assets.cast_dict(v, decimal_fields, datetime_fields)
+                elif isinstance(iter_value, list):
+                    for i in v:
+                        i=Assets.cast_dict(v, decimal_fields, datetime_fields)
+                else:
+                    iter_value[k]=cast(k, v)
+        elif isinstance(iter_value, list):
+            for i in v:
+                i=Assets.cast_dict(i, decimal_fields, datetime_fields)
+        return iter_value
+
+    @staticmethod
+    def loads_hooks_tb(o):
+        return Assets.cast_dict(o,  ["accounts_user",'investments_user', 'total_user', 'investments_invested_user'], ["datetime", ])
+
+    @staticmethod
+    def loads_hooks_io(o):
+        return Assets.cast_dict(o,  [
+            "accounts_user",
+            "gains_gross_user", 
+            "gains_net_user", 
+            'invested_user', 
+            'investments_user', 
+            "shares", 
+            'total_user', 
+            'investments_invested_user'
+        ], [
+            "datetime", 
+            "dt_end", 
+            "dt_start", 
+            "dt"
+        ])
 
 class PlInvestmentOperations():
     """

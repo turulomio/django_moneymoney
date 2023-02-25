@@ -575,6 +575,15 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 return Percentage(-(selling_price-last_quote), last_quote)
         #######################################      
         start=datetime.now()
+        
+        
+        ### DELETE MemoryError
+        
+        print("OLD", models.Assets.old_pl_investment_operations(timezone.now(), request.user.profile.currency, [69, ],  2))
+        print()
+        print("AHORA", models.Assets.pl_investment_operations(timezone.now(), request.user.profile.currency, [69, ],  2))
+        #######
+        
 
         
         plio=models.PlInvestmentOperations.from_ids(timezone.now(),  'EUR',  None,  mode=2)
@@ -1520,7 +1529,9 @@ def ReportAnnualIncome(request, year):
     #IOManager de final de año para luego calcular gains entre fechas
     dt_year_from=dtaware_year_start(year, request.user.profile.zone)
     dt_year_to=dtaware_year_end(year, request.user.profile.zone)
-    iom=InvestmentsOperationsManager.from_investment_queryset(models.Investments.objects.all().select_related("products"), dt_year_to, request)
+    
+    plio=models.PlInvestmentOperations.from_all(dt_year_to, request.user.profile.currency, 1)
+    #iom=InvestmentsOperationsManager.from_investment_queryset(models.Investments.objects.all().select_related("products"), dt_year_to, request)
     d_dividends=listdict2dict(models.Dividends.lod_ym_netgains_dividends(request, dt_from=dt_year_from, dt_to=dt_year_to), "year")
     d_incomes=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Income, year=year), "year")
     d_expenses=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Expense, year=year), "year")
@@ -1546,7 +1557,8 @@ def ReportAnnualIncome(request, year):
         fast_operations=d_fast_operations[year][f"m{month}"]
         dt_from=dtaware_month_start(year, month,  request.user.profile.zone)
         dt_to=dtaware_month_end(year, month,  request.user.profile.zone)
-        gains=iom.historical_gains_net_user_between_dt(dt_from, dt_to)
+        gains=plio.sum_ioh_between_dt(dt_from, dt_to, "gains_net_user")
+        #iom.historical_gains_net_user_between_dt(dt_from, dt_to)
         list_.append({
             "id": f"{year}/{month}/", 
             "month_number":month, 
@@ -1558,6 +1570,7 @@ def ReportAnnualIncome(request, year):
             "dividends":dividends, 
             "total":incomes+gains+expenses+dividends+fast_operations,  
         })
+    show_queries_function()
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder, safe=False)
 
 @api_view(['GET', ])    
