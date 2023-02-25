@@ -16,7 +16,7 @@ from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string
 from moneymoney.reusing.listdict_functions import listdict_year_month_value_transposition
 from moneymoney.reusing.percentage import Percentage
-from moneymoney_pl.core import t_keys_not_investment,  calculate_ios_lazy,  calculate_ios_finish, MyDjangoJSONEncoder, postgres_datetime_string_2_dtaware, loads_hooks_io, loads_hooks_tb
+from moneymoney_pl.core import t_keys_not_investment,  calculate_ios_lazy,  calculate_ios_finish, MyDjangoJSONEncoder, loads_hooks_io, loads_hooks_tb
 
 Decimal
 
@@ -1218,7 +1218,7 @@ class PlInvestmentOperations():
         """
         Public method ioc is a io_current dictionary
         """
-        if postgres_datetime_string_2_dtaware(ioc["datetime"]).year==date.today().year:
+        if ioc["datetime"].year==date.today().year:
             lastyear=ioc["price_user"] #Product value, self.money_price(type) not needed.
         else:
             lastyear=self.basic_results(ioc["investments_id"])["lastyear"]
@@ -1231,9 +1231,9 @@ class PlInvestmentOperations():
             return Percentage(-(self.basic_results(ioc["investments_id"])["last"]-Decimal(lastyear)), lastyear)
 
     def ioc_days(self, ioc):
-            return (date.today()-postgres_datetime_string_2_dtaware(ioc["datetime"]).date()).days
+            return (date.today()-ioc["datetime"].date()).days
     def ioh_years(self, ioh):
-        return round(Decimal((postgres_datetime_string_2_dtaware(ioh["dt_end"])-postgres_datetime_string_2_dtaware(ioh["dt_start"])).days/365), 2)
+        return round(Decimal((ioh["dt_end"]-ioh["dt_start"]).days/365), 2)
 
     def ioc_percentage_apr_user(self, ioc):
             dias=self.ioc_days(ioc)
@@ -1299,8 +1299,7 @@ class PlInvestmentOperations():
         r=0
         for investments_id in self.list_investments_id():
             for ioh in self.d_io_historical(investments_id):
-                dt_end=postgres_datetime_string_2_dtaware(ioh["dt_end"])
-                if dt_from <= dt_end and dt_end<=dt_to:
+                if dt_from <= ioh["dt_end"] and ioh["dt_end"]<=dt_to:
                     if productstypes_id is None:
                         r=r+ioh[key]
                     else:
@@ -1312,7 +1311,6 @@ class PlInvestmentOperations():
         r=0
         for investments_id in self.list_investments_id():
             for o in self.d_io(investments_id):
-                o_dt=postgres_datetime_string_2_dtaware(o["datetime"])
-                if dt_from<=o_dt and o_dt<=dt_to:
+                if dt_from<=o["datetime"] and o["datetime"]<=dt_to:
                     r=r - o[key]
         return r

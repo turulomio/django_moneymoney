@@ -13,6 +13,7 @@ from django.http import JsonResponse
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 from itertools import permutations
+from math import ceil
 from mimetypes import guess_extension
 from moneymoney import models, serializers
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
@@ -25,7 +26,6 @@ from moneymoney.reusing.percentage import Percentage,  percentage_between
 from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestString, RequestListUrl, id_from_url, all_args_are_not_none, RequestCastingError
 from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEncoder, json_success_response
 from moneymoney.reusing.sqlparser import sql_in_one_line
-from moneymoney_pl.core import postgres_datetime_string_2_dtaware
 from requests import delete, post
 from subprocess import run
 from os import path
@@ -510,10 +510,96 @@ class InvestmentsClasses(APIView):
         request=None, 
         responses=OpenApiTypes.OBJECT
     )
+    
+    
+        
+
     def get(self, request, *args, **kwargs):
-        qs_investments_active=models.Investments.objects.filter(active=True).select_related("products").select_related("products__productstypes").select_related("accounts").select_related("products__leverages")
-        iotm=InvestmentsOperationsTotalsManager.from_investment_queryset(qs_investments_active, timezone.now(), request)
-        return JsonResponse( iotm.json_classes(), encoder=MyDjangoJSONEncoder,     safe=False)
+        def json_classes_by_pci():
+            ld=[]
+            for mode, name in (('p', 'Put'), ('c', 'Call'), ('i', 'Inline')):
+                d={"name": name, "balance": 0,  "invested": 0}
+                for investment in qs_investments_active:
+                    if investment.products.pci==mode:
+                        d["balance"]=d["balance"]+plio.d_total_io_current(investment.id)["balance_user"]
+                        d["invested"]=d["invested"]+plio.d_total_io_current(investment.id)["invested_user"]
+                if mode=="c":
+                    d["balance"]=d["balance"]+accounts_balance
+                    d["invested"]=d["invested"]+accounts_balance
+                ld.append(d)
+            
+            return ld
+
+
+
+        def json_classes_by_product():
+            ld=[]
+            for product in models.Products.objects.order_by().distinct("investments__products").select_related("stockmarkets"):
+                d={"name": product.fullName(), "balance": 0,  "invested": 0}
+                for investment in qs_investments_active:
+                    if investment.products==product:
+                        d["balance"]=d["balance"]+plio.d_total_io_current(investment.id)["balance_user"]
+                        d["invested"]=d["invested"]+plio.d_total_io_current(investment.id)["invested_user"]
+                ld.append(d)
+            ld.append({"name": "Accounts", "balance": accounts_balance,  "invested": accounts_balance})
+            return ld
+
+        def json_classes_by_percentage():
+            ld=[]
+            for percentage in range(0, 11):
+                d={"name": f"{percentage*10}% variable", "balance": 0,  "invested": 0}
+                for investment in qs_investments_active:
+                    if ceil(investment.products.percentage/10.0)==percentage:
+                        d["balance"]=d["balance"]+plio.d_total_io_current(investment.id)["balance_user"]
+                        d["invested"]=d["invested"]+plio.d_total_io_current(investment.id)["invested_user"]
+                if percentage==0:
+                    d["balance"]=d["balance"]+accounts_balance
+                    d["invested"]=d["invested"]+accounts_balance
+                ld.append(d)
+            return ld
+
+        def json_classes_by_producttype():
+            ld=[]
+            for producttype in models.Productstypes.objects.all():
+                d={"name": producttype.name, "balance": 0,  "invested": 0}
+                for investment in qs_investments_active:
+                    if investment.products.productstypes==producttype:
+                        d["balance"]=d["balance"]+plio.d_total_io_current(investment.id)["balance_user"]
+                        d["invested"]=d["invested"]+plio.d_total_io_current(investment.id)["invested_user"]
+                if producttype.id==11:#Accounts
+                    d["balance"]=d["balance"]+accounts_balance
+                    d["invested"]=d["invested"]+accounts_balance
+                ld.append(d)
+            return ld
+            
+        def json_classes_by_leverage():
+            ld=[]
+            for leverage in models.Leverages.objects.all():
+                d={"name": leverage.name, "balance": 0,  "invested": 0}
+                for investment in qs_investments_active:
+                    if investment.products.leverages==leverage:
+                        d["balance"]=d["balance"]+plio.d_total_io_current(investment.id)["balance_user"]
+                        d["invested"]=d["invested"]+plio.d_total_io_current(investment.id)["invested_user"]
+                if leverage.id==1:#Accounts
+                    d["balance"]=d["balance"]+accounts_balance
+                    d["invested"]=d["invested"]+accounts_balance
+                ld.append(d)
+            return ld
+            
+        ###################
+        accounts_balance=models.Accounts.balance_user_currency(models.Accounts.objects.filter(active=True), timezone.now())
+        qs_investments_active=models.Investments.objects.filter(active=True).select_related("products","products__productstypes","accounts","products__leverages")
+
+        plio=models.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, qs_investments_active,  1)
+
+        d={}
+        d["by_leverage"]=json_classes_by_leverage()
+        d["by_pci"]=json_classes_by_pci()
+        d["by_percentage"]=json_classes_by_percentage()
+        d["by_product"]=json_classes_by_product()
+        d["by_producttype"]=json_classes_by_producttype()
+        show_queries_function()
+        return JsonResponse( d, encoder=MyDjangoJSONEncoder,     safe=False)
 
 class UnogeneratorWorking(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -578,7 +664,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
         
         
         ### DELETE MemoryError
-        print("AHORA", models.Assets.pl_investment_operations(timezone.now(), request.user.profile.currency, [69, ],  2))
+        #print("AHORA", models.Assets.pl_investment_operations(timezone.now(), request.user.profile.currency, [69, ],  1))
         #######
         
 
@@ -588,7 +674,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
         for o in self.get_queryset().select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages"):
             percentage_invested=None if plio.d_total_io_current(o.id)["invested_user"]==0 else  plio.d_total_io_current(o.id)["gains_gross_user"]/plio.d_total_io_current(o.id)["invested_user"]
             try:                
-                last_day_diff= (o.products.basic_results()['last']-o.products.basic_results()['penultimate'])*Decimal(plio.d_total_io_current(o.id)["shares"])*o.products.real_leveraged_multiplier()
+                last_day_diff= (o.products.basic_results()['last']-o.products.basic_results()['penultimate'])*plio.d_total_io_current(o.id)["shares"]*o.products.real_leveraged_multiplier()
             except:
                 last_day_diff=0
 
@@ -618,7 +704,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "selling_price": o.selling_price, 
                 "is_deletable": o.is_deletable(), 
                 "flag": o.products.stockmarkets.country, 
-                "gains_at_selling_point_investment": Decimal(o.selling_price)*Decimal(o.products.real_leveraged_multiplier())*Decimal(plio.d_total_io_current(o.id)["shares"])-Decimal(plio.d_total_io_current(o.id)["invested_investment"]), 
+                "gains_at_selling_point_investment": o.selling_price*o.products.real_leveraged_multiplier()*plio.d_total_io_current(o.id)["shares"]-plio.d_total_io_current(o.id)["invested_investment"], 
             })
         print(datetime.now()-start, "balance")
         return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
@@ -1642,8 +1728,7 @@ def ReportAnnualIncomeDetails(request, year, month):
         plio=models.PlInvestmentOperations.from_all(dt_year_month, request.user.profile.currency, 1)
         for investment in plio.qs_investments():
             for ioh in plio.d_io_historical(investment.id):
-                dt_end=postgres_datetime_string_2_dtaware(ioh["dt_end"])
-                if dt_end.year==year and dt_end.month==month:
+                if ioh["dt_end"].year==year and ioh["dt_end"].month==month:
                     ioh["id"]=ioh_id
                     ioh["name"]=investment.fullName()
                     ioh["operationstypes"]=request.build_absolute_uri(reverse('operationstypes-detail', args=(ioh["operationstypes_id"],  )))
@@ -1969,7 +2054,7 @@ def ReportEvolutionInvested(request, from_year):
         d['balance']=plio.sum_total_io_current()["balance_futures_user"]
         d['diff']=d['balance']-d['invested']
         d['percentage']=percentage_between(d['invested'], d['balance'])
-        d['net_gains_plus_dividends']=Decimal(plio.sum_ioh_between_dt(dt_from, dt_to, "gains_net_user"))+d_dividends[year]["total"]
+        d['net_gains_plus_dividends']=plio.sum_ioh_between_dt(dt_from, dt_to, "gains_net_user")+d_dividends[year]["total"]
         d['custody_commissions']=d_custody_commissions[year]["total"]
         d['taxes']=d_taxes[year]["total"]
         d['investment_commissions']=plio.sum_io_between_dt(dt_from, dt_to, "commissions_account")
