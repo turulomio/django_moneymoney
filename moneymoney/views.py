@@ -578,9 +578,6 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
         
         
         ### DELETE MemoryError
-        
-        print("OLD", models.Assets.old_pl_investment_operations(timezone.now(), request.user.profile.currency, [69, ],  2))
-        print()
         print("AHORA", models.Assets.pl_investment_operations(timezone.now(), request.user.profile.currency, [69, ],  2))
         #######
         
