@@ -17,7 +17,7 @@ from math import ceil
 from mimetypes import guess_extension
 from moneymoney import models, serializers
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
-from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, InvestmentsOperationsTotalsManager, StrategyIO
+from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, StrategyIO
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_rows_as_dict, show_queries, show_queries_function
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
@@ -1096,8 +1096,9 @@ def InvestmentsOperationsTotalManager_investments_same_product(request):
     product=RequestGetUrl(request, "product", models.Products)
     if product is not None:
         qs_investments=models.Investments.objects.filter(products=product, active=True)
-        iotm=InvestmentsOperationsTotalsManager.from_investment_queryset(qs_investments,  timezone.now(), request)
-        return JsonResponse( iotm.json(), encoder=MyDjangoJSONEncoder,     safe=False)
+        
+        plio=models.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, qs_investments,  2)
+        return JsonResponse( plio.t(), encoder=MyDjangoJSONEncoder, safe=False)
     return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
 
 class LeveragesViewSet(CatalogModelViewSet):
@@ -1189,9 +1190,7 @@ def ProductsQuotesOHCL(request):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsRanges(request):
-    print(request.data)
     product=RequestGetUrl(request, "product", models.Products)
-    print(product)
     totalized_operations=RequestGetBool(request, "totalized_operations") 
     percentage_between_ranges=RequestGetInteger(request, "percentage_between_ranges")
 
@@ -2112,7 +2111,9 @@ def ReportsInvestmentsLastOperation(request):
     method=RequestGetInteger(request, "method", 0)
     ld=[]
     if method==0:
-        investments=models.Investments.objects.filter(active=True).select_related("accounts").select_related("products")
+        investments=models.Investments.objects.filter(active=True).select_related("accounts", "products")
+        #plio=models.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, investments, 1)
+
         iom=InvestmentsOperationsManager.from_investment_queryset(investments, timezone.now(), request)
     elif method==1:#Merginc current operations
         iom=InvestmentsOperationsManager.merging_all_current_operations_of_active_investments(request, timezone.now())
@@ -2145,6 +2146,7 @@ def ReportsInvestmentsLastOperation(request):
             "percentage_sellingpoint": ioc_last.percentage_sellingpoint().value,   
             "investments_urls": investments_urls, 
         })
+    show_queries_function()
     return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
     
     

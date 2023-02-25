@@ -259,10 +259,9 @@ class Banks(models.Model):
         return self._balance_accounts
 
     def balance_investments(self, request):
-        from moneymoney.investmentsoperations import InvestmentsOperationsTotalsManager
         if hasattr(self, "_balance_investments") is False:
-            iotm=InvestmentsOperationsTotalsManager.from_investment_queryset(self.investments(active=True), timezone.now(), request)
-            self._balance_investments=iotm.current_balance_user()
+            plio=models.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, self.investments(active=True), 3)
+            self._balance_investments=plio.sum_total_io_current()["balance_user"]
         return self._balance_investments
         
     def balance_total(self, request):
