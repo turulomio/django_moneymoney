@@ -17,7 +17,7 @@ from math import ceil
 from mimetypes import guess_extension
 from moneymoney import models, serializers
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
-from moneymoney.investmentsoperations import IOC, InvestmentsOperations,  InvestmentsOperationsManager, StrategyIO
+from moneymoney.investmentsoperations import InvestmentsOperations, StrategyIO
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_rows_as_dict, show_queries, show_queries_function
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
@@ -1091,19 +1091,6 @@ def Currencies(request):
     
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
-#
-#@transaction.atomic
-#@api_view(['GET', ])    
-#@permission_classes([permissions.IsAuthenticated, ])
-#def InvestmentsOperationsTotalManager_investments_same_product(request):
-#    product=RequestGetUrl(request, "product", models.Products)
-#    if product is not None:
-#        qs_investments=models.Investments.objects.filter(products=product, active=True)
-#        
-#        plio=models.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, qs_investments,  2)
-#        return JsonResponse( plio.t(), encoder=MyDjangoJSONEncoder, safe=False)
-#    return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
-
 class LeveragesViewSet(CatalogModelViewSet):
     queryset = models.Leverages.objects.all()
     serializer_class = serializers.LeveragesSerializer
@@ -2113,43 +2100,63 @@ def ReportEvolutionInvested(request, from_year):
 def ReportsInvestmentsLastOperation(request):
     method=RequestGetInteger(request, "method", 0)
     ld=[]
-    if method==0:
-        investments=models.Investments.objects.filter(active=True).select_related("accounts", "products")
-        #plio=models.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, investments, 1)
-
-        iom=InvestmentsOperationsManager.from_investment_queryset(investments, timezone.now(), request)
-    elif method==1:#Merginc current operations
-        iom=InvestmentsOperationsManager.merging_all_current_operations_of_active_investments(request, timezone.now())
+    investments=models.Investments.objects.filter(active=True).select_related("accounts", "products")
+    if method==0: #Separated investments
+        plio=models.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, investments, 1)
         
-    for io in iom:
-        last=io.current_last_operation_excluding_additions()
         investments_urls=[]
-        if method==0:
-                investments_urls.append(request.build_absolute_uri(reverse('investments-detail', args=(io.investment.pk, ))), )
-        if method==1:
-            investments_same_product=models.Investments.objects.filter(active=True, products=io.investment.products).select_related("accounts").select_related("products")
-            for inv in investments_same_product:
-                investments_urls.append(request.build_absolute_uri(reverse('investments-detail', args=(inv.pk, ))), )
+        for investment in plio.qs_investments():
+            ioc_last=plio.io_current_last_operation_excluding_additions(investment.id)
+            investments_urls.append(request.build_absolute_uri(reverse('investments-detail', args=(investment.pk, ))), )
+        
+            if ioc_last is None:
+                continue
+            ld.append({
+                "id": investment.id, 
+                "name": investment.fullName(), 
+                "datetime": ioc_last["datetime"], 
+                "last_shares": ioc_last['shares'], 
+                "last_price": ioc_last['price_investment'], 
+                "decimals": investment.products.decimals, 
+                "shares": plio.d_total_io_current(investment.id)["shares"],  
+                "balance": plio.d_total_io_current(investment.id)["balance_futures_user"],  
+                "gains": plio.d_total_io_current(investment.id)["gains_gross_user"],  
+                "percentage_last": plio.total_io_current_percentage_total_user(investment.id).value, 
+                "percentage_invested": plio.ioc_percentage_total_user(ioc_last), 
+                "percentage_sellingpoint": 0, # plio.percentage_sellingpoint(ioc_last, investment.selling_price).value,   
+                "investments_urls": investments_urls, 
+            })
+    elif method==1:#Merginc current operations
+        plio=models.PlInvestmentOperations.from_merging_io_current(timezone.now(), request.user.profile.currency, investments, 1)
+        plio.print()
+        for virtual_investment_id in plio.list_investments_id():
+            virtual_investment_product=models.Products.objects.get(pk=virtual_investment_id)
             
-        if last is None:
-            continue
-        ioc_last=IOC(io.investment, last )
-        ld.append({
-            "id": io.investment.id, 
-            "name": io.investment.fullName(), 
-            "datetime": ioc_last.d["datetime"], 
-            "last_shares": ioc_last.d['shares'], 
-            "last_price": ioc_last.d['price_investment'], 
-            "decimals": io.investment.products.decimals, 
-            "shares": io.current_shares(),  
-            "balance": io.current_balance_futures_user(),  
-            "gains": io.current_gains_gross_user(),  
-            "percentage_last": ioc_last.percentage_total_investment().value, 
-            "percentage_invested": io.current_percentage_invested_user().value, 
-            "percentage_sellingpoint": ioc_last.percentage_sellingpoint().value,   
-            "investments_urls": investments_urls, 
-        })
-    show_queries_function()
+            ioc_last=plio.io_current_last_operation_excluding_additions(virtual_investment_id)
+            investments_urls=[] #Investments merged in this virtual_investment
+            for investment_id in plio.d_data(virtual_investment_id)["investments_id"]:
+                investments_urls.append(request.build_absolute_uri(reverse('investments-detail', args=(investment_id, ))), )
+            
+            if ioc_last is None:
+                continue
+            ld.append({
+                "id": virtual_investment_product.id, 
+                "name": _("IOC merged investment of '{0}'").format( virtual_investment_product.fullName()), 
+                "datetime": ioc_last["datetime"], 
+                "last_shares": ioc_last['shares'], 
+                "last_price": ioc_last['price_investment'], 
+                "decimals": virtual_investment_product.decimals, 
+                "shares": plio.d_total_io_current(virtual_investment_id)["shares"],  
+                "balance": plio.d_total_io_current(virtual_investment_id)["balance_futures_user"],  
+                "gains": plio.d_total_io_current(virtual_investment_id)["gains_gross_user"],  
+                "percentage_last": plio.total_io_current_percentage_total_user(virtual_investment_id).value, 
+                "percentage_invested": plio.ioc_percentage_total_user(ioc_last), 
+                "percentage_sellingpoint": 0, # plio.percentage_sellingpoint(ioc_last, investment.selling_price).value,   
+                "investments_urls": investments_urls, 
+            })
+
+
+#    show_queries_function()
     return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
     
     
