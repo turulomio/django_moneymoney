@@ -52,12 +52,12 @@ class ProductRange():
         r=[]
         if self.totalized_operations is True:
             for investment in plio.qs_investments():
-                if self.isInside(plio.total_io_current(investment.id)["average_price_investment"]) is True:
+                if self.isInside(plio.d_total_io_current(investment.id)["average_price_investment"]) is True:
                     r.append({
                         "url":self.request.build_absolute_uri(reverse('investments-detail', args=(investment.pk, ))), 
                         "id": investment.pk, 
                         "name": investment.fullName(), 
-                        "invested": plio.io_current(investment.id)["invested_user"], 
+                        "invested": plio.d_total_io_current(investment.id)["invested_user"], 
                         "currency": investment.products.currency, 
                         "active": investment.active, 
                         "selling_price": investment.selling_price, 
