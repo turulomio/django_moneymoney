@@ -472,9 +472,11 @@ def StrategiesWithBalance(request):
     r=[]
     for strategy in qs:
         dividends_net_user=0
-        s=StrategyIO(request, strategy)
-        gains_current_net_user=s.current_gains_net_user() 
-        gains_historical_net_user=s.historical_gains_net_user()
+        plio=models.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, strategy.investments_queryset(), 3)
+
+#        s=StrategyIO(request, strategy)
+        gains_current_net_user=plio.sum_total_io_current()["gains_net_user"]
+        gains_historical_net_user=plio.sum_total_io_historical()["gains_net_user"]
         lod_dividends_net_user=models.Dividends.lod_ym_netgains_dividends(request, ids=strategy.investments_ids(), dt_from=strategy.dt_from, dt_to=strategy.dt_to_for_comparations())
         r.append({
             "id": strategy.id,  
@@ -482,7 +484,7 @@ def StrategiesWithBalance(request):
             "name":strategy.name, 
             "dt_from": strategy.dt_from, 
             "dt_to": strategy.dt_to, 
-            "invested": s.current_invested_user(), 
+            "invested": plio.sum_total_io_current()["invested_user"], 
             "gains_current_net_user":  gains_current_net_user,  
             "gains_historical_net_user": gains_historical_net_user, 
             "dividends_net_user": listdict_sum(lod_dividends_net_user, "total"), 
@@ -501,6 +503,7 @@ def StrategiesWithBalance(request):
             "additional9": strategy.additional9, 
             "additional10": strategy.additional10, 
         })
+    show_queries_function()
     return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 class InvestmentsClasses(APIView):
@@ -976,7 +979,6 @@ class BanksViewSet(viewsets.ModelViewSet):
 def InvestmentsoperationsFull(request):
     ids=RequestGetListOfIntegers(request, "investments[]")
     mode=RequestGetInteger(request, "mode", 1)
-    print(ids, mode)
     plio=models.PlInvestmentOperations.from_ids(timezone.now(), request.user.profile.currency, ids, mode)
     return JsonResponse( plio.t(), encoder=MyDjangoJSONEncoder, safe=False)
 

@@ -3,9 +3,8 @@ from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
 from moneymoney.reusing.libmanagers import ObjectManager, DatetimeValueManager
-from moneymoney.models import Orders
+from moneymoney import models
 from moneymoney.reusing.percentage import Percentage
-from moneymoney.investmentsoperations import InvestmentsOperationsManager
 
 class ProductRange():
     def __init__(self, request,  id=None,  product=None,  value=None, percentage_down=None,  percentage_up=None, totalized_operations=True, decimals=2):
@@ -49,40 +48,40 @@ class ProductRange():
 
         
     ## Search for investments in self.mem.data and 
-    def getInvestmentsOperationsInsideJson(self, iom):
+    def getInvestmentsOperationsInsideJson(self, plio):
         r=[]
         if self.totalized_operations is True:
-            for io in iom.list:
-                if self.isInside(io.current_average_price_investment().amount) is True:
+            for investment in plio.qs_investments():
+                if self.isInside(plio.total_io_current(investment.id)["average_price_investment"]) is True:
                     r.append({
-                        "url":self.request.build_absolute_uri(reverse('investments-detail', args=(io.investment.pk, ))), 
-                        "id": io.investment.pk, 
-                        "name": io.investment.fullName(), 
-                        "invested": io.current_invested_user(), 
-                        "currency": io.investment.products.currency, 
-                        "active": io.investment.active, 
-                        "selling_price": io.investment.selling_price, 
-                        "daily_adjustment": io.investment.daily_adjustment, 
-                        "selling_expiration": io.investment.selling_expiration, 
-                        "products": self.request.build_absolute_uri(reverse('products-detail', args=(io.investment.products.pk, ))), 
-                        "accounts": self.request.build_absolute_uri(reverse('accounts-detail', args=(io.investment.accounts.pk, ))), 
+                        "url":self.request.build_absolute_uri(reverse('investments-detail', args=(investment.pk, ))), 
+                        "id": investment.pk, 
+                        "name": investment.fullName(), 
+                        "invested": plio.io_current(investment.id)["invested_user"], 
+                        "currency": investment.products.currency, 
+                        "active": investment.active, 
+                        "selling_price": investment.selling_price, 
+                        "daily_adjustment": investment.daily_adjustment, 
+                        "selling_expiration": investment.selling_expiration, 
+                        "products": self.request.build_absolute_uri(reverse('products-detail', args=(investment.products.pk, ))), 
+                        "accounts": self.request.build_absolute_uri(reverse('accounts-detail', args=(investment.accounts.pk, ))), 
                     })
         else: #Shows all investments operations in each range
-            for io in iom.list:
-                for op in io.io_current:
+            for investment in plio.qs_investments():
+                for op in plio.d_io_current(investment.id):
                     if self.isInside(op["price_investment"]) is True:
                         r.append({
-                            "url":self.request.build_absolute_uri(reverse('investments-detail', args=(io.investment.pk, ))), 
-                            "id": io.investment.pk, 
-                            "name": io.investment.fullName(), 
+                            "url":self.request.build_absolute_uri(reverse('investments-detail', args=(investment.pk, ))), 
+                            "id": investment.pk, 
+                            "name": investment.fullName(), 
                             "invested": op[ 'invested_user'], 
-                            "currency": io.investment.products.currency, 
-                            "active": io.investment.active, 
-                            "selling_price": io.investment.selling_price, 
-                            "daily_adjustment": io.investment.daily_adjustment, 
-                            "selling_expiration": io.investment.selling_expiration, 
-                            "products": self.request.build_absolute_uri(reverse('products-detail', args=(io.investment.products.pk, ))), 
-                            "accounts": self.request.build_absolute_uri(reverse('accounts-detail', args=(io.investment.accounts.pk, ))), 
+                            "currency": investment.products.currency, 
+                            "active": investment.active, 
+                            "selling_price": investment.selling_price, 
+                            "daily_adjustment": investment.daily_adjustment, 
+                            "selling_expiration": investment.selling_expiration, 
+                            "products": self.request.build_absolute_uri(reverse('products-detail', args=(investment.products.pk, ))), 
+                            "accounts": self.request.build_absolute_uri(reverse('accounts-detail', args=(investment.accounts.pk, ))), 
                         })
 
         return r
@@ -113,8 +112,9 @@ class ProductRangeManager(ObjectManager):
         self.decimals=decimals
         self.method=0
         
-        self.iom=InvestmentsOperationsManager.from_investment_queryset(self.qs_investments, timezone.now(), self.request)
-        self.orders=Orders.objects.select_related("investments", "investments__accounts","investments__products","investments__products__leverages","investments__products__productstypes")\
+        self.plio=models.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, self.qs_investments,  1)
+
+        self.orders=models.Orders.objects.select_related("investments", "investments__accounts","investments__products","investments__products__leverages","investments__products__productstypes")\
             .filter(investments__in=self.qs_investments, executed=None)\
             .filter(Q(expiration__gte=date.today()) | Q(expiration__isnull=True))
 
@@ -129,8 +129,8 @@ class ProductRangeManager(ObjectManager):
             i=i+1
         
         #Calculate max_ price and min_price. last price and orders is valorated too 
-        max_=self.iom.current_highest_price()
-        min_=self.iom.current_lowest_price()
+        max_=self.plio.io_current_highest_price()
+        min_=self.plio.io_current_lowest_price()
         if product.basic_results()["last"]> max_:
             max_=product.basic_results()["last"]
         if product.basic_results()["last"]< min_:
@@ -310,7 +310,7 @@ class ProductRangeManager(ObjectManager):
             d.append({
                 "value": round(float(o.value),  self.decimals), 
                 "recomendation_invest": o.recomendation_invest, 
-                "investments_inside": o.getInvestmentsOperationsInsideJson(self.iom), 
+                "investments_inside": o.getInvestmentsOperationsInsideJson(self.plio), 
                 "orders_inside": o.getOrdersInsideJson(self.orders), 
                 "current_in_range": o.isInside(self.product.basic_results()["last"]), 
                 "limits": str(o)

@@ -1279,7 +1279,7 @@ class PlInvestmentOperations():
         return self._t[str(id_)]["total_io_historical"]
     def sum_total_io_current(self):
         return self._t["sum_total_io_current"]
-    def sum_total_io_historical(self, id_):
+    def sum_total_io_historical(self):
         return self._t["sum_total_io_historical"]
         
     def investment(self, id_):
@@ -1309,4 +1309,27 @@ class PlInvestmentOperations():
             for o in self.d_io(investments_id):
                 if dt_from<=o["datetime"] and o["datetime"]<=dt_to:
                     r=r - o[key]
+        return r
+
+    def io_current_highest_price(self):
+        """
+        Public method Returns highest io operation price of all io operations
+        """
+        
+        r=0
+        for investments_id in self.list_investments_id():
+            for o in self.d_io_current(investments_id):
+                if o["price_investment"]>r:
+                    r=o["price_investment"]
+        return r
+    def io_current_lowest_price(self):
+        """
+        Public method Returns highest io operation price of all io operations
+        """
+        
+        r=10000000
+        for investments_id in self.list_investments_id():
+            for o in self.d_io_current(investments_id):
+                if o["price_investment"]<r:
+                    r=o["price_investment"]
         return r
