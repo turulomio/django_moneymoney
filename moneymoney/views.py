@@ -452,59 +452,52 @@ class StrategiesViewSet(viewsets.ModelViewSet):
         serializer = serializers.StrategiesSerializer(self.queryset, many=True, context={'request': request})
         return Response(serializer.data)
 
-@extend_schema(
-        parameters=[
-            OpenApiParameter(name='active', description='Filter by active strategies', required=False, type=bool), 
-        ],
-    )
-@api_view(['GET', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def StrategiesWithBalance(request):        
-    active=RequestGetBool(request, 'active')
-    if active is None:
-        qs=models.Strategies.objects.all() 
-    else:
-        if active is True:
-            qs=models.Strategies.objects.filter(dt_to__isnull=True)
+    @action(detail=False, methods=["get"], name='List investments with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
+    def withbalance(self, request): 
+        active=RequestGetBool(request, 'active')
+        if active is None:
+            qs=models.Strategies.objects.all() 
         else:
-            qs=models.Strategies.objects.filter(dt_to__isnull=False)
+            if active is True:
+                qs=models.Strategies.objects.filter(dt_to__isnull=True)
+            else:
+                qs=models.Strategies.objects.filter(dt_to__isnull=False)
 
-    r=[]
-    for strategy in qs:
-        dividends_net_user=0
-        plio=models.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, strategy.investments_queryset(), 3)
+        r=[]
+        for strategy in qs:
+            dividends_net_user=0
+            plio=models.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, strategy.investments_queryset(), 1)
 
-#        s=StrategyIO(request, strategy)
-        gains_current_net_user=plio.sum_total_io_current()["gains_net_user"]
-        gains_historical_net_user=plio.sum_total_io_historical()["gains_net_user"]
-        lod_dividends_net_user=models.Dividends.lod_ym_netgains_dividends(request, ids=strategy.investments_ids(), dt_from=strategy.dt_from, dt_to=strategy.dt_to_for_comparations())
-        r.append({
-            "id": strategy.id,  
-            "url": request.build_absolute_uri(reverse('strategies-detail', args=(strategy.pk, ))), 
-            "name":strategy.name, 
-            "dt_from": strategy.dt_from, 
-            "dt_to": strategy.dt_to, 
-            "invested": plio.sum_total_io_current()["invested_user"], 
-            "gains_current_net_user":  gains_current_net_user,  
-            "gains_historical_net_user": gains_historical_net_user, 
-            "dividends_net_user": listdict_sum(lod_dividends_net_user, "total"), 
-            "total_net_user":gains_current_net_user + gains_historical_net_user + dividends_net_user, 
-            "investments":strategy.investments_ids(), 
-            "type": strategy.type, 
-            "comment": strategy.comment, 
-            "additional1": strategy.additional1, 
-            "additional2": strategy.additional2, 
-            "additional3": strategy.additional3, 
-            "additional4": strategy.additional4, 
-            "additional5": strategy.additional5, 
-            "additional6": strategy.additional6, 
-            "additional7": strategy.additional7, 
-            "additional8": strategy.additional8, 
-            "additional9": strategy.additional9, 
-            "additional10": strategy.additional10, 
-        })
-    show_queries_function()
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+            gains_current_net_user=plio.sum_total_io_current()["gains_net_user"]
+            gains_historical_net_user=plio.io_historical_sum_between_dt(strategy.dt_from, strategy.dt_to_for_comparations(),  "gains_net_user")
+            lod_dividends_net_user=models.Dividends.lod_ym_netgains_dividends(request, ids=strategy.investments_ids(), dt_from=strategy.dt_from, dt_to=strategy.dt_to_for_comparations())
+            r.append({
+                "id": strategy.id,  
+                "url": request.build_absolute_uri(reverse('strategies-detail', args=(strategy.pk, ))), 
+                "name":strategy.name, 
+                "dt_from": strategy.dt_from, 
+                "dt_to": strategy.dt_to, 
+                "invested": plio.sum_total_io_current()["invested_user"], 
+                "gains_current_net_user":  gains_current_net_user,  
+                "gains_historical_net_user": gains_historical_net_user, 
+                "dividends_net_user": listdict_sum(lod_dividends_net_user, "total"), 
+                "total_net_user":gains_current_net_user + gains_historical_net_user + dividends_net_user, 
+                "investments":strategy.investments_ids(), 
+                "type": strategy.type, 
+                "comment": strategy.comment, 
+                "additional1": strategy.additional1, 
+                "additional2": strategy.additional2, 
+                "additional3": strategy.additional3, 
+                "additional4": strategy.additional4, 
+                "additional5": strategy.additional5, 
+                "additional6": strategy.additional6, 
+                "additional7": strategy.additional7, 
+                "additional8": strategy.additional8, 
+                "additional9": strategy.additional9, 
+                "additional10": strategy.additional10, 
+            })
+        show_queries_function()
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
 class InvestmentsClasses(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -1670,7 +1663,7 @@ def ReportAnnualIncome(request, year):
         fast_operations=d_fast_operations[year][f"m{month}"]
         dt_from=dtaware_month_start(year, month,  request.user.profile.zone)
         dt_to=dtaware_month_end(year, month,  request.user.profile.zone)
-        gains=plio.sum_ioh_between_dt(dt_from, dt_to, "gains_net_user")
+        gains=plio.io_historical_sum_between_dt(dt_from, dt_to, "gains_net_user")
         list_.append({
             "id": f"{year}/{month}/", 
             "month_number":month, 
@@ -1811,8 +1804,8 @@ group by productstypes_id""", (year, ))
     dividends_dict=listdict2dict(dividends, "productstypes_id")
     l=[]
     for pt in models.Productstypes.objects.all():
-        gains_net=plio.sum_ioh_between_dt(dt_from, dt_to, "gains_net_user", pt.id)
-        gains_gross=plio.sum_ioh_between_dt(dt_from, dt_to, "gains_gross_user", pt.id)
+        gains_net=plio.io_historical_sum_between_dt(dt_from, dt_to, "gains_net_user", pt.id)
+        gains_gross=plio.io_historical_sum_between_dt(dt_from, dt_to, "gains_gross_user", pt.id)
 #        gains_net, gains_gross= 0, 0
         dividends_gross, dividends_net=0, 0
 #        for row in gains:
@@ -2009,7 +2002,7 @@ def ReportEvolutionAssets(request, from_year):
         dividends=d_dividends[year]["total"]
         incomes=d_incomes[year]["total"]-dividends
         expenses=d_expenses[year]["total"]
-        gains=plio.sum_ioh_between_dt(dt_from, dt_to, "gains_net_user")
+        gains=plio.io_historical_sum_between_dt(dt_from, dt_to, "gains_net_user")
         list_.append({
             "year": year, 
             "balance_start": tb[year-1]["total_user"], 
@@ -2081,10 +2074,10 @@ def ReportEvolutionInvested(request, from_year):
         d['balance']=plio.sum_total_io_current()["balance_futures_user"]
         d['diff']=d['balance']-d['invested']
         d['percentage']=percentage_between(d['invested'], d['balance'])
-        d['net_gains_plus_dividends']=plio.sum_ioh_between_dt(dt_from, dt_to, "gains_net_user")+d_dividends[year]["total"]
+        d['net_gains_plus_dividends']=plio.io_historical_sum_between_dt(dt_from, dt_to, "gains_net_user")+d_dividends[year]["total"]
         d['custody_commissions']=d_custody_commissions[year]["total"]
         d['taxes']=d_taxes[year]["total"]
-        d['investment_commissions']=plio.sum_io_between_dt(dt_from, dt_to, "commission_account")
+        d['investment_commissions']=plio.io_sum_between_dt(dt_from, dt_to, "commission_account")
         list_.append(d)
     
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder, safe=False)

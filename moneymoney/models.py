@@ -1367,7 +1367,7 @@ class PlInvestmentOperations():
     def print(self):
         print(self.dumps())
         
-    def sum_ioh_between_dt(self, dt_from, dt_to,  key, productstypes_id=None):
+    def io_historical_sum_between_dt(self, dt_from, dt_to,  key, productstypes_id=None):
         r=0
         for investments_id in self.list_investments_id():
             for ioh in self.d_io_historical(investments_id):
@@ -1379,7 +1379,7 @@ class PlInvestmentOperations():
                             r=r+ioh[key]
         return r
 
-    def sum_io_between_dt(self, dt_from, dt_to, key):
+    def io_sum_between_dt(self, dt_from, dt_to, key):
         r=0
         for investments_id in self.list_investments_id():
             for o in self.d_io(investments_id):
