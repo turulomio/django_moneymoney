@@ -17,7 +17,7 @@ from math import ceil
 from mimetypes import guess_extension
 from moneymoney import models, serializers
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
-from moneymoney.investmentsoperations import InvestmentsOperations, StrategyIO
+from moneymoney.investmentsoperations import StrategyIO
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_rows_as_dict, show_queries, show_queries_function
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
@@ -980,15 +980,23 @@ def InvestmentsoperationsFull(request):
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsoperationsFullSimulation(request):
     investments=RequestListUrl(request, "investments", models.Investments)
+    qs_investments=models.Investments.objects.filter(id__in=[o.id for o in investments])
     dt=RequestDtaware(request, "dt", request.user.profile.zone)
-    local_currency=RequestString(request, "local_currency")
     listdict=request.data["operations"]
-    for d in listdict:
-        d["datetime"]=string2dtaware(d["datetime"],  "JsUtcIso", request.user.profile.zone)
-        d["investments_id"]=investments[0].id
-        d["operationstypes_id"]=id_from_url(d["operationstypes"])
-    r=InvestmentsOperations.from_investment_simulation(request, investments,  dt,  local_currency,  listdict).json()
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+    list_unsaved_io=[]
+    for i,  d in enumerate(listdict):
+        list_unsaved_io.append({
+                "id":-i, 
+                "operationstypes_id": id_from_url(d["operationstypes"]), 
+                "shares": d["shares"], 
+                "taxes": d["taxes"], 
+                "commission": d["commission"], 
+                "price": d["price"], 
+                "datetime": string2dtaware(d["datetime"],  "JsUtcIso", request.user.profile.zone), 
+                "currency_conversion":d["currency_conversion"]
+        })
+    r=models.PlInvestmentOperations.from_simulation(dt,  request.user.profile.currency, qs_investments , list_unsaved_io, 1)
+    return JsonResponse( r.t(), encoder=MyDjangoJSONEncoder,safe=False)
 
 
 @api_view(['GET', ]) 

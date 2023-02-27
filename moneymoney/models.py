@@ -1187,13 +1187,47 @@ class PlInvestmentOperations():
             factor=cursor_rows("SELECT * FROM currency_factor(%s,%s,%s)", [dt, from_, to_])[0]['currency_factor']
             t["lazy_factors"][(from_, to_, dt)]=factor if factor is not None else 0
 
+    @classmethod
+    def from_investments_simulation(cls, dt,  local_currency,  lod_investments_data, lod_ios_to_simulate, mode):
+        """
+        Class method Utilizado cuando es una inversión NO VIRTUAL y 
+
+        @param dt DESCRIPTION
+        @type TYPE
+        @param local_currency DESCRIPTION
+        @type TYPE
+        @param lod_investments_data DESCRIPTION
+        @type TYPE
+        @param lod_ios_to_simulate DESCRIPTION
+        @type TYPE
+        @param mode DESCRIPTION
+        @type TYPE
+        """
+        pass
 
     @classmethod
-    def from_simulation(cls, dt,  local_currency,  qs_investments, list_unsaved_io, mode):
-        lod_investments=cls.qs_investments_to_lod(qs_investments)
-        lod_ios=cls.qs_investments_to_lod_ios(qs_investments) + cls.list_unsaved_io_to_lod(list_unsaved_io)
-        lod_ios= sorted(lod_ios,  key=lambda item: item['datetime'])
-        t=calculate_ios_lazy(dt, lod_investments, lod_ios, local_currency)
+    def from_virtual_investments_simulation(cls, dt,  local_currency,  lod_investments_data, lod_ios_to_simulate, mode):
+        """
+        investments_id canbe virtual and several, coordinated with data and ios_to_simulate
+        
+        Lod_investments_data
+        [{'products_id': -81742, 'invesments_id': '445', 'multiplier': Decimal('2'), 'currency_account': 'EUR', 'currency_product': 'EUR', 'productstypes_id': 4}]
+
+        Class method lod_simulated_ios must have
+            r.append({
+                "id":-i, 
+                "operationstypes_id": io.operationstypes.id, 
+                "shares": io.shares, 
+                "taxes": io.taxes, 
+                "commission": io.commission, 
+                "price": io.price, 
+                "datetime": io.datetime, 
+                "currency_conversion":io.currency_conversion
+                 "investments_id": virtual_investments_id, 
+            })
+        """
+        lod_ios_to_simulate= sorted(lod_ios_to_simulate,  key=lambda item: item['datetime'])
+        t=calculate_ios_lazy(dt, lod_investments_data, lod_ios_to_simulate, local_currency)
         cls.external_query_factors_quotes(t)
         t=calculate_ios_finish(t, mode)
         return cls(t)
