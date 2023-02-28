@@ -1684,10 +1684,10 @@ def ReportAnnualIncome(request, year):
         (_("November"), 11), 
         (_("December"), 12), 
     ):
-        dividends=d_dividends[year][f"m{month}"]
-        incomes=d_incomes[year][f"m{month}"]-dividends
-        expenses=d_expenses[year][f"m{month}"]
-        fast_operations=d_fast_operations[year][f"m{month}"]
+        dividends= d_dividends[year][f"m{month}"]  if year in d_dividends else 0
+        incomes=d_incomes[year][f"m{month}"] if year in d_incomes else 0 -dividends
+        expenses=d_expenses[year][f"m{month}"] if year in d_expenses else 0
+        fast_operations=d_fast_operations[year][f"m{month}"] if year in d_fast_operations else 0
         dt_from=dtaware_month_start(year, month,  request.user.profile.zone)
         dt_to=dtaware_month_end(year, month,  request.user.profile.zone)
         gains=plio.io_historical_sum_between_dt(dt_from, dt_to, "gains_net_user")
@@ -1865,9 +1865,9 @@ group by productstypes_id""", (year, ))
     l.append({
             "id": -1000, #Fast operations
             "name":_("Fast operations"), 
-            "gains_gross": d_fast_operations[0]["total"], 
+            "gains_gross": d_fast_operations[0]["total"] if len(d_fast_operations)>0 else 0,
             "dividends_gross":0, 
-            "gains_net":d_fast_operations[0]["total"], 
+            "gains_net": d_fast_operations[0]["total"] if len(d_fast_operations)>0 else 0, 
             "dividends_net": 0, 
     })
     return JsonResponse( l, encoder=MyDjangoJSONEncoder,     safe=False)
