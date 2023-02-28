@@ -989,6 +989,7 @@ def InvestmentsoperationsFullSimulation(request):
     plio_id=request.data["plio_id"]
     # Request returns datetime as JsUtcISO. I must convert them to dtaware
     plio_id["data"]["dt"]=string2dtaware(plio_id["data"]["dt"],  "JsUtcIso", request.user.profile.zone)
+    #plio_id["data"]["investments_id"]=str(plio_id["data"]["investments_id"])
     for o in plio_id["io_current"]:
         o["datetime"]=string2dtaware(o["datetime"],  "JsUtcIso", request.user.profile.zone)
         #Ioc current doesn't have price
@@ -1006,19 +1007,19 @@ def InvestmentsoperationsFullSimulation(request):
         lod_ios_to_simulate.append({
                 "id":-i, 
                 "operationstypes_id": id_from_url(d["operationstypes"]), 
-                "shares": d["shares"], 
-                "taxes": d["taxes"], 
-                "commission": d["commission"], 
-                "price": d["price"], 
+                "shares": Decimal(d["shares"]), 
+                "taxes": Decimal(d["taxes"]), 
+                "commission": Decimal(d["commission"]), 
+                "price": Decimal(d["price"]), 
                 "datetime": string2dtaware(d["datetime"],  "JsUtcIso", request.user.profile.zone), 
-                "currency_conversion":d["currency_conversion"], 
+                "currency_conversion":Decimal(d["currency_conversion"]), 
                 "investments_id":plio_id["data"]["investments_id"]
         })
-    lod_data=[plio_id["data"], ] #It's an array
+    lod_data=[plio_id["data"], ] #It's an array"]
     lod_all=plio_id["io_current"] + lod_ios_to_simulate
     print(lod_all)
-    r=models.PlInvestmentOperations.from_virtual_investments_simulation(plio_id["data"]["dt"],  request.user.profile.currency, lod_data, lod_all, 1)
-    return JsonResponse( r.t(), encoder=MyDjangoJSONEncoder,safe=False)
+    plio_id_after=models.PlInvestmentOperations.from_virtual_investments_simulation(plio_id["data"]["dt"],  request.user.profile.currency, lod_data, lod_all, 1)
+    return JsonResponse( plio_id_after, encoder=MyDjangoJSONEncoder,safe=False)
 
 
 @api_view(['GET', ]) 
