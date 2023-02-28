@@ -259,7 +259,7 @@ class Banks(models.Model):
 
     def balance_investments(self, request):
         if hasattr(self, "_balance_investments") is False:
-            plio=models.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, self.investments(active=True), 3)
+            plio=PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, self.investments(active=True), 3)
             self._balance_investments=plio.sum_total_io_current()["balance_user"]
         return self._balance_investments
         
