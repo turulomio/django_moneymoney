@@ -1111,6 +1111,16 @@ class PlInvestmentOperations():
         return cls(plio)
 
     @classmethod
+    def from_request_plio_id(cls, request_plio_id):
+        """It comes with dates in JSUTCISO
+            Cames from simulations
+        """
+        t={}
+        t[str(request_plio_id["data"]["investments_id"])]=request_plio_id
+        
+        return cls(t)
+
+    @classmethod
     def from_all(cls, dt,  local_currency,  mode):
         plio=Assets.pl_investment_operations(dt, local_currency, None, mode)
         return cls(plio)
@@ -1188,27 +1198,23 @@ class PlInvestmentOperations():
             t["lazy_factors"][(from_, to_, dt)]=factor if factor is not None else 0
 
     @classmethod
-    def from_investments_simulation(cls, dt,  local_currency,  lod_investments_data, lod_ios_to_simulate, mode):
+    def from_investments_simulation(cls, dt,  local_currency,  investment , lod_ios_to_simulate, mode):
         """
-        Class method Utilizado cuando es una inversión NO VIRTUAL y 
-
-        @param dt DESCRIPTION
-        @type TYPE
-        @param local_currency DESCRIPTION
-        @type TYPE
-        @param lod_investments_data DESCRIPTION
-        @type TYPE
-        @param lod_ios_to_simulate DESCRIPTION
-        @type TYPE
-        @param mode DESCRIPTION
-        @type TYPE
+            Devuelve un plio_Id, solo se debe pasar una inversión
+            lod_ios_to_simulate is only io to simulate, the rest is automatically loaded
         """
-        pass
+        qs_investments=Investments.objects.filter(pk=investment.id)
+        lod_investments_data=PlInvestmentOperations.qs_investments_to_lod(qs_investments)
+        lod_ios=PlInvestmentOperations.qs_investments_to_lod_ios(qs_investments)
+        return cls.from_virtual_investments_simulation(dt,  local_currency,  lod_investments_data, lod_ios+ lod_ios_to_simulate, mode)
 
     @classmethod
-    def from_virtual_investments_simulation(cls, dt,  local_currency,  lod_investments_data, lod_ios_to_simulate, mode):
+    def from_virtual_investments_simulation(cls, dt,  local_currency,  lod_investment_data, lod_ios_to_simulate, mode):
         """
-        investments_id canbe virtual and several, coordinated with data and ios_to_simulate
+        Devuelve un plio_Id, solo se debe pasar una inversión
+        
+        investments_id canbe virtual  coordinated with data and ios_to_simulate
+        lod_ios_to_simulate must load all io and simulation ios
         
         Lod_investments_data
         [{'products_id': -81742, 'invesments_id': '445', 'multiplier': Decimal('2'), 'currency_account': 'EUR', 'currency_product': 'EUR', 'productstypes_id': 4}]
@@ -1227,10 +1233,10 @@ class PlInvestmentOperations():
             })
         """
         lod_ios_to_simulate= sorted(lod_ios_to_simulate,  key=lambda item: item['datetime'])
-        t=calculate_ios_lazy(dt, lod_investments_data, lod_ios_to_simulate, local_currency)
+        t=calculate_ios_lazy(dt, lod_investment_data, lod_ios_to_simulate, local_currency)
         cls.external_query_factors_quotes(t)
         t=calculate_ios_finish(t, mode)
-        return cls(t)
+        return cls(t).d(lod_investment_data[0]["investments_id"])
         
         
     @classmethod

@@ -970,6 +970,9 @@ class BanksViewSet(viewsets.ModelViewSet):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsoperationsFull(request):
+    """
+        This view returns a simulated plio_id
+    """
     ids=RequestGetListOfIntegers(request, "investments[]")
     mode=RequestGetInteger(request, "mode", 1)
     plio=models.PlInvestmentOperations.from_ids(timezone.now(), request.user.profile.currency, ids, mode)
@@ -979,13 +982,28 @@ def InvestmentsoperationsFull(request):
 @api_view(['POST', ]) 
 @permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsoperationsFullSimulation(request):
-    investments=RequestListUrl(request, "investments", models.Investments)
-    qs_investments=models.Investments.objects.filter(id__in=[o.id for o in investments])
-    dt=RequestDtaware(request, "dt", request.user.profile.zone)
+    """
+        It uses plio_id io_current o make simulation
+        Using plio_id I can simulate, merged plios, or investments_plios  or even other simulations, but only one. That's the reason  of plio_id not plio.
+    """
+    plio_id=request.data["plio_id"]
+    # Request returns datetime as JsUtcISO. I must convert them to dtaware
+    plio_id["data"]["dt"]=string2dtaware(plio_id["data"]["dt"],  "JsUtcIso", request.user.profile.zone)
+    for o in plio_id["io_current"]:
+        o["datetime"]=string2dtaware(o["datetime"],  "JsUtcIso", request.user.profile.zone)
+        #Ioc current doesn't have price
+        o["shares"]=Decimal(o["shares"])
+        o["price"]=Decimal(o["price_investment"])
+        o["taxes"]=Decimal(o["taxes_account"])
+        o["commission"]=Decimal(o["commissions_account"])
+        o["currency_conversion"]=Decimal(o["investment2account"])
+        
     listdict=request.data["operations"]
-    list_unsaved_io=[]
+    print(plio_id["data"])
+#    plio=models.PlInvestmentOperations.from_request_plio_id(plio_id)
+    lod_ios_to_simulate=[]
     for i,  d in enumerate(listdict):
-        list_unsaved_io.append({
+        lod_ios_to_simulate.append({
                 "id":-i, 
                 "operationstypes_id": id_from_url(d["operationstypes"]), 
                 "shares": d["shares"], 
@@ -993,9 +1011,13 @@ def InvestmentsoperationsFullSimulation(request):
                 "commission": d["commission"], 
                 "price": d["price"], 
                 "datetime": string2dtaware(d["datetime"],  "JsUtcIso", request.user.profile.zone), 
-                "currency_conversion":d["currency_conversion"]
+                "currency_conversion":d["currency_conversion"], 
+                "investments_id":plio_id["data"]["investments_id"]
         })
-    r=models.PlInvestmentOperations.from_simulation(dt,  request.user.profile.currency, qs_investments , list_unsaved_io, 1)
+    lod_data=[plio_id["data"], ] #It's an array
+    lod_all=plio_id["io_current"] + lod_ios_to_simulate
+    print(lod_all)
+    r=models.PlInvestmentOperations.from_virtual_investments_simulation(plio_id["data"]["dt"],  request.user.profile.currency, lod_data, lod_all, 1)
     return JsonResponse( r.t(), encoder=MyDjangoJSONEncoder,safe=False)
 
 
