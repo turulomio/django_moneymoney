@@ -2192,7 +2192,7 @@ def ReportCurrentInvestmentsOperations(request):
     for inv in plio.qs_investments():
         for o in plio.d_io_current(inv.id):
             ld.append({
-                "investments": request.build_absolute_uri(reverse('investments-detail', args=(inv.id, ))),
+                "investments_id": inv.id, 
                 "name": inv.fullName(), # Needed for AssetsReport
                 "operationstypes": request.build_absolute_uri(reverse('operationstypes-detail', args=(o["operationstypes_id"], ))), 
                 "datetime": o["datetime"], 
