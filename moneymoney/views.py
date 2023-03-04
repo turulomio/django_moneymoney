@@ -643,6 +643,13 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
         else:
             return self.queryset
 
+    def list(self, request):
+        print("LIST INVESTMETS")
+        for o in self.queryset:
+            if o.id==440:
+                print(o.selling_price, o.selling_expiration)
+        r= viewsets.ModelViewSet.list(self, request)
+        return r
 
     @action(detail=False, methods=["get"], name='List investments with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
     def withbalance(self, request): 
@@ -1041,13 +1048,15 @@ def InvestmentsChangeSellingPrice(request):
     selling_price=RequestDecimal(request, "selling_price")
     selling_expiration=RequestDate(request, "selling_expiration")
     investments=RequestListUrl(request, "investments", models.Investments)
-    
+    ids=[]
     if investments is not None and selling_price is not None: #Pricce 
         for inv in investments:
+            ids.append(inv.id)
             inv.selling_price=selling_price
             inv.selling_expiration=selling_expiration
             inv.save()
-        return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
+        r= serializers.InvestmentsSerializer(models.Investments.objects.filter(id__in=ids), many=True, context={'request': request}).data
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
     return Response({'status': 'Investment or selling_price is None'}, status=status.HTTP_404_NOT_FOUND)
 
 
