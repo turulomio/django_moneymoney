@@ -17,7 +17,6 @@ from math import ceil
 from mimetypes import guess_extension
 from moneymoney import models, serializers
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
-from moneymoney.investmentsoperations import StrategyIO
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_rows_as_dict, show_queries, show_queries_function
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
@@ -498,6 +497,15 @@ class StrategiesViewSet(viewsets.ModelViewSet):
             })
         show_queries_function()
         return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+        
+    @action(detail=True, methods=["get"], name='Gets a plio_id from strategy investments', url_path="plio_id", url_name='plio_id', permission_classes=[permissions.IsAuthenticated])
+    def plio_id(self, request, pk=None): 
+        strategy=self.get_object()
+        if strategy is not None:
+            s=models.PlInvestmentOperations.plio_id_from_strategy(timezone.now(), request.user.profile.currency, strategy)
+            return JsonResponse( s, encoder=MyDjangoJSONEncoder,  safe=False)
+        return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
+
 
 class InvestmentsClasses(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -1021,21 +1029,9 @@ def InvestmentsoperationsFullSimulation(request):
         })
     lod_data=[plio_id["data"], ] #It's an array
     lod_all=plio_id["io_current"] + lod_ios_to_simulate
-    plio_id_after=models.PlInvestmentOperations.from_virtual_investments_simulation(plio_id["data"]["dt"],  request.user.profile.currency, lod_data, lod_all, 1)
+    plio_id_after=models.PlInvestmentOperations.plio_id_from_virtual_investments_simulation(plio_id["data"]["dt"],  request.user.profile.currency, lod_data, lod_all, 1)
     return JsonResponse( plio_id_after, encoder=MyDjangoJSONEncoder,safe=False)
 
-
-@api_view(['GET', ]) 
-@permission_classes([permissions.IsAuthenticated, ])
-def StrategiesSimulation(request):
-    strategy=RequestGetUrl(request, "strategy", models.Strategies)
-    dt=RequestGetDtaware(request, "dt", request.user.profile.zone)
-    temporaltable=RequestGetString(request, "temporaltable")
-    simulated_operations=[]
-    if strategy is not None:
-        s=StrategyIO(request, strategy, dt, simulated_operations, temporaltable)
-        return JsonResponse( s.json(), encoder=MyDjangoJSONEncoder,  safe=False)
-    return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
 
 
 

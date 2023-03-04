@@ -1110,15 +1110,6 @@ class PlInvestmentOperations():
         plio=Assets.pl_investment_operations(dt, local_currency, list_ids, mode)
         return cls(plio)
 
-    @classmethod
-    def from_request_plio_id(cls, request_plio_id):
-        """It comes with dates in JSUTCISO
-            Cames from simulations
-        """
-        t={}
-        t[str(request_plio_id["data"]["investments_id"])]=request_plio_id
-        
-        return cls(t)
 
     @classmethod
     def from_all(cls, dt,  local_currency,  mode):
@@ -1198,18 +1189,7 @@ class PlInvestmentOperations():
             t["lazy_factors"][(from_, to_, dt)]=factor if factor is not None else 0
 
     @classmethod
-    def from_investments_simulation(cls, dt,  local_currency,  investment , lod_ios_to_simulate, mode):
-        """
-            Devuelve un plio_Id, solo se debe pasar una inversión
-            lod_ios_to_simulate is only io to simulate, the rest is automatically loaded
-        """
-        qs_investments=Investments.objects.filter(pk=investment.id)
-        lod_investments_data=PlInvestmentOperations.qs_investments_to_lod(qs_investments)
-        lod_ios=PlInvestmentOperations.qs_investments_to_lod_ios(qs_investments)
-        return cls.from_virtual_investments_simulation(dt,  local_currency,  lod_investments_data, lod_ios+ lod_ios_to_simulate, mode)
-
-    @classmethod
-    def from_virtual_investments_simulation(cls, dt,  local_currency,  lod_investment_data, lod_ios_to_simulate, mode):
+    def plio_id_from_virtual_investments_simulation(cls, dt,  local_currency,  lod_investment_data, lod_ios_to_simulate, mode):
         """
         Devuelve un plio_Id, solo se debe pasar una inversión
         
@@ -1238,6 +1218,59 @@ class PlInvestmentOperations():
         t=calculate_ios_finish(t, mode)
         return cls(t).d(lod_investment_data[0]["investments_id"])
         
+        
+    @classmethod
+    def plio_id_from_strategy(cls, dt,  local_currency,  strategy):
+        """
+            Returns a plio_id adding all io, io_current,io_historical of all investments (plio) and returning only one plio. Only adds, do not calculate
+        """
+        
+        plio=cls.from_ids(dt, local_currency, strategy.investments_ids(), 1)
+        
+        r={}
+        r["data"]={}
+        r["data"]["products_id"]="HETEROGENEOUS"
+        r["data"]["investments_id"]=strategy.investments_ids()
+        r["data"]["multiplier"]="HETEROGENEOUS"
+        r["data"]["currency_product"]="HETEROGENEOUS"
+        r["data"]["productstypes_id"]="HETEROGENEOUS"
+        r["data"]["currency_user"]=local_currency
+        
+        r["io"]=[]
+        for plio_id in plio.list_investments_id():
+            for o in plio.d_io(plio_id):
+                if strategy.dt_from<=o["datetime"] and o["datetime"]<=strategy.dt_to_for_comparations():
+                    r["io"].append(o)
+        r["io"]= sorted(r["io"],  key=lambda item: item['datetime'])
+
+        r["io_current"]=[]
+        for plio_id in plio.list_investments_id():
+            for o in plio.d_io_current(plio_id):
+                if strategy.dt_from<=o["datetime"] and o["datetime"]<=strategy.dt_to_for_comparations():
+                    r["io_current"].append(o)
+        r["io_current"]= sorted(r["io_current"],  key=lambda item: item['datetime'])
+                
+        r["total_io_current"]={}
+        r["total_io_current"]["balance_user"]=listdict_sum(r["io_current"], "balance_user")
+        r["total_io_current"]["balance_investment"]="HETEROGENEOUS"
+        r["total_io_current"]["balance_futures_user"]=listdict_sum(r["io_current"], "balance_futures_user")
+        r["total_io_current"]["gains_gross_user"]=listdict_sum(r["io_current"], "gains_gross_user")
+        r["total_io_current"]["gains_net_user"]=listdict_sum(r["io_current"], "gains_net_user")
+        r["total_io_current"]["shares"]=listdict_sum(r["io_current"], "shares")
+        r["total_io_current"]["invested_user"]=listdict_sum(r["io_current"], "invested_user")
+        r["total_io_current"]["invested_investment"]="HETEROGENEOUS"
+        
+        r["io_historical"]=[]
+        for plio_id in plio.list_investments_id():
+            for o in plio.d_io_historical(plio_id):
+                if strategy.dt_from<=o["dt_end"] and o["dt_end"]<=strategy.dt_to_for_comparations():
+                    r["io_historical"].append(o)
+        r["io_historical"]= sorted(r["io_historical"],  key=lambda item: item['dt_end'])
+
+        r["total_io_historical"]={}
+        r["total_io_historical"]["gains_net_user"]=listdict_sum(r["total_io_historical"], "gains_net_user")
+        return r
+
         
     @classmethod
     def from_merging_io_current(cls, dt,  local_currency,  qs_investments, mode):

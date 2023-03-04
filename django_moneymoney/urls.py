@@ -62,7 +62,6 @@ urlpatterns=[
     path('reports/ranking/', money_views.ReportRanking, name='ReportRanking'),
     path('reports/annual/gainsbyproductstypes/<int:year>/', money_views.ReportAnnualGainsByProductstypes, name='ReportAnnualGainsByProductstypes'),
     path('statistics/', money_views.Statistics, name='Statistics'),
-    path('strategies/simulation/', money_views.StrategiesSimulation, name='StrategiesSimulation'),
     path('time/', money_views.Time.as_view(), name='Time'),
     path('timezones/', money_views.Timezones.as_view(), name='Timezones'),
     path('unogenerator/working/', money_views.UnogeneratorWorking.as_view()),
