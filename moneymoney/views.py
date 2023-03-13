@@ -1045,13 +1045,17 @@ def InvestmentsChangeSellingPrice(request):
     selling_expiration=RequestDate(request, "selling_expiration")
     investments=RequestListUrl(request, "investments", models.Investments)
     ids=[]
+    print("BEfore", models.Investments.objects.get(pk=456).selling_price)
     if investments is not None and selling_price is not None: #Pricce 
-        for inv in investments:
-            ids.append(inv.id)
-            inv.selling_price=selling_price
-            inv.selling_expiration=selling_expiration
-            inv.save()
-        r= serializers.InvestmentsSerializer(models.Investments.objects.filter(id__in=ids), many=True, context={'request': request}).data
+        with transaction.atomic():
+            for inv in investments:
+                ids.append(inv.id)
+                inv.selling_price=selling_price
+                inv.selling_expiration=selling_expiration
+                inv.save()
+            r   = serializers.InvestmentsSerializer(models.Investments.objects.filter(id__in=ids), many=True, context={'request': request}).data
+            
+            print("After", models.Investments.objects.get(pk=456).selling_price)
         return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
     return Response({'status': 'Investment or selling_price is None'}, status=status.HTTP_404_NOT_FOUND)
 
