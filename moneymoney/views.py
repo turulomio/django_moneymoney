@@ -1055,7 +1055,7 @@ def InvestmentsChangeSellingPrice(request):
                 inv.save()
             r   = serializers.InvestmentsSerializer(models.Investments.objects.filter(id__in=ids), many=True, context={'request': request}).data
             
-            print("After", models.Investments.objects.get(pk=456).selling_price)
+        print("After", models.Investments.objects.get(pk=456).selling_price)
         return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
     return Response({'status': 'Investment or selling_price is None'}, status=status.HTTP_404_NOT_FOUND)
 
