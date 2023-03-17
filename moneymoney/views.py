@@ -1294,7 +1294,7 @@ class ProductsViewSet(viewsets.ModelViewSet):
             elif search==":ACTIVE_INVESTMENTS":
                 ids=list(models.Investments.objects.filter(active=True).values_list("products__id",  flat=True).distinct())
             elif search==":PERSONAL":
-                ids=list(models.Products.objects.filter(id__lt=0).values_list('id', flat=True))
+                ids=list(models.Products.objects.filter(id__gt=0).values_list('id', flat=True))
             elif search==":INDICES":
                 ids=list(models.Products.objects.filter(productstypes=models.Productstypes.objects.get(pk=eProductType.Index)).values_list('id', flat=True))
             elif search==":CFD_FUTURES":
