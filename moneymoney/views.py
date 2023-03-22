@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta, datetime
 from decimal import Decimal
 from django.conf import settings
+from django.core.management import call_command
 from django.db import transaction
 from django.db.models import prefetch_related_objects, Count, Sum, Q
 from django.db.models.functions.datetime import ExtractMonth, ExtractYear
@@ -1124,6 +1125,16 @@ class LeveragesViewSet(CatalogModelViewSet):
     queryset = models.Leverages.objects.all()
     serializer_class = serializers.LeveragesSerializer
 
+@api_view(['POST', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def MaintenanceCatalogsUpdate(request):
+    internet=RequestBool(request, "internet", False)
+    if internet is True: #Github code update
+        call_command("loaddata_catalogs", "--internet")
+    else: # Current Code update
+        call_command("loaddata_catalogs")
+    return Response({'status': 'Catalogs updated'}, status=status.HTTP_200_OK)
+    
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsPairs(request):

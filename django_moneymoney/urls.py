@@ -42,6 +42,8 @@ urlpatterns=[
     path('investments/changesellingprice/', money_views.InvestmentsChangeSellingPrice, name='InvestmentsChangeSellingPrice'),
     path('investmentsoperations/full/', money_views.InvestmentsoperationsFull, name='InvestmentsoperationsFull'),
     path('investmentsoperations/full/simulation/', money_views.InvestmentsoperationsFullSimulation, name='InvestmentsoperationsFullSimulation'),
+    
+    path('maintenance/catalogs/update/', money_views.MaintenanceCatalogsUpdate, name='MaintenanceCatalogsUpdate'),
     path('products/pairs/', money_views.ProductsPairs,  name='ProductsPairs'),
     path('products/ranges/', money_views.ProductsRanges, name='ProductsRanges'),
     path('products/update/', money_views.ProductsUpdate, name='ProductsUpdate'),
