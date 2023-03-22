@@ -179,11 +179,16 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
         if request.data["system"] is True :
             validated_data["id"]=models.Products.objects.earliest('id').id-1
         else:
-            validated_data["id"]=models.Products.objects.latest('id').id+1
+            last=models.Products.objects.latest('id')
+            if last<0:#First personal data
+                validated_data["id"]=1
+            else:
+                validated_data["id"]=last +1
             
         
-        if  request.user.groups.filter(name="CatalogManager").exists() is False and validated_data["id"]<0:
-            raise ValidationError(_("You cant edit a system product if you're not a Catalog Manager (only developers)"))
+        if  not request.user.groups.filter(name="CatalogManager").exists():
+           if  request.data["system"] is True:
+                raise ValidationError(_("You can't edit a system product if you're not a Catalog Manager (only developers)"))
             
         created=serializers.HyperlinkedModelSerializer.create(self,  validated_data)
         return created
