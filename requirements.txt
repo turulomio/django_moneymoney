@@ -11,3 +11,4 @@ factory-boy
 faker
 unogenerator
 moneymoney_pl
+mod_wsgi
