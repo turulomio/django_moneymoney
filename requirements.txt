@@ -10,3 +10,4 @@ tabulate
 factory-boy
 faker
 unogenerator
+moneymoney_pl
