@@ -1375,6 +1375,10 @@ class PlInvestmentOperations():
             return Percentage()
         return Percentage(self.d_total_io_current(id)['gains_gross_user'], self.d_total_io_current(id)["invested_user"])
         
+    def total_io_current_percentage_sellingpoint(self, id, selling_price):
+        if selling_price is None or selling_price==0:
+            return Percentage()
+        return percentage_between(self.basic_results(id)["last"], selling_price)
         
     def ioc_days(self, ioc):
             return (date.today()-ioc["datetime"].date()).days
@@ -1388,6 +1392,9 @@ class PlInvestmentOperations():
             return Percentage(self.ioc_percentage_total_user(ioc)*365,  dias)
 
     def ioc_percentage_total_user(self, ioc):
+        """
+            Returns total porcentage of an current investment operation dictionary
+        """
         if ioc["invested_user"] is None:#initiating xulpymoney
             return Percentage()
         return Percentage(ioc['gains_gross_user'], ioc["invested_user"])
@@ -1486,6 +1493,9 @@ class PlInvestmentOperations():
         
         
     def  io_current_last_operation_excluding_additions(self, id):
+        """
+            Returns last investment operation excluding additions
+        """
         for o in reversed(self.d_io_current(id)):
             if o["operationstypes_id"]!=6:# Shares Additions
                 return o

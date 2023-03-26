@@ -714,6 +714,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "is_deletable": o.is_deletable(), 
                 "flag": o.products.stockmarkets.country, 
                 "gains_at_selling_point_investment": o.selling_price*o.products.real_leveraged_multiplier()*plio.d_total_io_current(o.id)["shares"]-plio.d_total_io_current(o.id)["invested_investment"], 
+                "decimals": o.decimals, 
             })
         print(datetime.now()-start, "balance")
         return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
@@ -2155,9 +2156,9 @@ def ReportsInvestmentsLastOperation(request):
                 "shares": plio.d_total_io_current(investment.id)["shares"],  
                 "balance": plio.d_total_io_current(investment.id)["balance_futures_user"],  
                 "gains": plio.d_total_io_current(investment.id)["gains_gross_user"],  
-                "percentage_last": plio.total_io_current_percentage_total_user(investment.id).value, 
-                "percentage_invested": plio.ioc_percentage_total_user(ioc_last), 
-                "percentage_sellingpoint": 0, # plio.percentage_sellingpoint(ioc_last, investment.selling_price).value,   
+                "percentage_last": plio.ioc_percentage_total_user(ioc_last), 
+                "percentage_invested":  plio.total_io_current_percentage_total_user(investment.id).value, 
+                "percentage_sellingpoint": plio.total_io_current_percentage_sellingpoint(investment.id, investment.selling_price).value,   
                 "investments_urls": investments_urls, 
             })
     elif method==1:#Merginc current operations

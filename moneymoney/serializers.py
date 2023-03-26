@@ -53,7 +53,7 @@ class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
     fullname = serializers.SerializerMethodField()
     class Meta:
         model = models.Investments
-        fields = ('url', 'id','name', 'active','accounts', 'selling_price', 'products',  'selling_expiration', 'daily_adjustment', 'balance_percentage', 'fullname')
+        fields = ('url', 'id','name', 'active','accounts', 'selling_price', 'products',  'selling_expiration', 'daily_adjustment', 'balance_percentage', 'fullname', 'decimals')
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_fullname(self, obj):
