@@ -419,6 +419,7 @@ class Investments(models.Model):
     selling_expiration = models.DateField(blank=True, null=True)
     daily_adjustment = models.BooleanField()
     balance_percentage = models.DecimalField(max_digits=18, decimal_places=6)
+    decimals=models.IntegerField(blank=False, null=False, default=6) #Refers to shares decimals
 
     class Meta:
         managed = True
@@ -634,7 +635,7 @@ class Products(models.Model):
     ticker_morningstar = models.TextField(blank=True, null=True) 
     ticker_quefondos = models.TextField(blank=True, null=True) 
     ticker_investingcom = models.TextField(blank=True, null=True) 
-    decimals = models.IntegerField(blank=True, null=True)
+    decimals = models.IntegerField(blank=True, null=True) #Refers to quotes decimals
 
     class Meta:
         managed = True

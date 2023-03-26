@@ -28,7 +28,6 @@ def generate_assets_report(request, format):
     from moneymoney.views import ReportAnnual
     authorization=cursor_one_field("select * from authtoken_token where user_id=%s", (request.user.id, ))
     c=request.user.profile.currency
-    
     year=date.today().year
     template=f"{path.dirname(__file__)}/templates/AssetsReport.odt"
     doc=ODT(template)

@@ -93,9 +93,6 @@ def AssetsReport(request):
         r={"filename":path.basename(filename),  "format": format_,  "data":encoded_string.decode("UTF-8"), "mime":mime}
         return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
-
-
-
 class ConceptsViewSet(viewsets.ModelViewSet):
     queryset = models.Concepts.objects.all()
     serializer_class = serializers.ConceptsSerializer
@@ -1053,7 +1050,7 @@ def InvestmentsChangeSellingPrice(request):
                 inv.selling_price=selling_price
                 inv.selling_expiration=selling_expiration
                 inv.save()
-            r   = serializers.InvestmentsSerializer(models.Investments.objects.filter(id__in=ids), many=True, context={'request': request}).data
+        r   = serializers.InvestmentsSerializer(models.Investments.objects.filter(id__in=ids), many=True, context={'request': request}).data
         return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
     return Response({'status': 'Investment or selling_price is None'}, status=status.HTTP_404_NOT_FOUND)
 
