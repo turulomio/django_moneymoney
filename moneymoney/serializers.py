@@ -180,10 +180,10 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
             validated_data["id"]=models.Products.objects.earliest('id').id-1
         else:
             last=models.Products.objects.latest('id')
-            if last<0:#First personal data
+            if last.id<0:#First personal data
                 validated_data["id"]=1
             else:
-                validated_data["id"]=last +1
+                validated_data["id"]=last.id +1
             
         
         if  not request.user.groups.filter(name="CatalogManager").exists():
