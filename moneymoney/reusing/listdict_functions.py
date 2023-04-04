@@ -3,6 +3,7 @@
 ## DO NOT UPDATE IT IN YOUR CODE
 
 from collections import OrderedDict
+from datetime import date
 
 ## El objetivo es crear un objeto list_dict que se almacenera en self.ld con funciones set
 ## set_from_db #Todo se carga desde base de datos con el minimo parametro posible
@@ -187,6 +188,13 @@ def listdict2dict(listdict, key):
     for ld in listdict:
         d[ld[key]]=ld
     return d
+    
+## Converts a listdict to a dict using (key1,key2) tuple  as new dict key, and the dict as a value
+def listdict2dict_tuple(listdict, key1, key2):
+    d={}
+    for ld in listdict:
+        d[(ld[key1],ld[key2])]=ld
+    return d
 
 ## Returns a list from a listdict key
 ## @param listdict
@@ -284,6 +292,10 @@ def listdict2listofordereddicts(ld, keys):
     return r
 
 
+## Returns the dictionary that has the max value of a key. Not necessary is unique
+def listdict_max(ld, key):
+     print("TODO")
+
 ## Returns maximum value of a given key. Is unique. REturns NOne if listdict is empty
 def listdict_max_value(ld, key):
      if len(ld)>0:
@@ -324,7 +336,7 @@ def listdict_year_month_value_transposition(ld, key_year="year", key_month="mont
 
     #Assign values
     for d in ld:
-        r[d[key_year]-min_year]["m"+str(d[key_month])]=r[d[key_year]-min_year]["m"+str(d[key_month])]+d[key_value]
+        r[d[key_year]-min_year]["m"+str(d[key_month])]=d[key_value]
 
     #Calculate totals
     for year in range(min_year,max_year+1):
@@ -332,6 +344,19 @@ def listdict_year_month_value_transposition(ld, key_year="year", key_month="mont
         d["total"]=d["m1"]+d["m2"]+d["m3"]+d["m4"]+d["m5"]+d["m6"]+d["m7"]+d["m8"]+d["m9"]+d["m10"]+d["m11"]+d["m12"]
 
     return r
+
+## Converts a tipical groyp by lor with year, month (normaly extracted from db to fill empty values)
+def listdict_year_month_value_filling(ld, year_from, year_to=date.today().year, fill_value=0, key_year="year", key_month="month", key_value="value"):
+    ld_tuple=listdict2dict_tuple(listdict, key_year, month_year)
+    for year in range(year_from,year_to+1):
+        for month in range (1,13):
+            if not (key_year,key_month) in ld_tuple:
+                ld_tuple[(key_year,key_month)]={key_year: year, key_month: month, key_value:fill_value}
+    r=[]
+    for d in ld_tuple.values:
+        r.append(d)
+    return r
+
 
 ## Converts a tipical groyp by lor with A, B, value, value into an other lod with A as rows, B as columns and value as AxB list of dic
 ## columns order can be defined in order

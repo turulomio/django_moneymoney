@@ -21,7 +21,7 @@ from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_rows_as_dict, show_queries, show_queries_function
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
-from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average, listdict_year_month_value_transposition
+from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average, listdict_year_month_value_transposition, listdict_year_month_value_filling
 from moneymoney.reusing.percentage import Percentage,  percentage_between
 from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestString, RequestListUrl, id_from_url, all_args_are_not_none, RequestCastingError
 from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEncoder, json_success_response
@@ -2035,7 +2035,13 @@ def ReportEvolutionAssets(request, from_year):
     d_incomes=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Income), "year")
     d_expenses=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Expense), "year")
     d_dividends=listdict2dict(models.Dividends.lod_ym_netgains_dividends(request), "year")
-    
+
+    # Dictionary can have missing years if there isn't data in database, so I must fill them
+    for year in range(from_year, date.today().year+1):
+        for dict_ in [d_incomes, d_expenses, d_dividends]:
+            if not year in dict_:
+                dict_[year]={"total":0}
+
     list_=[]
     for year in range(from_year, date.today().year+1): 
         dt_from=dtaware_year_start(year, request.user.profile.zone)
@@ -2105,11 +2111,17 @@ def ReportEvolutionInvested(request, from_year):
     d_custody_commissions=listdict2dict(models.Assets.lod_ym_balance_user_by_concepts(request, [eConcept.CommissionCustody, ] ), "year")
     d_taxes=listdict2dict(models.Assets.lod_ym_balance_user_by_concepts(request, [eConcept.TaxesReturn, eConcept.TaxesPayment, ] ), "year")
 
+    # Dictionary can have missing years if there isn't data in database, so I must fill them
+    for year in range(from_year, date.today().year+1):
+        for dict_ in [d_dividends, d_custody_commissions, d_taxes]:
+            if not year in dict_:
+                dict_[year]={"total":0}
+
     for year in range(from_year, date.today().year+1): 
         dt_from=dtaware_year_start(year, request.user.profile.zone)
         dt_to=dtaware_year_end(year, request.user.profile.zone)
         plio=models.PlInvestmentOperations.from_qs(dt_to, request.user.profile.currency, qs, 1)
-        
+
         d={}
         d['year']=year
         d['invested']=plio.sum_total_io_current()["invested_user"]
@@ -2118,7 +2130,7 @@ def ReportEvolutionInvested(request, from_year):
         d['percentage']=percentage_between(d['invested'], d['balance'])
         d['net_gains_plus_dividends']=plio.io_historical_sum_between_dt(dt_from, dt_to, "gains_net_user")+d_dividends[year]["total"]
         d['custody_commissions']=d_custody_commissions[year]["total"]
-        d['taxes']=d_taxes[year]["total"]
+        d['taxes']=d_taxes[year]["total"] 
         d['investment_commissions']=plio.io_sum_between_dt(dt_from, dt_to, "commission_account")
         list_.append(d)
     
