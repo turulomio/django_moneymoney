@@ -21,7 +21,7 @@ from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_rows_as_dict, show_queries, show_queries_function
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
-from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average, listdict_year_month_value_transposition, listdict_year_month_value_filling
+from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average, listdict_year_month_value_transposition
 from moneymoney.reusing.percentage import Percentage,  percentage_between
 from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestString, RequestListUrl, id_from_url, all_args_are_not_none, RequestCastingError
 from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEncoder, json_success_response
@@ -326,14 +326,16 @@ class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
             return self.queryset.all()
 
 
-
+def listdict_year_month_value_transposition_sum(lymv_a, lymv_b):
+    pass
     
 class Derivatives(APIView):
     permission_classes = [permissions.IsAuthenticated]
     @extend_schema(
-        description="Return 'Derivatives and Fast InvestmentOperations' accounts operations", 
+        description="Return 'Derivatives and Fast InvestmentOperations' accounts operations. Also Balance with FastOperationsCoverture", 
     )
     def get(self, request, *args, **kwargs):
+        r={}
         qs=models.Accountsoperations.objects.filter(concepts__id__in=(
             eConcept.DerivativesAdjustment, 
             eConcept.DerivativesCommission, 
@@ -344,7 +346,18 @@ class Derivatives(APIView):
             .values( 'year', 'month')\
             .annotate(amount=Sum('amount'))\
             .order_by('year', 'month')
-        return json_data_response(True, listdict_year_month_value_transposition(list(qs.values('year', 'month', 'amount')), key_value="amount"), "Derivatives query done")
+        r["derivatives"]=listdict_year_month_value_transposition(list(qs.values('year', 'month', 'amount')))
+        
+        qs_coverage=models.FastOperationsCoverage.objects.all()\
+            .annotate(year=ExtractYear('datetime'), month=ExtractMonth('datetime'))\
+            .values( 'year', 'month')\
+            .annotate(amount=Sum('amount'))\
+            .order_by('year', 'month')
+            
+        lymv_coverage=listdict_year_month_value_transposition(list(qs_coverage.values('year', 'month', 'amount')))
+            
+        r["balance"]=listdict_year_month_value_transposition_sum(r["derivatives"], lymv_coverage)
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)        
 
 class DividendsViewSet(viewsets.ModelViewSet):
     queryset = models.Dividends.objects.all().select_related("investments", "investments__accounts")
