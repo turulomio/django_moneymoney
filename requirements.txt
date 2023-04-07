@@ -3,7 +3,7 @@ django
 django-cors-headers
 djangorestframework
 drf-spectacular
-psycopg2==2.9.5
+psycopg2
 requests
 unogenerator
 tabulate

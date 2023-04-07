@@ -506,7 +506,6 @@ class Investmentsoperations(models.Model):
     price = models.DecimalField(max_digits=100, decimal_places=6, blank=False, null=False)
     datetime = models.DateTimeField(blank=False, null=False)
     comment = models.TextField(blank=True, null=True)
-    show_in_ranges = models.BooleanField(blank=False, null=False)
     currency_conversion = models.DecimalField(max_digits=30, decimal_places=10, blank=False, null=False)
 
     class Meta:
@@ -532,9 +531,6 @@ class Investmentsoperations(models.Model):
     ## que se puede actualizar en cualquier momento con esta función
     @transaction.atomic
     def update_associated_account_operation(self,  request):
-        #/Borra de la tabla investmentsaccountsoperations los de la operinversión pasada como parámetro
-        #execute("delete from investmentsaccountsoperations where investmentsoperations_id=%s",(self.id, )) 
-        #Selecciona si existe una accountoperation con comment '10000,self.id' con id_concepts 35,29 y 38
         concepts=Concepts.objects.filter(pk__in=(eConcept.BuyShares, eConcept.SellShares, eConcept.BankCommissions))
         qs_ao=Accountsoperations.objects.filter(concepts__in=concepts, comment=f'{eComment.InvestmentOperation},{self.id}')
         qs_ao.delete()
@@ -1490,8 +1486,7 @@ class PlInvestmentOperations():
                 if o["price_investment"]<r:
                     r=o["price_investment"]
         return r
-        
-        
+
     def  io_current_last_operation_excluding_additions(self, id):
         """
             Returns last investment operation excluding additions
@@ -1500,3 +1495,12 @@ class PlInvestmentOperations():
             if o["operationstypes_id"]!=6:# Shares Additions
                 return o
         return None
+
+class FastOperationsCoverage(models.Model):
+    datetime = models.DateTimeField(blank=False, null=False)
+    investments = models.ForeignKey('Investments', models.DO_NOTHING, blank=False, null=False)
+    amount= models.DecimalField(max_digits=30, decimal_places=6, blank=False, null=False)
+    comment = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = True
