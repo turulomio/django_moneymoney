@@ -262,6 +262,11 @@ class StrategiesSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class FastOperationsCoverageSerializer(serializers.HyperlinkedModelSerializer):
+    
+    currency= serializers.SerializerMethodField()
     class Meta:
         model = models.FastOperationsCoverage
-        fields = ('url', 'id', 'datetime', 'investments', 'amount','comment')
+        fields = ('url', 'id', 'datetime', 'investments', 'amount','comment', 'currency')
+
+    def get_currency(self, o):
+        return o.investments.products.currency

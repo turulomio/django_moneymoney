@@ -326,41 +326,6 @@ class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
             return self.queryset.all()
 
 
-def listdict_year_month_value_transposition_sum(lymv_a, lymv_b):
-    def get_younger(year, field):
-        if year in d_younger:
-            return d_younger[year][field]
-        else:
-            return 0
-    
-    if len(lymv_a)==0:
-        return lymv_b
-    if len(lymv_b)==0:
-        return lymv_a
-    year_lymv_a=lymv_a[0]["year"]
-    year_lymv_b=lymv_b[0]["year"]
-    print(year_lymv_a, year_lymv_b)
-    older=lymv_a if year_lymv_a<year_lymv_b else lymv_b
-    younger=lymv_a if year_lymv_a>year_lymv_b else lymv_b
-    d_younger=listdict2dict(younger, "year")
-    r=[]
-    for d in older:
-        new={}
-        new["year"]=d["year"]
-        new["m1"]=d["m1"]+get_younger(d["year"],"m1")
-        new["m2"]=d["m2"]+get_younger(d["year"],"m2")
-        new["m3"]=d["m3"]+get_younger(d["year"],"m3")
-        new["m4"]=d["m4"]+get_younger(d["year"],"m4")
-        new["m5"]=d["m5"]+get_younger(d["year"],"m5")
-        new["m6"]=d["m6"]+get_younger(d["year"],"m6")
-        new["m7"]=d["m7"]+get_younger(d["year"],"m7")
-        new["m8"]=d["m8"]+get_younger(d["year"],"m8")
-        new["m9"]=d["m9"]+get_younger(d["year"],"m9")
-        new["m10"]=d["m10"]+get_younger(d["year"],"m10")
-        new["m11"]=d["m11"]+get_younger(d["year"],"m11")
-        new["m12"]=d["m12"]+get_younger(d["year"],"m12")
-        r.append(new)
-    return r
     
 class Derivatives(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -380,9 +345,7 @@ class Derivatives(APIView):
             .annotate(amount=Sum('amount'))\
             .order_by('year', 'month')
             
-        print(list(qs.values('year', 'month', 'amount')))    
         r["derivatives"]=listdict_year_month_value_transposition(list(qs.values('year', 'month', 'amount')), key_value="amount")
-        print("OIOD")
         
         qs_coverage=models.FastOperationsCoverage.objects.all()\
             .annotate(year=ExtractYear('datetime'), month=ExtractMonth('datetime'))\
@@ -2365,10 +2328,14 @@ class EstimationsDpsViewSet(viewsets.ModelViewSet):
 class StockmarketsViewSet(CatalogModelViewSet):
     queryset = models.Stockmarkets.objects.all()
     serializer_class = serializers.StockmarketsSerializer
-    
 
 class FastOperationsCoverageViewSet(viewsets.ModelViewSet):
-    queryset = models.FastOperationsCoverage.objects.all()
+    queryset = models.FastOperationsCoverage.objects.all().select_related("investments__products")
     serializer_class = serializers.FastOperationsCoverageSerializer
-    permission_classes = [permissions.IsAuthenticated]  
+    permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        year=RequestGetInteger(self.request, 'year')
+        month=RequestGetInteger(self.request, 'month')
+        if all_args_are_not_none(year, month):
+            return self.queryset.filter(datetime__year=year, datetime__month=month)
