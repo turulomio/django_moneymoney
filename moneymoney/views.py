@@ -21,7 +21,7 @@ from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_rows_as_dict, show_queries, show_queries_function
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
-from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average, listdict_year_month_value_transposition, listdict_year_month_value_filling
+from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average, listdict_year_month_value_transposition, listdict_year_month_value_transposition_sum
 from moneymoney.reusing.percentage import Percentage,  percentage_between
 from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestString, RequestListUrl, id_from_url, all_args_are_not_none, RequestCastingError
 from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEncoder, json_success_response
@@ -326,14 +326,14 @@ class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
             return self.queryset.all()
 
 
-
     
 class Derivatives(APIView):
     permission_classes = [permissions.IsAuthenticated]
     @extend_schema(
-        description="Return 'Derivatives and Fast InvestmentOperations' accounts operations", 
+        description="Return 'Derivatives and Fast InvestmentOperations' accounts operations. Also Balance with FastOperationsCoverage", 
     )
     def get(self, request, *args, **kwargs):
+        r={}
         qs=models.Accountsoperations.objects.filter(concepts__id__in=(
             eConcept.DerivativesAdjustment, 
             eConcept.DerivativesCommission, 
@@ -344,7 +344,19 @@ class Derivatives(APIView):
             .values( 'year', 'month')\
             .annotate(amount=Sum('amount'))\
             .order_by('year', 'month')
-        return json_data_response(True, listdict_year_month_value_transposition(list(qs.values('year', 'month', 'amount')), key_value="amount"), "Derivatives query done")
+            
+        r["derivatives"]=listdict_year_month_value_transposition(list(qs.values('year', 'month', 'amount')), key_value="amount")
+        
+        qs_coverage=models.FastOperationsCoverage.objects.all()\
+            .annotate(year=ExtractYear('datetime'), month=ExtractMonth('datetime'))\
+            .values( 'year', 'month')\
+            .annotate(amount=Sum('amount'))\
+            .order_by('year', 'month')
+            
+        lymv_coverage=listdict_year_month_value_transposition(list(qs_coverage.values('year', 'month', 'amount')), key_value="amount")
+            
+        r["balance"]=listdict_year_month_value_transposition_sum(r["derivatives"], lymv_coverage)
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)        
 
 class DividendsViewSet(viewsets.ModelViewSet):
     queryset = models.Dividends.objects.all().select_related("investments", "investments__accounts")
@@ -632,7 +644,6 @@ class Timezones(APIView):
 
 
 class InvestmentsViewSet(viewsets.ModelViewSet):
-    
     queryset = models.Investments.objects.select_related("accounts").all()
     serializer_class = serializers.InvestmentsSerializer
     permission_classes = [permissions.IsAuthenticated]  
@@ -648,14 +659,6 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
             return self.queryset.filter(active=active)
         else:
             return self.queryset
-
-    def list(self, request):
-        print("LIST INVESTMETS")
-        for o in self.queryset:
-            if o.id==440:
-                print(o.selling_price, o.selling_expiration)
-        r= viewsets.ModelViewSet.list(self, request)
-        return r
 
     @action(detail=False, methods=["get"], name='List investments with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
     def withbalance(self, request): 
@@ -786,7 +789,6 @@ class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
 def AccountTransfer(request): 
     account_origin=RequestUrl(request, 'account_origin', models.Accounts)#Returns an account object
     account_destiny=RequestUrl(request, 'account_destiny', models.Accounts)
-    print(request.user.profile.zone)
     datetime=RequestDtaware(request, 'datetime', request.user.profile.zone)
     amount=RequestDecimal(request, 'amount')
     commission=RequestDecimal(request, 'commission',  0)
@@ -794,7 +796,6 @@ def AccountTransfer(request):
     ao_destiny=RequestUrl(request, 'ao_destiny', models.Accountsoperations)
     ao_commission=RequestUrl(request, 'ao_commission', models.Accountsoperations)
     if request.method=="POST":
-        print(amount, commission, datetime)
         if ( account_destiny is not None and account_origin is not None and datetime is not None and amount is not None and amount >=0 and commission is not None and commission >=0 and account_destiny!=account_origin):
             if commission >0:
                 ao_commission=models.Accountsoperations()
@@ -813,7 +814,6 @@ def AccountTransfer(request):
             ao_origin.amount=-amount
             ao_origin.accounts=account_origin
             ao_origin.save()
-            print(ao_origin)
 
             #Destiny
             ao_destiny=models.Accountsoperations()
@@ -1362,8 +1362,6 @@ class ProductsViewSet(viewsets.ModelViewSet):
             select date, lag, quote, percentage(lag,quote)  from quotes;
         """, (product.id, product.id, first_year, date.today().year+1))
         rows_year.pop(0)
-    #    ld_print(rows_month)
-    #    ld_print(rows_year)
         #PERCENTAGES
         ld_percentage=[]
         d={ 'm1': 0, 'm2': 0, 'm3': 0, 'm4': 0, 'm5': 0, 'm6': 0, 'm7': 0, 'm8': 0, 'm9': 0, 'm10': 0, 'm11': 0, 'm12': 0}
@@ -1452,7 +1450,6 @@ def ProductsUpdate(request):
 
         #if file is too large, return
         if csv_file.multiple_chunks():
-            print()
             return Response({'status': "Uploaded file is too big ({} MB).".format(csv_file.size/(1000*1000),)}, status=status.HTTP_404_NOT_FOUND)
 
         ic=InvestingCom(request, product=None)
@@ -1534,7 +1531,6 @@ class QuotesMassiveUpdate(APIView):
         from moneymoney.investing_com import InvestingCom
         product=RequestUrl(request, "product", models.Products)
         type=RequestInteger(request, "type")
-        print(product,  type)
         if product and type==1:## Investment.com historical quotes file
             # if not GET, then proceed
             if "csv_file1" not in request.FILES:
@@ -2175,7 +2171,6 @@ def ReportsInvestmentsLastOperation(request):
             })
     elif method==1:#Merginc current operations
         plio=models.PlInvestmentOperations.from_merging_io_current(timezone.now(), request.user.profile.currency, investments, 1)
-        plio.print()
         for virtual_investment_id in plio.list_investments_id():
             virtual_investment_product=models.Products.objects.get(pk=virtual_investment_id)
             
@@ -2298,12 +2293,10 @@ def StoreFile(request):
         return JsonResponse(True, safe=False)  
     return JsonResponse(False, safe=False)  
 
-
 class EstimationsDpsViewSet(viewsets.ModelViewSet):
     queryset = models.EstimationsDps.objects.all()
     serializer_class = serializers.EstimationsDpsSerializer
     permission_classes = [permissions.IsAuthenticated]      
-    
     
     def get_queryset(self):
         # To get active or inactive accounts
@@ -2316,3 +2309,14 @@ class EstimationsDpsViewSet(viewsets.ModelViewSet):
 class StockmarketsViewSet(CatalogModelViewSet):
     queryset = models.Stockmarkets.objects.all()
     serializer_class = serializers.StockmarketsSerializer
+
+class FastOperationsCoverageViewSet(viewsets.ModelViewSet):
+    queryset = models.FastOperationsCoverage.objects.all().select_related("investments__products")
+    serializer_class = serializers.FastOperationsCoverageSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        year=RequestGetInteger(self.request, 'year')
+        month=RequestGetInteger(self.request, 'month')
+        if all_args_are_not_none(year, month):
+            return self.queryset.filter(datetime__year=year, datetime__month=month)
