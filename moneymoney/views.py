@@ -327,12 +327,12 @@ class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
 
 
 def listdict_year_month_value_transposition_sum(lymv_a, lymv_b):
-    pass
+    return []
     
 class Derivatives(APIView):
     permission_classes = [permissions.IsAuthenticated]
     @extend_schema(
-        description="Return 'Derivatives and Fast InvestmentOperations' accounts operations. Also Balance with FastOperationsCoverture", 
+        description="Return 'Derivatives and Fast InvestmentOperations' accounts operations. Also Balance with FastOperationsCoverage", 
     )
     def get(self, request, *args, **kwargs):
         r={}
@@ -346,7 +346,10 @@ class Derivatives(APIView):
             .values( 'year', 'month')\
             .annotate(amount=Sum('amount'))\
             .order_by('year', 'month')
-        r["derivatives"]=listdict_year_month_value_transposition(list(qs.values('year', 'month', 'amount')))
+            
+        print(list(qs.values('year', 'month', 'amount')))    
+        r["derivatives"]=listdict_year_month_value_transposition(list(qs.values('year', 'month', 'amount')), key_value="amount")
+        print("OIOD")
         
         qs_coverage=models.FastOperationsCoverage.objects.all()\
             .annotate(year=ExtractYear('datetime'), month=ExtractMonth('datetime'))\
@@ -354,7 +357,7 @@ class Derivatives(APIView):
             .annotate(amount=Sum('amount'))\
             .order_by('year', 'month')
             
-        lymv_coverage=listdict_year_month_value_transposition(list(qs_coverage.values('year', 'month', 'amount')))
+        lymv_coverage=listdict_year_month_value_transposition(list(qs_coverage.values('year', 'month', 'amount')), key_value="amount")
             
         r["balance"]=listdict_year_month_value_transposition_sum(r["derivatives"], lymv_coverage)
         return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)        
@@ -2329,3 +2332,10 @@ class EstimationsDpsViewSet(viewsets.ModelViewSet):
 class StockmarketsViewSet(CatalogModelViewSet):
     queryset = models.Stockmarkets.objects.all()
     serializer_class = serializers.StockmarketsSerializer
+    
+
+class FastOperationsCoverageViewSet(viewsets.ModelViewSet):
+    queryset = models.FastOperationsCoverage.objects.all()
+    serializer_class = serializers.FastOperationsCoverageSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+

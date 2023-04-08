@@ -6,6 +6,7 @@ from moneymoney import views_login as money_views_login
 from rest_framework import routers
 
 router = routers.DefaultRouter()
+routers.DefaultRouter
 router.register(r'accounts', money_views.AccountsViewSet)
 router.register(r'accountsoperations', money_views.AccountsoperationsViewSet)
 router.register(r'banks', money_views.BanksViewSet)
@@ -15,6 +16,7 @@ router.register(r'creditcardsoperations', money_views.CreditcardsoperationsViewS
 router.register(r'dividends', money_views.DividendsViewSet)
 router.register(r'dps', money_views.DpsViewSet)
 router.register(r'estimationsdps', money_views.EstimationsDpsViewSet)
+router.register(r'fastoperationscoverage', money_views.FastOperationsCoverageViewSet)
 router.register(r'investments', money_views.InvestmentsViewSet)
 router.register(r'investmentsoperations', money_views.InvestmentsoperationsViewSet)
 router.register(r'leverages', money_views.LeveragesViewSet)
