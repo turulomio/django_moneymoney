@@ -1287,8 +1287,8 @@ class ProductsViewSet(viewsets.ModelViewSet):
                     products,
                     last_penultimate_lastyear(products.id, now()) 
                 where 
-                    products.id in %s
-            """), (tuple(ids), ))
+                    products.id = any(%s)
+            """), (ids, ))
         #############################################        
         search=RequestGetString(request, "search")
         if all_args_are_not_none(search):

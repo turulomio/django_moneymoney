@@ -77,8 +77,8 @@ class Accounts(models.Model):
         if len (qs)==0:
             return 0
             
-        ids=tuple(qs.values_list("id",  flat=True).distinct())
-        return cursor_one_field("select sum((account_balance(accounts.id,%s,'EUR')).balance_user_currency) from  accounts where id in %s", (dt, ids))
+        ids=qs.values_list("id",  flat=True).distinct()
+        return cursor_one_field("select sum((account_balance(accounts.id,%s,'EUR')).balance_user_currency) from  accounts where id=any(%s)", (dt, ids))
 
             
     @staticmethod
