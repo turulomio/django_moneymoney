@@ -3,7 +3,6 @@ from decimal import Decimal
 from django.contrib.auth.models import User
 from django.db import models, transaction
 from django.db.models import Case, When, Sum
-from django.db.models.expressions import RawSQL
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
@@ -473,11 +472,8 @@ class Investments(models.Model):
         queryset = Investments.objects.select_related('accounts').filter(pk__in=ids).order_by(preserved)
         return queryset
         
-    def shares_from_db_investmentsoperations(self):
-        r=cursor_one_field(" select sum(shares) from investmentsoperations where investments_id=%s", (self.id, ))
-        if r is None:
-            return 0
-        return r
+    def shares_from_db_investmentsoperations(self):        
+        return models.Investmentsoperations.objects.filter(investments=self).aggregate(Sum("shares"))["shares__sum"]
         
     def set_attributes_after_investmentsoperations_crud(self):      
 #        print("setting investment attributes")
@@ -673,10 +669,6 @@ class Products(models.Model):
             self._ohcl_daily_before_splits=cursor_rows("select * from ohcldailybeforesplits(%s)", (self.id, ))
         return self._ohcl_daily_before_splits
 
-    @staticmethod
-    def qs_products_of_active_investments():
-        return Products.objects.filter(id__in=RawSQL('select distinct(products.id) from products, investments where products.id=investments.products_id and investments.active is true', ()))
-
 class Productspairs(models.Model):
     name = models.CharField(max_length=200, blank=False, null=False)
     a = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='products')
@@ -715,7 +707,7 @@ class Quotes(models.Model):
     def save(self, *args, **kwargs):
         if self.datetime-timezone.now()>timedelta(days=1):
             return _("Error saving '{0}'. Datetime it's in the future").format(self)
-        quotes=Quotes.objects.filter(datetime=self.datetime, products=self.products)
+        quotes=Quotes.objects.filter(datetime=self.datetime, products=self.products).select_related("products")
         if quotes.exists():
             quotes.update(quote=self.quote)
             return _("Updating '{0}'").format(quotes)
