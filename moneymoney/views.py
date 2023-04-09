@@ -2320,3 +2320,4 @@ class FastOperationsCoverageViewSet(viewsets.ModelViewSet):
         month=RequestGetInteger(self.request, 'month')
         if all_args_are_not_none(year, month):
             return self.queryset.filter(datetime__year=year, datetime__month=month)
+        return self.queryset
