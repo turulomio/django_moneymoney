@@ -406,11 +406,14 @@ class OrdersViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         active=RequestGetBool(self.request, 'active')
         expired=RequestGetBool(self.request, 'expired')
+        expired_days=RequestGetInteger(self.request, 'expired_days')
         executed=RequestGetBool(self.request, 'executed')
         if active is not None:
             return self.queryset.filter(Q(expiration__gte=date.today()) | Q(expiration__isnull=True), executed__isnull=True)
         elif expired is not None:
             return self.queryset.filter(expiration__lte=date.today(),  executed__isnull=True)
+        elif expired_days is not None:
+            return self.queryset.filter(expiration__range=(date.today()-timedelta(days=expired_days), date.today()),  executed__isnull=True)
         elif executed is not None:
             return self.queryset.filter(executed__isnull=False)
         else:
