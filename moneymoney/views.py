@@ -2196,13 +2196,8 @@ def ReportsInvestmentsLastOperation(request):
                 "percentage_sellingpoint": 0, # plio.percentage_sellingpoint(ioc_last, investment.selling_price).value,   
                 "investments_urls": investments_urls, 
             })
-
-
 #    show_queries_function()
     return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
-    
-    
-
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -2213,30 +2208,13 @@ def ReportCurrentInvestmentsOperations(request):
     
     for inv in plio.qs_investments():
         for o in plio.d_io_current(inv.id):
-            ld.append({
-                "investments_id": inv.id, 
-                "name": inv.fullName(), # Needed for AssetsReport
-                "operationstypes": request.build_absolute_uri(reverse('operationstypes-detail', args=(o["operationstypes_id"], ))), 
-                "datetime": o["datetime"], 
-                "shares": o['shares'], 
-                "price_user": o['price_user'], 
-                "invested_user": o['invested_user'], 
-                "balance_user": o["balance_user"], 
-                "gains_gross_user": o['gains_gross_user'], 
-                "percentage_annual_user": plio.ioc_percentage_annual_user(o).value, 
-                "percentage_apr_user": plio.ioc_percentage_apr_user(o).value, 
-                "percentage_total_user": plio.ioc_percentage_total_user(o).value,
-                "currency_user": plio.d_data(inv.id)["currency_user"], 
-            })
+            ld.append(o)
     ld=listdict_order_by(ld, "datetime")
     
-    return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
-
-
+    return JsonResponse( ld, encoder=MyDjangoJSONEncoder, safe=False)
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-
 def ReportRanking(request):
     plio=models.PlInvestmentOperations.from_ids(timezone.now(), request.user.profile.currency, None, mode=2)
 
