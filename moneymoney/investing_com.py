@@ -149,40 +149,42 @@ class InvestingCom:
         r=[]
         quotes_count = 0
         for row in self.csv_object:
-                if row[2]=="":
-                    products=Products.objects.raw('SELECT products.* FROM products where ticker_investingcom=%s', (f"{row[1]}", ))
-                    code=f"{row[1]}"
-                else:
-                    products=Products.objects.raw('SELECT products.* FROM products where ticker_investingcom=%s', (f"{row[1]}#{row[2]}", ))
-                    code=f"{row[1]}#{row[2]}"
-                    
-                if len(products)==0:
-                    r.append({"product":None,   "code":code,  "log": "Product wasn't found"})
+            if row[2]=="":
+                products=Products.objects.filter(ticker_investingcom=row[1]).select_related("stockmarkets")
+                code=f"{row[1]}"
+            else:
+                products=Products.objects.filter(ticker_investingcom=f"{row[1]}#{row[2]}").select_related("stockmarkets")
+                code=f"{row[1]}#{row[2]}"
+                
+                
+                
+            if len(products)==0:
+                r.append({"product":None,   "code":code,  "log": "Product wasn't found"})
 
-                for product in products:
-                    d={"product": product.fullName(),   "code":code}
-                    if row[16].find(":")==-1:#It's a date
-                        try:
-                            quote=Quotes()
-                            quote.products=product
-                            date_=string2date(row[16], "DD/MM")
-                            quote.datetime=dtaware(date_, product.stockmarkets.closes, product.stockmarkets.zone)#Without 4 microseconds becaouse is not a ohcl
-                            quote.quote=string2decimal(row[3])
-                            quotes_count=quotes_count+1
-                            d["log"]=quote.save()
-                        except:
-                            d["log"]="Error parsing date"+ str(row)
-                    else: #It's an hour
-                        try:
-                            quote=Quotes()
-                            quote.products=product
-                            quote.datetime=string2dtaware(row[16],"%H:%M:%S", self.request.user.profile.zone)
-                            quote.quote=string2decimal(row[3])
-                            quotes_count=quotes_count+1
-                            d["log"]=quote.save()
-                        except:
-                            d["log"]="Error parsing hour" + str(row)
-                    r.append(d)
+            for product in products:
+                d={"product": product.fullName(),   "code":code}
+                if row[16].find(":")==-1:#It's a date
+                    try:
+                        quote=Quotes()
+                        quote.products=product
+                        date_=string2date(row[16], "DD/MM")
+                        quote.datetime=dtaware(date_, product.stockmarkets.closes, product.stockmarkets.zone)#Without 4 microseconds becaouse is not a ohcl
+                        quote.quote=string2decimal(row[3])
+                        quotes_count=quotes_count+1
+                        d["log"]=quote.save()
+                    except:
+                        d["log"]="Error parsing date"+ str(row)
+                else: #It's an hour
+                    try:
+                        quote=Quotes()
+                        quote.products=product
+                        quote.datetime=string2dtaware(row[16],"%H:%M:%S", self.request.user.profile.zone)
+                        quote.quote=string2decimal(row[3])
+                        quotes_count=quotes_count+1
+                        d["log"]=quote.save()
+                    except:
+                        d["log"]="Error parsing hour" + str(row)
+                r.append(d)
         print("Products found updating portfolio", len(r))
         return r
 

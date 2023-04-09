@@ -402,7 +402,6 @@ class OrdersViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.OrdersSerializer
     permission_classes = [permissions.IsAuthenticated]  
 
-
     def get_queryset(self):
         active=RequestGetBool(self.request, 'active')
         expired=RequestGetBool(self.request, 'expired')
@@ -508,7 +507,6 @@ class StrategiesViewSet(viewsets.ModelViewSet):
                 "additional9": strategy.additional9, 
                 "additional10": strategy.additional10, 
             })
-        show_queries_function()
         return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
         
     @action(detail=True, methods=["get"], name='Gets a plio_id from strategy investments', url_path="plio_id", url_name='plio_id', permission_classes=[permissions.IsAuthenticated])
@@ -1458,7 +1456,6 @@ def ProductsUpdate(request):
         ic=InvestingCom(request, product=None)
         ic.load_from_filename_in_memory(csv_file)
     r=ic.get()
-    
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
     
 class Profile(APIView):
@@ -2061,7 +2058,6 @@ def ReportEvolutionAssets(request, from_year):
             "expenses":expenses, 
             "total":incomes+gains+dividends+expenses, 
         })
-    show_queries_function()
     return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
     
 @api_view(['GET', ])    
@@ -2199,7 +2195,6 @@ def ReportsInvestmentsLastOperation(request):
                 "percentage_sellingpoint": 0, # plio.percentage_sellingpoint(ioc_last, investment.selling_price).value,   
                 "investments_urls": investments_urls, 
             })
-#    show_queries_function()
     return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
 
 @api_view(['GET', ])    
