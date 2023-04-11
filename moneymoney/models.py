@@ -473,7 +473,7 @@ class Investments(models.Model):
         return queryset
         
     def shares_from_db_investmentsoperations(self):        
-        return models.Investmentsoperations.objects.filter(investments=self).aggregate(Sum("shares"))["shares__sum"]
+        return Investmentsoperations.objects.filter(investments=self).aggregate(Sum("shares"))["shares__sum"]
         
     def set_attributes_after_investmentsoperations_crud(self):      
 #        print("setting investment attributes")
