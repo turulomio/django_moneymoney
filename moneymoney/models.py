@@ -1138,7 +1138,6 @@ class PlInvestmentOperations():
                 "price": io.price, 
                 "datetime": io.datetime, 
                 "comment": io.comment, 
-                "show_in_ranges": io.show_in_ranges, 
                 "currency_conversion":io.currency_conversion
             })
         return r
@@ -1161,7 +1160,6 @@ class PlInvestmentOperations():
                 "price": io.price, 
                 "datetime": io.datetime, 
                 "comment": io.comment, 
-                "show_in_ranges": io.show_in_ranges, 
                 "currency_conversion":io.currency_conversion
             })
         return r

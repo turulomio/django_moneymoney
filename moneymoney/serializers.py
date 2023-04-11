@@ -63,7 +63,7 @@ class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     currency = serializers.SerializerMethodField()
     class Meta:
         model = models.Investmentsoperations
-        fields = ('url', 'id','operationstypes', 'investments','shares', 'taxes', 'commission',  'price', 'datetime', 'comment', 'show_in_ranges', 'currency_conversion', 'currency')
+        fields = ('url', 'id','operationstypes', 'investments','shares', 'taxes', 'commission',  'price', 'datetime', 'comment', 'currency_conversion', 'currency')
 
     
     def create(self, validated_data):

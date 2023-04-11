@@ -125,7 +125,6 @@ class InvestmentsoperationsFactory(DjangoModelFactory):
     commission=Faker("random_number")
     datetime=timezone.now()
     comment=Faker("sentence")
-    show_in_ranges=Faker("boolean")
     currency_conversion=1
     
 
