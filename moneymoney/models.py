@@ -12,9 +12,9 @@ from moneymoney.reusing.casts import string2list_of_integers
 from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_row, cursor_rows
 from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string
-from moneymoney.reusing.listdict_functions import listdict_year_month_value_transposition, listdict_sum
 from moneymoney.reusing.percentage import Percentage, percentage_between
 from moneymoney_pl.core import t_keys_not_investment,  calculate_ios_lazy,  calculate_ios_finish, MyDjangoJSONEncoder, loads_hooks_io, loads_hooks_tb
+from pydicts import lod, lod_ymv
 
 Decimal
 
@@ -363,7 +363,7 @@ class Dividends(models.Model):
     @staticmethod
     def lod_ym_netgains_dividends(request,  dt_from=None,  dt_to=None, ids=None):
         """
-            Returns a list of rows with a structure as in listdict_year_month_value_transposition
+            Returns a list of rows with a structure as in lod_ymv.lod_ymv_transposition
             if dt_from and dt_to is not None only shows this range dividends, else all database registers
             if ids is None returns all investments dividends, else return some investments ids List of ids
         """
@@ -381,7 +381,7 @@ class Dividends(models.Model):
             d=d.values("datetime__year","datetime__month").annotate(sum=Sum("net"))
             for o in  d:
                 ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["sum"], currency, request.user.profile.currency)})
-        return listdict_year_month_value_transposition(ld)
+        return lod_ymv.lod_ymv_transposition(ld)
 
     @transaction.atomic
     def save(self, *args, **kwargs):
@@ -1009,7 +1009,7 @@ class Assets:
     ## @param month can be None to calculate all year
     def lod_ym_balance_user_by_operationstypes(request, operationstypes_id, year=None):
         """
-            Returns a list of rows with a structure as in listdict_year_month_value_transposition
+            Returns a list of rows with a structure as in lod_ymv.lod_ymv_transposition
             if year only shows this year, else all database registers
         """
             
@@ -1030,13 +1030,13 @@ class Assets:
             cc=cc.values("datetime__year","datetime__month").annotate(Sum("amount")) 
             for o in  cc:
                 ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
-        return listdict_year_month_value_transposition(ld)
+        return lod_ymv.lod_ymv_transposition(ld)
 
     ## This method should take care of diffrent currenciesç
     ## @param month can be None to calculate all year
     def lod_ym_balance_user_by_concepts(request, concepts_ids, year=None):
         """
-            Returns a list of rows with a structure as in listdict_year_month_value_transposition
+            Returns a list of rows with a structure as in lod_ymv.lod_ymv_transposition
             if year only shows this year, else all database registers
         """
             
@@ -1057,7 +1057,7 @@ class Assets:
             cc=cc.values("datetime__year","datetime__month").annotate(Sum("amount")) 
             for o in  cc:
                 ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
-        return listdict_year_month_value_transposition(ld)
+        return lod_ymv.lod_ymv_transposition(ld)
 
     @staticmethod
     def money_convert(dt, amount, from_,  to_):   
@@ -1238,13 +1238,13 @@ class PlInvestmentOperations():
         r["io_current"]= sorted(r["io_current"],  key=lambda item: item['datetime'])
                 
         r["total_io_current"]={}
-        r["total_io_current"]["balance_user"]=listdict_sum(r["io_current"], "balance_user")
+        r["total_io_current"]["balance_user"]=lod.lod_sum(r["io_current"], "balance_user")
         r["total_io_current"]["balance_investment"]="HETEROGENEOUS"
-        r["total_io_current"]["balance_futures_user"]=listdict_sum(r["io_current"], "balance_futures_user")
-        r["total_io_current"]["gains_gross_user"]=listdict_sum(r["io_current"], "gains_gross_user")
-        r["total_io_current"]["gains_net_user"]=listdict_sum(r["io_current"], "gains_net_user")
-        r["total_io_current"]["shares"]=listdict_sum(r["io_current"], "shares")
-        r["total_io_current"]["invested_user"]=listdict_sum(r["io_current"], "invested_user")
+        r["total_io_current"]["balance_futures_user"]=lod.lod_sum(r["io_current"], "balance_futures_user")
+        r["total_io_current"]["gains_gross_user"]=lod.lod_sum(r["io_current"], "gains_gross_user")
+        r["total_io_current"]["gains_net_user"]=lod.lod_sum(r["io_current"], "gains_net_user")
+        r["total_io_current"]["shares"]=lod.lod_sum(r["io_current"], "shares")
+        r["total_io_current"]["invested_user"]=lod.lod_sum(r["io_current"], "invested_user")
         r["total_io_current"]["invested_investment"]="HETEROGENEOUS"
         
         r["io_historical"]=[]
@@ -1255,7 +1255,7 @@ class PlInvestmentOperations():
         r["io_historical"]= sorted(r["io_historical"],  key=lambda item: item['dt_end'])
 
         r["total_io_historical"]={}
-        r["total_io_historical"]["gains_net_user"]=listdict_sum(r["total_io_historical"], "gains_net_user")
+        r["total_io_historical"]["gains_net_user"]=lod.lod_sum(r["total_io_historical"], "gains_net_user")
         return r
 
         
@@ -1300,14 +1300,14 @@ class PlInvestmentOperations():
             average_price_investment=0
             
             t_merged[str(product.id)]["total_io_current"]={}
-            t_merged[str(product.id)]["total_io_current"]["balance_user"]=listdict_sum(t_merged[str(product.id)]["io_current"], "balance_user")
-            t_merged[str(product.id)]["total_io_current"]["balance_investment"]=listdict_sum(t_merged[str(product.id)]["io_current"], "balance_investment")
-            t_merged[str(product.id)]["total_io_current"]["balance_futures_user"]=listdict_sum(t_merged[str(product.id)]["io_current"], "balance_futures_user")
-            t_merged[str(product.id)]["total_io_current"]["gains_gross_user"]=listdict_sum(t_merged[str(product.id)]["io_current"], "gains_gross_user")
-            t_merged[str(product.id)]["total_io_current"]["gains_net_user"]=listdict_sum(t_merged[str(product.id)]["io_current"], "gains_net_user")
-            t_merged[str(product.id)]["total_io_current"]["shares"]=listdict_sum(t_merged[str(product.id)]["io_current"], "shares")
-            t_merged[str(product.id)]["total_io_current"]["invested_user"]=listdict_sum(t_merged[str(product.id)]["io_current"], "invested_user")
-            t_merged[str(product.id)]["total_io_current"]["invested_investment"]=listdict_sum(t_merged[str(product.id)]["io_current"], "invested_investment")
+            t_merged[str(product.id)]["total_io_current"]["balance_user"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "balance_user")
+            t_merged[str(product.id)]["total_io_current"]["balance_investment"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "balance_investment")
+            t_merged[str(product.id)]["total_io_current"]["balance_futures_user"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "balance_futures_user")
+            t_merged[str(product.id)]["total_io_current"]["gains_gross_user"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "gains_gross_user")
+            t_merged[str(product.id)]["total_io_current"]["gains_net_user"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "gains_net_user")
+            t_merged[str(product.id)]["total_io_current"]["shares"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "shares")
+            t_merged[str(product.id)]["total_io_current"]["invested_user"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "invested_user")
+            t_merged[str(product.id)]["total_io_current"]["invested_investment"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "invested_investment")
             t_merged[str(product.id)]["total_io_current"]["balance_user"]=average_price_investment
             
             t_merged[str(product.id)]["io_historical"]=[]
@@ -1318,8 +1318,8 @@ class PlInvestmentOperations():
             t_merged[str(product.id)]["io_historical"]= sorted(t_merged[str(product.id)]["io_historical"],  key=lambda item: item['dt_end'])
 
             t_merged[str(product.id)]["total_io_historical"]={}
-            t_merged[str(product.id)]["total_io_historical"]["gains_net_user"]=listdict_sum(t_merged[str(product.id)]["total_io_historical"], "gains_net_user")
-            #t_merged[str(product.id)]["total_io_historical"]["commission_account"]=listdict_sum(t_merged[str(product.id)]["total_io_historical"], "commission_account")
+            t_merged[str(product.id)]["total_io_historical"]["gains_net_user"]=lod.lod_sum(t_merged[str(product.id)]["total_io_historical"], "gains_net_user")
+            #t_merged[str(product.id)]["total_io_historical"]["commission_account"]=lod.lod_sum(t_merged[str(product.id)]["total_io_historical"], "commission_account")
 
         return cls(t_merged)
         

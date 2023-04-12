@@ -11,9 +11,9 @@ from moneymoney.reusing.casts import f
 from moneymoney.reusing.connection_dj import cursor_one_field
 from moneymoney.reusing.currency import  Currency
 from moneymoney.reusing.datetime_functions import dtaware2string, string2dtaware, dtnaive2string
-from moneymoney.reusing.listdict_functions import listdict_sum, listdict_sum_negatives, listdict_sum_positives, listdict_order_by
 from moneymoney.reusing.percentage import  Percentage
 from os import path
+from pydicts import lod
 from unogenerator import ODT
 from unogenerator.commons import bytes_after_trim_image
 
@@ -52,10 +52,10 @@ def generate_assets_report(request, format):
     
     from moneymoney.views import ReportAnnualGainsByProductstypes
     dict_report_annual_gainsbyproductstypes=loads(ReportAnnualGainsByProductstypes(request._request, year).content)
-    vTotal_gains_net=Currency(listdict_sum(dict_report_annual_gainsbyproductstypes, "gains_net"), c)
-    vTotal_dividends_net=Currency(listdict_sum(dict_report_annual_gainsbyproductstypes, "dividends_net"), c)
-    vTotal_gains_gross=Currency(listdict_sum(dict_report_annual_gainsbyproductstypes, "gains_gross"), c)
-    vTotal_dividends_gross=Currency(listdict_sum(dict_report_annual_gainsbyproductstypes, "dividends_gross"), c)
+    vTotal_gains_net=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "gains_net"), c)
+    vTotal_dividends_net=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "dividends_net"), c)
+    vTotal_gains_gross=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "gains_gross"), c)
+    vTotal_dividends_gross=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "dividends_gross"), c)
     vTotal_gains_dividends_net=vTotal_gains_net+vTotal_dividends_net
     vTotal_gains_dividends_gross=vTotal_gains_gross+vTotal_dividends_gross
 
@@ -86,7 +86,7 @@ def generate_assets_report(request, format):
         for o in dict_bankswithbalance:
             if o["active"]==True:
                 bankswithbalance.append((o["name"], Currency(o["balance_accounts"], c), Currency(o["balance_investments"], c), Currency(o["balance_total"], c)))
-        bankswithbalance.append([_("Total"), Currency(listdict_sum(dict_bankswithbalance, "balance_accounts"), c), Currency(listdict_sum(dict_bankswithbalance, "balance_investments"), c), Currency(listdict_sum(dict_bankswithbalance, "balance_total"), c)])
+        bankswithbalance.append([_("Total"), Currency(lod.lod_sum(dict_bankswithbalance, "balance_accounts"), c), Currency(lod.lod_sum(dict_bankswithbalance, "balance_investments"), c), Currency(lod.lod_sum(dict_bankswithbalance, "balance_total"), c)])
         doc.addTableParagraph(bankswithbalance, columnssize_percentages=[40, 20, 20, 20],  size=8, style="Table1Total")
 
         # Assests current year
@@ -95,7 +95,7 @@ def generate_assets_report(request, format):
         report_annual=[(_("Month"), _("Accounts balance"), _("Investments balance"), _("Total"),  _("Annual percentage"), _("Month diff"))]
         for o in dict_report_annual["data"]:
             report_annual.append([o["month"], Currency(o["account_balance"], c), Currency(o["investment_balance"], c), Currency(o["total"], c), Percentage(o["percentage_year"], 1), Currency(o["diff_lastmonth"], c)])
-        report_annual.append([_("Total"), "", "", "", "", Currency(listdict_sum(dict_report_annual["data"], "diff_lastmonth"), c)])
+        report_annual.append([_("Total"), "", "", "", "", Currency(lod.lod_sum(dict_report_annual["data"], "diff_lastmonth"), c)])
 
         doc.addTableParagraph(report_annual, columnssize_percentages=[10, 18, 18, 18, 18, 18 ],  size=7, name="TableReportAnnual", style="Table1Total")
 
@@ -108,11 +108,11 @@ def generate_assets_report(request, format):
             report_annual_income.append((o["month"], Currency(o["incomes"], c), Currency(o["expenses"], c), Currency(o["gains"], c), Currency(o["dividends"], c), Currency(o["total"], c)))
         report_annual_income.append([
             _("Total"), 
-            Currency(listdict_sum(dict_report_annual_income, "incomes"), c), 
-            Currency(listdict_sum(dict_report_annual_income, "expenses"), c), 
-            Currency(listdict_sum(dict_report_annual_income, "gains"), c), 
-            Currency(listdict_sum(dict_report_annual_income, "dividends"), c), 
-            Currency(listdict_sum(dict_report_annual_income, "total"), c), 
+            Currency(lod.lod_sum(dict_report_annual_income, "incomes"), c), 
+            Currency(lod.lod_sum(dict_report_annual_income, "expenses"), c), 
+            Currency(lod.lod_sum(dict_report_annual_income, "gains"), c), 
+            Currency(lod.lod_sum(dict_report_annual_income, "dividends"), c), 
+            Currency(lod.lod_sum(dict_report_annual_income, "total"), c), 
         ])
 
         doc.addTableParagraph(report_annual_income, columnssize_percentages=[40, 20, 20, 20],  size=8, style="Table1Total")
@@ -146,10 +146,10 @@ def generate_assets_report(request, format):
             ))
         report_annual_gainsbyproductstypes.append([
             _("Total"), 
-            Currency(listdict_sum(dict_report_annual_gainsbyproductstypes, "gains_gross"), c), 
-            Currency(listdict_sum(dict_report_annual_gainsbyproductstypes, "dividends_gross"), c), 
-            Currency(listdict_sum(dict_report_annual_gainsbyproductstypes, "gains_net"), c), 
-            Currency(listdict_sum(dict_report_annual_gainsbyproductstypes, "dividends_net"), c), 
+            Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "gains_gross"), c), 
+            Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "dividends_gross"), c), 
+            Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "gains_net"), c), 
+            Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "dividends_net"), c), 
         ])
         doc.addTableParagraph(report_annual_gainsbyproductstypes,  size=8, style="Table1Total")
         
@@ -174,7 +174,7 @@ def generate_assets_report(request, format):
         _("Total"), 
         "", 
         "", 
-        Currency(listdict_sum(dict_accountswithbalance, "balance_user"), c), 
+        Currency(lod.lod_sum(dict_accountswithbalance, "balance_user"), c), 
     ])
     doc.addTableParagraph(accountswithbalance, columnssize_percentages=[37, 33, 15, 15],  size=8, style="Table1Total")
     doc.pageBreak("Landscape")
@@ -185,7 +185,7 @@ def generate_assets_report(request, format):
     doc.addParagraph(_("Investments list"), "Heading 2")
     doc.addParagraph(_("Next list is sorted by the distance in percent to the selling point."), "MyStandard")
     dict_investmentswithbalance=request_get(request._request.build_absolute_uri(reverse('investments-withbalance'))+"?active=true", authorization)
-    dict_investmentswithbalance=listdict_order_by(dict_investmentswithbalance, "percentage_selling_point")
+    dict_investmentswithbalance=lod.lod_order_by(dict_investmentswithbalance, "percentage_selling_point")
     investmentswithbalance=[(_("Name"), _("Invested"),  _("Balance"), _("Gains"), _("% invested"), _("% selling point"))]
     for o in dict_investmentswithbalance:
         investmentswithbalance.append((
@@ -196,22 +196,22 @@ def generate_assets_report(request, format):
             Percentage(o["percentage_invested"], 1), 
             Percentage(o["percentage_selling_point"], 1), 
         ))  
-        invested_user=Currency(listdict_sum(dict_investmentswithbalance, "invested_user"), c)
-        gains_positives=Currency(listdict_sum_positives(dict_investmentswithbalance, "gains_user"), c)
-        gains_negatives=Currency(listdict_sum_negatives(dict_investmentswithbalance, "gains_user"), c)
+        invested_user=Currency(lod.lod_sum(dict_investmentswithbalance, "invested_user"), c)
+        gains_positives=Currency(lod.lod_sum_positives(dict_investmentswithbalance, "gains_user"), c)
+        gains_negatives=Currency(lod.lod_sum_negatives(dict_investmentswithbalance, "gains_user"), c)
         gains=gains_positives+gains_negatives
     investmentswithbalance.append([
         _("Total"), 
         invested_user, 
-        Currency(listdict_sum(dict_investmentswithbalance, "balance_user"), c), 
+        Currency(lod.lod_sum(dict_investmentswithbalance, "balance_user"), c), 
         gains, 
         Percentage(gains.amount, invested_user.amount), 
         "", 
     ])
     doc.addTableParagraph(investmentswithbalance, columnssize_percentages=[50, 10, 10, 10, 10, 10],  size=8, style="Table1Total")
-    invested_user=Currency(listdict_sum(dict_investmentswithbalance, "invested_user"), c)
-    gains_positives=Currency(listdict_sum_positives(dict_investmentswithbalance, "gains_user"), c)
-    gains_negatives=Currency(listdict_sum_negatives(dict_investmentswithbalance, "gains_user"), c)
+    invested_user=Currency(lod.lod_sum(dict_investmentswithbalance, "invested_user"), c)
+    gains_positives=Currency(lod.lod_sum_positives(dict_investmentswithbalance, "gains_user"), c)
+    gains_negatives=Currency(lod.lod_sum_negatives(dict_investmentswithbalance, "gains_user"), c)
     gains=gains_positives+gains_negatives
     if invested_user.isZero()==False:
         doc.addParagraph(f(_("Investment gains (positive minus negative results): {gains_positives} - {-gains_negatives} are {gains}.")), "MyStandard")
@@ -238,9 +238,9 @@ def generate_assets_report(request, format):
         "", 
         "", 
         "", 
-        Currency(listdict_sum(dict_report_current_investmentsoperations, "invested_user"), c), 
-        Currency(listdict_sum(dict_report_current_investmentsoperations, "balance_user"), c), 
-        Currency(listdict_sum(dict_report_current_investmentsoperations, "gains_gross_user"), c), 
+        Currency(lod.lod_sum(dict_report_current_investmentsoperations, "invested_user"), c), 
+        Currency(lod.lod_sum(dict_report_current_investmentsoperations, "balance_user"), c), 
+        Currency(lod.lod_sum(dict_report_current_investmentsoperations, "gains_gross_user"), c), 
         "", 
     ])
 
@@ -273,7 +273,7 @@ def generate_assets_report(request, format):
     #Orders report
     doc.addParagraph(_("Investments orders"), "Heading 1")
     dict_orders_list=request_get(request._request.build_absolute_uri(reverse('orders-list'))+"?active=true", authorization)
-    dict_orders_list=listdict_order_by(dict_orders_list, "percentage_from_price", reverse=True)
+    dict_orders_list=lod.lod_order_by(dict_orders_list, "percentage_from_price", reverse=True)
     orders_list=[( _("Date"), _("Expiration"), _("Investment"), _("Shares"), _("Price"), _("Amount"), _("% from current price"))]
     for o in dict_orders_list:
         orders_list.append((
@@ -309,11 +309,11 @@ def generate_assets_report(request, format):
         "", 
         "", 
         "", 
-        Currency(listdict_sum(dict_reportdividends, "estimated"), c), 
+        Currency(lod.lod_sum(dict_reportdividends, "estimated"), c), 
         "", 
     ])
     doc.addTableParagraph(reportdividends, columnssize_percentages=[50, 10, 10, 10, 10, 10 ],  size=8, style="Table1Total")
-    doc.addParagraph(f(_("If I keep this investment during a year, I'll get {Currency(listdict_sum(dict_reportdividends,'estimated'),c)}")), "MyStandard")
+    doc.addParagraph(f(_("If I keep this investment during a year, I'll get {Currency(lod.lod_sum(dict_reportdividends,'estimated'),c)}")), "MyStandard")
     doc.pageBreak()
     
     # Ranking de investments
@@ -334,10 +334,10 @@ def generate_assets_report(request, format):
     reportranking.append([
         _("Total"), 
         "", 
-        Currency(listdict_sum(dict_reportranking, "current_net_gains"), c), 
-        Currency(listdict_sum(dict_reportranking, "historical_net_gains"), c), 
-        Currency(listdict_sum(dict_reportranking, "dividends"), c), 
-        Currency(listdict_sum(dict_reportranking, "total"), c), 
+        Currency(lod.lod_sum(dict_reportranking, "current_net_gains"), c), 
+        Currency(lod.lod_sum(dict_reportranking, "historical_net_gains"), c), 
+        Currency(lod.lod_sum(dict_reportranking, "dividends"), c), 
+        Currency(lod.lod_sum(dict_reportranking, "total"), c), 
     ])
     doc.addTableParagraph(reportranking, columnssize_percentages=[7, 43, 12.5, 12.5, 12.5, 12.5 ],  size=5, style="Table1Total")
     

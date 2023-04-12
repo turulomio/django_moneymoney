@@ -4,6 +4,7 @@ django-cors-headers
 djangorestframework
 drf-spectacular
 psycopg2
+pydicts
 requests
 unogenerator
 tabulate

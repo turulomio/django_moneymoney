@@ -21,7 +21,6 @@ from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_rows_as_dict, show_queries, show_queries_function
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
-from moneymoney.reusing.listdict_functions import listdict2dict, listdict_order_by, listdict_sum, listdict_median, listdict_average, listdict_year_month_value_transposition, listdict_year_month_value_transposition_sum
 from moneymoney.reusing.percentage import Percentage,  percentage_between
 from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestString, RequestListUrl, id_from_url, all_args_are_not_none, RequestCastingError
 from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEncoder, json_success_response
@@ -29,6 +28,7 @@ from moneymoney.reusing.sqlparser import sql_in_one_line
 from requests import delete, post
 from subprocess import run
 from os import path
+from pydicts import lod, lod_ymv
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework import viewsets, permissions, status
@@ -157,9 +157,9 @@ class ConceptsViewSet(viewsets.ModelViewSet):
             d["total"]=d["m1"]+d["m2"]+d["m3"]+d["m4"]+d["m5"]+d["m6"]+d["m7"]+d["m8"]+d["m9"]+d["m10"]+d["m11"]+d["m12"]
 
         r["data"]=json_concepts_historical
-        r["total"]=listdict_sum(json_concepts_historical, "total")
-        r["median"]=listdict_median(rows, 'value')
-        r["average"]=listdict_average(rows, 'value')
+        r["total"]=lod.lod_sum(json_concepts_historical, "total")
+        r["median"]=lod.lod_median(rows, 'value')
+        r["average"]=lod.lod_average(rows, 'value')
         
         return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
     @action(detail=True, methods=["get"], name='Returns historical concept report detail', url_path="historical_report_detail", url_name='historical_report_detail', permission_classes=[permissions.IsAuthenticated])
@@ -345,7 +345,7 @@ class Derivatives(APIView):
             .annotate(amount=Sum('amount'))\
             .order_by('year', 'month')
             
-        r["derivatives"]=listdict_year_month_value_transposition(list(qs.values('year', 'month', 'amount')), key_value="amount")
+        r["derivatives"]=lod_ymv.lod_ymv_transposition(list(qs.values('year', 'month', 'amount')), key_value="amount")
         
         qs_coverage=models.FastOperationsCoverage.objects.all()\
             .annotate(year=ExtractYear('datetime'), month=ExtractMonth('datetime'))\
@@ -353,9 +353,9 @@ class Derivatives(APIView):
             .annotate(amount=Sum('amount'))\
             .order_by('year', 'month')
             
-        lymv_coverage=listdict_year_month_value_transposition(list(qs_coverage.values('year', 'month', 'amount')), key_value="amount")
+        lymv_coverage=lod_ymv.lod_ymv_transposition(list(qs_coverage.values('year', 'month', 'amount')), key_value="amount")
             
-        r["balance"]=listdict_year_month_value_transposition_sum(r["derivatives"], lymv_coverage)
+        r["balance"]=lod_ymv.lod_ymv_transposition_sum(r["derivatives"], lymv_coverage)
         return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)        
 
 class DividendsViewSet(viewsets.ModelViewSet):
@@ -491,7 +491,7 @@ class StrategiesViewSet(viewsets.ModelViewSet):
                 "invested": plio.sum_total_io_current()["invested_user"], 
                 "gains_current_net_user":  gains_current_net_user,  
                 "gains_historical_net_user": gains_historical_net_user, 
-                "dividends_net_user": listdict_sum(lod_dividends_net_user, "total"), 
+                "dividends_net_user": lod.lod_sum(lod_dividends_net_user, "total"), 
                 "total_net_user":gains_current_net_user + gains_historical_net_user + dividends_net_user, 
                 "investments":strategy.investments_ids(), 
                 "type": strategy.type, 
@@ -1676,10 +1676,10 @@ def ReportAnnualIncome(request, year):
     dt_year_to=dtaware_year_end(year, request.user.profile.zone)
     
     plio=models.PlInvestmentOperations.from_all(dt_year_to, request.user.profile.currency, 1)
-    d_dividends=listdict2dict(models.Dividends.lod_ym_netgains_dividends(request, dt_from=dt_year_from, dt_to=dt_year_to), "year")
-    d_incomes=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Income, year=year), "year")
-    d_expenses=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Expense, year=year), "year")
-    d_fast_operations=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.FastOperations, year=year), "year")
+    d_dividends=lod.lod2dod(models.Dividends.lod_ym_netgains_dividends(request, dt_from=dt_year_from, dt_to=dt_year_to), "year")
+    d_incomes=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Income, year=year), "year")
+    d_expenses=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Expense, year=year), "year")
+    d_fast_operations=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.FastOperations, year=year), "year")
 
     for month_name, month in (
         (_("January"), 1), 
@@ -1839,7 +1839,7 @@ from
     left join investments on products.id=investments.products_id
     left join (select * from dividends where extract('year' from datetime)=%s) dividends on investments.id=dividends.investments_id
 group by productstypes_id""", (year, ))
-    dividends_dict=listdict2dict(dividends, "productstypes_id")
+    dividends_dict=lod.lod2dod(dividends, "productstypes_id")
     l=[]
     for pt in models.Productstypes.objects.all():
         gains_net=plio.io_historical_sum_between_dt(dt_from, dt_to, "gains_net_user", pt.id)
@@ -2028,9 +2028,9 @@ def ReportEvolutionAssets(request, from_year):
     for year in range(from_year-1, date.today().year+1):
         tb[year]=models.Assets.pl_total_balance(dtaware_month_end(year, 12, request.user.profile.zone), request.user.profile.currency)
         
-    d_incomes=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Income), "year")
-    d_expenses=listdict2dict(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Expense), "year")
-    d_dividends=listdict2dict(models.Dividends.lod_ym_netgains_dividends(request), "year")
+    d_incomes=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Income), "year")
+    d_expenses=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Expense), "year")
+    d_dividends=lod.lod2dod(models.Dividends.lod_ym_netgains_dividends(request), "year")
 
     # Dictionary can have missing years if there isn't data in database, so I must fill them
     for year in range(from_year, date.today().year+1):
@@ -2102,9 +2102,9 @@ def ReportEvolutionAssetsChart(request):
 def ReportEvolutionInvested(request, from_year):
     list_=[]
     qs=models.Investments.objects.all().select_related("products")
-    d_dividends=listdict2dict(models.Dividends.lod_ym_netgains_dividends(request), "year")
-    d_custody_commissions=listdict2dict(models.Assets.lod_ym_balance_user_by_concepts(request, [eConcept.CommissionCustody, ] ), "year")
-    d_taxes=listdict2dict(models.Assets.lod_ym_balance_user_by_concepts(request, [eConcept.TaxesReturn, eConcept.TaxesPayment, ] ), "year")
+    d_dividends=lod.lod2dod(models.Dividends.lod_ym_netgains_dividends(request), "year")
+    d_custody_commissions=lod.lod2dod(models.Assets.lod_ym_balance_user_by_concepts(request, [eConcept.CommissionCustody, ] ), "year")
+    d_taxes=lod.lod2dod(models.Assets.lod_ym_balance_user_by_concepts(request, [eConcept.TaxesReturn, eConcept.TaxesPayment, ] ), "year")
 
     # Dictionary can have missing years if there isn't data in database, so I must fill them
     for year in range(from_year, date.today().year+1):
@@ -2207,7 +2207,7 @@ def ReportCurrentInvestmentsOperations(request):
     for inv in plio.qs_investments():
         for o in plio.d_io_current(inv.id):
             ld.append(o)
-    ld=listdict_order_by(ld, "datetime")
+    ld=lod.lod_order_by(ld, "datetime")
     
     return JsonResponse( ld, encoder=MyDjangoJSONEncoder, safe=False)
 
@@ -2236,7 +2236,7 @@ def ReportRanking(request):
         d["total"]=Decimal(d["current_net_gains"])+Decimal(d["historical_net_gains"])+Decimal(d["dividends"])
         ld.append(d)
         
-    ld=listdict_order_by(ld, "total", True)
+    ld=lod.lod_order_by(ld, "total", True)
     ranking=1
     for d in ld:
         d["ranking"]=ranking
