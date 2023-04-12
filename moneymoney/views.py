@@ -377,10 +377,6 @@ class DividendsViewSet(viewsets.ModelViewSet):
         else:
             return self.queryset.order_by("datetime")
     
-    def list(self, request):
-        r= viewsets.ModelViewSet.list(self, request)
-        
-        return r
     
 class DpsViewSet(viewsets.ModelViewSet):
     queryset = models.Dps.objects.all()
@@ -1248,7 +1244,7 @@ def ProductsRanges(request):
 ## Solo afectaría a personal products<0. Solo investments, ya que todas las demás dependen de produto y habría que borrarllas
 ## Es decir si borro un producto, borraría quotes, splits, estimatiosn.....
 class ProductsViewSet(viewsets.ModelViewSet):
-    queryset = models.Products.objects.select_related("productstypes").select_related("leverages").select_related("stockmarkets").all().annotate(uses=Count('investments', distinct=True))
+    queryset = models.Products.objects.select_related("productstypes","leverages", "stockmarkets").all().annotate(uses=Count('investments', distinct=True))
     serializer_class = serializers.ProductsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
@@ -1259,7 +1255,6 @@ class ProductsViewSet(viewsets.ModelViewSet):
     
         self.perform_destroy(instance)
         return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
-    
 
     @action(detail=True, methods=['POST'], name='Delete last quote of the product', url_path="delete_last_quote", url_name='delete_last_quote', permission_classes=[permissions.IsAuthenticated])
     def delete_last_quote(self, request, pk=None):
