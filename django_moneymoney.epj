@@ -2,7 +2,7 @@
   "header": {
     "comment": "eric project file for project django_moneymoney",
     "copyright": "Copyright (C) 2023 , ",
-    "saved": "2023-04-11, 09:32:51"
+    "saved": "2023-04-12, 08:03:08"
   },
   "project": {
     "AUTHOR": "",
@@ -148,7 +148,6 @@
       "moneymoney/reusing/github.py",
       "moneymoney/reusing/libmanagers.py",
       "moneymoney/reusing/lineal_regression.py",
-      "moneymoney/reusing/listdict_functions.py",
       "moneymoney/reusing/percentage.py",
       "moneymoney/reusing/request_casting.py",
       "moneymoney/reusing/responses_json.py",
