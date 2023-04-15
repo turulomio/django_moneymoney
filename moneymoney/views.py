@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.management import call_command
 from django.db import transaction
-from django.db.models import prefetch_related_objects, Count, Sum, Q
+from django.db.models import prefetch_related_objects, Count, Sum, Q, Max, Subquery
 from django.db.models.functions.datetime import ExtractMonth, ExtractYear
 from django.urls import reverse
 from django.utils import timezone
@@ -1325,76 +1325,23 @@ class ProductsViewSet(viewsets.ModelViewSet):
             return json_data_response(True, rows, "Products search done")
         return json_data_response(False, rows, "Products search error")
 
-
     @action(detail=True, methods=['GET'], name='Get product historical information report', url_path="historical_information", url_name='historical_information', permission_classes=[permissions.IsAuthenticated])
     def historical_information(self, request, pk=None):
-        first_year=RequestGetInteger(request, "first_year",  2005)
         product=self.get_object()
+ 
+        # Query with las datetime grouped by year, month
+        qs_last_datetimes_by_ym=models.Quotes.objects.filter(products=product)\
+            .values("datetime__year","datetime__month").annotate(last=Max("datetime"))
+        # Query to get quotes with that datetimes
+        qs_quotes_last_ym=models.Quotes.objects.filter(products=product, datetime__in=Subquery(qs_last_datetimes_by_ym.values("last"))).order_by("datetime")
+        lod_newquotes=list(qs_quotes_last_ym.values("datetime__year", "datetime__month", "quote"))
         
-        #Calculo 1 mes antes
-        rows_month=cursor_rows("""
-            WITH quotes as (
-                SELECT 
-                    dates::date - interval '1 day' date, 
-                    (select quote from quote(%s, dates - interval '1 day')), 
-                    lag((select quote from quote(%s, dates - interval '1 day')),1) over(order by dates::date) 
-                from 
-                    generate_series('%s-01-01'::date - interval '1 day','%s-01-01'::date, '1 month') dates
-            )
-            select date,lag, quote, percentage(lag,quote)  from quotes;
-        """, (product.id, product.id, first_year, date.today().year+1))
-        rows_month.pop(0)
+        # Transposition lod
+        lod_transposition=lod_ymv.lod_ymv_transposition(lod_newquotes, "datetime__year", "datetime__month", "quote")
+        lod_percentage=lod_ymv.lod_ymv_transposition_with_percentages(lod_transposition)
         
-        #Calculo 1 año antes
-        rows_year=cursor_rows("""
-            WITH quotes as (
-                SELECT 
-                    dates::date - interval '1 day' date, 
-                    (select quote from quote(%s, dates - interval '1 day')), 
-                    lag((select quote from quote(%s, dates - interval '1 day')),1) over(order by dates::date) 
-                from 
-                    generate_series('%s-01-01'::date - interval '1 day','%s-01-02'::date, '1 year') dates
-            )
-            select date, lag, quote, percentage(lag,quote)  from quotes;
-        """, (product.id, product.id, first_year, date.today().year+1))
-        rows_year.pop(0)
-        #PERCENTAGES
-        ld_percentage=[]
-        d={ 'm1': 0, 'm2': 0, 'm3': 0, 'm4': 0, 'm5': 0, 'm6': 0, 'm7': 0, 'm8': 0, 'm9': 0, 'm10': 0, 'm11': 0, 'm12': 0}
-        for i in range(0, len(rows_month)):
-            month=(i % 12 )+1
-            d[f"m{month}"]=Percentage(rows_month[i]["percentage"], 100)
-            if month==12:
-                ld_percentage.append(d)
-                d={ 'm1': 0, 'm2': 0, 'm3': 0, 'm4': 0, 'm5': 0, 'm6': 0, 'm7': 0, 'm8': 0, 'm9': 0, 'm10': 0, 'm11': 0, 'm12': 0}
-
-        if month!=12:
-            ld_percentage.append(d)
-
-        for i in range(0, len(rows_year)):
-            ld_percentage[i]["year"]=first_year+i 
-            ld_percentage[i]['m13']=Percentage(rows_year[i]["percentage"], 100) 
-            
-        #QUOTES
-        ld_quotes=[]
-        d={ 'm1': 0, 'm2': 0, 'm3': 0, 'm4': 0, 'm5': 0, 'm6': 0, 'm7': 0, 'm8': 0, 'm9': 0, 'm10': 0, 'm11': 0, 'm12': 0}
-        for i in range(0, len(rows_month)):
-            month=(i % 12 )+1
-            d[f"m{month}"]=rows_month[i]["quote"]
-            if month==12:
-                ld_quotes.append(d)
-                d={ 'm1': 0, 'm2': 0, 'm3': 0, 'm4': 0, 'm5': 0, 'm6': 0, 'm7': 0, 'm8': 0, 'm9': 0, 'm10': 0, 'm11': 0, 'm12': 0}
-        if month!=12:
-            ld_quotes.append(d)
-
-        for i in range(0, len(rows_year)):
-            ld_quotes[i]["year"]=first_year+i 
-
-        r={"quotes":ld_quotes, "percentages":ld_percentage}
-        
+        r={"quotes":lod_transposition, "percentages":lod_percentage}
         return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
-
-
 
 class ProductspairsViewSet(viewsets.ModelViewSet):
     queryset = models.Productspairs.objects.all()
