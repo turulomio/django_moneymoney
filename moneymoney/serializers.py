@@ -1,4 +1,5 @@
 from datetime import date
+from django.db import transaction
 from moneymoney import models
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -65,7 +66,7 @@ class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
         model = models.Investmentsoperations
         fields = ('url', 'id','operationstypes', 'investments','shares', 'taxes', 'commission',  'price', 'datetime', 'comment', 'currency_conversion', 'currency')
 
-    
+    @transaction.atomic
     def create(self, validated_data):
         created=serializers.HyperlinkedModelSerializer.create(self,  validated_data)
         created.save()
@@ -73,11 +74,14 @@ class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
         created.update_associated_account_operation(self.context.get("request"))
         return created
     
+    @transaction.atomic
     def update(self, instance, validated_data):
         updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
         updated.save()
+        updated.refresh_from_db()
         updated.investments.set_attributes_after_investmentsoperations_crud()
         updated.update_associated_account_operation(self.context.get("request"))
+        updated.investments.refresh_from_db()
         return updated
         
 

@@ -513,7 +513,7 @@ class Investmentsoperations(models.Model):
 
     @transaction.atomic
     def save(self, *args, **kwargs):
-            models.Model.save(self)
+            models.Model.save(self, args, kwargs)
 
     @transaction.atomic
     def delete(self):
