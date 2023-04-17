@@ -512,10 +512,6 @@ class Investmentsoperations(models.Model):
         return "InvestmentOperation"
 
     @transaction.atomic
-    def save(self, *args, **kwargs):
-            models.Model.save(self, args, kwargs)
-
-    @transaction.atomic
     def delete(self):
         concepts=Concepts.objects.filter(pk__in=(eConcept.BuyShares, eConcept.SellShares, eConcept.BankCommissions))
         qs_ao=Accountsoperations.objects.filter(concepts__in=concepts, comment=f'{eComment.InvestmentOperation},{self.id}')

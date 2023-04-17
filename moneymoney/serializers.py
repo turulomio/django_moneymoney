@@ -78,10 +78,8 @@ class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     def update(self, instance, validated_data):
         updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
         updated.save()
-        updated.refresh_from_db()
         updated.investments.set_attributes_after_investmentsoperations_crud()
         updated.update_associated_account_operation(self.context.get("request"))
-        updated.investments.refresh_from_db()
         return updated
         
 
