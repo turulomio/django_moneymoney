@@ -1,0 +1,43 @@
+[tool.poetry]
+name = "django_moneymoney"
+version = "0.1.0"
+description = "Personal accounting and financial system"
+authors = ["turulomio <turulomio@yahoo.es>"]
+license = "GPL-3.0 license"
+readme = "README.md"
+
+exclude = [
+    "eml_rename/devscripts.py"
+]
+
+
+[tool.poetry.dependencies]
+python = "^3.10"
+django = "^4.2"
+django-cors-headers = "^3.14.0"
+djangorestframework = "^3.14.0"
+drf-spectacular = "^0.26.2"
+psycopg2 = "^2.9.6"
+pydicts = "^0.4.0"
+requests = "^2.28.2"
+unogenerator = "^0.31.0"
+moneymoney-pl = "^0.1.0"
+
+[tool.poetry.group.dev.dependencies]
+poethepoet = "^0.19.0"
+coverage = "^7.2.3"
+factory-boy = "^3.2.1"
+faker = "^18.4.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poe.tasks]
+release = { script = "django_moneymoney.devscripts:release" }
+translate = { script = "django_moneymoney.devscripts:translate" }
+
+[project.urls]
+homepage = "https://github.com/turulomio/django_moneymoney/"
+repository = "https://github.com/turulomio/django_moneymoney/"
+changelog = "https://github.com/turulomio/django_moneymoney#changelog"
