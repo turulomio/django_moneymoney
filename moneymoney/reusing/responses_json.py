@@ -36,7 +36,7 @@ def json_data_response(success, data,  detail=""):
             - data: Dict
             - detail: Description of success
     """
-    if not success.__class__.__name__=="bool" or not detail.__class__.__name__=="str" or not data.__class__.__name__ in ["dict", "OrderedDict", "list"]:
+    if not success.__class__.__name__=="bool"  or not detail.__class__.__name__ in ("str", "__proxy__") or not data.__class__.__name__ in ["dict", "OrderedDict", "list"]:
         print("json_data_response parameters are wrong")
         
     return JsonResponse( {"success": success,  "data": data,  "detail": detail}, encoder=MyDjangoJSONEncoder, safe=True)
