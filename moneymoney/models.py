@@ -603,6 +603,15 @@ class Orders(models.Model):
 
 
 class Products(models.Model):
+    """
+        En este modelo se integran SistemProducts y PersonalProducts, para no generar dos tablas
+        Se van a respetar los 100.000.000 primeros ids para productos de sistema
+        El resto serán para personal products
+        La generación de ids de system products será manual asistida
+        
+        Antes los tenia los system products con id<0 pero fallan las fixtures al iniciar una base de datos desde zero
+        
+    """
     name = models.TextField(blank=True, null=True)
     isin = models.TextField(blank=True, null=True)
     currency = models.TextField(blank=True, null=True)
