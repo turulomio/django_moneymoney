@@ -408,7 +408,16 @@ class OrdersViewSet(viewsets.ModelViewSet):
         elif expired is not None:
             return self.queryset.filter(expiration__lte=date.today(),  executed__isnull=True)
         elif expired_days is not None:
-            return self.queryset.filter(expiration__range=(date.today()-timedelta(days=expired_days), date.today()),  executed__isnull=True)
+            """
+                Returns orders that have expired in last expired_days and that haven't been reordered. Used to alert expired orders
+            """
+            qs_orders_expired_days=self.queryset.filter(expiration__range=(date.today()-timedelta(days=expired_days), date.today()),  executed__isnull=True)
+
+            set_investments_with_orders_active=set(models.Orders.objects.filter(Q(expiration__gte=date.today()) | Q(expiration__isnull=True), executed__isnull=True).values_list("investments_id", flat=True))
+            set_investments_with_orders_expired_days=set(qs_orders_expired_days.values_list("investments_id", flat=True))
+            set_investments_with_orders_not_reorderd=set_investments_with_orders_expired_days-set_investments_with_orders_active
+            print(set_investments_with_orders_active, set_investments_with_orders_expired_days, set_investments_with_orders_not_reorderd)
+            return qs_orders_expired_days.filter(investments_id__in=list(set_investments_with_orders_not_reorderd))
         elif executed is not None:
             return self.queryset.filter(executed__isnull=False)
         else:
@@ -430,9 +439,10 @@ class OrdersViewSet(viewsets.ModelViewSet):
                 "price": o.price, 
                 "amount": o.shares*o.price*o.investments.products.real_leveraged_multiplier(), 
                 "percentage_from_price": percentage_between(o.investments.products.basic_results()["last"], o.price),
-               "executed": o.executed,  
-               "current_price": o.investments.products.basic_results()["last"], 
+                "executed": o.executed,  
+                "current_price": o.investments.products.basic_results()["last"], 
             })
+        show_queries_function()
         return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 class OperationstypesViewSet(CatalogModelViewSet):
     queryset = models.Operationstypes.objects.all()
@@ -1296,7 +1306,7 @@ class ProductsViewSet(viewsets.ModelViewSet):
             elif search==":ACTIVE_INVESTMENTS":
                 ids=list(models.Investments.objects.filter(active=True).values_list("products__id",  flat=True).distinct())
             elif search==":PERSONAL":
-                ids=list(models.Products.objects.filter(id__gt=0).values_list('id', flat=True))
+                ids=list(models.Products.objects.filter(id__gt=10000000).values_list('id', flat=True))
             elif search==":INDICES":
                 ids=list(models.Products.objects.filter(productstypes=models.Productstypes.objects.get(pk=eProductType.Index)).values_list('id', flat=True))
             elif search==":CFD_FUTURES":

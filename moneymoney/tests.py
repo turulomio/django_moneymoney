@@ -230,15 +230,5 @@ class CtTestCase(APITestCase):
         self.assertEqual(account_balance["balance_account_currency"], -1492)
         accounts_balance=cursor_one_row("select * from accounts_balance(%s,%s)", (timezone.now(), 'EUR'))
         self.assertEqual(accounts_balance["accounts_balance"], -1492)
-        total_balance=cursor_one_row("select * from total_balance(%s,%s)", (timezone.now(), 'EUR'))
+        total_balance=models.Assets.pl_total_balance(timezone.now(), "EUR")
         self.assertEqual(total_balance["total_user"], -1492)
-        
-#        # Gets annual reports NO FUNCIONAN POR THREATS DB SESSIONS DIFERENT
-#        year=int(ao["datetime"][0:4])
-##        month=int(ao["datetime"][5:7])
-#        r=self.client_authorized_1.get(f"/reports/annual/{year}/")
-#        total=loads(r.content)
-#        print(total)
-#        r=self.client_authorized_1.get(f"/reports/annual/income/{year}/")
-#        total=loads(r.content)
-#        print(total)
