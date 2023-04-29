@@ -673,6 +673,14 @@ class Products(models.Model):
         if hasattr(self, "_ohcl_daily_before_splits") is False:
             self._ohcl_daily_before_splits=cursor_rows("select * from ohcldailybeforesplits(%s)", (self.id, ))
         return self._ohcl_daily_before_splits
+        
+    @staticmethod
+    def next_system_products_id(self):
+        return Products.objects.filter(id__lt=10000000).order_by("-id")[0].id+1
+
+        
+    def next_personal_products_id(self):
+        return
 
 class Productspairs(models.Model):
     name = models.CharField(max_length=200, blank=False, null=False)

@@ -71,7 +71,7 @@ class Command(BaseCommand):
             "--indent",  "4", 
             "-o", filename
         )
-        self.remove_items_with_condition(filename, lambda x: x["pk"]>0)
+        self.remove_items_with_condition(filename, lambda x: x["pk"]>10000000)
 
         # System concepts are generated with id<100 in concepts table, so I pass pks as --pks parameter
         concepts_ids=list(models.Concepts.objects.filter(id__lt=100).values_list('id', flat=True))

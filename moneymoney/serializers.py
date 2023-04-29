@@ -179,14 +179,16 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
     def create(self, validated_data):
         request=self.context.get("request")
         if request.data["system"] is True :
-            validated_data["id"]=models.Products.objects.earliest('id').id-1
+            validated_data["id"]=models.Products.next_system_products_id()
         else:
             last=models.Products.objects.latest('id')
-            if last.id<0:#First personal data
-                validated_data["id"]=1
+            if last.id<10000000:#First personal data
+                validated_data["id"]=10000001
             else:
                 validated_data["id"]=last.id +1
             
+        ## AQUI SE DEBERÏA HACER ALGUN TIPO DE BLOQUEO DE TABLA SI FUERA UNA BASE DE DATOS MULTIUSUARIO
+        ## PARA RESERVAR ESTE ID MANUAL
         
         if  not request.user.groups.filter(name="CatalogManager").exists():
            if  request.data["system"] is True:
@@ -197,7 +199,7 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
         
     def update(self, instance, validated_data):
         request=self.context.get("request")       
-        if  request.user.groups.filter(name="CatalogManager").exists() is False and id_from_url(request.data["url"])<0:
+        if  request.user.groups.filter(name="CatalogManager").exists() is False and id_from_url(request.data["url"])<100000000:
             raise ValidationError(_("You cant edit a system product if you're not a Catalog Manager (only developers)"))
         updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
         return updated
