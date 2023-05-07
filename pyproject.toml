@@ -17,15 +17,15 @@ django = "^4.2"
 django-cors-headers = "^3.14.0"
 djangorestframework = "^3.14.0"
 drf-spectacular = "^0.26.2"
-psycopg2 = "^2.9.6"
 pydicts = "^0.4.0"
-requests = "^2.28.2"
+requests = "^2.29.0"
 unogenerator = "^0.31.0"
 moneymoney-pl = "^0.1.0"
+psycopg = "^3.1.8"
 
 [tool.poetry.group.dev.dependencies]
 poethepoet = "^0.19.0"
-coverage = "^7.2.3"
+coverage = "^7.2.4"
 factory-boy = "^3.2.1"
 faker = "^18.4.0"
 

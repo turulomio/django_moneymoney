@@ -442,8 +442,8 @@ class OrdersViewSet(viewsets.ModelViewSet):
                 "executed": o.executed,  
                 "current_price": o.investments.products.basic_results()["last"], 
             })
-        show_queries_function()
         return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+
 class OperationstypesViewSet(CatalogModelViewSet):
     queryset = models.Operationstypes.objects.all()
     serializer_class = serializers.OperationstypesSerializer
