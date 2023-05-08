@@ -13,18 +13,18 @@ exclude = [
 
 [tool.poetry.dependencies]
 python = "^3.10"
-django = "^4.2"
+django = "^4.2.1"
 django-cors-headers = "^3.14.0"
 djangorestframework = "^3.14.0"
 drf-spectacular = "^0.26.2"
-pydicts = "^0.4.0"
+pydicts = "^0.5.0"
 requests = "^2.29.0"
 unogenerator = "^0.31.0"
 moneymoney-pl = "^0.1.0"
 psycopg = "^3.1.8"
 
 [tool.poetry.group.dev.dependencies]
-poethepoet = "^0.19.0"
+poethepoet = "^0.20.0"
 coverage = "^7.2.4"
 factory-boy = "^3.2.1"
 faker = "^18.4.0"
