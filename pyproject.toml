@@ -15,7 +15,6 @@ drf-spectacular = "^0.26.2"
 pydicts = "^0.5.0"
 requests = "^2.29.0"
 unogenerator = "^0.31.0"
-moneymoney-pl = "^0.1.0"
 psycopg = "^3.1.8"
 
 [tool.poetry.group.dev.dependencies]
