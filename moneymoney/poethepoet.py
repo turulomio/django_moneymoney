@@ -16,7 +16,6 @@ def reusing():
         download_from_github("turulomio", "reusingcode", "django/connection_dj.py", "moneymoney/reusing")
         download_from_github("turulomio", "reusingcode", "django/responses_json.py", "moneymoney/reusing")
         download_from_github("turulomio", "reusingcode", "django/request_casting.py", "moneymoney/reusing")
-        download_from_github("turulomio", "reusingcode", "python/call_by_name.py", "moneymoney/reusing")
         download_from_github("turulomio", "reusingcode", "python/casts.py", "moneymoney/reusing")
         download_from_github("turulomio", "reusingcode", "python/currency.py", "moneymoney/reusing")
         download_from_github("turulomio", "reusingcode", "python/decorators.py", "moneymoney/reusing")
@@ -27,5 +26,4 @@ def reusing():
         download_from_github("turulomio", "reusingcode", "python/sqlparser.py", "moneymoney/reusing")
         download_from_github("turulomio", "reusingcode", "python/libmanagers.py", "moneymoney/reusing")
 
-    replace_in_file("moneymoney/reusing/libmanagers.py", "from call_by_name", "from .call_by_name")
     replace_in_file("moneymoney/reusing/libmanagers.py", "from datetime_functions", "from .datetime_functions")
