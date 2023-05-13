@@ -13,7 +13,7 @@ from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_row, c
 from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string
 from moneymoney.reusing.percentage import Percentage, percentage_between
-from moneymoney_pl.core import t_keys_not_investment,  calculate_ios_lazy,  calculate_ios_finish, MyDjangoJSONEncoder, loads_hooks_io, loads_hooks_tb
+from moneymoney.investment_operations import t_keys_not_investment,  calculate_ios_lazy,  calculate_ios_finish, MyDjangoJSONEncoder, loads_hooks_io, loads_hooks_tb
 from pydicts import lod, lod_ymv
 
 Decimal
