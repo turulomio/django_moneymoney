@@ -6,15 +6,10 @@ authors = ["turulomio <turulomio@yahoo.es>"]
 license = "GPL-3.0 license"
 readme = "README.md"
 
-exclude = [
-    "eml_rename/devscripts.py"
-]
-
-
 [tool.poetry.dependencies]
 python = "^3.10"
 django = "^4.2.1"
-django-cors-headers = "^3.14.0"
+django-cors-headers = "^4.0.0"
 djangorestframework = "^3.14.0"
 drf-spectacular = "^0.26.2"
 pydicts = "^0.5.0"
@@ -34,7 +29,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poe.tasks]
-reusing = { script = "moneymoney.devscripts:reusing" }
+reusing = { script = "moneymoney.poethepoet:reusing" }
 
 [project.urls]
 homepage = "https://github.com/turulomio/django_moneymoney/"
