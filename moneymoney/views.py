@@ -635,11 +635,33 @@ class UnogeneratorWorking(APIView):
         else:
             return json_success_response(False, _("Unogenerator server is not working") )
 
-class Time(APIView):
+class Alerts(APIView):
     permission_classes = [permissions.IsAuthenticated]
     @extend_schema(request=None, responses=OpenApiTypes.DATETIME)
     def get(self, request, *args, **kwargs):
-        return JsonResponse( timezone.now(), encoder=MyDjangoJSONEncoder,     safe=False)
+        r={}
+        r["server_time"]=timezone.now()
+        
+        #Expired orders calling other viewset from this viewsets
+        r["expired_days"]=7
+        r["orders_expired"]=models.request_get(request._request.build_absolute_uri(reverse('orders-list'))+f"?expired_days={r['expired_days']}", request.user.auth_token.key)
+        
+        
+        # Get all investments status
+        r["investments_inactive_with_balance"]=[]
+        qs=models.Investments.objects.filter(active=False)
+        plio_inactive=models.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, qs,  2)
+        for id in plio_inactive.list_investments_id():
+            plio=plio_inactive.d(id)
+            if plio["total_io_current"]["balance_investment"]!=0:
+                r["investments_inactive_with_balance"].append(plio)
+
+        
+        
+        
+        show_queries_function()
+        print(r)
+        return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
 class Timezones(APIView):
     permission_classes = [permissions.IsAuthenticated]

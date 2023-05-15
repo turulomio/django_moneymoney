@@ -15,6 +15,7 @@ from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dt
 from moneymoney.reusing.percentage import Percentage, percentage_between
 from moneymoney.investment_operations import t_keys_not_investment,  calculate_ios_lazy,  calculate_ios_finish, MyDjangoJSONEncoder, loads_hooks_io, loads_hooks_tb
 from pydicts import lod, lod_ymv
+from requests import get
 
 Decimal
 
@@ -1507,3 +1508,10 @@ class FastOperationsCoverage(models.Model):
 
     class Meta:
         managed = True
+        
+        
+
+def request_get(absolute_url, user_token):
+    ## verify should be changed
+    a=get(absolute_url, headers={'Authorization': f'Token {user_token}'}, verify=False)
+    return loads(a.content)

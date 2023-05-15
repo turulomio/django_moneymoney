@@ -1,14 +1,12 @@
 from datetime import date, datetime
-from requests import get
 from django.conf import settings
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from json import loads
 from moneymoney import __version__
-from moneymoney.models import Operationstypes
+from moneymoney import models
 from moneymoney.reusing.request_casting import object_from_url
 from moneymoney.reusing.casts import f
-from moneymoney.reusing.connection_dj import cursor_one_field
 from moneymoney.reusing.currency import  Currency
 from moneymoney.reusing.datetime_functions import dtaware2string, string2dtaware, dtnaive2string
 from moneymoney.reusing.percentage import  Percentage
@@ -18,15 +16,11 @@ from unogenerator import ODT
 from unogenerator.commons import bytes_after_trim_image
 
 
-def request_get(absolute_url, authorization):
-    ## verify should be changed
-    a=get(absolute_url, headers={'Authorization': f'Token {authorization}'}, verify=False)
-    return loads(a.content)
     
 
 def generate_assets_report(request, format):
     from moneymoney.views import ReportAnnual
-    authorization=cursor_one_field("select * from authtoken_token where user_id=%s", (request.user.id, ))
+    authorization=request.user.auth_token.key
     c=request.user.profile.currency
     year=date.today().year
     template=f"{path.dirname(__file__)}/templates/AssetsReport.odt"
@@ -81,7 +75,7 @@ def generate_assets_report(request, format):
         # Assets by bank
         doc.addParagraph(_("Assets by bank"), "Heading 2")
         
-        dict_bankswithbalance=request_get(request._request.build_absolute_uri(reverse('banks-withbalance')), authorization)
+        dict_bankswithbalance=models.request_get(request._request.build_absolute_uri(reverse('banks-withbalance')), authorization)
         bankswithbalance=[(_("Bank"), _("Accounts balance"), _("Investments balance"), _("Total balance"))]
         for o in dict_bankswithbalance:
             if o["active"]==True:
@@ -159,7 +153,7 @@ def generate_assets_report(request, format):
 
     ## Accounts
     doc.addParagraph(_("Current Accounts"), "Heading 1")
-    dict_accountswithbalance=request_get(request._request.build_absolute_uri(reverse('accounts-withbalance')), authorization)
+    dict_accountswithbalance=models.request_get(request._request.build_absolute_uri(reverse('accounts-withbalance')), authorization)
 
     accountswithbalance=[(_("Name"), _("Number"), _("Balance account"), _("Balance user currency"))]
     for o in dict_accountswithbalance:
@@ -184,7 +178,7 @@ def generate_assets_report(request, format):
     
     doc.addParagraph(_("Investments list"), "Heading 2")
     doc.addParagraph(_("Next list is sorted by the distance in percent to the selling point."), "MyStandard")
-    dict_investmentswithbalance=request_get(request._request.build_absolute_uri(reverse('investments-withbalance'))+"?active=true", authorization)
+    dict_investmentswithbalance=models.request_get(request._request.build_absolute_uri(reverse('investments-withbalance'))+"?active=true", authorization)
     dict_investmentswithbalance=lod.lod_order_by(dict_investmentswithbalance, "percentage_selling_point")
     investmentswithbalance=[(_("Name"), _("Invested"),  _("Balance"), _("Gains"), _("% invested"), _("% selling point"))]
     for o in dict_investmentswithbalance:
@@ -225,7 +219,7 @@ def generate_assets_report(request, format):
         report_current_investmentsoperations.append((
            dtaware2string(string2dtaware(o["datetime"], "JsUtcIso"), "%Y-%m-%d %H:%M:%S"), 
             o["name"],
-            object_from_url(o["operationstypes"], Operationstypes).name, 
+            object_from_url(o["operationstypes"], models.OperationsTypes).name, 
             o['shares'], 
             Currency(o["price_user"], c), 
             Currency(o["invested_user"], c), 
@@ -272,7 +266,7 @@ def generate_assets_report(request, format):
     
     #Orders report
     doc.addParagraph(_("Investments orders"), "Heading 1")
-    dict_orders_list=request_get(request._request.build_absolute_uri(reverse('orders-list'))+"?active=true", authorization)
+    dict_orders_list=models.request_get(request._request.build_absolute_uri(reverse('orders-list'))+"?active=true", authorization)
     dict_orders_list=lod.lod_order_by(dict_orders_list, "percentage_from_price", reverse=True)
     orders_list=[( _("Date"), _("Expiration"), _("Investment"), _("Shares"), _("Price"), _("Amount"), _("% from current price"))]
     for o in dict_orders_list:

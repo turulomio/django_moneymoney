@@ -32,6 +32,7 @@ router.register(r'stockmarkets', money_views.StockmarketsViewSet)
 urlpatterns=[
     path('api/', include(router.urls)),
     path('admin/', admin.site.urls),
+    path('alerts/', money_views.Alerts.as_view(), name='Alerts'),
     path('login/', money_views_login.login, name="login"), 
     path('logout/', money_views_login.logout, name="logout"), 
     path('accounts/transfer/', money_views.AccountTransfer, name='AccountTransfer'),
@@ -66,7 +67,6 @@ urlpatterns=[
     path('reports/ranking/', money_views.ReportRanking, name='ReportRanking'),
     path('reports/annual/gainsbyproductstypes/<int:year>/', money_views.ReportAnnualGainsByProductstypes, name='ReportAnnualGainsByProductstypes'),
     path('statistics/', money_views.Statistics, name='Statistics'),
-    path('time/', money_views.Time.as_view(), name='Time'),
     path('timezones/', money_views.Timezones.as_view(), name='Timezones'),
     path('unogenerator/working/', money_views.UnogeneratorWorking.as_view()),
     
