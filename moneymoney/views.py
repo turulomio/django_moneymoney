@@ -647,6 +647,13 @@ class Alerts(APIView):
         r["orders_expired"]=models.request_get(request._request.build_absolute_uri(reverse('orders-list'))+f"?expired_days={r['expired_days']}", request.user.auth_token.key)
         
         
+        # Get all inactive accounts status
+        r["accounts_inactive_with_balance"]=[]
+        lod_accounts=models.request_get(request._request.build_absolute_uri(reverse('accounts-list'))+"withbalance/?active=false", request.user.auth_token.key)
+        for d in lod_accounts:
+            if d["balance_account"]!=0:
+                r["accounts_inactive_with_balance"].append(d)
+
         # Get all investments status
         r["investments_inactive_with_balance"]=[]
         qs=models.Investments.objects.filter(active=False)
@@ -655,12 +662,6 @@ class Alerts(APIView):
             plio=plio_inactive.d(id)
             if plio["total_io_current"]["balance_investment"]!=0:
                 r["investments_inactive_with_balance"].append(plio)
-
-        
-        
-        
-        show_queries_function()
-        print(r)
         return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
 class Timezones(APIView):
