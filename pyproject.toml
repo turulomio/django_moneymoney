@@ -15,13 +15,13 @@ drf-spectacular = "^0.26.2"
 pydicts = "^0.5.0"
 requests = "^2.29.0"
 unogenerator = "^0.31.0"
-psycopg = "^3.1.8"
+psycopg = "^3.1.9"
 
 [tool.poetry.group.dev.dependencies]
 poethepoet = "^0.20.0"
 coverage = "^7.2.4"
 factory-boy = "^3.2.1"
-faker = "^18.4.0"
+faker = "^18.9.0"
 
 [build-system]
 requires = ["poetry-core"]
