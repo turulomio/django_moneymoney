@@ -216,16 +216,20 @@ def generate_assets_report(request, format):
     dict_report_current_investmentsoperations=loads(ReportCurrentInvestmentsOperations(request._request).content)
     report_current_investmentsoperations=[(_("Date and time"), _("Name"), _("Operation type"), _("Shares"), _("Price"), _("Invested"), _("Balance"), _("Gross gains"), _("% total"))]
     for o in dict_report_current_investmentsoperations:
+        print(o)
         report_current_investmentsoperations.append((
            dtaware2string(string2dtaware(o["datetime"], "JsUtcIso"), "%Y-%m-%d %H:%M:%S"), 
             o["name"],
-            object_from_url(o["operationstypes"], models.OperationsTypes).name, 
+            object_from_url(request.build_absolute_uri(reverse('operationstypes-detail', args=(o["operationstypes_id"], ))), models.Operationstypes).name, 
+
             o['shares'], 
             Currency(o["price_user"], c), 
             Currency(o["invested_user"], c), 
             Currency(o["balance_user"], c), 
             Currency(o["gains_gross_user"], c), 
-            Percentage(o["percentage_total_user"], 1)))
+            "Falta percentage_total_user", 
+        ))
+            #Percentage(o["percentage_total_user"], 1)))
     report_current_investmentsoperations.append([
         _("Total"), 
         "", 

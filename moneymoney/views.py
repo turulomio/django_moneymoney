@@ -2181,6 +2181,7 @@ def ReportCurrentInvestmentsOperations(request):
     
     for inv in plio.qs_investments():
         for o in plio.d_io_current(inv.id):
+            o["name"]=inv.fullName()
             ld.append(o)
     ld=lod.lod_order_by(ld, "datetime")
     
