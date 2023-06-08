@@ -8,20 +8,20 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-django = "^4.2.1"
+django = "^4.2.2"
 django-cors-headers = "^4.0.0"
 djangorestframework = "^3.14.0"
 drf-spectacular = "^0.26.2"
 pydicts = "^0.5.0"
-requests = "^2.29.0"
+requests = "^2.31.0"
 unogenerator = "^0.31.0"
 psycopg = "^3.1.9"
 
 [tool.poetry.group.dev.dependencies]
 poethepoet = "^0.20.0"
-coverage = "^7.2.4"
+coverage = "^7.2.7"
 factory-boy = "^3.2.1"
-faker = "^18.9.0"
+faker = "^18.10.1"
 
 [build-system]
 requires = ["poetry-core"]
