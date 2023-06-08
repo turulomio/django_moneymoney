@@ -1095,7 +1095,7 @@ def Currencies(request):
         a/b=factor a=factor b. EUR/USD= 1.09 => 1 EUR =1.09 USD
     """
     supported=[
-        ("EUR", "USD", -74747),
+        ("EUR", "USD", 74747),
     ]
     r=[]
     for a,  b in list(permutations(models.Assets.currencies(), 2)):
