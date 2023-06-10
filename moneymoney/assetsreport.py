@@ -227,7 +227,7 @@ def generate_assets_report(request, format):
             Currency(o["invested_user"], c), 
             Currency(o["balance_user"], c), 
             Currency(o["gains_gross_user"], c), 
-            "Falta percentage_total_user", 
+            Percentage(o["gains_gross_user"], o["invested_user"])
         ))
             #Percentage(o["percentage_total_user"], 1)))
     report_current_investmentsoperations.append([
