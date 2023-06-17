@@ -9,3 +9,4 @@ django_moneymoney/presettings.py
 .jedi
 .coverage
 .python3.10
+poetry.lock
