@@ -230,15 +230,21 @@ def parse_from_url(url):
         For example https://localhost/api/products/1/ ==> ('products', 1)
     """
     if url is None:
-        return None
-    parts=url.split("/")
-    return parts[len(parts)-3], int(parts[len(parts)-2])
+        return None,None
+    try:
+        parts=url.split("/")
+        return parts[len(parts)-3], int(parts[len(parts)-2])
+    except:
+        print("Error parsing url", url)
+        return None,None
 
 
 def object_from_url(url, class_, select_related=[], prefetch_related=[], model_url=None):
     """
         By default this method validates that url has the name of the class_ in lowercase as model_url
         For example. Products model should contain /products/ in url and then its id
+                     ProductsMine should contain /productsmain/ or /products_main/ or /products-main/
+        If your url is not in the ones before, you can use model_url to pass your own url to validate
         If we woudn't validate a param could pass other model with the same id and give wrong results
     """
     if url is None:
@@ -253,7 +259,7 @@ def object_from_url(url, class_, select_related=[], prefetch_related=[], model_u
     if id_ is None:
         return None
 
-    if class_.__name__.lower() != model_url:
+    if class_.__name__.lower() != model_url.lower().replace("-","").replace("_",""):
         comment=f"url couldn't be validated {url} ==> {class_.__name__} {model_url} {id_}"
         raise RequestCastingError(comment)
 

@@ -227,18 +227,21 @@ def time2string(ti, format="HH:MM" ):
 def string2date(iso, format="YYYY-MM-DD"):
     allowed=["YYYY-MM-DD", "DD/MM/YYYY", "DD.MM.YYYY", "DD/MM"]
     if format in allowed:
-        if format=="YYYY-MM-DD": #YYYY-MM-DD
-            d=iso.split("-")
-            return date(int(d[0]), int(d[1]),  int(d[2]))
-        if format=="DD/MM/YYYY": #DD/MM/YYYY
-            d=iso.split("/")
-            return date(int(d[2]), int(d[1]),  int(d[0]))
-        if format=="DD.MM.YYYY": #DD.MM.YYYY
-            d=iso.split(".")
-            return date(int(d[2]), int(d[1]),  int(d[0]))
-        if format=="DD/MM": #DD/MM
-            d=iso.split("/")
-            return date(date.today().year, int(d[1]),  int(d[0]))
+        try:
+            if format=="YYYY-MM-DD": #YYYY-MM-DD
+                d=iso.split("-")
+                return date(int(d[0]), int(d[1]),  int(d[2]))
+            if format=="DD/MM/YYYY": #DD/MM/YYYY
+                d=iso.split("/")
+                return date(int(d[2]), int(d[1]),  int(d[0]))
+            if format=="DD.MM.YYYY": #DD.MM.YYYY
+                d=iso.split(".")
+                return date(int(d[2]), int(d[1]),  int(d[0]))
+            if format=="DD/MM": #DD/MM
+                d=iso.split("/")
+                return date(date.today().year, int(d[1]),  int(d[0]))
+        except:
+            return None
     else:
         error("I can't convert this format '{}'. I only support this {}".format(format, allowed))
 
