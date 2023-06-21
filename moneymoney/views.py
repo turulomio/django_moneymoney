@@ -1506,6 +1506,7 @@ class QuotesMassiveUpdate(APIView):
         from moneymoney.investing_com import InvestingCom
         product=RequestUrl(request, "product", models.Products)
         type=RequestInteger(request, "type")
+        print(product, type, request.FILES, request.data)
         if product and type==1:## Investment.com historical quotes file
             # if not GET, then proceed
             if "csv_file1" not in request.FILES:
