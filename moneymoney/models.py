@@ -676,7 +676,7 @@ class Products(models.Model):
         return self._ohcl_daily_before_splits
         
     @staticmethod
-    def next_system_products_id(self):
+    def next_system_products_id():
         return Products.objects.filter(id__lt=10000000).order_by("-id")[0].id+1
 
         
