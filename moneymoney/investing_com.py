@@ -1,6 +1,7 @@
+from datetime import datetime
 from django.utils.translation import gettext_lazy as _
-
 from moneymoney.models import Products,  Quotes
+from moneymoney import types
 from csv import reader
 from datetime import timedelta
 from io import StringIO
@@ -60,6 +61,11 @@ class InvestingCom:
 
     def load_from_filename_in_disk(self, filename_in_disk):
         self.csv_object=reader(open(filename_in_disk, mode="r", encoding="utf-8"))
+        self.columns=self.get_number_of_csv_columns()
+        
+            
+    def load_from_bytes(self, bytes_):
+        self.csv_object=reader(StringIO(bytes_.decode("UTF-8")))
         self.columns=self.get_number_of_csv_columns()
         
     def get(self):
@@ -211,3 +217,37 @@ class InvestingCom:
             line_count += 1
         print("Added {} quotes from {} CSV lines".format(len(r), line_count))
         return r
+    ## Imports data from a CSV file with this struct. It has 6 columns
+    ## "Fecha","Último","Apertura","Máximo","Mínimo","Vol.","% var."
+    ## "May 23, 2023","10,074","10,060","10,148","9,987","10,36M","-0,08%"
+    def append_from_historical_rare_date(self):
+        r=[]
+        line_count = 0
+        for row in self.csv_object:
+            if self.product.productstypes.id==types.eProductType.Fund:
+                date_=datetime.strptime(row[0], "%b %d, %Y")
+                dateends=self.product.stockmarkets.dtaware_closes(date_)
+                quote_=string2decimal(row[2].replace(",", "#").replace(".",",").replace("#",""))
+                quote=Quotes(products=self.product, datetime=dateends, quote=quote_)
+                r.append({"product": self.product.fullName(),   "code":self.product.ticker_investingcom, "log":quote.save()})
+        
+
+            else:
+                if line_count >0:#Ignores headers line
+    #                try:
+                    ohcl=OHCLDaily(
+                        self.product, 
+                        string2date(row[0], "DD.MM.YYYY"), 
+                        string2decimal(row[2]), 
+                        string2decimal(row[3]), 
+                        string2decimal(row[1]), 
+                        string2decimal(row[4])
+                    )
+                    r=r+ohcl.generate_4_quotes()
+    #                except:
+    #                    print("Error parsing" + str(row))
+            line_count += 1
+        print("Added {} quotes from {} CSV lines".format(len(r), line_count))
+        return r
+
+    

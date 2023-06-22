@@ -22,7 +22,7 @@ from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_r
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
 from moneymoney.reusing.percentage import Percentage,  percentage_between
-from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestInteger, RequestString, RequestListUrl, id_from_url, all_args_are_not_none, RequestCastingError
+from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestString, RequestListUrl, id_from_url, all_args_are_not_none, RequestCastingError
 from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEncoder, json_success_response
 from moneymoney.reusing.sqlparser import sql_in_one_line
 from requests import delete, post
@@ -1505,26 +1505,12 @@ class QuotesMassiveUpdate(APIView):
     def post(self, request, *args, **kwargs):
         from moneymoney.investing_com import InvestingCom
         product=RequestUrl(request, "product", models.Products)
-        type=RequestInteger(request, "type")
-        print(product, type, request.FILES, request.data)
-        if product and type==1:## Investment.com historical quotes file
-            # if not GET, then proceed
-            if "csv_file1" not in request.FILES:
-                return json_data_response(False, [], "You must upload a file")
-            else:
-                csv_file = request.FILES["csv_file1"]
-                
-            if not csv_file.name.endswith('.csv'):
-                return json_data_response(False, [], "File is not CSV type")
+        bytes_=b64decode(request.data["doc"])
 
-            #if file is too large, return
-            if csv_file.multiple_chunks():
-                return json_data_response(False, [], "Uploaded file is too big ({} MB).".format(csv_file.size/(1000*1000)))
-
-            ic=InvestingCom(request, product)
-            ic.load_from_filename_in_memory(csv_file)
-            return json_data_response( True, ic.get(),  "Quotes massive update success")
-        return json_data_response( False, [],  "Product and type not set correctly")
+        ic=InvestingCom(request, product)
+        ic.load_from_bytes(bytes_)
+        r=ic.append_from_historical_rare_date()
+        return json_data_response( True, r,  "Quotes massive update success")
  
 class QuotesViewSet(viewsets.ModelViewSet):
     queryset = models.Quotes.objects.all().select_related("products")
