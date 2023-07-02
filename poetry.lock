@@ -484,14 +484,14 @@ test = ["anyio (>=3.6.2)", "mypy (>=1.2)", "pproxy (>=2.7)", "pytest (>=6.2.5)",
 
 [[package]]
 name = "pydicts"
-version = "0.5.0"
+version = "0.6.0"
 description = "Module to use dictionaries in various situations"
 category = "main"
 optional = false
 python-versions = ">=3.10,<4.0"
 files = [
-    {file = "pydicts-0.5.0-py3-none-any.whl", hash = "sha256:988f2f4103d832e2e2c27c9fa97f3f0c8d931b4282b823b17a9104bbab150a70"},
-    {file = "pydicts-0.5.0.tar.gz", hash = "sha256:3d1368efb660386d75e1003cbdc93ed8f8f7c412a555d5832248a56fee1026ed"},
+    {file = "pydicts-0.6.0-py3-none-any.whl", hash = "sha256:f313240dbf693180752398cbe7f0669d071b9ed704bf27c710df5f7a5b2ced97"},
+    {file = "pydicts-0.6.0.tar.gz", hash = "sha256:c8c85484f686e460e4294dcd007be35e1a9b1b808c8afff3643d0daa2c09f396"},
 ]
 
 [package.dependencies]
@@ -786,4 +786,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "637a7810c3660d9a6b60a27ae0f6ecd499e8dd1deb39537103b57e5a267c2e1a"
+content-hash = "f9fb35b57dab71d5ff53b8c8adf2aa1ca6dca089b6ed857ef106828f9c1fa6bd"
