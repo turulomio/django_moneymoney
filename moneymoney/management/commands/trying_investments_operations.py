@@ -13,7 +13,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 #        self.investments_operations_por_un_id()
         #self.investments_operations_por_varios_ids()       
-        self.investments_operations_todas()
+        self.investments_operations_all()
         #show_queries_function()
         
         
@@ -70,7 +70,7 @@ class Command(BaseCommand):
         print("LAZY", datetime.now()-s)
         
 
-    def investments_operations_todas(self):
+    def investments_operations_all(self):
         s=datetime.now()
         lod_investments=investment_operations_new.generate_lod_data_from_qs(models.Investments.objects.all().select_related("products", "products__productstypes", "accounts",  "products__leverages"), 'EUR')
         lod_=models.Investmentsoperations.objects.all().values()
