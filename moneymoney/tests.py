@@ -232,3 +232,4 @@ class CtTestCase(APITestCase):
         self.assertEqual(accounts_balance["accounts_balance"], -1492)
         total_balance=models.Assets.pl_total_balance(timezone.now(), "EUR")
         self.assertEqual(total_balance["total_user"], -1492)
+
