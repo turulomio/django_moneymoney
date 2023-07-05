@@ -900,15 +900,15 @@ class AccountsViewSet(viewsets.ModelViewSet):
     def withbalance(self, request):
         r=[]
         for o in self.get_queryset():
-            balance_account, balance_user=o.balance(timezone.now(), request.user.profile.currency ) 
+            balance=o.balance(timezone.now(), request.user.profile.currency ) 
             r.append({
                 "id": o.id,  
                 "name": o.name, 
                 "active":o.active, 
                 "url":request.build_absolute_uri(reverse('accounts-detail', args=(o.pk, ))), 
                 "number": o.number, 
-                "balance_account": balance_account,  
-                "balance_user": balance_user, 
+                "balance_account": balance["balance_account_currency"] ,  
+                "balance_user": balance["balance_user_currency"], 
                 "is_deletable": o.is_deletable(), 
                 "currency": o.currency, 
                 "banks":request.build_absolute_uri(reverse('banks-detail', args=(o.banks.pk, ))), 

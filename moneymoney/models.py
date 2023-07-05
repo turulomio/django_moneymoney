@@ -73,7 +73,7 @@ class Accounts(models.Model):
             
             
         r={}
-        r["balance_account_currency"]=models.Accountsoperations.objects.filter(accounts=self, datetime__lte=dt).select_related("accounts").aggregate(Sum("amount"))["amount__sum"]
+        r["balance_account_currency"]=Accountsoperations.objects.filter(accounts=self, datetime__lte=dt).select_related("accounts").aggregate(Sum("amount"))["amount__sum"]
         factor=Quotes.currency_factor(dt, self.currency, currency_user)
         r["balance_user_currency"]=r["balance_account_currency"]*factor
         return r
@@ -89,8 +89,6 @@ class Accounts(models.Model):
             balance_account_currency can be calculated if all accounts in qs has the same currency
         """
         currencies_in_qs=list(qs.order_by().values_list("currency",flat=True).distinct())
-        if len (currencies_in_qs)==0:
-            return Decimal("0")
         r={}
         if len(currencies_in_qs)==1: #One currency only
             r["balance_account_currency"]=Accountsoperations.objects.filter(accounts__in=qs, datetime__lte=dt).select_related("accounts").aggregate(Sum("amount"))["amount__sum"]
@@ -283,7 +281,7 @@ class Banks(models.Model):
     def balance_accounts(self):
         if hasattr(self, "_balance_accounts") is False:
             qs=Accounts.objects.all().filter(banks_id=self.id, active=True)
-            self._balance_accounts=Accounts.balance_user_currency(qs,  timezone.now())
+            self._balance_accounts=Accounts.accounts_balance(qs,  timezone.now(), 'EUR')["balance_user_currency"]
         return self._balance_accounts
 
     def balance_investments(self, request):
