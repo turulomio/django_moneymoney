@@ -12,8 +12,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 #        self.investments_operations_por_un_id()
-        self.investments_operations_por_varios_ids()       
-        show_queries_function()
+        #self.investments_operations_por_varios_ids()       
+        self.investments_operations_todas()
+        #show_queries_function()
         
         
     def investments_operations_por_un_id(self):
@@ -37,7 +38,7 @@ class Command(BaseCommand):
         lod.lod_print(d["io_current"])
         lod.lod_print(d["io_historical"])
         d["lazy_quotes"], d["lazy_factors"]=investment_operations_new.get_quotes_and_factors(d["lazy_quotes"], d["lazy_factors"])
-        d=investment_operations_new.calculate_io_finish(d, 1)
+        d=investment_operations_new.calculate_io_finish(d, d)
         print("LAZY", datetime.now()-s)        
         
         
@@ -50,13 +51,33 @@ class Command(BaseCommand):
             "currency_product":"EUR", 
             "currency_account":"EUR", 
             "currency_user":"EUR", 
+        }, 
+        {
+            "investments_id":127, 
+            "productstypes_id":2,
+            "products_id":79329, 
+            "currency_product":"EUR", 
+            "currency_account":"EUR", 
+            "currency_user":"EUR", 
         }]
-        lod_=models.Investmentsoperations.objects.filter(investments__id=334).values()
+        lod_=models.Investmentsoperations.objects.filter(investments__id__in=[334, 127]).values()
         
         lod.lod_print(lod_)
         t=investment_operations_new.calculate_ios_lazy(timezone.now(), lod_investments,  lod_, 'EUR')
         t["lazy_quotes"], t["lazy_factors"]=investment_operations_new.get_quotes_and_factors(t["lazy_quotes"], t["lazy_factors"])
         t=investment_operations_new.calculate_ios_finish(t, 1)
+        print(t)
+        print("LAZY", datetime.now()-s)
+        
+
+    def investments_operations_todas(self):
+        s=datetime.now()
+        lod_investments=investment_operations_new.generate_lod_data_from_qs(models.Investments.objects.all().select_related("products", "products__productstypes", "accounts",  "products__leverages"), 'EUR')
+        lod_=models.Investmentsoperations.objects.all().values()
+        
+        t=investment_operations_new.calculate_ios_lazy(timezone.now(), lod_investments,  lod_, 'EUR')
+        t["lazy_quotes"], t["lazy_factors"]=investment_operations_new.get_quotes_and_factors(t["lazy_quotes"], t["lazy_factors"])
+        t=investment_operations_new.calculate_ios_finish(t, 3)
         print(t)
         print("LAZY", datetime.now()-s)
         

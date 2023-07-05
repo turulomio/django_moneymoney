@@ -1,4 +1,19 @@
 from moneymoney import models
+
+def generate_lod_data_from_qs(qs,  currency_user):
+    lod=[]
+    for inv in qs:
+        lod.append({
+            "investments_id": inv.id, 
+            "productstypes_id": inv.products.productstypes.id, 
+            "products_id": inv.products.id, 
+            "currency_product": inv.products.currency, 
+            "currency_account":inv.accounts.currency, 
+            "currency_user": currency_user, 
+            "multiplier": inv.products.leverages.multiplier, 
+        })
+    return lod
+
 def realmultiplier(pia):
     if pia["productstypes_id"] in (12, 13):
         return pia['multiplier'] 
@@ -63,7 +78,7 @@ def calculate_ios_finish(t, mode):
         if investments_id in t_keys_not_investment():
             continue
 
-        t[investments_id]=calculate_io_finish(d, mode)
+        t[investments_id]=calculate_io_finish(d, t)
 
         t["sum_total_io_current"]["balance_user"]=t["sum_total_io_current"]["balance_user"]+t[investments_id]["total_io_current"]['balance_user']
         t["sum_total_io_current"]["balance_futures_user"]=t["sum_total_io_current"]["balance_futures_user"]+t[investments_id]["total_io_current"]['balance_futures_user']
@@ -274,15 +289,16 @@ def currency_factor(datetime_, from_, to_ ):
     print("NOT FOUND")
     return None
 
-def calculate_io_finish(d, mode):
+def calculate_io_finish(d, dict_with_lf_and_lq):
     """
         d es el resultado de calculate_io_lazy
+        dict_with_lf_and_lq puede ser en d o en t segun sea io o ios
     """
     def lf(from_, to_, dt):
-        return d["lazy_factors"][(from_, to_, dt)]
+        return dict_with_lf_and_lq["lazy_factors"][(from_, to_, dt)]
         
     def lq(products_id, dt):
-        return d["lazy_quotes"][(products_id, dt)]
+        return dict_with_lf_and_lq["lazy_quotes"][(products_id, dt)]
         
     
     data=d["data"]
