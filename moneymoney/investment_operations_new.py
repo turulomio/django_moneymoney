@@ -243,51 +243,17 @@ def get_quotes_and_factors(lazy_quotes, lazy_factors):
     """
     for lz in lazy_quotes.keys():
         products_id, datetime_=lz
-        r=quote(products_id, datetime_)
+        r=models.Quote.quote(products_id, datetime_)
         if r is None:
             lazy_quotes[lz]=None
         else:
             lazy_quotes[lz]=r.quote
     for lf in lazy_factors.keys():
         from_, to_, datetime_=lf
-        lazy_factors[lf]=currency_factor(datetime_, from_,  to_)
+        lazy_factors[lf]=models.Quote.currency_factor(datetime_, from_,  to_)
     return lazy_quotes, lazy_factors
 
-def quote(product_id, datetime_):
-    """
-        Returns and object or None
-    """
-    try:
-        r=models.Quotes.objects.filter(products__id=product_id, datetime__lte=datetime_).order_by("-datetime")[0]
-        return r
-    except:
-        return None
-    
-    
-def currency_factor(datetime_, from_, to_ ):
-    """
-        Returns and object or None
-    """
-    if from_==to_:
-        return 1
-        
-    if from_== 'EUR' and to_== 'USD':
-        q=quote(74747, datetime_)
-        if q is None:
-            return None
-        else:
-            return q.quote    
-    if from_== 'USD' and to_== 'EUR':
-        q=quote(74747, datetime_)
-        if q is None:
-            return None
-        else:
-            if q.quote==0:
-                return None
-            else:
-                return 1/q.quote
-    print("NOT FOUND")
-    return None
+
 
 def calculate_io_finish(d, dict_with_lf_and_lq):
     """
@@ -417,3 +383,9 @@ def calculate_io_finish(d, dict_with_lf_and_lq):
         d["total_io_historical"]["commissions_account"]=d["total_io_historical"]["commissions_account"]+h["commissions_account"]
         d["total_io_historical"]["gains_net_user"]=d["total_io_historical"]["gains_net_user"]+h["gains_net_user"]
     return d
+
+
+
+
+
+

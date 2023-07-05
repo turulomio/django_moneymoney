@@ -13,9 +13,13 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 #        self.investments_operations_por_un_id()
         #self.investments_operations_por_varios_ids()       
-        self.investments_operations_all()
-        #show_queries_function()
+        #self.investments_operations_all()
+        self.account_balance()
+        show_queries_function()
         
+    def account_balance(self):
+        qs_accounts=models.Accounts.objects.filter(active=True)
+        print(models.Accounts.balance_user_currency(qs_accounts, timezone.now(), 'EUR'))
         
     def investments_operations_por_un_id(self):
 #        print(investment_operations_new.quote(79329, timezone.now()-timedelta(days=365)))

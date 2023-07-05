@@ -67,26 +67,55 @@ class Accounts(models.Model):
         return True
 
     ## @return Tuple (balance_account_currency | balance_user_currency)
-    def balance(self, dt,  local_currency):
-        r=cursor_one_row("select * from account_balance(%s,%s,%s)", (self.id, dt, local_currency))
-        return r['balance_account_currency'], r['balance_user_currency']
+    def balance(self, dt,  currency_user):
+#        r=cursor_one_row("select * from account_balance(%s,%s,%s)", (self.id, dt, local_currency))
+#        return r['balance_account_currency'], r['balance_user_currency']
             
+            
+        r={}
+        r["balance_account_currency"]=models.Accountsoperations.objects.filter(accounts=self, datetime__lte=dt).select_related("accounts").aggregate(Sum("amount"))["amount__sum"]
+        factor=Quotes.currency_factor(dt, self.currency, currency_user)
+        r["balance_user_currency"]=r["balance_account_currency"]*factor
+        return r
             
     @staticmethod
-    def balance_user_currency(qs, dt):
-        if len (qs)==0:
-            return 0
-            
-        ids=list(qs.values_list("id",  flat=True).distinct())
-        return cursor_one_field("select sum((account_balance(accounts.id,%s,'EUR')).balance_user_currency) from  accounts where id=any(%s)", (dt, ids))
+    def balance_user_currency(qs, dt, currency_user):
+        return Accounts.accounts_balance(qs, dt, currency_user)["balance_user_currency"]
 
+    @staticmethod
+    def accounts_balance(qs, dt, currency_user):
+        """
+            qs. Queryset Accounts
+            balance_account_currency can be calculated if all accounts in qs has the same currency
+        """
+        currencies_in_qs=list(qs.order_by().values_list("currency",flat=True).distinct())
+        if len (currencies_in_qs)==0:
+            return Decimal("0")
+        r={}
+        if len(currencies_in_qs)==1: #One currency only
+            r["balance_account_currency"]=Accountsoperations.objects.filter(accounts__in=qs, datetime__lte=dt).select_related("accounts").aggregate(Sum("amount"))["amount__sum"]
+            factor=Quotes.currency_factor(dt, currencies_in_qs[0], currency_user)
+            r["balance_user_currency"]=r["balance_account_currency"]*factor
+        else:
+            r["balance_account_currency"]=None
+            r["balance_user_currency"]=Decimal("0")
+            for currency in currencies_in_qs:
+                b=Accountsoperations.objects.filter(accounts__in=qs, datetime__lte=dt, accounts__currency=currency).select_related("accounts").aggregate(Sum("amount"))["amount__sum"]
+                factor=Quotes.currency_factor(dt, currency, currency_user)
+                r["balance_user_currency"]=r["balance_user_currency"]+b*factor
+        return r
+
+                
             
     @staticmethod
-    def currencies():
+    def currencies(qs=None):
         """
         Returns a list with distinct currencies in accounts
         """
-        return list(Accounts.objects.order_by().values_list("currency",flat=True).distinct())
+        if qs  is None:
+            return list(Accounts.objects.order_by().values_list("currency",flat=True).distinct())
+        else:
+            return list(qs.order_by().values_list("currency",flat=True).distinct())
 
 class Operationstypes(models.Model):
     name = models.TextField()
@@ -732,7 +761,46 @@ class Quotes(models.Model):
     @staticmethod
     def hurl(request, id): ##Do not use url, conflicts with self.url in drf
         return request.build_absolute_uri(reverse('quotes-detail', args=(id, )))
-
+    
+    @staticmethod
+    def get_quote(product_id, datetime_):
+        """
+            Gets a quote object of a product in a datetime or less.
+            Returns and object or None
+        """
+        try:
+            r=Quotes.objects.filter(products__id=product_id, datetime__lte=datetime_).order_by("-datetime")[0]
+            return r
+        except:
+            return None
+    
+    
+    @staticmethod
+    def currency_factor(datetime_, from_, to_ ):
+        """
+            Gets the factor to pass a currency to other in a datetime
+            Returns and object or None
+        """
+        if from_==to_:
+            return 1
+            
+        if from_== 'EUR' and to_== 'USD':
+            q=Quotes.get_quote(74747, datetime_)
+            if q is None:
+                return None
+            else:
+                return q.quote    
+        if from_== 'USD' and to_== 'EUR':
+            q=Quotes.get_quote(74747, datetime_)
+            if q is None:
+                return None
+            else:
+                if q.quote==0:
+                    return None
+                else:
+                    return 1/q.quote
+        print("NOT FOUND")
+        return None
 
 
 class Splits(models.Model):
