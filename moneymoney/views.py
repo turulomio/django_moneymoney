@@ -24,7 +24,6 @@ from moneymoney.reusing.decorators import ptimeit
 from moneymoney.reusing.percentage import Percentage,  percentage_between
 from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestString, RequestListUrl, id_from_url, all_args_are_not_none, RequestCastingError
 from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEncoder, json_success_response
-from moneymoney.reusing.sqlparser import sql_in_one_line
 from requests import delete, post
 from subprocess import run
 from os import path
@@ -1302,23 +1301,7 @@ class ProductsViewSet(viewsets.ModelViewSet):
         """
             Search products and return them with last, penultimate, and last year quotes
         """
-        def db_query_by_products_ids(ids):
-            return cursor_rows(sql_in_one_line("""
-                select 
-                    products.id, 
-                    last_datetime, 
-                    last, 
-                    penultimate_datetime, 
-                    penultimate, 
-                    lastyear_datetime, 
-                    lastyear 
-                from 
-                    products,
-                    last_penultimate_lastyear(products.id, now()) 
-                where 
-                    products.id = any(%s)
-            """), (ids, ))
-        #############################################        
+  
         search=RequestGetString(request, "search")
         if all_args_are_not_none(search):
             
@@ -1351,10 +1334,20 @@ class ProductsViewSet(viewsets.ModelViewSet):
                     Q(ticker_google__icontains=search) |
                     Q(ticker_quefondos__icontains=search)
                 ).values_list('id', flat=True))
-            rows=db_query_by_products_ids(ids) if len(ids)>0 else []
-            for row in rows:
-                row["product"]=request.build_absolute_uri(reverse('products-detail', args=(row['id'], )))
+            products=models.Products.objects.filter(id__in=ids)
+            rows=[]
+            for p in products:
+                row={}
+                row['id']=p.id
+                row["product"]=p.hurl(request, p.id)
+                row["last_datetime"]=None if p.quote_last() is None else p.quote_last().datetime
+                row["last"]=None if p.quote_last() is None else p.quote_last().quote
+                row["penultimate_datetime"]=None if p.quote_penultimate() is None else p.quote_penultimate().datetime
+                row["penultimate"]=None if p.quote_penultimate() is None else p.quote_penultimate().quote
+                row["lastyear_datetime"]=None if p.quote_lastyear() is None else p.quote_lastyear().datetime
+                row["lastyear"]=None if p.quote_lastyear() is None else p.quote_lastyear().quote
                 row["percentage_last_year"]=None if row["lastyear"] is None else Percentage(row["last"]-row["lastyear"], row["lastyear"])
+                rows.append(row)
             return json_data_response(True, rows, "Products search done")
         return json_data_response(False, rows, "Products search error")
 
