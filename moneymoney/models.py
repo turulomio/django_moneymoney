@@ -9,7 +9,7 @@ from django.utils import timezone
 from json import loads, dumps
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.reusing.casts import string2list_of_integers
-from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_row, cursor_rows
+from moneymoney.reusing.connection_dj import cursor_one_field, cursor_rows
 from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string, dtaware_day_end_from_date, dtaware_year_end
 from moneymoney.reusing.percentage import Percentage, percentage_between
@@ -773,18 +773,50 @@ class Products(models.Model):
         if self.productstypes.id in (eProductType.CFD, eProductType.Future):
             return self.leverages.multiplier
         return 1
-
-    def quote(self, dt):
-        return cursor_one_row("select * from quote(%s,%s)", (self.id, dt ))
         
     def ohclMonthlyBeforeSplits(self):
         if hasattr(self, "_ohcl_monthly_before_splits") is False:
-            self._ohcl_monthly_before_splits=cursor_rows("select * from ohclmonthlybeforesplits(%s)", (self.id, ))
+            self._ohcl_monthly_before_splits=cursor_rows("""select 
+                t.products_id,
+                date_part('year',date) as year, 
+                date_part('month', date) as month, 
+                (array_agg(t.open order by date))[1] as open, 
+                min(t.low) as low, 
+                max(t.high) as high, 
+                (array_agg(t.close order by date desc))[1] as close 
+            from (
+            
+            select 
+                quotes.products_id, 
+                datetime::date as date, 
+                (array_agg(quote order by datetime))[1] as open, 
+                min(quote) as low, 
+                max(quote) as high, 
+                (array_agg(quote order by datetime desc))[1] as close 
+            from quotes 
+            where quotes.products_id=%s
+            group by quotes.products_id, datetime::date 
+            order by datetime::date
+            
+            
+            ) as t
+            group by t.products_id,  year, month 
+            order by year, month""", (self.id, ))
         return self._ohcl_monthly_before_splits
 
     def ohclDailyBeforeSplits(self):
         if hasattr(self, "_ohcl_daily_before_splits") is False:
-            self._ohcl_daily_before_splits=cursor_rows("select * from ohcldailybeforesplits(%s)", (self.id, ))
+            self._ohcl_daily_before_splits=cursor_rows("""select 
+                quotes.products_id, 
+                datetime::date as date, 
+                (array_agg(quote order by datetime))[1] as open, 
+                min(quote) as low, 
+                max(quote) as high, 
+                (array_agg(quote order by datetime desc))[1] as close 
+            from quotes 
+            where quotes.products_id=%s
+            group by quotes.products_id, datetime::date 
+            order by datetime::date """, (self.id, ))
         return self._ohcl_daily_before_splits
         
     @staticmethod

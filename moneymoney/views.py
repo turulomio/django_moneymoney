@@ -1220,6 +1220,7 @@ def ProductsQuotesOHCL(request):
         
         if product is not None and year is not None and month is not None:
             ld_ohcl=product.ohclDailyBeforeSplits()       
+            product.ohclMonthlyBeforeSplits()
             r=[] ## TODO. Add from_date in postgres function to avoid this
             for d in ld_ohcl:
                 if d["date"].year==year and d["date"].month==month:
