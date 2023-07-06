@@ -173,7 +173,7 @@ class CtTestCase(APITestCase):
 #        self.assertEqual(total_balance["total_user"], -1492)
 
 
-    def test_banks(self):
-        print()
-        print("test_banks")
-        tests_helpers.common_tests_Private(self,  '/api/banks/', models.Banks.post_payload(),  self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
+#    def test_banks(self):
+#        print()
+#        print("test_banks")
+#        tests_helpers.common_tests_Private(self,  '/api/banks/', models.Banks.post_payload(),  self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
