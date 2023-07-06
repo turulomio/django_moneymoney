@@ -25,5 +25,6 @@ def reusing():
         download_from_github("turulomio", "reusingcode", "python/datetime_functions.py", "moneymoney/reusing")
         download_from_github("turulomio", "reusingcode", "python/sqlparser.py", "moneymoney/reusing")
         download_from_github("turulomio", "reusingcode", "python/libmanagers.py", "moneymoney/reusing")
+        download_from_github("turulomio", "django_calories_tracker", "calories_tracker/tests_helpers.py", "moneymoney/reusing")
 
     replace_in_file("moneymoney/reusing/libmanagers.py", "from datetime_functions", "from .datetime_functions")
