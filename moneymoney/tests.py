@@ -4,7 +4,7 @@ from django.test import tag
 from json import loads
 from moneymoney import models
 #from moneymoney.reusing.connection_dj import cursor_one_row
-from moneymoney.reusing import tests_helpers
+#from moneymoney.reusing import tests_helpers
 #from moneymoney.types import eOperationType
 #from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
