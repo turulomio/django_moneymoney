@@ -11,7 +11,7 @@ from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.reusing.casts import string2list_of_integers
 from moneymoney.reusing.connection_dj import cursor_one_field, cursor_one_row, cursor_rows
 from moneymoney.reusing.currency import Currency
-from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string
+from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string, dtaware_day_end_from_date, dtaware_year_end
 from moneymoney.reusing.percentage import Percentage, percentage_between
 from moneymoney.investment_operations import t_keys_not_investment,  calculate_ios_lazy,  calculate_ios_finish, MyDjangoJSONEncoder, loads_hooks_io, loads_hooks_tb
 from pydicts import lod, lod_ymv
@@ -685,6 +685,53 @@ class Products(models.Model):
         if hasattr(self, "_basic_results") is False:
             self._basic_results=cursor_one_row("select * from last_penultimate_lastyear(%s,%s)", (self.id, timezone.now() ))
         return self._basic_results
+
+    def new_basic_results(self, dt=None):
+        """
+            dt . None by defaults gets basic_results now. Otherwise in that dt
+        """
+        if dt is None:
+            dt= timezone.now()
+        r={
+            "id":self.id, 
+            "last_datetime":None, 
+            "last": None, 
+            "penultimate_datetime": None, 
+            "penultimate": None, 
+            "lastyear_datetime": None, 
+            "lastyear": None, 
+        }
+        quote_last=Quotes.get_quote(self.id, dt)
+        if quote_last is not None:
+            r["last_datetime"]=quote_last.datetime
+            r["last"]=quote_last.quote
+            dt_penultimate=dtaware_day_end_from_date(quote_last.datetime.date()-timedelta(days=1), 'UTC')#Better utc to assure
+            quote_penultimate=Quotes.get_quote(self.id, dt_penultimate)
+            if quote_penultimate is not None:
+                r["penultimate_datetime"]=quote_penultimate.datetime
+                r["penultimate"]=quote_penultimate.quote
+                dt_lastyear=dtaware_year_end(dt.year-1, 'UTC')
+                quote_lastyear=Quotes.get_quote(self.id, dt_lastyear)
+                if quote_lastyear is not None:
+                    r["lastyear_datetime"]=quote_lastyear.datetime
+                    r["lastyear"]=quote_lastyear.quote
+        return r
+        
+#            searched:=make_timestamptz(EXTRACT(YEAR FROM penultimate.date)::integer,EXTRACT(MONTH FROM penultimate.date)::integer, EXTRACT(DAY FROM penultimate.date)::integer, 23, 59, 59.999999::double precision) ;
+#    select quotes.datetime INTO last_datetime from quote(penultimate.id, searched) quotes;
+#    minus:=last_datetime::date - integer '1';
+#    searched:=make_timestamptz(EXTRACT(YEAR FROM minus)::integer,EXTRACT(MONTH FROM minus)::integer, EXTRACT(DAY FROM minus)::integer, 23, 59, 59.999999::double precision) ;
+#    SELECT quotes.quote, quotes.datetime  INTO penultimate.quote, penultimate.datetime FROM quotes where quotes.products_id= penultimate.id and quotes.datetime <= searched order by quotes.datetime desc limit 1;
+
+        
+        
+        
+#CREATE OR REPLACE FUNCTION public.last_penultimate_lastyear(INOUT id integer, at_datetime timestamp with time zone, OUT last_datetime timestamp with time zone, OUT last numeric, OUT penultimate_datetime timestamp with time zone, OUT penultimate numeric, OUT lastyear_datetime timestamp with time zone, OUT lastyear numeric)
+#            SELECT quotes.quote, quotes.datetime  INTO last_penultimate_lastyear.last, last_penultimate_lastyear.last_datetime FROM quote(id, at_datetime) quotes;
+#    SELECT quotes.quote, quotes.datetime  INTO last_penultimate_lastyear.penultimate, last_penultimate_lastyear.penultimate_datetime FROM penultimate(id, at_datetime::date) quotes;
+#    ly:=make_timestamptz((EXTRACT(YEAR FROM  at_datetime)-1)::integer, 12, 31, 23, 59, 59.999999::double precision) ;
+#    SELECT quotes.quote, quotes.datetime  INTO last_penultimate_lastyear.lastyear, last_penultimate_lastyear.lastyear_datetime FROM quote(id,ly) quotes;
+
         
     ## IBEXA es x2 pero esta en el pricio
     ## CFD DAX no está en el precio

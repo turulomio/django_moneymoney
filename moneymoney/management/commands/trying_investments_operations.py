@@ -14,12 +14,20 @@ class Command(BaseCommand):
 #        self.investments_operations_por_un_id()
         #self.investments_operations_por_varios_ids()       
         #self.investments_operations_all()
-        self.account_balance()
+#        self.account_balance()
+        self.last_penultimate_lastyear()
         show_queries_function()
+        
+        
+    def last_penultimate_lastyear(self):
+        product=models.Products.objects.get(pk=79329)
+        print(product)
+        print(product.basic_results())
+        print(product.new_basic_results())
         
     def account_balance(self):
         qs_accounts=models.Accounts.objects.filter(active=True)
-        print(models.Accounts.balance_user_currency(qs_accounts, timezone.now(), 'EUR'))
+        print(models.Accounts.accounts_balance(qs_accounts, timezone.now(), 'EUR'))
         
     def investments_operations_por_un_id(self):
 #        print(investment_operations_new.quote(79329, timezone.now()-timedelta(days=365)))
