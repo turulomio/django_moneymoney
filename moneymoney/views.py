@@ -701,16 +701,13 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
             else:#Long short products
                 return Percentage(-(selling_price-last_quote), last_quote)
         #######################################      
-        start=datetime.now()
-        
-        
-        ### DELETE MemoryError
-        #print("AHORA", models.Assets.pl_investment_operations(timezone.now(), request.user.profile.currency, [69, ],  1))
-        #######
-        
+        active=RequestGetBool(request, "active")
+        if active is None:        
+            return Response({'detail': _('You must set active parameter')}, status=status.HTTP_400_BAD_REQUEST)
 
-        
-        plio=investment_operations.PlInvestmentOperations.from_all(timezone.now(),  'EUR',  mode=2)
+            
+        start=datetime.now()       
+        plio=investment_operations.PlInvestmentOperations.from_qs(timezone.now(),  'EUR',  models.Investments.objects.filter(active=active),  mode=2)
         r=[]
         for o in self.get_queryset().select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages"):
             percentage_invested=None if plio.d_total_io_current(o.id)["invested_user"]==0 else  plio.d_total_io_current(o.id)["gains_gross_user"]/plio.d_total_io_current(o.id)["invested_user"]
@@ -730,7 +727,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "last_datetime": o.products.quote_last().datetime, 
                 "last": o.products.quote_last().quote, 
                 "daily_difference": last_day_diff, 
-                "daily_percentage":percentage_between(o.products.quote_penultimate().quote, o.products.quote_last().quote), 
+                "daily_percentage": None if o.products.quote_penultimate() is None or o.products.quote_last() is None else percentage_between(o.products.quote_penultimate().quote, o.products.quote_last().quote), 
                 "invested_user": plio.d_total_io_current(o.id)["invested_user"], 
                 "gains_user": plio.d_total_io_current(o.id)["gains_gross_user"], 
                 "balance_user": plio.d_total_io_current(o.id)["balance_user"], 
