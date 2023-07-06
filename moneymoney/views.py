@@ -2138,7 +2138,7 @@ def ReportsInvestmentsLastOperation(request):
                 "percentage_sellingpoint": 0, # plio.percentage_sellingpoint(ioc_last, investment.selling_price).value,   
                 "investments_urls": investments_urls, 
             })
-    return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
+    return JsonResponse( ld, encoder=MyDjangoJSONEncoder, safe=False)
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -2158,7 +2158,7 @@ def ReportCurrentInvestmentsOperations(request):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportRanking(request):
-    plio=investment_operations.PlInvestmentOperations.from_ids( timezone.now(), request.user.profile.currency, None, mode=2)
+    plio=investment_operations.PlInvestmentOperations.from_all( timezone.now(), request.user.profile.currency, mode=2)
 
     ld=[]
     dividends=cursor_rows_as_dict("investments_id","select investments_id, sum(net) from dividends group by investments_id")
