@@ -1,6 +1,6 @@
 from base64 import  b64encode, b64decode
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta
 from decimal import Decimal
 from django.conf import settings
 from django.core.management import call_command
@@ -705,8 +705,6 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
         if active is None:        
             return Response({'detail': _('You must set active parameter')}, status=status.HTTP_400_BAD_REQUEST)
 
-            
-        start=datetime.now()       
         plio=investment_operations.PlInvestmentOperations.from_qs(timezone.now(),  'EUR',  models.Investments.objects.filter(active=active),  mode=2)
         r=[]
         for o in self.get_queryset().select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages"):
@@ -745,7 +743,6 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "gains_at_selling_point_investment": o.selling_price*o.products.real_leveraged_multiplier()*plio.d_total_io_current(o.id)["shares"]-plio.d_total_io_current(o.id)["invested_investment"], 
                 "decimals": o.decimals, 
             })
-        print(datetime.now()-start, "balance")
         return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
     @action(detail=True, methods=["get"], name='Investments operations evolution chart', url_path="operations_evolution_chart", url_name='operations_evolution_chart', permission_classes=[permissions.IsAuthenticated])
