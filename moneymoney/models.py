@@ -81,10 +81,6 @@ class Accounts(models.Model):
         factor=Quotes.currency_factor(dt, self.currency, currency_user)
         r["balance_user_currency"]=r["balance_account_currency"]*factor
         return r
-            
-    @staticmethod
-    def balance_user_currency(qs, dt, currency_user):
-        return Accounts.accounts_balance(qs, dt, currency_user)["balance_user_currency"]
 
     @staticmethod
     def accounts_balance(qs, dt, currency_user):
