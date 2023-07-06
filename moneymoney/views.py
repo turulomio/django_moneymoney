@@ -1925,50 +1925,37 @@ def ReportConcepts(request):
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportDividends(request):
     qs_investments=models.Investments.objects.filter(active=True).select_related("products").select_related("accounts").select_related("products__leverages").select_related("products__productstypes")
-    shares=cursor_rows_as_dict("investments_id", """
-        select 
-            investments.id as investments_id ,
-            coalesce(sum(shares),0) as shares
-            from investments left join investmentsoperations on investments.id=investmentsoperations.investments_id group by investments.id""")
-    estimations=cursor_rows_as_dict("products_id",  """
-        select 
-            distinct(products.id) as products_id, 
-            estimation, 
-            date_estimation,
-            (last_penultimate_lastyear(products.id, now())).last 
-        from products, estimations_dps where products.id=estimations_dps.products_id and year=%s""", (date.today().year, ))
-    quotes=cursor_rows_as_dict("products_id",  """
-        select 
-            products_id, 
-            products.currency,
-            (last_penultimate_lastyear(products.id, now())).last 
-            from products, investments where investments.products_id=products.id and investments.active=true""")
     ld_report=[]
-    for inv in qs_investments:        
-        if shares[inv.id] is None: #Left join
-            shares[inv.id]=0
-        if inv.products_id in estimations:
-            dps=estimations[inv.products_id]["estimation"]
-            date_estimation=estimations[inv.products_id]["date_estimation"]
-            percentage=Percentage(dps, quotes[inv.products_id]["last"])
-            estimated=shares[inv.id]["shares"]*dps*inv.products.real_leveraged_multiplier()
-        else:
-            dps= None
+    for inv in qs_investments:
+        shares=inv.shares_from_db_investmentsoperations()
+        try:
+            estimation=models.EstimationsDps.objects.get(products_id=inv.products.id, year=timezone.now().year)
+        except: 
+            estimation=None
+            
+        if estimation is None:
+            estimation=None
             date_estimation=None
+            dps=None
             percentage=Percentage()
             estimated=None
-        
+        else:
+            dps=estimation.estimation
+            date_estimation=estimation.date_estimation
+            percentage=Percentage(dps, inv.products.quote_last().quote)
+            estimated=shares*dps*inv.products.real_leveraged_multiplier()
+            
         
         d={
-            "product": request.build_absolute_uri(reverse('products-detail', args=(inv.products.id, ))), 
+            "product": inv.products.hurl(request, inv.products.id), 
             "name":  inv.fullName(), 
-            "current_price": quotes[inv.products_id]["last"], 
+            "current_price": inv.products.quote_last().quote, 
             "dps": dps, 
-            "shares": shares[inv.id]["shares"], 
+            "shares": shares, 
             "date_estimation": date_estimation, 
             "estimated": estimated, 
-            "percentage": percentage,  
-            "currency": quotes[inv.products_id]["currency"]
+            "percentage": percentage, 
+            "currency": inv.products.currency, 
         }
         ld_report.append(d)
     return JsonResponse( ld_report, encoder=MyDjangoJSONEncoder,     safe=False)

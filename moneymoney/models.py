@@ -1667,3 +1667,4 @@ def request_get(absolute_url, user_token):
     a=get(absolute_url, headers={'Authorization': f'Token {user_token}'}, verify=False)
     print(a.content)
     return loads(a.content)
+
