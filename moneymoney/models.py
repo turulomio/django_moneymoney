@@ -735,6 +735,38 @@ class Products(models.Model):
                     r["lastyear"]=self.quote_lastyear().quote
         return r
         
+        
+    @staticmethod
+    def basic_results_from_products_id(products_id):
+        """
+            Sometimes I only hava an id. PL Investments OPerations
+        """
+        dt= timezone.now()
+        r={
+            "id":products_id, 
+            "last_datetime":None, 
+            "last": None, 
+            "penultimate_datetime": None, 
+            "penultimate": None, 
+            "lastyear_datetime": None, 
+            "lastyear": None, 
+        }
+        quote_last=Quotes.get_quote(products_id, dt)
+        if quote_last is not None:
+            r["last_datetime"]=quote_last.datetime
+            r["last"]=quote_last.quote
+            dt_penultimate=dtaware_day_end_from_date(quote_last.datetime.date()-timedelta(days=1), 'UTC')#Better utc to assure
+            quote_penultimate=Quotes.get_quote(products_id, dt_penultimate)
+            if quote_penultimate is not None:
+                r["penultimate_datetime"]=quote_penultimate.datetime
+                r["penultimate"]=quote_penultimate.quote
+                dt_lastyear=dtaware_year_end(dt.year-1, 'UTC')
+                quote_lastyear=Quotes.get_quote(products_id, dt_lastyear)
+                if quote_lastyear is not None:
+                    r["lastyear_datetime"]=quote_lastyear.datetime
+                    r["lastyear"]=quote_lastyear.quote
+        return r
+        
     ## IBEXA es x2 pero esta en el pricio
     ## CFD DAX no está en el precio
     def real_leveraged_multiplier(self):
@@ -1465,7 +1497,7 @@ class PlInvestmentOperations():
             
         products_id=str(self.d_data(str(id))["products_id"])
         if not products_id in self._t["basic_results"]:
-            self._t["basic_results"][products_id]=cursor_one_row("select * from last_penultimate_lastyear(%s,%s)", (products_id, timezone.now() ))
+            self._t["basic_results"][products_id]=Products.basic_results_from_products_id(products_id)
         return self._t["basic_results"][products_id]
         
     def ioc_percentage_annual_user(self, ioc):
