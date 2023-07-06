@@ -3,7 +3,7 @@ from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
 from moneymoney.reusing.libmanagers import ObjectManager, DatetimeValueManager
-from moneymoney import models
+from moneymoney import models, investment_operations
 from moneymoney.reusing.percentage import Percentage
 
 class ProductRange():
@@ -112,7 +112,7 @@ class ProductRangeManager(ObjectManager):
         self.decimals=decimals
         self.method=0
         
-        self.plio=models.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, self.qs_investments,  1)
+        self.plio=investment_operations.PlInvestmentOperations.from_qs(self.request, timezone.now(), request.user.profile.currency, self.qs_investments,  1)
 
         self.orders=models.Orders.objects.select_related("investments", "investments__accounts","investments__products","investments__products__leverages","investments__products__productstypes")\
             .filter(investments__in=self.qs_investments, executed=None)\

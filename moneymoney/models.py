@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
 from json import loads
-from moneymoney import investments_operations_new
+from moneymoney import investment_operations
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.reusing.casts import string2list_of_integers
 from moneymoney.reusing.connection_dj import cursor_one_field, cursor_rows
@@ -289,7 +289,7 @@ class Banks(models.Model):
 
     def balance_investments(self, request):
         if hasattr(self, "_balance_investments") is False:
-            plio=investments_operations_new.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, self.investments(active=True), 3)
+            plio=investment_operations.PlInvestmentOperations.from_qs(request, timezone.now(), request.user.profile.currency, self.investments(active=True), 3)
             self._balance_investments=plio.sum_total_io_current()["balance_user"]
         return self._balance_investments
         
@@ -557,7 +557,7 @@ class Investmentsoperations(models.Model):
         concepts=Concepts.objects.filter(pk__in=(eConcept.BuyShares, eConcept.SellShares, eConcept.BankCommissions))
         qs_ao=Accountsoperations.objects.filter(concepts__in=concepts, comment=f'{eComment.InvestmentOperation},{self.id}')
         qs_ao.delete()
-        plio=investments_operations_new.PlInvestmentOperations.from_ids(timezone.now(), request.user.profile.currency, [self.investments.id, ], 1)
+        plio=investment_operations.PlInvestmentOperations.from_ids(request, timezone.now(), request.user.profile.currency, [self.investments.id, ], 1)
         #Searches io investments operations of the comment
         io=None
         for o in plio.d_io(self.investments.id):
@@ -1267,15 +1267,15 @@ class Assets:
             Returns a dict with the following keys:
             {'accounts_user': 0, 'investments_user': 0, 'total_user': 0, 'investments_invested_user': 0}
         """
-        return loads(cursor_rows("select * from pl_total_balance(%s,%s)", (dt, local_currency, ))[0]["pl_total_balance"], object_hook=investments_operations_new.loads_hooks_tb)[0]
+        return loads(cursor_rows("select * from pl_total_balance(%s,%s)", (dt, local_currency, ))[0]["pl_total_balance"], object_hook=investment_operations.loads_hooks_tb)[0]
 
-    @staticmethod
-    def pl_investment_operations(dt, local_currency, list_ids, mode):
-        """
-            If list_ids is None returns investment_operations for all investments
-            Returns a dict with the following keys:
-        """
-        return loads(cursor_rows("select * from pl_investment_operations(%s,%s,%s,%s)", (dt, local_currency, list_ids, mode))[0]["pl_investment_operations"], object_hook=investments_operations_new.loads_hooks_io)
+#    @staticmethod
+#    def pl_investment_operations(dt, local_currency, list_ids, mode):
+#        """
+#            If list_ids is None returns investment_operations for all investments
+#            Returns a dict with the following keys:
+#        """
+#        return loads(cursor_rows("select * from pl_investment_operations(%s,%s,%s,%s)", (dt, local_currency, list_ids, mode))[0]["pl_investment_operations"], object_hook=investment_operations.loads_hooks_io)
 
 
 class FastOperationsCoverage(models.Model):
