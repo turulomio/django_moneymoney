@@ -73,7 +73,11 @@ class Accounts(models.Model):
             
             
         r={}
-        r["balance_account_currency"]=Accountsoperations.objects.filter(accounts=self, datetime__lte=dt).select_related("accounts").aggregate(Sum("amount"))["amount__sum"]
+        b=Accountsoperations.objects.filter(accounts=self, datetime__lte=dt).select_related("accounts").aggregate(Sum("amount"))["amount__sum"]
+        if b is None:
+            r["balance_account_currency"]=Decimal('0')
+        else:
+            r["balance_account_currency"]=b
         factor=Quotes.currency_factor(dt, self.currency, currency_user)
         r["balance_user_currency"]=r["balance_account_currency"]*factor
         return r
@@ -91,7 +95,11 @@ class Accounts(models.Model):
         currencies_in_qs=list(qs.order_by().values_list("currency",flat=True).distinct())
         r={}
         if len(currencies_in_qs)==1: #One currency only
-            r["balance_account_currency"]=Accountsoperations.objects.filter(accounts__in=qs, datetime__lte=dt).select_related("accounts").aggregate(Sum("amount"))["amount__sum"]
+            b=Accountsoperations.objects.filter(accounts__in=qs, datetime__lte=dt).select_related("accounts").aggregate(Sum("amount"))["amount__sum"]
+            if b is None:
+                r["balance_account_currency"]=Decimal('0')
+            else:
+                r["balance_account_currency"]=b
             factor=Quotes.currency_factor(dt, currencies_in_qs[0], currency_user)
             r["balance_user_currency"]=r["balance_account_currency"]*factor
         else:
@@ -1580,4 +1588,5 @@ class FastOperationsCoverage(models.Model):
 def request_get(absolute_url, user_token):
     ## verify should be changed
     a=get(absolute_url, headers={'Authorization': f'Token {user_token}'}, verify=False)
+    print(a.content)
     return loads(a.content)

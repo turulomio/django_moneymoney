@@ -76,6 +76,7 @@ def generate_assets_report(request, format):
         doc.addParagraph(_("Assets by bank"), "Heading 2")
         
         dict_bankswithbalance=models.request_get(request._request.build_absolute_uri(reverse('banks-withbalance')), authorization)
+        print(dict_bankswithbalance)
         bankswithbalance=[(_("Bank"), _("Accounts balance"), _("Investments balance"), _("Total balance"))]
         for o in dict_bankswithbalance:
             if o["active"]==True:

@@ -608,7 +608,7 @@ class InvestmentsClasses(APIView):
             return ld
             
         ###################
-        accounts_balance=models.Accounts.balance_user_currency(models.Accounts.objects.filter(active=True), timezone.now())
+        accounts_balance=models.Accounts.balance_user_currency(models.Accounts.objects.filter(active=True), timezone.now(), 'EUR')
         qs_investments_active=models.Investments.objects.filter(active=True).select_related("products","products__productstypes","accounts","products__leverages")
 
         plio=models.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, qs_investments_active,  1)
