@@ -2,7 +2,7 @@
   "header": {
     "comment": "eric project file for project django_moneymoney",
     "copyright": "Copyright (C) 2023 , ",
-    "saved": "2023-07-06, 05:48:06"
+    "saved": "2023-07-06, 09:53:19"
   },
   "project": {
     "AUTHOR": "",
@@ -135,7 +135,6 @@
       "moneymoney/migrations/0039_fastoperationscoverage_investments.py",
       "moneymoney/migrations/0040_auto_20230429_0553.py",
       "moneymoney/migrations/0041_auto_20230513_0928.py",
-      "moneymoney/migrations/0042_auto_20230705_0707.py",
       "moneymoney/migrations/__init__.py",
       "moneymoney/models.py",
       "moneymoney/paginators.py",
@@ -150,7 +149,6 @@
       "moneymoney/reusing/file_functions.py",
       "moneymoney/reusing/github.py",
       "moneymoney/reusing/libmanagers.py",
-      "moneymoney/reusing/myjsonencoder.py",
       "moneymoney/reusing/percentage.py",
       "moneymoney/reusing/request_casting.py",
       "moneymoney/reusing/responses_json.py",
