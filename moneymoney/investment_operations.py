@@ -30,33 +30,30 @@ class PlInvestmentOperations():
         self._t=t
     
     @classmethod
-    def from_qs(cls, request, dt,  local_currency,  qs_investments,  mode):
+    def from_qs(cls, dt,  local_currency,  qs_investments,  mode):
         ids=list(qs_investments.values_list('pk',flat=True))
-        return cls.from_ids(request, dt, local_currency, ids, mode)
+        return cls.from_ids(dt, local_currency, ids, mode)
 
     @classmethod
-    def from_ids(cls, request,  dt,  local_currency,  list_ids,  mode):
+    def from_ids(cls,  dt,  local_currency,  list_ids,  mode):
         
         s=datetime.now()
-        lod_investments=generate_lod_data_from_qs(models.Investments.objects.filter(id__in=list_ids), request.user.profile.currency)
+        lod_investments=PlInvestmentOperations.qs_investments_to_lod(models.Investments.objects.filter(id__in=list_ids), local_currency)
         lod_=models.Investmentsoperations.objects.filter(investments__id__in=list_ids).values()
         
-        lod.lod_print(lod_)
-        t=calculate_ios_lazy(timezone.now(), lod_investments,  lod_,  request.user.profile.currency)
+        t=calculate_ios_lazy(timezone.now(), lod_investments,  lod_,  local_currency)
         t["lazy_quotes"], t["lazy_factors"]=get_quotes_and_factors(t["lazy_quotes"], t["lazy_factors"])
         t=calculate_ios_finish(t, mode)
-        print(t)
         print("LAZY", datetime.now()-s)
         return cls(t)
 
 
     @classmethod
-    def from_all(cls, request,  dt,  local_currency,  mode):
-        plio=cls.from_qs(request, dt, local_currency, models.Investments.objects.all(), mode)
-        return cls(plio)
+    def from_all(cls,  dt,  local_currency,  mode):
+        return cls.from_qs(dt, local_currency, models.Investments.objects.all(), mode)
         
     @staticmethod
-    def qs_investments_to_lod(qs):
+    def qs_investments_to_lod(qs, currency_user):
         """
             Converts a qs to a lod investments used in moneymoney_pl
         """
@@ -68,6 +65,7 @@ class PlInvestmentOperations():
                 "multiplier": i.products.leverages.multiplier, 
                 "currency_account": i.accounts.currency, 
                 "currency_product": i.products.currency, 
+                "currency_user": currency_user, 
                 "productstypes_id": i.products.productstypes.id, 
             })
         return r
@@ -114,17 +112,6 @@ class PlInvestmentOperations():
                 "currency_conversion":io.currency_conversion
             })
         return r
-#    @staticmethod
-#    def external_query_factors_quotes(t):
-#                
-#        # Get quotes and factors
-#        for products_id, dt in t["lazy_quotes"].keys():
-#            quote=cursor_rows("select quote from quote(%s, %s)", (products_id, dt))[0]['quote']
-#            t["lazy_quotes"][(products_id,dt)]=quote if quote is not None else 0
-#
-#        for from_,  to_, dt in t["lazy_factors"].keys():
-#            factor=cursor_rows("SELECT * FROM currency_factor(%s,%s,%s)", [dt, from_, to_])[0]['currency_factor']
-#            t["lazy_factors"][(from_, to_, dt)]=factor if factor is not None else 0
 
     @classmethod
     def plio_id_from_virtual_investments_simulation(cls, dt,  local_currency,  lod_investment_data, lod_ios_to_simulate, mode):
@@ -382,8 +369,18 @@ class PlInvestmentOperations():
     def dumps(self):
         return dumps(self._t,  indent=4,  cls=MyDjangoJSONEncoder )
         
-    def print(self):
+    def print_dumps(self):
         print(self.dumps())
+        
+    def print_d(self, id):
+        print(self.keys())
+        lod.lod_print(self.d(id)["io"])
+        lod.lod_print(self.d(id)["io_current"])
+        lod.lod_print(self.d(id)["io_historical"])
+        lod.lod_print([self.d_total_io(id), ])
+        lod.lod_print([self.d_total_io_current(id), ])
+        lod.lod_print([self.d_total_io_historical(id), ])
+        
         
     def io_historical_sum_between_dt(self, dt_from, dt_to,  key, productstypes_id=None):
         r=0
@@ -436,21 +433,6 @@ class PlInvestmentOperations():
             if o["operationstypes_id"]!=6:# Shares Additions
                 return o
         return None
-
-
-def generate_lod_data_from_qs(qs,  currency_user):
-    lod=[]
-    for inv in qs:
-        lod.append({
-            "investments_id": inv.id, 
-            "productstypes_id": inv.products.productstypes.id, 
-            "products_id": inv.products.id, 
-            "currency_product": inv.products.currency, 
-            "currency_account":inv.accounts.currency, 
-            "currency_user": currency_user, 
-            "multiplier": inv.products.leverages.multiplier, 
-        })
-    return lod
 
 def realmultiplier(pia):
     if pia["productstypes_id"] in (12, 13):
