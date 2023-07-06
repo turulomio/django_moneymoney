@@ -1781,7 +1781,7 @@ def ReportAnnualGainsByProductstypes(request, year):
     dt_from=dtaware_year_start(year, request.user.profile.zone)
     dt_to=dtaware_year_end(year, request.user.profile.zone)
 
-    plio=investment_operations.PlInvestmentOperations.from_ids( dt_to, request.user.profile.currency, None, 1)
+    plio=investment_operations.PlInvestmentOperations.from_all( dt_to, request.user.profile.currency, 1)
     
     #This inner joins its made to see all productstypes_id even if they are Null.
     # Subquery for dividends is used due to if I make a where from dividends table I didn't get null productstypes_id

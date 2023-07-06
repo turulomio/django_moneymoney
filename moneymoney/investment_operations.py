@@ -1,6 +1,5 @@
 from datetime import date, datetime
 from decimal import Decimal
-from django.utils import timezone
 from json import dumps
 from moneymoney import models
 from moneymoney.reusing.percentage import Percentage, percentage_between
@@ -39,9 +38,9 @@ class PlInvestmentOperations():
         
         s=datetime.now()
         lod_investments=PlInvestmentOperations.qs_investments_to_lod(models.Investments.objects.filter(id__in=list_ids), local_currency)
-        lod_=models.Investmentsoperations.objects.filter(investments__id__in=list_ids).values()
+        lod_=models.Investmentsoperations.objects.filter(investments__id__in=list_ids, datetime__lte=dt).order_by("datetime").values()
         
-        t=calculate_ios_lazy(timezone.now(), lod_investments,  lod_,  local_currency)
+        t=calculate_ios_lazy(dt, lod_investments,  lod_,  local_currency)
         t["lazy_quotes"], t["lazy_factors"]=get_quotes_and_factors(t["lazy_quotes"], t["lazy_factors"])
         t=calculate_ios_finish(t, mode)
         print("LAZY", datetime.now()-s)

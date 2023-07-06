@@ -1267,8 +1267,21 @@ class Assets:
             Returns a dict with the following keys:
             {'accounts_user': 0, 'investments_user': 0, 'total_user': 0, 'investments_invested_user': 0}
         """
-        return loads(cursor_rows("select * from pl_total_balance(%s,%s)", (dt, local_currency, ))[0]["pl_total_balance"], object_hook=investment_operations.loads_hooks_tb)[0]
+        accounts_user= Accounts.accounts_balance(Accounts.objects.all(), dt, local_currency)["balance_user_currency"]
+        print(accounts_user)
+        
+        plio=investment_operations.PlInvestmentOperations.from_all(dt,  local_currency,  mode=3)
 
+        r= { 
+            "accounts_user": accounts_user, 
+            "investments_user": plio.sum_total_io_current()["balance_user"],
+            "total_user": accounts_user+Decimal(plio.sum_total_io_current()["balance_user"]),
+            "investments_invested_user": plio.sum_total_io_current()["invested_user"],
+            "datetime": dt,
+            }
+        print("TOTAL BALANCE", r)
+        return r
+        
 #    @staticmethod
 #    def pl_investment_operations(dt, local_currency, list_ids, mode):
 #        """
