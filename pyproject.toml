@@ -20,8 +20,6 @@ psycopg = "^3.1.9"
 [tool.poetry.group.dev.dependencies]
 poethepoet = "^0.20.0"
 coverage = "^7.2.7"
-factory-boy = "^3.2.1"
-faker = "^18.10.1"
 
 [build-system]
 requires = ["poetry-core"]

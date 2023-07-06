@@ -279,7 +279,14 @@ class Banks(models.Model):
         db_table = 'banks'      
 
     def __str__(self):
-        return self.name
+        return self.name  
+        
+    @staticmethod
+    def post_payload():
+        return {
+            "name":  "Bank for testing", 
+            "active": True, 
+        }
 
     def balance_accounts(self):
         if hasattr(self, "_balance_accounts") is False:
