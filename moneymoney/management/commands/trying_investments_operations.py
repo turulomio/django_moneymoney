@@ -24,6 +24,9 @@ class Command(BaseCommand):
         print(product)
         print(product.basic_results())
         print(product.new_basic_results())
+        print(product.quote_last())
+        print(product.quote_penultimate())
+        print(product.quote_lastyear())
         
     def account_balance(self):
         qs_accounts=models.Accounts.objects.filter(active=True)

@@ -680,18 +680,51 @@ class Products(models.Model):
 
     def fullName(self):
         return "{} ({})".format(self.name, _(self.stockmarkets.name))
+        
+        
+    def quote_last(self):
+        """
+            Returns an object
+        """
+        if hasattr(self, "_quote_last") is False:
+            self._quote_last=Quotes.get_quote(self.id, timezone.now())
+        return self._quote_last
+        
+    def quote_penultimate(self):
+        """
+            Returns an object
+        """
+        if self.quote_last() is None:
+            return None
+        if hasattr(self, "_quote_penultimate") is False:
+            dt_penultimate=dtaware_day_end_from_date(self.quote_last().datetime.date()-timedelta(days=1), 'UTC')#Better utc to assure
+            self._quote_penultimate=Quotes.get_quote(self.id, dt_penultimate)
+        return self._quote_penultimate
+        
+
+    def quote_lastyear(self):
+        """
+            Returns an object
+        """
+        if self.quote_last() is None:
+            return None
+        if hasattr(self, "_quote_lastyear") is False:
+            dt_lastyear=dtaware_year_end(self.quote_last().datetime.year-1, 'UTC')
+            self._quote_lastyear=Quotes.get_quote(self.id, dt_lastyear)
+        return self._quote_lastyear
+        
 
     def basic_results(self):
         if hasattr(self, "_basic_results") is False:
-            self._basic_results=cursor_one_row("select * from last_penultimate_lastyear(%s,%s)", (self.id, timezone.now() ))
+            #self._basic_results=cursor_one_row("select * from last_penultimate_lastyear(%s,%s)", (self.id, timezone.now() ))
+            self._basic_results=self.new_basic_results()
         return self._basic_results
 
-    def new_basic_results(self, dt=None):
+    def new_basic_results(self):
         """
             dt . None by defaults gets basic_results now. Otherwise in that dt
         """
-        if dt is None:
-            dt= timezone.now()
+        dt= timezone.now()
         r={
             "id":self.id, 
             "last_datetime":None, 
