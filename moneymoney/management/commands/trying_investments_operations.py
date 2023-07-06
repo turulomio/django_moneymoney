@@ -23,7 +23,6 @@ class Command(BaseCommand):
         product=models.Products.objects.get(pk=79329)
         print(product)
         print(product.basic_results())
-        print(product.new_basic_results())
         print(product.quote_last())
         print(product.quote_penultimate())
         print(product.quote_lastyear())

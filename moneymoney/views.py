@@ -438,9 +438,9 @@ class OrdersViewSet(viewsets.ModelViewSet):
                 "shares": o.shares, 
                 "price": o.price, 
                 "amount": o.shares*o.price*o.investments.products.real_leveraged_multiplier(), 
-                "percentage_from_price": percentage_between(o.investments.products.basic_results()["last"], o.price),
+                "percentage_from_price": percentage_between(o.investments.products.quote_last().quote, o.price),
                 "executed": o.executed,  
-                "current_price": o.investments.products.basic_results()["last"], 
+                "current_price": o.investments.products.quote_last().quote, 
             })
         return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
 
@@ -716,7 +716,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
         for o in self.get_queryset().select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages"):
             percentage_invested=None if plio.d_total_io_current(o.id)["invested_user"]==0 else  plio.d_total_io_current(o.id)["gains_gross_user"]/plio.d_total_io_current(o.id)["invested_user"]
             try:                
-                last_day_diff= (o.products.basic_results()['last']-o.products.basic_results()['penultimate'])*plio.d_total_io_current(o.id)["shares"]*o.products.real_leveraged_multiplier()
+                last_day_diff= (o.products.quote_last().quote-o.products.quote_penultimate().quote)*plio.d_total_io_current(o.id)["shares"]*o.products.real_leveraged_multiplier()
             except:
                 last_day_diff=0
 
@@ -728,17 +728,17 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "url":request.build_absolute_uri(reverse('investments-detail', args=(o.pk, ))), 
                 "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.id, ))), 
                 "products":request.build_absolute_uri(reverse('products-detail', args=(o.products.id, ))), 
-                "last_datetime": o.products.basic_results()['last_datetime'], 
-                "last": o.products.basic_results()['last'], 
+                "last_datetime": o.products.quote_last().datetime, 
+                "last": o.products.quote_last().quote, 
                 "daily_difference": last_day_diff, 
-                "daily_percentage":percentage_between(o.products.basic_results()['penultimate'], o.products.basic_results()['last']), 
+                "daily_percentage":percentage_between(o.products.quote_penultimate().quote, o.products.quote_last().quote), 
                 "invested_user": plio.d_total_io_current(o.id)["invested_user"], 
                 "gains_user": plio.d_total_io_current(o.id)["gains_gross_user"], 
                 "balance_user": plio.d_total_io_current(o.id)["balance_user"], 
                 "currency": o.products.currency, 
                 "currency_account": o.accounts.currency, 
                 "percentage_invested": percentage_invested, 
-                "percentage_selling_point": percentage_to_selling_point(plio.d_total_io_current(o.id)["shares"], o.selling_price, o.products.basic_results()['last']), 
+                "percentage_selling_point": percentage_to_selling_point(plio.d_total_io_current(o.id)["shares"], o.selling_price, o.products.quote_last().quote), 
                 "selling_expiration": o.selling_expiration, 
                 "shares":plio.d_total_io_current(o.id)["shares"], 
                 "balance_percentage": o.balance_percentage, 
@@ -1189,8 +1189,8 @@ def ProductsPairs(request):
     """, [product_worse.id, product_better.id, timedelta(minutes=-interval_minutes), timedelta(minutes=interval_minutes) ])
     
     r={}
-    r["product_a"]={"name":product_better.fullName(), "currency": product_better.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_better.id, ))), "current_price": product_better.basic_results()["last"]}
-    r["product_b"]={"name":product_worse.fullName(), "currency": product_worse.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_worse.id, ))), "current_price": product_worse.basic_results()["last"]}
+    r["product_a"]={"name":product_better.fullName(), "currency": product_better.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_better.id, ))), "current_price": product_better.quote_last().quote}
+    r["product_b"]={"name":product_worse.fullName(), "currency": product_worse.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_worse.id, ))), "current_price": product_worse.quote_last().quote}
     r["data"]=[]
     if len(common_quotes)>0:
         first_pr=common_quotes[0]["quote_b"]/common_quotes[0]["quote_a"]
