@@ -1,111 +1,11 @@
-from base64 import b64encode
-from datetime import datetime, timedelta
+from datetime import date, datetime
 from decimal import Decimal
+from json import dumps
+from moneymoney import models
+from moneymoney.reusing.percentage import Percentage, percentage_between
+from pydicts import lod
+from base64 import b64encode
 from django.core.serializers.json import DjangoJSONEncoder 
-
-
-def cast_dict(iter_value, decimal_fields, datetime_fields):
-    """
-        Iterates a dict or list to cast decimals and dtaware in json.loads using objeck_hook
-    """
-    def cast(k, v):
-        if k in decimal_fields and v.__class__==str:
-            return Decimal(v)
-        if k in datetime_fields and v.__class__==str:
-            return postgres_datetime_string_2_dtaware(v)
-        return v
-    #####
-    if isinstance(iter_value, dict):
-        for k, v in iter_value.items():
-            if isinstance(v, dict):
-                iter_value[k]=cast_dict(v, decimal_fields, datetime_fields)
-            elif isinstance(iter_value, list):
-                for i in v:
-                    i=cast_dict(v, decimal_fields, datetime_fields)
-            else:
-                iter_value[k]=cast(k, v)
-    elif isinstance(iter_value, list):
-        for i in v:
-            i=cast_dict(i, decimal_fields, datetime_fields)
-    return iter_value
-
-
-def loads_hooks_tb(o):
-    """
-        Function to json.object_hook for total_balance
-    """
-    return cast_dict(o,  ["accounts_user",'investments_user', 'total_user', 'investments_invested_user'], ["datetime", ])
-
-def loads_hooks_io(o):
-    """
-        Function to json.object_hook for investment_operations
-    """
-    return cast_dict(o,  [
-        "account2user",
-        "account2user_start",
-        "account2user_end",
-        "accounts_user",
-        "account2user_at_datetime",
-        "average_price_investment",
-        "balance_futures_account",
-        "balance_futures_investment",
-        "balance_futures_user",
-        "balance_account",
-        "balance_investment",
-        "balance_user",
-        "commission",
-        "commission_account",
-        "commissions_account",
-        "commissions_investment",
-        "commissions_user",
-        "currency_conversion",
-        "gains_gross_account",
-        "gains_gross_investment",
-        "gains_gross_user", 
-        "gains_net_account",
-        "gains_net_investment",
-        "gains_net_user",
-        "gross_account",
-        "gross_investment",
-        "gross_end_account",
-        "gross_end_investment",
-        "gross_end_user",
-        "gross_start_account",
-        "gross_start_investment",
-        "gross_start_user",
-        "gross_user",
-        "invested_account",
-        "invested_investment",
-        'invested_user',
-        "investment2account", 
-        "investment2account_at_datetime",
-        "investment2account_start",
-        "investment2account_end",
-        'investments_user', 
-        "multiplier",
-        "net_account",
-        "net_investment",
-        "net_user",
-        "price",
-        "price_account",
-        "price_end_investment",
-        "price_investment",
-        "price_start_investment",
-        "price_user",
-        "shares", 
-        "taxes",
-        "taxes_account",
-        "taxes_investment",
-        "taxes_user",
-        'total_user', 
-        'investments_invested_user'
-    ], [
-        "datetime", 
-        "dt_end", 
-        "dt_start", 
-        "dt"
-    ])
-
 
 class MyDjangoJSONEncoder(DjangoJSONEncoder):    
     #Converts from dict to json text
@@ -119,6 +19,419 @@ class MyDjangoJSONEncoder(DjangoJSONEncoder):
         if o.__class__.__name__=="Currency":
             return o.amount
         return DjangoJSONEncoder.default(self,o)
+
+
+class PlInvestmentOperations():
+    """
+        Class to operate with Assets.pl_investment_operations result
+    """
+    def __init__(self, t):
+        self._t=t
+    
+    @classmethod
+    def from_qs(cls, dt,  local_currency,  qs_investments,  mode):
+        ids=list(qs_investments.values_list('pk',flat=True))
+        return cls.from_ids(dt, local_currency, ids, mode)
+
+    @classmethod
+    def from_ids(cls,  dt,  local_currency,  list_ids,  mode):
+        
+        s=datetime.now()
+        lod_investments=PlInvestmentOperations.qs_investments_to_lod(models.Investments.objects.filter(id__in=list_ids), local_currency)
+        lod_=models.Investmentsoperations.objects.filter(investments__id__in=list_ids, datetime__lte=dt).order_by("datetime").values()
+        
+        t=calculate_ios_lazy(dt, lod_investments,  lod_,  local_currency)
+        t["lazy_quotes"], t["lazy_factors"]=get_quotes_and_factors(t["lazy_quotes"], t["lazy_factors"])
+        t=calculate_ios_finish(t, mode)
+        print("LAZY", datetime.now()-s)
+        return cls(t)
+
+
+    @classmethod
+    def from_all(cls,  dt,  local_currency,  mode):
+        return cls.from_qs(dt, local_currency, models.Investments.objects.all(), mode)
+        
+    @staticmethod
+    def qs_investments_to_lod(qs, currency_user):
+        """
+            Converts a qs to a lod investments used in moneymoney_pl
+        """
+        r=[]
+        for i in qs:
+            r.append({
+                "products_id": i.products.id, 
+                "investments_id": str(i.id), 
+                "multiplier": i.products.leverages.multiplier, 
+                "currency_account": i.accounts.currency, 
+                "currency_product": i.products.currency, 
+                "currency_user": currency_user, 
+                "productstypes_id": i.products.productstypes.id, 
+            })
+        return r
+
+    @staticmethod
+    def list_unsaved_io_to_lod(list_):
+        """
+            Converts a list of unsaved investmentsoperations to a lod_ios used in moneymoney_pl
+        """
+        r=[]
+        for i, io in enumerate(list_):
+            r.append({
+                "id":-i, 
+                "operationstypes_id": io.operationstypes.id, 
+                "investments_id": str(i.investments.id), 
+                "shares": io.shares, 
+                "taxes": io.taxes, 
+                "commission": io.commission, 
+                "price": io.price, 
+                "datetime": io.datetime, 
+                "comment": io.comment, 
+                "currency_conversion":io.currency_conversion
+            })
+        return r
+        
+    @staticmethod
+    def qs_investments_to_lod_ios(qs):
+        """
+            Converts a list of unsaved investmentsoperations to a lod_ios used in moneymoney_pl
+        """
+        r=[]
+        ids=tuple(qs.values_list('pk',flat=True))
+        for i, io in enumerate(models.Investmentsoperations.objects.filter(investments_id__in=ids).order_by("datetime")):
+            r.append({
+                "id":-i, 
+                "operationstypes_id": io.operationstypes.id, 
+                "investments_id": str(io.investments.id), 
+                "shares": io.shares, 
+                "taxes": io.taxes, 
+                "commission": io.commission, 
+                "price": io.price, 
+                "datetime": io.datetime, 
+                "comment": io.comment, 
+                "currency_conversion":io.currency_conversion
+            })
+        return r
+
+    @classmethod
+    def plio_id_from_virtual_investments_simulation(cls, dt,  local_currency,  lod_investment_data, lod_ios_to_simulate, mode):
+        """
+        Devuelve un plio_Id, solo se debe pasar una inversión
+        
+        investments_id canbe virtual  coordinated with data and ios_to_simulate
+        lod_ios_to_simulate must load all io and simulation ios
+        
+        Lod_investments_data
+        [{'products_id': -81742, 'invesments_id': '445', 'multiplier': Decimal('2'), 'currency_account': 'EUR', 'currency_product': 'EUR', 'productstypes_id': 4}]
+
+        Class method lod_simulated_ios must have
+            r.append({
+                "id":-i, 
+                "operationstypes_id": io.operationstypes.id, 
+                "shares": io.shares, 
+                "taxes": io.taxes, 
+                "commission": io.commission, 
+                "price": io.price, 
+                "datetime": io.datetime, 
+                "currency_conversion":io.currency_conversion
+                 "investments_id": virtual_investments_id, 
+            })
+        """
+        lod_ios_to_simulate= sorted(lod_ios_to_simulate,  key=lambda item: item['datetime'])
+        t=calculate_ios_lazy(dt, lod_investment_data, lod_ios_to_simulate, local_currency)
+        cls.external_query_factors_quotes(t)
+        t=calculate_ios_finish(t, mode)
+        return cls(t).d(lod_investment_data[0]["investments_id"])
+        
+        
+    @classmethod
+    def plio_id_from_strategy(cls, dt,  local_currency,  strategy):
+        """
+            Returns a plio_id adding all io, io_current,io_historical of all investments (plio) and returning only one plio. Only adds, do not calculate
+        """
+        
+        plio=cls.from_ids(dt, local_currency, strategy.investments_ids(), 1)
+        
+        r={}
+        r["data"]={}
+        r["data"]["products_id"]="HETEROGENEOUS"
+        r["data"]["investments_id"]=strategy.investments_ids()
+        r["data"]["multiplier"]="HETEROGENEOUS"
+        r["data"]["currency_product"]="HETEROGENEOUS"
+        r["data"]["productstypes_id"]="HETEROGENEOUS"
+        r["data"]["currency_user"]=local_currency
+        
+        r["io"]=[]
+        for plio_id in plio.list_investments_id():
+            for o in plio.d_io(plio_id):
+                if strategy.dt_from<=o["datetime"] and o["datetime"]<=strategy.dt_to_for_comparations():
+                    r["io"].append(o)
+        r["io"]= sorted(r["io"],  key=lambda item: item['datetime'])
+
+        r["io_current"]=[]
+        for plio_id in plio.list_investments_id():
+            for o in plio.d_io_current(plio_id):
+                if strategy.dt_from<=o["datetime"] and o["datetime"]<=strategy.dt_to_for_comparations():
+                    r["io_current"].append(o)
+        r["io_current"]= sorted(r["io_current"],  key=lambda item: item['datetime'])
+                
+        r["total_io_current"]={}
+        r["total_io_current"]["balance_user"]=lod.lod_sum(r["io_current"], "balance_user")
+        r["total_io_current"]["balance_investment"]="HETEROGENEOUS"
+        r["total_io_current"]["balance_futures_user"]=lod.lod_sum(r["io_current"], "balance_futures_user")
+        r["total_io_current"]["gains_gross_user"]=lod.lod_sum(r["io_current"], "gains_gross_user")
+        r["total_io_current"]["gains_net_user"]=lod.lod_sum(r["io_current"], "gains_net_user")
+        r["total_io_current"]["shares"]=lod.lod_sum(r["io_current"], "shares")
+        r["total_io_current"]["invested_user"]=lod.lod_sum(r["io_current"], "invested_user")
+        r["total_io_current"]["invested_investment"]="HETEROGENEOUS"
+        
+        r["io_historical"]=[]
+        for plio_id in plio.list_investments_id():
+            for o in plio.d_io_historical(plio_id):
+                if strategy.dt_from<=o["dt_end"] and o["dt_end"]<=strategy.dt_to_for_comparations():
+                    r["io_historical"].append(o)
+        r["io_historical"]= sorted(r["io_historical"],  key=lambda item: item['dt_end'])
+
+        r["total_io_historical"]={}
+        r["total_io_historical"]["gains_net_user"]=lod.lod_sum(r["total_io_historical"], "gains_net_user")
+        return r
+
+        
+    @classmethod
+    def from_merging_io_current(cls, dt,  local_currency,  qs_investments, mode):
+        """
+            Return a plio merging in same virtual (negative) id all investments in qs with same product
+            only io_current and io_historical
+        """
+        def get_investments_id(product):
+            """
+                Function Returns a list of integers with all investments_id of a product in plio
+            """
+            r=[]
+            for id in plio.list_investments_id():
+                if product.id==plio.d_data(id)["products_id"]:
+                    r.append(int(id))
+            return r
+        
+        
+        ###############
+        plio=cls.from_qs(dt, local_currency, qs_investments, mode)
+        products_ids=list(models.Investments.objects.filter(active=True).values_list("products__id",  flat=True).distinct())
+        t_merged={}
+        for product in models.Products.objects.filter(id__in=products_ids):
+            t_merged[str(product.id)]={}
+            t_merged[str(product.id)]["data"]={}
+            t_merged[str(product.id)]["data"]["products_id"]=product.id
+            t_merged[str(product.id)]["data"]["investments_id"]=get_investments_id(product)
+            t_merged[str(product.id)]["data"]["multiplier"]=product.leverages.multiplier
+            t_merged[str(product.id)]["data"]["currency_product"]=product.currency
+            t_merged[str(product.id)]["data"]["productstypes_id"]=product.productstypes.id
+            t_merged[str(product.id)]["data"]["currency_user"]=local_currency
+            
+            t_merged[str(product.id)]["io_current"]=[]
+            for plio_id in plio.list_investments_id():
+                if plio.d_data(plio_id)["products_id"]==product.id:
+                    for o in plio.d_io_current(plio_id):
+                        t_merged[str(product.id)]["io_current"].append(o)
+            t_merged[str(product.id)]["io_current"]= sorted(t_merged[str(product.id)]["io_current"],  key=lambda item: item['datetime'])
+            
+            average_price_investment=0
+            
+            t_merged[str(product.id)]["total_io_current"]={}
+            t_merged[str(product.id)]["total_io_current"]["balance_user"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "balance_user")
+            t_merged[str(product.id)]["total_io_current"]["balance_investment"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "balance_investment")
+            t_merged[str(product.id)]["total_io_current"]["balance_futures_user"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "balance_futures_user")
+            t_merged[str(product.id)]["total_io_current"]["gains_gross_user"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "gains_gross_user")
+            t_merged[str(product.id)]["total_io_current"]["gains_net_user"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "gains_net_user")
+            t_merged[str(product.id)]["total_io_current"]["shares"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "shares")
+            t_merged[str(product.id)]["total_io_current"]["invested_user"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "invested_user")
+            t_merged[str(product.id)]["total_io_current"]["invested_investment"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "invested_investment")
+            t_merged[str(product.id)]["total_io_current"]["balance_user"]=average_price_investment
+            
+            t_merged[str(product.id)]["io_historical"]=[]
+            for plio_id in plio.list_investments_id():
+                if plio.d_data(plio_id)["products_id"]==product.id:
+                    for o in plio.d_io_historical(plio_id):
+                        t_merged[str(product.id)]["io_historical"].append(o)
+            t_merged[str(product.id)]["io_historical"]= sorted(t_merged[str(product.id)]["io_historical"],  key=lambda item: item['dt_end'])
+
+            t_merged[str(product.id)]["total_io_historical"]={}
+            t_merged[str(product.id)]["total_io_historical"]["gains_net_user"]=lod.lod_sum(t_merged[str(product.id)]["total_io_historical"], "gains_net_user")
+            #t_merged[str(product.id)]["total_io_historical"]["commission_account"]=lod.lod_sum(t_merged[str(product.id)]["total_io_historical"], "commission_account")
+
+        return cls(t_merged)
+        
+    def basic_results(self, id):
+        """
+        Public method Id is investments id
+        """
+        if not "basic_results" in self._t:
+            self._t["basic_results"]={}
+            
+        products_id=str(self.d_data(str(id))["products_id"])
+        if not products_id in self._t["basic_results"]:
+            self._t["basic_results"][products_id]=models.Products.basic_results_from_products_id(products_id)
+        return self._t["basic_results"][products_id]
+        
+    def ioc_percentage_annual_user(self, ioc):
+        """
+        Public method ioc is a io_current dictionary
+        """
+        if ioc["datetime"].year==date.today().year:
+            lastyear=ioc["price_user"] #Product value, self.money_price(type) not needed.
+        else:
+            lastyear=self.basic_results(ioc["investments_id"])["lastyear"]
+        if self.basic_results(ioc["investments_id"])["lastyear"] is None or lastyear is None:
+            return Percentage()
+
+        if ioc["shares"]>0:
+            return Percentage(self.basic_results(ioc["investments_id"])["last"]-Decimal(lastyear), lastyear)
+        else:
+            return Percentage(-(self.basic_results(ioc["investments_id"])["last"]-Decimal(lastyear)), lastyear)
+
+    def ioc_percentage_sellingpoint(self, ioc, selling_price):
+        if selling_price is None or selling_price==0:
+            return Percentage()
+        return percentage_between(self.basic_results(ioc["investments_id"])["last"], selling_price)
+
+    def total_io_current_percentage_total_user(self, id):
+        if self.d_total_io_current(id)["invested_user"] is None:#initiating xulpymoney
+            return Percentage()
+        return Percentage(self.d_total_io_current(id)['gains_gross_user'], self.d_total_io_current(id)["invested_user"])
+        
+    def total_io_current_percentage_sellingpoint(self, id, selling_price):
+        if selling_price is None or selling_price==0:
+            return Percentage()
+        return percentage_between(self.basic_results(id)["last"], selling_price)
+        
+    def ioc_days(self, ioc):
+            return (date.today()-ioc["datetime"].date()).days
+    def ioh_years(self, ioh):
+        return round(Decimal((ioh["dt_end"]-ioh["dt_start"]).days/365), 2)
+
+    def ioc_percentage_apr_user(self, ioc):
+            dias=self.ioc_days(ioc)
+            if dias==0:
+                dias=1
+            return Percentage(self.ioc_percentage_total_user(ioc)*365,  dias)
+
+    def ioc_percentage_total_user(self, ioc):
+        """
+            Returns total porcentage of an current investment operation dictionary
+        """
+        if ioc["invested_user"] is None:#initiating xulpymoney
+            return Percentage()
+        return Percentage(ioc['gains_gross_user'], ioc["invested_user"])
+        
+    def mode(self):
+        return self._t["mode"]
+        
+    def list_investments_id(self):
+        r=[]
+        for key in self.keys():
+            if key not in t_keys_not_investment():
+                r.append(key)
+        return r
+        
+    def qs_investments(self):
+        return models.Investments.objects.filter(id__in = self.list_investments_id()).select_related("accounts")
+        
+    def d(self, id_):
+        return self._t[str(id_)]
+        
+    def t(self):
+        return self._t
+        
+    def keys(self):
+        return list(self._t.keys())
+    def d_data(self, id_):
+        return self._t[str(id_)]["data"]
+    def d_io(self, id_):
+        return self._t[str(id_)]["io"]
+    def d_io_current(self, id_):
+        return self._t[str(id_)]["io_current"]
+    def d_io_historical(self, id_):
+        return self._t[str(id_)]["io_historical"]
+    def d_total_io(self, id_):
+        return self._t[str(id_)]["total_io"]
+    def d_total_io_current(self, id_):
+        return self._t[str(id_)]["total_io_current"]
+    def d_total_io_historical(self, id_):
+        return self._t[str(id_)]["total_io_historical"]
+    def sum_total_io_current(self):
+        return self._t["sum_total_io_current"]
+    def sum_total_io_historical(self):
+        return self._t["sum_total_io_historical"]
+        
+    def investment(self, id_):
+        return models.Investments.objects.get(pk=id_)
+        
+    def dumps(self):
+        return dumps(self._t,  indent=4,  cls=MyDjangoJSONEncoder )
+        
+    def print_dumps(self):
+        print(self.dumps())
+        
+    def print_d(self, id):
+        print(self.keys())
+        lod.lod_print(self.d(id)["io"])
+        lod.lod_print(self.d(id)["io_current"])
+        lod.lod_print(self.d(id)["io_historical"])
+        lod.lod_print([self.d_total_io(id), ])
+        lod.lod_print([self.d_total_io_current(id), ])
+        lod.lod_print([self.d_total_io_historical(id), ])
+        
+        
+    def io_historical_sum_between_dt(self, dt_from, dt_to,  key, productstypes_id=None):
+        r=0
+        for investments_id in self.list_investments_id():
+            for ioh in self.d_io_historical(investments_id):
+                if dt_from <= ioh["dt_end"] and ioh["dt_end"]<=dt_to:
+                    if productstypes_id is None:
+                        r=r+ioh[key]
+                    else:
+                        if int(self.d_data(investments_id)["productstypes_id"])==int(productstypes_id):
+                            r=r+ioh[key]
+        return r
+
+    def io_sum_between_dt(self, dt_from, dt_to, key):
+        r=0
+        for investments_id in self.list_investments_id():
+            for o in self.d_io(investments_id):
+                if dt_from<=o["datetime"] and o["datetime"]<=dt_to:
+                    r=r - o[key]
+        return r
+
+    def io_current_highest_price(self):
+        """
+        Public method Returns highest io operation price of all io operations
+        """
+        
+        r=0
+        for investments_id in self.list_investments_id():
+            for o in self.d_io_current(investments_id):
+                if o["price_investment"]>r:
+                    r=o["price_investment"]
+        return r
+    def io_current_lowest_price(self):
+        """
+        Public method Returns highest io operation price of all io operations
+        """
+        
+        r=10000000
+        for investments_id in self.list_investments_id():
+            for o in self.d_io_current(investments_id):
+                if o["price_investment"]<r:
+                    r=o["price_investment"]
+        return r
+
+    def  io_current_last_operation_excluding_additions(self, id):
+        """
+            Returns last investment operation excluding additions
+        """
+        for o in reversed(self.d_io_current(id)):
+            if o["operationstypes_id"]!=6:# Shares Additions
+                return o
+        return None
 
 def realmultiplier(pia):
     if pia["productstypes_id"] in (12, 13):
@@ -184,7 +497,7 @@ def calculate_ios_finish(t, mode):
         if investments_id in t_keys_not_investment():
             continue
 
-        t[investments_id]=calculate_io_finish(t, d, mode)
+        t[investments_id]=calculate_io_finish(d, t)
 
         t["sum_total_io_current"]["balance_user"]=t["sum_total_io_current"]["balance_user"]+t[investments_id]["total_io_current"]['balance_user']
         t["sum_total_io_current"]["balance_futures_user"]=t["sum_total_io_current"]["balance_futures_user"]+t[investments_id]["total_io_current"]['balance_futures_user']
@@ -205,23 +518,7 @@ def calculate_ios_finish(t, mode):
     del t["lazy_factors"]
     del t["lazy_quotes"]
     return t
-def postgres_datetime_string_2_dtaware(s):
-    if s is None:
-        return None
-    arrPlus=s.split("+")
-    zone=arrPlus[1]
-    
-    arrPunto=arrPlus[0].split(".")
-    if len(arrPunto)==2:
-        naive=arrPunto[0]
-        micro=str(arrPunto[1])
-    else:
-        naive=arrPunto[0]
-        micro='0'
-    micro=int(micro+ '0'*(6-len(micro)))
-    dt=datetime.strptime( naive+"+"+zone+":00", "%Y-%m-%d %H:%M:%S%z" )
-    dt=dt+timedelta(microseconds=micro)
-    return dt
+
 
 ## lazy_factors id, dt, from, to
 ## lazy_quotes product, timestamp
@@ -351,14 +648,42 @@ def calculate_io_lazy(dt, data,  io_rows, currency_user):
                         "currency_user":currency_user, 
                     }) 
                     break
+                    
+                    
+        
+        
+                    
     return { "io": io, "io_current": cur,"io_historical":hist, "data":data, "lazy_quotes":lazy_quotes, "lazy_factors": lazy_factors}
+    
+    
+def get_quotes_and_factors(lazy_quotes, lazy_factors):
+    """
+        d es el resultado de calculate_io_lazy
+    """
+    for lz in lazy_quotes.keys():
+        products_id, datetime_=lz
+        r=models.Quotes.get_quote(products_id, datetime_)
+        if r is None:
+            lazy_quotes[lz]=None
+        else:
+            lazy_quotes[lz]=r.quote
+    for lf in lazy_factors.keys():
+        from_, to_, datetime_=lf
+        lazy_factors[lf]=models.Quotes.currency_factor(datetime_, from_,  to_)
+    return lazy_quotes, lazy_factors
 
-def calculate_io_finish(t, d, mode):
+
+
+def calculate_io_finish(d, dict_with_lf_and_lq):
+    """
+        d es el resultado de calculate_io_lazy
+        dict_with_lf_and_lq puede ser en d o en t segun sea io o ios
+    """
     def lf(from_, to_, dt):
-        return t["lazy_factors"][(from_, to_, dt)]
+        return dict_with_lf_and_lq["lazy_factors"][(from_, to_, dt)]
         
     def lq(products_id, dt):
-        return t["lazy_quotes"][(products_id, dt)]
+        return dict_with_lf_and_lq["lazy_quotes"][(products_id, dt)]
         
     
     data=d["data"]
@@ -477,3 +802,9 @@ def calculate_io_finish(t, d, mode):
         d["total_io_historical"]["commissions_account"]=d["total_io_historical"]["commissions_account"]+h["commissions_account"]
         d["total_io_historical"]["gains_net_user"]=d["total_io_historical"]["gains_net_user"]+h["gains_net_user"]
     return d
+
+
+
+
+
+

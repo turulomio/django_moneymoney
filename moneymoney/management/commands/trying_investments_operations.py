@@ -1,7 +1,7 @@
 from datetime import datetime
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from moneymoney import models, investment_operations_new
+from moneymoney import models, investment_operations
 from moneymoney.reusing.connection_dj import show_queries_function
 from pydicts import lod
 
@@ -15,9 +15,13 @@ class Command(BaseCommand):
         #self.investments_operations_por_varios_ids()       
         #self.investments_operations_all()
 #        self.account_balance()
-        self.last_penultimate_lastyear()
+#        self.last_penultimate_lastyear()
+        self.pl_ios()
         show_queries_function()
         
+    def pl_ios(self):
+        plio=investment_operations.PlInvestmentOperations.from_ids( timezone.now(),  'EUR',  [270],  1)
+        plio.print_d(270)
         
     def last_penultimate_lastyear(self):
         product=models.Products.objects.get(pk=79329)
@@ -46,13 +50,13 @@ class Command(BaseCommand):
         }
         lod_=models.Investmentsoperations.objects.filter(investments__id=334).values()
         
-        d=investment_operations_new.calculate_io_lazy(timezone.now(), data,  lod_, 'EUR')
+        d=investment_operations.calculate_io_lazy(timezone.now(), data,  lod_, 'EUR')
         print(d.keys())
         lod.lod_print(d["io"])
         lod.lod_print(d["io_current"])
         lod.lod_print(d["io_historical"])
-        d["lazy_quotes"], d["lazy_factors"]=investment_operations_new.get_quotes_and_factors(d["lazy_quotes"], d["lazy_factors"])
-        d=investment_operations_new.calculate_io_finish(d, d)
+        d["lazy_quotes"], d["lazy_factors"]=investment_operations.get_quotes_and_factors(d["lazy_quotes"], d["lazy_factors"])
+        d=investment_operations.calculate_io_finish(d, d)
         print("LAZY", datetime.now()-s)        
         
         
@@ -76,22 +80,21 @@ class Command(BaseCommand):
         }]
         lod_=models.Investmentsoperations.objects.filter(investments__id__in=[334, 127]).values()
         
-        lod.lod_print(lod_)
-        t=investment_operations_new.calculate_ios_lazy(timezone.now(), lod_investments,  lod_, 'EUR')
-        t["lazy_quotes"], t["lazy_factors"]=investment_operations_new.get_quotes_and_factors(t["lazy_quotes"], t["lazy_factors"])
-        t=investment_operations_new.calculate_ios_finish(t, 1)
+        t=investment_operations.calculate_ios_lazy(timezone.now(), lod_investments,  lod_, 'EUR')
+        t["lazy_quotes"], t["lazy_factors"]=investment_operations.get_quotes_and_factors(t["lazy_quotes"], t["lazy_factors"])
+        t=investment_operations.calculate_ios_finish(t, 1)
         print(t)
         print("LAZY", datetime.now()-s)
         
 
     def investments_operations_all(self):
         s=datetime.now()
-        lod_investments=investment_operations_new.generate_lod_data_from_qs(models.Investments.objects.all().select_related("products", "products__productstypes", "accounts",  "products__leverages"), 'EUR')
+        lod_investments=investment_operations.generate_lod_data_from_qs(models.Investments.objects.all().select_related("products", "products__productstypes", "accounts",  "products__leverages"), 'EUR')
         lod_=models.Investmentsoperations.objects.all().values()
         
-        t=investment_operations_new.calculate_ios_lazy(timezone.now(), lod_investments,  lod_, 'EUR')
-        t["lazy_quotes"], t["lazy_factors"]=investment_operations_new.get_quotes_and_factors(t["lazy_quotes"], t["lazy_factors"])
-        t=investment_operations_new.calculate_ios_finish(t, 3)
+        t=investment_operations.calculate_ios_lazy(timezone.now(), lod_investments,  lod_, 'EUR')
+        t["lazy_quotes"], t["lazy_factors"]=investment_operations.get_quotes_and_factors(t["lazy_quotes"], t["lazy_factors"])
+        t=investment_operations.calculate_ios_finish(t, 3)
         print(t)
         print("LAZY", datetime.now()-s)
         
