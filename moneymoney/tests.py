@@ -223,3 +223,5 @@ class CtTestCase(APITestCase):
         ios_merged=ios.IOS.from_qs_merging_io_current(timezone.now(), 'EUR', models.Investments.objects.all(), 1)
         self.assertEqual(ios_merged.d_data(79329)["investments_id"], [1, 2])
         
+        ios_merged.print_dumps()
+        ios_merged.print()

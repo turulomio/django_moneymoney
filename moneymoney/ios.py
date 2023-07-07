@@ -21,6 +21,10 @@ class MyDjangoJSONEncoder(DjangoJSONEncoder):
         return DjangoJSONEncoder.default(self,o)
 
 
+class IOSTypes:
+    from_qs=1
+    from_qs_merging_io_current=2
+
 
 class IOS():
     """
@@ -115,6 +119,9 @@ class IOS():
     def t(self):
         return self._t
         
+    def type(self):
+        return self._t["type"]
+        
     def keys(self):
         return list(self._t.keys())
     def d_data(self, id_):
@@ -144,6 +151,11 @@ class IOS():
         
     def print_dumps(self):
         print(self.dumps())
+        
+    def print(self):
+        print("Printing IOS")
+        print(f" - type: {self.type()}")
+        print(f" - keys: {self.keys()}")
         
     def print_d(self, id):
         print(f"*** IO {id} ***")
@@ -214,7 +226,7 @@ class IOS():
         
     @staticmethod
     def __t_keys_not_investment():
-        return ["lazy_quotes","lazy_factors", "sum_total_io_current", "sum_total_io_historical","mode","basic_results"]
+        return ["lazy_quotes","lazy_factors", "sum_total_io_current", "sum_total_io_historical","mode","basic_results", "type"]
 
     @classmethod
     def from_qs(cls, dt,  local_currency,  qs_investments,  mode):
@@ -226,6 +238,7 @@ class IOS():
         t=IOS.__calculate_ios_lazy(dt, lod_investments,  lod_,  local_currency)
         t["lazy_quotes"], t["lazy_factors"]=IOS.__get_quotes_and_factors(t["lazy_quotes"], t["lazy_factors"])
         t=IOS.__calculate_ios_finish(t, mode)
+        t["type"]=IOSTypes.from_qs
         print("IOS FROM QS", datetime.now()-s)
         return cls(t)
 
@@ -453,6 +466,7 @@ class IOS():
             t_merged[str(product.id)]["total_io_historical"]["gains_net_user"]=lod.lod_sum(t_merged[str(product.id)]["total_io_historical"], "gains_net_user")
             #t_merged[str(product.id)]["total_io_historical"]["commission_account"]=lod.lod_sum(t_merged[str(product.id)]["total_io_historical"], "commission_account")
 
+        t_merged["type"]=IOSTypes.from_qs_merging_io_current
         return cls(t_merged)
         
 
