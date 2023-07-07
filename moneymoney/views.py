@@ -688,7 +688,8 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
             return self.queryset.filter(active=active)
         else:
             return self.queryset
-
+            
+    
     @action(detail=False, methods=["get"], name='List investments with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
     def withbalance(self, request): 
         def percentage_to_selling_point(shares, selling_price, last_quote):       
@@ -743,6 +744,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "gains_at_selling_point_investment": o.selling_price*o.products.real_leveraged_multiplier()*plio.d_total_io_current(o.id)["shares"]-plio.d_total_io_current(o.id)["invested_investment"], 
                 "decimals": o.decimals, 
             })
+            show_queries_function()
         return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
     @action(detail=True, methods=["get"], name='Investments operations evolution chart', url_path="operations_evolution_chart", url_name='operations_evolution_chart', permission_classes=[permissions.IsAuthenticated])

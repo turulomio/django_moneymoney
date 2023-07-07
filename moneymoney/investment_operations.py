@@ -30,21 +30,25 @@ class PlInvestmentOperations():
     
     @classmethod
     def from_qs(cls, dt,  local_currency,  qs_investments,  mode):
-        ids=list(qs_investments.values_list('pk',flat=True))
-        return cls.from_ids(dt, local_currency, ids, mode)
-
-    @classmethod
-    def from_ids(cls,  dt,  local_currency,  list_ids,  mode):
-        
         s=datetime.now()
-        lod_investments=PlInvestmentOperations.qs_investments_to_lod(models.Investments.objects.filter(id__in=list_ids), local_currency)
-        lod_=models.Investmentsoperations.objects.filter(investments__id__in=list_ids, datetime__lte=dt).order_by("datetime").values()
+        qs_investments=qs_investments.select_related("products", "products__leverages", "products__productstypes", "accounts")
+        lod_investments=PlInvestmentOperations.qs_investments_to_lod(qs_investments, local_currency)
+        lod_=models.Investmentsoperations.objects.filter(investments__in=qs_investments, datetime__lte=dt).order_by("datetime").values()
         
         t=calculate_ios_lazy(dt, lod_investments,  lod_,  local_currency)
         t["lazy_quotes"], t["lazy_factors"]=get_quotes_and_factors(t["lazy_quotes"], t["lazy_factors"])
         t=calculate_ios_finish(t, mode)
-        print("LAZY", datetime.now()-s)
+        print("IOS", datetime.now()-s)
+        
         return cls(t)
+
+    @classmethod
+    def from_ids(cls,  dt,  local_currency,  list_ids,  mode):
+        """
+            Ids de inverstments
+        """
+        qs_investments=models.Investments.objects.filter(id__in=list_ids)
+        return cls.from_qs(dt, local_currency, qs_investments, mode)
 
 
     @classmethod
