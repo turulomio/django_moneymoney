@@ -18,7 +18,7 @@ from math import ceil
 from mimetypes import guess_extension
 from moneymoney import models, serializers, investment_operations
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
-from moneymoney.reusing.connection_dj import execute, cursor_one_field, cursor_rows, cursor_rows_as_dict, show_queries, show_queries_function
+from moneymoney.reusing.connection_dj import execute, cursor_rows, show_queries, show_queries_function
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
 from moneymoney.reusing.percentage import Percentage,  percentage_between
@@ -203,7 +203,7 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
             if o.deferred==False:
                 balance=0
             else:
-                balance=cursor_one_field("select coalesce(sum(amount),0) from creditcardsoperations where creditcards_id=%s and paid=false;", [o.id, ])
+                balance=models.Creditcardsoperations.objects.filter(creditcards_id=o.id, paid=False).aggregate(Sum("amount"))["amount__sum"] or 0 #Puede ser None, en ese caso devuelve 0
             r.append({
                 "id": o.id,  
                 "url": request.build_absolute_uri(reverse('creditcards-detail', args=(o.pk, ))), 
@@ -920,7 +920,7 @@ class AccountsViewSet(viewsets.ModelViewSet):
         
         if all_args_are_not_none( year, month):
             dt_initial=dtaware_month_start(year, month, request.user.profile.zone)
-            initial_balance=account.balance( dt_initial, request.user.profile.currency)[0]
+            initial_balance=account.balance( dt_initial, request.user.profile.currency)['balance_account_currency']
             qs=models.Accountsoperations.objects.select_related("accounts","concepts").filter(datetime__year=year, datetime__month=month, accounts=account).order_by("datetime")
 
             r=[]
@@ -2148,15 +2148,17 @@ def ReportCurrentInvestmentsOperations(request):
     ld=lod.lod_order_by(ld, "datetime")
     
     return JsonResponse( ld, encoder=MyDjangoJSONEncoder, safe=False)
-
+@ptimeit
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportRanking(request):
     plio=investment_operations.PlInvestmentOperations.from_all( timezone.now(), request.user.profile.currency, mode=2)
+    show_queries_function()
 
     ld=[]
-    dividends=cursor_rows_as_dict("investments_id","select investments_id, sum(net) from dividends group by investments_id")
-    for product in models.Products.objects.order_by().distinct("investments__products").select_related("stockmarkets"):
+    dividends=lod.lod2dod(models.Dividends.objects.all().values("investments_id").annotate(sum=Sum('net')), "investments_id")
+
+    for product in models.Products.objects.order_by().distinct("investments__products").select_related("stockmarkets", "leverages", "productstypes"):
         d={}
         d["id"]=product.id
         d["name"]=product.fullName()

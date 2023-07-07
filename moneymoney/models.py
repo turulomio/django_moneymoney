@@ -10,7 +10,7 @@ from json import loads
 from moneymoney import investment_operations
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.reusing.casts import string2list_of_integers
-from moneymoney.reusing.connection_dj import cursor_one_field, cursor_rows
+from moneymoney.reusing.connection_dj import cursor_rows
 from moneymoney.reusing.currency import Currency
 from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string, dtaware_day_end_from_date, dtaware_year_end
 from pydicts import lod_ymv
@@ -67,10 +67,6 @@ class Accounts(models.Model):
 
     ## @return Tuple (balance_account_currency | balance_user_currency)
     def balance(self, dt,  currency_user):
-#        r=cursor_one_row("select * from account_balance(%s,%s,%s)", (self.id, dt, local_currency))
-#        return r['balance_account_currency'], r['balance_user_currency']
-            
-            
         r={}
         b=Accountsoperations.objects.filter(accounts=self, datetime__lte=dt).select_related("accounts").aggregate(Sum("amount"))["amount__sum"]
         if b is None:
@@ -1101,7 +1097,7 @@ class Comment:
             elif code==eComment.CreditCardBilling:#Facturaci´on de tarjeta diferida
                 d=self.decode_objects(string)
                 if d["creditcard"] is not None:
-                    number=cursor_one_field("select count(*) from creditcardsoperations where accountsoperations_id=%s", (d["operaccount"].id, ))
+                    number=Creditcardsoperations.objects.filter(accountsoperations__id=d["operaccount"].id).count()
                     return _("Billing {} movements of {}").format(number, d["creditcard"].name)
                 return _("Error decoding credit card billing comment")
 
@@ -1264,9 +1260,15 @@ class Assets:
 
     @staticmethod
     def money_convert(dt, amount, from_,  to_):   
-        if from_==to_:
-            return amount
-        return cursor_one_field("select * from money_convert(%s, %s, %s, %s)", (dt, amount, from_,  to_))
+        """
+            Makes a money conversion from a currency to other in a moment
+        """
+        factor=Quotes.currency_factor(dt, from_, to_)
+        if factor is None:
+            return None
+        else:
+            return amount*factor
+
         
     @staticmethod
     def pl_total_balance(dt, local_currency):
@@ -1275,8 +1277,7 @@ class Assets:
             {'accounts_user': 0, 'investments_user': 0, 'total_user': 0, 'investments_invested_user': 0}
         """
         accounts_user= Accounts.accounts_balance(Accounts.objects.all(), dt, local_currency)["balance_user_currency"]
-        print(accounts_user)
-        
+       
         plio=investment_operations.PlInvestmentOperations.from_all(dt,  local_currency,  mode=3)
 
         r= { 
@@ -1286,17 +1287,7 @@ class Assets:
             "investments_invested_user": plio.sum_total_io_current()["invested_user"],
             "datetime": dt,
             }
-        print("TOTAL BALANCE", r)
         return r
-        
-#    @staticmethod
-#    def pl_investment_operations(dt, local_currency, list_ids, mode):
-#        """
-#            If list_ids is None returns investment_operations for all investments
-#            Returns a dict with the following keys:
-#        """
-#        return loads(cursor_rows("select * from pl_investment_operations(%s,%s,%s,%s)", (dt, local_currency, list_ids, mode))[0]["pl_investment_operations"], object_hook=investment_operations.loads_hooks_io)
-
 
 class FastOperationsCoverage(models.Model):
     datetime = models.DateTimeField(blank=False, null=False)
@@ -1312,6 +1303,5 @@ class FastOperationsCoverage(models.Model):
 def request_get(absolute_url, user_token):
     ## verify should be changed
     a=get(absolute_url, headers={'Authorization': f'Token {user_token}'}, verify=False)
-    print(a.content)
     return loads(a.content)
 
