@@ -178,7 +178,6 @@ class CtTestCase(APITestCase):
 #        print("test_banks")
 #        tests_helpers.common_tests_Private(self,  '/api/banks/', models.Banks.post_payload(),  self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
 
-    @tag("current")
     def test_Accounts(self):
         print()
         print("test_Accounts")
@@ -197,6 +196,7 @@ class CtTestCase(APITestCase):
         self.assertEqual(r["balance_user_currency"], 1000)
 
 
+    @tag("current")
     def test_IOS(self):
         print()
         print("test_IOS")
@@ -215,6 +215,11 @@ class CtTestCase(APITestCase):
         ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  1) #Recaulculates IOS
         self.assertEqual(ios_.d_total_io_current(1)["balance_user"], 9990)
         
-
         
-    
+        #IOS.from_merging_io_current
+        ## Adding a new investment and new investmentsoperations with same product
+        dict_investment_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(dict_account["url"], dict_product["url"]), status.HTTP_201_CREATED)
+        dict_ios_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment_2["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+        ios_merged=ios.IOS.from_qs_merging_io_current(timezone.now(), 'EUR', models.Investments.objects.all(), 1)
+        self.assertEqual(ios_merged.d_data(79329)["investments_id"], [1, 2])
+        

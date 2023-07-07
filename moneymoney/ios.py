@@ -388,7 +388,7 @@ class IOS():
 
         
     @classmethod
-    def from_merging_io_current(cls, dt,  local_currency,  qs_investments, mode):
+    def from_qs_merging_io_current(cls, dt,  local_currency,  qs_investments, mode):
         """
             Return a plio merging in same virtual (negative) id all investments in qs with same product
             only io_current and io_historical
@@ -396,6 +396,10 @@ class IOS():
         def get_investments_id(product):
             """
                 Function Returns a list of integers with all investments_id of a product in plio
+                
+                investments_id se convierte en un array de ids merged por producto
+                
+                products_id se convierten en los id (d) del t
             """
             r=[]
             for id in plio.list_investments_id():
