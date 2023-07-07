@@ -1,12 +1,12 @@
 from django.contrib.auth.models import User
 from django.test import tag
-#from django.utils import timezone
+from django.utils import timezone
 from json import loads
-from moneymoney import models
+from moneymoney import models, ios
 #from moneymoney.reusing.connection_dj import cursor_one_row
-#from moneymoney.reusing import tests_helpers
+from moneymoney.reusing import tests_helpers
 #from moneymoney.types import eOperationType
-#from rest_framework import status
+from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 from django.contrib.auth.models import Group
 
@@ -177,3 +177,22 @@ class CtTestCase(APITestCase):
 #        print()
 #        print("test_banks")
 #        tests_helpers.common_tests_Private(self,  '/api/banks/', models.Banks.post_payload(),  self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
+    @tag("current")
+    def test_IOS(self):
+        print()
+        print("test_IOS")
+        
+        #IOS.from_ids
+        dict_account=tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
+        dict_product=tests_helpers.client_get(self, self.client_authorized_1, "/api/products/79329/", status.HTTP_200_OK)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(product=dict_product["url"], quote=10), status.HTTP_201_CREATED)
+        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(dict_account["url"], dict_product["url"]), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+        ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  1)
+        self.assertEqual(ios_.d_total_io_current(1)["balance_user"], 10000)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"], shares=-1), status.HTTP_201_CREATED) #Removes one share
+        ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  1) #Recaulculates IOS
+        self.assertEqual(ios_.d_total_io_current(1)["balance_user"], 9990)
+
+        
+    

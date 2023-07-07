@@ -146,12 +146,17 @@ class IOS():
         print(self.dumps())
         
     def print_d(self, id):
-        print(self.keys())
+        print(f"*** IO {id} ***")
         lod.lod_print(self.d(id)["io"])
+        print(f"*** IO CURRENT {id} ***")
         lod.lod_print(self.d(id)["io_current"])
+        print(f"*** IO HISTORICAL {id} ***")
         lod.lod_print(self.d(id)["io_historical"])
+        print(f"*** TOTAL IO {id} ***")
         lod.lod_print([self.d_total_io(id), ])
+        print(f"*** TOTAL IO CURRENT {id} ***")
         lod.lod_print([self.d_total_io_current(id), ])
+        print(f"*** TOTAL IO HISTORICAL {id} ***")
         lod.lod_print([self.d_total_io_historical(id), ])
         
         
@@ -221,8 +226,7 @@ class IOS():
         t=IOS.__calculate_ios_lazy(dt, lod_investments,  lod_,  local_currency)
         t["lazy_quotes"], t["lazy_factors"]=IOS.__get_quotes_and_factors(t["lazy_quotes"], t["lazy_factors"])
         t=IOS.__calculate_ios_finish(t, mode)
-        print("IOS", datetime.now()-s)
-        
+        print("IOS FROM QS", datetime.now()-s)
         return cls(t)
 
     @classmethod

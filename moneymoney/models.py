@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
 from json import loads
-from moneymoney import investment_operations
+from moneymoney import ios
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.reusing.casts import string2list_of_integers
 from moneymoney.reusing.connection_dj import cursor_rows
@@ -292,7 +292,7 @@ class Banks(models.Model):
 
     def balance_investments(self, request):
         if hasattr(self, "_balance_investments") is False:
-            plio=investment_operations.IOS.from_qs(timezone.now(), request.user.profile.currency, self.investments(active=True), 3)
+            plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, self.investments(active=True), 3)
             self._balance_investments=plio.sum_total_io_current()["balance_user"]
         return self._balance_investments
         
@@ -466,6 +466,22 @@ class Investments(models.Model):
     def fullName(self):
         return "{} ({})".format(self.name, self.accounts.name)
 
+
+    @staticmethod
+    def post_payload(accounts, products):
+        return {
+            "name": "Investment for testing",
+           "active": True, 
+            "accounts": accounts, 
+            "selling_price":0, 
+            "products": products, 
+            "selling_expiration":None, 
+            "daily_adjustment":False, 
+            "balance_percentage":100, 
+            "amount": 1200, 
+            "decimals": 6, 
+        }
+
     ## Función que devuelve un booleano si una cuenta es borrable, es decir, que no tenga registros dependientes.
     def is_deletable(self):
         if (
@@ -545,6 +561,21 @@ class Investmentsoperations(models.Model):
     def __str__(self):
         return "InvestmentOperation"
 
+
+    @staticmethod
+    def post_payload(investments, datetime=timezone.now(), shares=1000, price=10,  taxes=0, commission=0,  operationstypes="http://testserver/api/operationstypes/4/", currency_conversion=1):
+        return {
+            "operationstypes": operationstypes, 
+            "investments": investments, 
+            "shares": shares, 
+            "taxes":taxes, 
+            "commission": commission, 
+            "price": price, 
+            "datetime": datetime, 
+            "comment": "", 
+            "currency_conversion": currency_conversion, 
+        }
+
     @transaction.atomic
     def delete(self):
         concepts=Concepts.objects.filter(pk__in=(eConcept.BuyShares, eConcept.SellShares, eConcept.BankCommissions))
@@ -560,7 +591,7 @@ class Investmentsoperations(models.Model):
         concepts=Concepts.objects.filter(pk__in=(eConcept.BuyShares, eConcept.SellShares, eConcept.BankCommissions))
         qs_ao=Accountsoperations.objects.filter(concepts__in=concepts, comment=f'{eComment.InvestmentOperation},{self.id}')
         qs_ao.delete()
-        plio=investment_operations.IOS.from_ids(timezone.now(), request.user.profile.currency, [self.investments.id, ], 1)
+        plio=ios.IOS.from_ids(timezone.now(), request.user.profile.currency, [self.investments.id, ], 1)
         #Searches io investments operations of the comment
         io=None
         for o in plio.d_io(self.investments.id):
@@ -862,7 +893,18 @@ class Quotes(models.Model):
         
     def __str__(self):
         return f"Quote ({self.id}) of '{self.products.name}' at {self.datetime} is {self.quote}"
-        
+
+
+
+    @staticmethod
+    def post_payload(product, datetime=timezone.now(), quote=10):
+        return {
+            "datetime": datetime, 
+            "products": product, 
+            "quote": quote, 
+        }
+
+
     @transaction.atomic
     def save(self, *args, **kwargs):
         if self.datetime-timezone.now()>timedelta(days=1):
@@ -1278,7 +1320,7 @@ class Assets:
         """
         accounts_user= Accounts.accounts_balance(Accounts.objects.all(), dt, local_currency)["balance_user_currency"]
        
-        plio=investment_operations.IOS.from_all(dt,  local_currency,  mode=3)
+        plio=ios.IOS.from_all(dt,  local_currency,  mode=3)
 
         r= { 
             "accounts_user": accounts_user, 
