@@ -20,7 +20,7 @@ class Command(BaseCommand):
         show_queries_function()
         
     def pl_ios(self):
-        plio=investment_operations.PlInvestmentOperations.from_ids( timezone.now(),  'EUR',  [270],  1)
+        plio=investment_operations.IOS.from_ids( timezone.now(),  'EUR',  [270],  1)
         plio.print_d(270)
         
     def last_penultimate_lastyear(self):

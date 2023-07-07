@@ -112,7 +112,7 @@ class ProductRangeManager(ObjectManager):
         self.decimals=decimals
         self.method=0
         
-        self.plio=investment_operations.PlInvestmentOperations.from_qs( timezone.now(), request.user.profile.currency, self.qs_investments,  1)
+        self.plio=investment_operations.IOS.from_qs( timezone.now(), request.user.profile.currency, self.qs_investments,  1)
 
         self.orders=models.Orders.objects.select_related("investments", "investments__accounts","investments__products","investments__products__leverages","investments__products__productstypes")\
             .filter(investments__in=self.qs_investments, executed=None)\

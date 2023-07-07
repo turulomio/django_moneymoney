@@ -292,7 +292,7 @@ class Banks(models.Model):
 
     def balance_investments(self, request):
         if hasattr(self, "_balance_investments") is False:
-            plio=investment_operations.PlInvestmentOperations.from_qs(timezone.now(), request.user.profile.currency, self.investments(active=True), 3)
+            plio=investment_operations.IOS.from_qs(timezone.now(), request.user.profile.currency, self.investments(active=True), 3)
             self._balance_investments=plio.sum_total_io_current()["balance_user"]
         return self._balance_investments
         
@@ -560,7 +560,7 @@ class Investmentsoperations(models.Model):
         concepts=Concepts.objects.filter(pk__in=(eConcept.BuyShares, eConcept.SellShares, eConcept.BankCommissions))
         qs_ao=Accountsoperations.objects.filter(concepts__in=concepts, comment=f'{eComment.InvestmentOperation},{self.id}')
         qs_ao.delete()
-        plio=investment_operations.PlInvestmentOperations.from_ids(timezone.now(), request.user.profile.currency, [self.investments.id, ], 1)
+        plio=investment_operations.IOS.from_ids(timezone.now(), request.user.profile.currency, [self.investments.id, ], 1)
         #Searches io investments operations of the comment
         io=None
         for o in plio.d_io(self.investments.id):
@@ -1278,7 +1278,7 @@ class Assets:
         """
         accounts_user= Accounts.accounts_balance(Accounts.objects.all(), dt, local_currency)["balance_user_currency"]
        
-        plio=investment_operations.PlInvestmentOperations.from_all(dt,  local_currency,  mode=3)
+        plio=investment_operations.IOS.from_all(dt,  local_currency,  mode=3)
 
         r= { 
             "accounts_user": accounts_user, 
