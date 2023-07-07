@@ -228,6 +228,17 @@ class Accountsoperations(models.Model):
     def __str__(self):
         return "{} {} {}".format(self.datetime, self.concepts.name, self.amount)
 
+
+    @staticmethod
+    def post_payload(accounts="http://testserver/api/accounts/4/",  concepts="http://testserver/api/concepts/1/", amount=1000,  comment="Opening account", datetime=timezone.now()):
+        return {
+            "concepts":concepts, 
+            "amount": amount, 
+            "comment": comment, 
+            "accounts": accounts, 
+            "datetime": datetime, 
+        }
+
     def can_be_updated(self):
         if self.concepts is None:
             return False

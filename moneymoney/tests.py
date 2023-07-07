@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.contrib.auth.models import User
 from django.test import tag
 from django.utils import timezone
@@ -113,7 +114,6 @@ class CtTestCase(APITestCase):
 #        mf_io=factory_helpers.MyFactory(factory.InvestmentsoperationsFactory, "Colaborative", "/api/investmentsoperations/")
 #        io_payload=mf_io.factory.build(investments=investment, operationstypes=models.Operationstypes.objects.get(pk=eOperationType.SharesPurchase))
 #        r=self.client_authorized_1.post("/api/investmentsoperations/", mf_io.serialize(io_payload, remove_id_url=True))
-#        self.assertTrue(models.Accountsoperations.objects.filter(comment=f"10000,{loads(r.content)['id']}").exists())
 #    
 #    def test_estimations_dps(self):     
 #        """
@@ -177,7 +177,26 @@ class CtTestCase(APITestCase):
 #        print()
 #        print("test_banks")
 #        tests_helpers.common_tests_Private(self,  '/api/banks/', models.Banks.post_payload(),  self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
+
     @tag("current")
+    def test_Accounts(self):
+        print()
+        print("test_Accounts")
+        
+        #accounts_balance with empty database
+        qs_accounts=models.Accounts.objects.filter(active=True)
+        r=models.Accounts.accounts_balance(qs_accounts, timezone.now(), 'EUR')
+        self.assertEqual(r["balance_user_currency"], Decimal(0))
+        
+        #Adding an ao
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(), status.HTTP_201_CREATED)
+        
+        #accounts_balance with empty database
+        qs_accounts=models.Accounts.objects.filter(active=True)
+        r=models.Accounts.accounts_balance(qs_accounts, timezone.now(), 'EUR')
+        self.assertEqual(r["balance_user_currency"], 1000)
+
+
     def test_IOS(self):
         print()
         print("test_IOS")
@@ -187,12 +206,15 @@ class CtTestCase(APITestCase):
         dict_product=tests_helpers.client_get(self, self.client_authorized_1, "/api/products/79329/", status.HTTP_200_OK)
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(product=dict_product["url"], quote=10), status.HTTP_201_CREATED)
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(dict_account["url"], dict_product["url"]), status.HTTP_201_CREATED)
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+        dict_ios_1=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+        self.assertTrue(models.Accountsoperations.objects.filter(comment=f"10000,{dict_ios_1['id']}").exists())#Comprueba que existe ao
         ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  1)
         self.assertEqual(ios_.d_total_io_current(1)["balance_user"], 10000)
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"], shares=-1), status.HTTP_201_CREATED) #Removes one share
+        dict_ios_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"], shares=-1), status.HTTP_201_CREATED) #Removes one share
+        self.assertTrue(models.Accountsoperations.objects.filter(comment=f"10000,{dict_ios_2['id']}").exists())#Comprueba que existe ao
         ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  1) #Recaulculates IOS
         self.assertEqual(ios_.d_total_io_current(1)["balance_user"], 9990)
+        
 
         
     
