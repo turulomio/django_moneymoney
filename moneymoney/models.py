@@ -476,6 +476,9 @@ class Investments(models.Model):
 
     def fullName(self):
         return "{} ({})".format(self.name, self.accounts.name)
+    @staticmethod
+    def hurl(request, id):
+        return request.build_absolute_uri(reverse('investments-detail', args=(id, )))
 
 
     @staticmethod

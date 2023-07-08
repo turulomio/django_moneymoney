@@ -1008,6 +1008,38 @@ class BanksViewSet(viewsets.ModelViewSet):
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
+def IOS(request):
+    """
+        This view interacts with IOS module
+    """
+    classmethod_str=RequestGetString(request, "classmethod_str")
+    if classmethod_str is None:
+        return Response({'status': "classmethod_str can't be null"}, status=status.HTTP_400_BAD_REQUEST)
+        
+    dt=RequestGetDtaware(request, "datetime", request.user.profile.zone, timezone.now())
+    mode=RequestGetInteger(request, "mode", 1)
+    if classmethod_str=="from_ids":
+        ids=RequestGetListOfIntegers(request, "investments[]")
+        if all_args_are_not_none( ids):
+            ios_=ios.IOS.from_ids( dt,  request.user.profile.currency,  ids,  mode)
+            return JsonResponse( ios_.t(), encoder=MyDjangoJSONEncoder, safe=False)
+    elif classmethod_str=="from_all":
+            ios_=ios.IOS.from_all( dt,  request.user.profile.currency,  mode)
+            return JsonResponse( ios_.t(), encoder=MyDjangoJSONEncoder, safe=False)
+    elif classmethod_str=="from_qs_merging_io_current__all":
+            ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.all(),   mode)
+            return JsonResponse( ios_.t(), encoder=MyDjangoJSONEncoder, safe=False)
+    elif classmethod_str=="from_qs_merging_io_current__ids":
+        ids=RequestGetListOfIntegers(request, "investments[]")
+        if all_args_are_not_none( ids):
+            ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.filter(id__in=ids),   mode)
+            return JsonResponse( ios_.t(), encoder=MyDjangoJSONEncoder, safe=False)
+    return Response({'status': "classmethod_str wasn't found'"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
 def InvestmentsoperationsFull(request):
     """
         This view returns a simulated plio_id
@@ -2108,14 +2140,14 @@ def ReportsInvestmentsLastOperation(request):
                 "investments_urls": investments_urls, 
             })
     elif method==1:#Merginc current operations
-        plio=ios.IOS.from_merging_io_current( timezone.now(), request.user.profile.currency, investments, 1)
+        plio=ios.IOS.from_qs_merging_io_current( timezone.now(), request.user.profile.currency, investments, 1)
         for virtual_investment_id in plio.list_investments_id():
-            virtual_investment_product=models.Products.objects.get(pk=virtual_investment_id)
+            virtual_investment_product=models.Products.objects.get(pk=virtual_investment_id).select_related("stockmarkets")
             
             ioc_last=plio.io_current_last_operation_excluding_additions(virtual_investment_id)
             investments_urls=[] #Investments merged in this virtual_investment
-            for investment_id in plio.d_data(virtual_investment_id)["investments_id"]:
-                investments_urls.append(request.build_absolute_uri(reverse('investments-detail', args=(investment_id, ))), )
+            for investment_id in plio.d_investments_ids_merged(virtual_investment_id):
+                investments_urls.append(models.Investments.hurl(request, investment_id))
             
             if ioc_last is None:
                 continue
@@ -2134,6 +2166,7 @@ def ReportsInvestmentsLastOperation(request):
                 "percentage_sellingpoint": 0, # plio.percentage_sellingpoint(ioc_last, investment.selling_price).value,   
                 "investments_urls": investments_urls, 
             })
+    show_queries_function()
     return JsonResponse( ld, encoder=MyDjangoJSONEncoder, safe=False)
 
 @api_view(['GET', ])    

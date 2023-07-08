@@ -210,7 +210,7 @@ class CtTestCase(APITestCase):
         self.assertTrue(models.Accountsoperations.objects.filter(comment=f"10000,{dict_ios_1['id']}").exists())#Comprueba que existe ao
         ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  1)
         self.assertEqual(ios_.d_total_io_current(1)["balance_user"], 10000)
-        dict_ios_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"], shares=-1), status.HTTP_201_CREATED) #Removes one share
+        dict_ios_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"], shares=-1, price=20), status.HTTP_201_CREATED) #Removes one share
         self.assertTrue(models.Accountsoperations.objects.filter(comment=f"10000,{dict_ios_2['id']}").exists())#Comprueba que existe ao
         ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  1) #Recaulculates IOS
         self.assertEqual(ios_.d_total_io_current(1)["balance_user"], 9990)
@@ -221,7 +221,10 @@ class CtTestCase(APITestCase):
         dict_investment_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(dict_account["url"], dict_product["url"]), status.HTTP_201_CREATED)
         dict_ios_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment_2["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
         ios_merged=ios.IOS.from_qs_merging_io_current(timezone.now(), 'EUR', models.Investments.objects.all(), 1)
-        self.assertEqual(ios_merged.d_data(79329)["investments_id"], [1, 2])
+        self.assertEqual(ios_merged.list_investments_id(),  ['79329'])
         
         ios_merged.print_dumps()
-        ios_merged.print()
+        ios_merged.print_d(79329)
+
+
+        #IOS.from_ids from client
