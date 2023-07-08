@@ -1016,7 +1016,7 @@ def IOS(request):
         return Response({'status': "classmethod_str can't be null"}, status=status.HTTP_400_BAD_REQUEST)
         
     dt=RequestGetDtaware(request, "datetime", request.user.profile.zone, timezone.now())
-    mode=RequestGetInteger(request, "mode", 1)
+    mode=RequestGetInteger(request, "mode", ios.IOSModes.ios_totals_sumtotals)
     if classmethod_str=="from_ids":
         ids=RequestGetListOfIntegers(request, "investments[]")
         if all_args_are_not_none( ids):
