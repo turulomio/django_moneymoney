@@ -21,6 +21,11 @@ class MyDjangoJSONEncoder(DjangoJSONEncoder):
             return o.amount
         return DjangoJSONEncoder.default(self,o)
 
+class IOSModes:
+    sumtotals=3 #Showss only sumtotals
+    totals_sumtotals=2 #Shows totals and sumtotals
+    ios_totals_sumtotals=1 #Shows io,totals and sumtotals
+    
 
 class IOSTypes:
     from_qs=1
@@ -233,10 +238,6 @@ class IOS():
             if o["operationstypes_id"]!=6:# Shares Additions
                 return o
         return None
-        
-    @staticmethod
-    def __t_keys_not_investment():
-        return ["lazy_quotes","lazy_factors", "sum_total_io_current", "sum_total_io_historical","mode","basic_results", "type"]
 
     @classmethod
     def from_qs(cls, dt,  local_currency,  qs_investments,  mode):
@@ -251,8 +252,9 @@ class IOS():
         t["type"]=IOSTypes.from_qs
 
         #Set entries name
-        for investment in qs_investments:
-            t[str(investment.id)]["data"]["name"]=investment.fullName()
+        if mode in [IOSModes.ios_totals_sumtotals, IOSModes.totals_sumtotals]:
+            for investment in qs_investments:
+                t[str(investment.id)]["data"]["name"]=investment.fullName()
         print("IOS FROM QS", datetime.now()-s)
         return cls(t)
 
@@ -422,7 +424,7 @@ class IOS():
         """
 
         s=datetime.now()
-        old_ios=cls.from_qs(dt, local_currency, qs_investments, mode)
+        old_ios=cls.from_qs(dt, local_currency, qs_investments, IOSModes.ios_totals_sumtotals)#Must have ios, although result can be other mode
         
         # Preparing lod_data 
         products={}#Temp dictionary
@@ -485,69 +487,12 @@ class IOS():
         
         
         #Set entries name for product, iterating all investments. Redundant but simpler
-        for old_investment in qs_investments:
-            t[str(old_investment.products.id)]["data"]["name"]=_("IOC merged investment of '{0}'").format( old_investment.products.fullName()) 
+        if mode in [IOSModes.ios_totals_sumtotals, IOSModes.totals_sumtotals]:
+            for old_investment in qs_investments:
+                t[str(old_investment.products.id)]["data"]["name"]=_("IOC merged investment of '{0}'").format( old_investment.products.fullName()) 
 
         print("IOS FROM QS MERGING ", datetime.now()-s)
         return cls(t)
-#        
-#        
-#        
-#        
-#        
-#        
-#        
-#        
-#        
-#        
-#        
-#        products_ids=list(models.Investments.objects.filter(active=True).values_list("products__id",  flat=True).distinct())
-#        t_merged={}
-#        for product in models.Products.objects.filter(id__in=products_ids):
-#            t_merged[str(product.id)]={}
-#            t_merged[str(product.id)]["data"]={}
-#            t_merged[str(product.id)]["data"]["products_id"]=product.id
-#            t_merged[str(product.id)]["data"]["investments_id"]=get_investments_id(product)
-#            t_merged[str(product.id)]["data"]["multiplier"]=product.leverages.multiplier
-#            t_merged[str(product.id)]["data"]["currency_product"]=product.currency
-#            t_merged[str(product.id)]["data"]["productstypes_id"]=product.productstypes.id
-#            t_merged[str(product.id)]["data"]["currency_user"]=local_currency
-#            
-#            t_merged[str(product.id)]["io_current"]=[]
-#            for plio_id in plio.entries():
-#                if plio.d_data(plio_id)["products_id"]==product.id:
-#                    for o in plio.d_io_current(plio_id):
-#                        t_merged[str(product.id)]["io_current"].append(o)
-#            t_merged[str(product.id)]["io_current"]= sorted(t_merged[str(product.id)]["io_current"],  key=lambda item: item['datetime'])
-#            
-#            average_price_investment=0
-#            
-#            t_merged[str(product.id)]["total_io_current"]={}
-#            t_merged[str(product.id)]["total_io_current"]["balance_user"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "balance_user")
-#            t_merged[str(product.id)]["total_io_current"]["balance_investment"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "balance_investment")
-#            t_merged[str(product.id)]["total_io_current"]["balance_futures_user"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "balance_futures_user")
-#            t_merged[str(product.id)]["total_io_current"]["gains_gross_user"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "gains_gross_user")
-#            t_merged[str(product.id)]["total_io_current"]["gains_net_user"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "gains_net_user")
-#            t_merged[str(product.id)]["total_io_current"]["shares"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "shares")
-#            t_merged[str(product.id)]["total_io_current"]["invested_user"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "invested_user")
-#            t_merged[str(product.id)]["total_io_current"]["invested_investment"]=lod.lod_sum(t_merged[str(product.id)]["io_current"], "invested_investment")
-#            t_merged[str(product.id)]["total_io_current"]["balance_user"]=average_price_investment
-#            
-#            t_merged[str(product.id)]["io_historical"]=[]
-#            for plio_id in plio.entries():
-#                if plio.d_data(plio_id)["products_id"]==product.id:
-#                    for o in plio.d_io_historical(plio_id):
-#                        t_merged[str(product.id)]["io_historical"].append(o)
-#            t_merged[str(product.id)]["io_historical"]= sorted(t_merged[str(product.id)]["io_historical"],  key=lambda item: item['dt_end'])
-#
-#            t_merged[str(product.id)]["total_io_historical"]={}
-#            t_merged[str(product.id)]["total_io_historical"]["gains_net_user"]=lod.lod_sum(t_merged[str(product.id)]["total_io_historical"], "gains_net_user")
-#            #t_merged[str(product.id)]["total_io_historical"]["commission_account"]=lod.lod_sum(t_merged[str(product.id)]["total_io_historical"], "commission_account")
-#
-#        t_merged["type"]=IOSTypes.from_qs_merging_io_current
-#        return cls(t_merged)
-        
-
 
     ## lazy_factors id, dt, from, to
     ## lazy_quotes product, timestamp
@@ -915,12 +860,12 @@ class IOS():
             t["sum_total_io_historical"]["gains_net_user"]=t["sum_total_io_historical"]["gains_net_user"]+t[investments_id]["total_io_historical"]['gains_net_user']
             t["sum_total_io_historical"]["commissions_account"]=t["sum_total_io_historical"]["commissions_account"]+t[investments_id]["total_io_historical"]['commissions_account']
 
-            if mode in (2,3):
+            if mode in (IOSModes.totals_sumtotals, IOSModes.sumtotals):
                 del t[investments_id]["io"]
                 del t[investments_id]["io_current"]
                 del t[investments_id]["io_historical"]
         
-        if mode==3:
+        if mode==IOSModes.sumtotals:
             return {"sum_total_io_current": t["sum_total_io_current"], "sum_total_io_historical": t["sum_total_io_historical"], "mode":t["mode"]}
 
         del t["lazy_factors"]
