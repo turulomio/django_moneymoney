@@ -744,7 +744,6 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "gains_at_selling_point_investment": o.selling_price*o.products.real_leveraged_multiplier()*plio.d_total_io_current(o.id)["shares"]-plio.d_total_io_current(o.id)["invested_investment"], 
                 "decimals": o.decimals, 
             })
-            show_queries_function()
         return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
     @action(detail=True, methods=["get"], name='Investments operations evolution chart', url_path="operations_evolution_chart", url_name='operations_evolution_chart', permission_classes=[permissions.IsAuthenticated])
@@ -2119,7 +2118,6 @@ def ReportsInvestmentsLastOperation(request):
             ioc_last=ios_.io_current_last_operation_excluding_additions(investment.id)
             if ioc_last is None:
                 continue
-            ios_.d_data(investment.id)["name"]=investment.fullName()
             ios_.d_data(investment.id)["last_datetime"]=ioc_last["datetime"]
             ios_.d_data(investment.id)["last_shares"]=ioc_last['shares']
             ios_.d_data(investment.id)["last_price"]=ioc_last['price_investment']
@@ -2140,7 +2138,6 @@ def ReportsInvestmentsLastOperation(request):
             if ioc_last is None:
                 continue
             #Añado valores calculados al data para utilizar ios_
-            ios_.d_data(virtual_investment_product.id)["name"]=_("IOC merged investment of '{0}'").format( virtual_investment_product.fullName()) 
             ios_.d_data(virtual_investment_product.id)["last_datetime"]=ioc_last["datetime"]
             ios_.d_data(virtual_investment_product.id)["last_shares"]=ioc_last['shares']
             ios_.d_data(virtual_investment_product.id)["last_price"]=ioc_last['price_investment']
@@ -2163,12 +2160,11 @@ def ReportCurrentInvestmentsOperations(request):
     ld=lod.lod_order_by(ld, "datetime")
     
     return JsonResponse( ld, encoder=MyDjangoJSONEncoder, safe=False)
-@ptimeit
+
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportRanking(request):
     plio=ios.IOS.from_all( timezone.now(), request.user.profile.currency, mode=2)
-    show_queries_function()
 
     ld=[]
     dividends=lod.lod2dod(models.Dividends.objects.all().values("investments_id").annotate(sum=Sum('net')), "investments_id")

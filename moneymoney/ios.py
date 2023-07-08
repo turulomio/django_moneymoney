@@ -6,6 +6,7 @@ from moneymoney.reusing.percentage import Percentage, percentage_between
 from pydicts import lod
 from base64 import b64encode
 from django.core.serializers.json import DjangoJSONEncoder 
+from django.utils.translation import gettext_lazy as _
 
 class MyDjangoJSONEncoder(DjangoJSONEncoder):    
     #Converts from dict to json text
@@ -248,6 +249,10 @@ class IOS():
         t["lazy_quotes"], t["lazy_factors"]=IOS.__get_quotes_and_factors(t["lazy_quotes"], t["lazy_factors"])
         t=IOS.__calculate_ios_finish(t, mode)
         t["type"]=IOSTypes.from_qs
+
+        #Set entries name
+        for investment in qs_investments:
+            t[str(investment.id)]["data"]["name"]=investment.fullName()
         print("IOS FROM QS", datetime.now()-s)
         return cls(t)
 
@@ -435,7 +440,6 @@ class IOS():
             }
                 
         lod_data=lod.dod2lod(products)
-        lod.lod_print(lod_data)
 
         #preparing lod_investments
         
@@ -458,7 +462,6 @@ class IOS():
                     "currency_conversion": o["investment2account"], 
                 })
         lod_io=lod.lod_order_by(lod_io, "datetime")
-        lod.lod_print(lod_io)
 
         #Generating new_t
         t=IOS.__calculate_ios_lazy(dt, lod_data,  lod_io,  local_currency)
@@ -479,6 +482,11 @@ class IOS():
         # I make ios_finish after to get old io_historical too in results
         t["lazy_quotes"], t["lazy_factors"]=IOS.__get_quotes_and_factors(t["lazy_quotes"], t["lazy_factors"])
         t=IOS.__calculate_ios_finish(t, mode)
+        
+        
+        #Set entries name for product, iterating all investments. Redundant but simpler
+        for old_investment in qs_investments:
+            t[str(old_investment.products.id)]["data"]["name"]=_("IOC merged investment of '{0}'").format( old_investment.products.fullName()) 
 
         print("IOS FROM QS MERGING ", datetime.now()-s)
         return cls(t)
@@ -707,7 +715,6 @@ class IOS():
         def lq(products_id, dt):
             return dict_with_lf_and_lq["lazy_quotes"][(products_id, dt)]
             
-        print("D", d)
         data=d["data"]
         
         d["total_io"]={}
