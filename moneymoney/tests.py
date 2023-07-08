@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 from django.contrib.auth.models import User
 from django.test import tag
@@ -196,7 +197,6 @@ class CtTestCase(APITestCase):
         self.assertEqual(r["balance_user_currency"], 1000)
 
 
-    @tag("current")
     def test_IOS(self):
         print()
         print("test_IOS")
@@ -228,3 +228,15 @@ class CtTestCase(APITestCase):
 
 
         #IOS.from_ids from client
+        
+        
+    @tag("current")
+    def test_ReportConcepts(self):
+        print()
+        print("test_ReportConcepts")
+        #test empty
+        tests_helpers.client_get(self, self.client_authorized_1, f"/reports/concepts/?year={date.today().year}&month={date.today().month}", status.HTTP_200_OK)
+        #test value
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(), status.HTTP_201_CREATED)
+        r=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/concepts/?year={date.today().year}&month={date.today().month}", status.HTTP_200_OK)
+        self.assertEqual(len(r["positive"]), 1)

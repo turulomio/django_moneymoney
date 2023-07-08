@@ -337,6 +337,10 @@ class Concepts(models.Model):
         
     def fullName(self):
         return "{} - {}".format(_(self.name), _(self.operationstypes.name))
+        
+    @staticmethod
+    def hurl(request, id):
+        return request.build_absolute_uri(reverse('concepts-detail', args=(id, )))
     
     def get_used(self):
         return   Creditcardsoperations.objects.filter(concepts__id=self.id).count() + Accountsoperations.objects.filter(concepts__id=self.id).count() + Dividends.objects.filter(concepts__id=self.id).count()   
@@ -347,6 +351,13 @@ class Concepts(models.Model):
         if self.operationstypes.id in [1,2] and self.id not in [1, 6, 37, 38,39,59,62,63,65,66, 67, 72, 75, 76, 77]:
            r= True
         return r
+
+    @staticmethod
+    def dictionary():
+        dict_concepts={}
+        for c in Concepts.objects.all():
+            dict_concepts[c.id]=c
+        return dict_concepts
 
 class Creditcards(models.Model):
     name = models.TextField()

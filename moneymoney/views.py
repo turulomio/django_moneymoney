@@ -25,6 +25,7 @@ from moneymoney.reusing.percentage import Percentage,  percentage_between
 from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestString, RequestListUrl, id_from_url, all_args_are_not_none, RequestCastingError
 from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEncoder, json_success_response
 from requests import delete, post
+#from statistics import median
 from subprocess import run
 from os import path
 from pydicts import lod, lod_ymv
@@ -1808,7 +1809,7 @@ def ReportAnnualGainsByProductstypes(request, year):
     dt_from=dtaware_year_start(year, request.user.profile.zone)
     dt_to=dtaware_year_end(year, request.user.profile.zone)
 
-    plio=ios.IOS.from_all( dt_to, request.user.profile.currency, 1)
+    plio=ios.IOS.from_all( dt_to, request.user.profile.currency, ios.IOSModes.ios_totals_sumtotals)
     
     #This inner joins its made to see all productstypes_id even if they are Null.
     # Subquery for dividends is used due to if I make a where from dividends table I didn't get null productstypes_id
@@ -1871,79 +1872,54 @@ group by productstypes_id""", (year, ))
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportConcepts(request):
+    def get_median(concept):
+#        Request.objects.extra({ "month": ExtractMonth('date_creation'),
+#                        "year": ExtractYear('date_creation') })
+#               .values('month', 'year')
+#               .annotate(total=Count('month'))
+#               .values('month', 'year', 'total')
+#        
+#        amounts=list(models.Accountsoperations.objects.filter(concepts=concept).values_list("amount", flat=True)) + \
+#        list(models.Creditcardsoperations.objects.filter(concepts=concept).values_list("amount", flat=True))
+#        amounts.sort()
+#        return median(amounts)
+        return 0
+    
+    
     year=RequestGetInteger(request, "year")
     month=RequestGetInteger(request,  "month")
     if year is None or month is None:
-        return Response({'status': 'details'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'details': _('You must set year and month parameters')}, status=status.HTTP_400_BAD_REQUEST)
         
     r={}
     r["positive"]=[]
-    month_balance_positive=0
-    dict_month_positive={}
     r["negative"]=[]
-    month_balance_negative=0
-    dict_month_negative={}
-    dict_median={}
     
-    concepts=models.Concepts.objects.all().select_related("operationstypes")
-    
-    ## median
-    for row in cursor_rows("""
-        select
-            concepts_id as id, 
-            median(amount) as median
-        from 
-            accountsoperations
-        group by 
-            concepts_id
-        """):
-        dict_median[row['id']]=row['median']
-    ## Data
-    for row in cursor_rows("""
-        select
-            concepts_id as id, 
-            sum(amount) as total
-        from 
-            accountsoperations,
-            concepts
-        where 
-            date_part('year', datetime)=%s and
-            date_part('month', datetime)=%s and
-            concepts.operationstypes_id in (1,2) and
-            accountsoperations.concepts_id=concepts.id
-        group by 
-            concepts_id
-        """, (year, month)):
-        if row['total']>=0:
-            month_balance_positive+=row['total']
-            dict_month_positive[row['id']]=row['total']
-        else:
-            month_balance_negative+=row['total']
-            dict_month_negative[row['id']]=row['total']
-
+    month_ao_sum=list(models.Accountsoperations.objects.filter(datetime__month=month,datetime__year=year, concepts__operationstypes__id__in=[eOperationType.Income, eOperationType.Expense]).select_related("operationstypes").values("concepts__id").order_by("concepts_id").annotate(sum=Sum('amount')))+\
+        list(models.Creditcardsoperations.objects.filter(datetime__month=month,datetime__year=year, concepts__operationstypes__id__in=[eOperationType.Income, eOperationType.Expense]).select_related("operationstypes").values("concepts__id").order_by("concepts_id").annotate(sum=Sum('amount')))
+    total_month_positives=lod.lod_sum_positives(month_ao_sum, "sum")
+    total_month_negatives=lod.lod_sum_negatives(month_ao_sum, "sum")
+    dict_concepts=models.Concepts.dictionary()
     ## list
-    for concept in concepts:
-        if concept.id in dict_month_positive.keys():
+    for d in month_ao_sum:
+        concept=dict_concepts[d["concepts__id"]]
+        if d["sum"]>0:
             r["positive"].append({
-                "concept": request.build_absolute_uri(reverse('concepts-detail', args=(concept.pk, ))), 
+                "concept": models.Concepts.hurl(request, d["concepts__id"]), 
                 "name": concept.name, 
-                "operationstypes": request.build_absolute_uri(reverse('operationstypes-detail', args=(concept.pk, ))), 
-                "total": dict_month_positive.get(concept.id, 0), 
-                "percentage_total": Percentage(dict_month_positive.get(concept.id, 0), month_balance_positive), 
-                "median":dict_median.get(concept.id, 0), 
+                "total": d["sum"], 
+                "percentage_total": Percentage(d["sum"], total_month_positives), 
+                "median":get_median(concept),
             })   
-    ## list negative
-    for concept in concepts:
-        if concept.id in dict_month_negative.keys():
+        else:
             r["negative"].append({
-                "concept": request.build_absolute_uri(reverse('concepts-detail', args=(concept.pk, ))), 
+                "concept": models.Concepts.hurl(request, d["concepts__id"]), 
                 "name": concept.name, 
-                "operationstypes": request.build_absolute_uri(reverse('operationstypes-detail', args=(concept.pk, ))), 
-                "total": dict_month_negative.get(concept.id, 0), 
-                "percentage_total": Percentage(dict_month_negative.get(concept.id, 0), month_balance_negative), 
-                "median":dict_median.get(concept.id, 0), 
+                "total": d["sum"], 
+                "percentage_total": Percentage(d["sum"], total_month_negatives), 
+                "median":get_median(concept), 
             })
-
+    show_queries_function()
     return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
 
 
