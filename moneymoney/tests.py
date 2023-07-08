@@ -221,7 +221,7 @@ class CtTestCase(APITestCase):
         dict_investment_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(dict_account["url"], dict_product["url"]), status.HTTP_201_CREATED)
         dict_ios_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment_2["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
         ios_merged=ios.IOS.from_qs_merging_io_current(timezone.now(), 'EUR', models.Investments.objects.all(), 1)
-        self.assertEqual(ios_merged.list_investments_id(),  ['79329'])
+        self.assertEqual(ios_merged.entries(),  ['79329'])
         
         ios_merged.print_dumps()
         ios_merged.print_d(79329)

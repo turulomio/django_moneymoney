@@ -33,6 +33,9 @@ class IOS():
         Estas classmethods devuelven objetos IOS
         
         Es decir se encapsula todo
+        
+        
+        Si necesita añadir algún valor, se puede añadir a los diccionarios y luego hacer un response con ios.t() o lo que sea
     """
     def __init__(self, t):
         self._t=t
@@ -103,15 +106,11 @@ class IOS():
     def mode(self):
         return self._t["mode"]
         
-    def list_investments_id(self):
-        r=[]
-        for key in self.keys():
-            if key not in self.__t_keys_not_investment():
-                r.append(key)
-        return r
+    def entries(self):
+        return self._t["entries"]
         
     def qs_investments(self):
-        return models.Investments.objects.filter(id__in = self.list_investments_id()).select_related("accounts")
+        return models.Investments.objects.filter(id__in = self.entries()).select_related("accounts")
         
     def d(self, id_):
         return self._t[str(id_)]
@@ -184,7 +183,7 @@ class IOS():
         
     def io_historical_sum_between_dt(self, dt_from, dt_to,  key, productstypes_id=None):
         r=0
-        for investments_id in self.list_investments_id():
+        for investments_id in self.entries():
             for ioh in self.d_io_historical(investments_id):
                 if dt_from <= ioh["dt_end"] and ioh["dt_end"]<=dt_to:
                     if productstypes_id is None:
@@ -196,7 +195,7 @@ class IOS():
 
     def io_sum_between_dt(self, dt_from, dt_to, key):
         r=0
-        for investments_id in self.list_investments_id():
+        for investments_id in self.entries():
             for o in self.d_io(investments_id):
                 if dt_from<=o["datetime"] and o["datetime"]<=dt_to:
                     r=r - o[key]
@@ -208,7 +207,7 @@ class IOS():
         """
         
         r=0
-        for investments_id in self.list_investments_id():
+        for investments_id in self.entries():
             for o in self.d_io_current(investments_id):
                 if o["price_investment"]>r:
                     r=o["price_investment"]
@@ -219,7 +218,7 @@ class IOS():
         """
         
         r=10000000
-        for investments_id in self.list_investments_id():
+        for investments_id in self.entries():
             for o in self.d_io_current(investments_id):
                 if o["price_investment"]<r:
                     r=o["price_investment"]
@@ -375,14 +374,14 @@ class IOS():
         r["data"]["currency_user"]=local_currency
         
         r["io"]=[]
-        for plio_id in plio.list_investments_id():
+        for plio_id in plio.entries():
             for o in plio.d_io(plio_id):
                 if strategy.dt_from<=o["datetime"] and o["datetime"]<=strategy.dt_to_for_comparations():
                     r["io"].append(o)
         r["io"]= sorted(r["io"],  key=lambda item: item['datetime'])
 
         r["io_current"]=[]
-        for plio_id in plio.list_investments_id():
+        for plio_id in plio.entries():
             for o in plio.d_io_current(plio_id):
                 if strategy.dt_from<=o["datetime"] and o["datetime"]<=strategy.dt_to_for_comparations():
                     r["io_current"].append(o)
@@ -399,7 +398,7 @@ class IOS():
         r["total_io_current"]["invested_investment"]="HETEROGENEOUS"
         
         r["io_historical"]=[]
-        for plio_id in plio.list_investments_id():
+        for plio_id in plio.entries():
             for o in plio.d_io_historical(plio_id):
                 if strategy.dt_from<=o["dt_end"] and o["dt_end"]<=strategy.dt_to_for_comparations():
                     r["io_historical"].append(o)
@@ -422,7 +421,7 @@ class IOS():
         
         # Preparing lod_data 
         products={}#Temp dictionary
-        for investments_id in old_ios.list_investments_id():
+        for investments_id in old_ios.entries():
             d=old_ios.d_data(investments_id)
             products[d["products_id"]]={
                 "name": f"Merging product {d['products_id']}", 
@@ -441,7 +440,7 @@ class IOS():
         #preparing lod_investments
         
         lod_io=[]
-        for investments_id in old_ios.list_investments_id():
+        for investments_id in old_ios.entries():
             lod_io_current=old_ios.d_io_current(investments_id)
             data_investments_id=old_ios.d_data(investments_id)
 
@@ -465,7 +464,7 @@ class IOS():
         t=IOS.__calculate_ios_lazy(dt, lod_data,  lod_io,  local_currency)
 
         #Now I have to add io_historical before merging 
-        for investments_id in old_ios.list_investments_id():
+        for investments_id in old_ios.entries():
             products_id=old_ios.d_data(investments_id)["products_id"]
             for old_ioh in old_ios.d_io_historical(investments_id):
                 old_ioh["investments_id"]=products_id
@@ -507,7 +506,7 @@ class IOS():
 #            t_merged[str(product.id)]["data"]["currency_user"]=local_currency
 #            
 #            t_merged[str(product.id)]["io_current"]=[]
-#            for plio_id in plio.list_investments_id():
+#            for plio_id in plio.entries():
 #                if plio.d_data(plio_id)["products_id"]==product.id:
 #                    for o in plio.d_io_current(plio_id):
 #                        t_merged[str(product.id)]["io_current"].append(o)
@@ -527,7 +526,7 @@ class IOS():
 #            t_merged[str(product.id)]["total_io_current"]["balance_user"]=average_price_investment
 #            
 #            t_merged[str(product.id)]["io_historical"]=[]
-#            for plio_id in plio.list_investments_id():
+#            for plio_id in plio.entries():
 #                if plio.d_data(plio_id)["products_id"]==product.id:
 #                    for o in plio.d_io_historical(plio_id):
 #                        t_merged[str(product.id)]["io_historical"].append(o)
@@ -708,7 +707,7 @@ class IOS():
         def lq(products_id, dt):
             return dict_with_lf_and_lq["lazy_quotes"][(products_id, dt)]
             
-        
+        print("D", d)
         data=d["data"]
         
         d["total_io"]={}
@@ -870,8 +869,10 @@ class IOS():
         t={}
         t["lazy_quotes"]={}
         t["lazy_factors"]={}
+        t["entries"]=[] #All ids to enter in ios_id
 
         for investments_id, investment in investments.items():
+            t["entries"].append(investments_id)
             d=IOS.__calculate_io_lazy(datetime, investment, ios[investments_id], currency_user)
             t["lazy_quotes"].update(d["lazy_quotes"])
             t["lazy_factors"].update(d["lazy_factors"])
@@ -896,11 +897,8 @@ class IOS():
         t["sum_total_io_historical"]["commissions_account"]=0
         t["sum_total_io_historical"]["gains_net_user"]=0
 
-        for investments_id, d in t.items():
-            if investments_id in IOS.__t_keys_not_investment():
-                continue
-
-            t[investments_id]=IOS.__calculate_io_finish(d, t)
+        for investments_id in t["entries"]:
+            t[investments_id]=IOS.__calculate_io_finish(t[investments_id], t)
 
             t["sum_total_io_current"]["balance_user"]=t["sum_total_io_current"]["balance_user"]+t[investments_id]["total_io_current"]['balance_user']
             t["sum_total_io_current"]["balance_futures_user"]=t["sum_total_io_current"]["balance_futures_user"]+t[investments_id]["total_io_current"]['balance_futures_user']

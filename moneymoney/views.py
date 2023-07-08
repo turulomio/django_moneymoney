@@ -657,7 +657,7 @@ class Alerts(APIView):
         r["investments_inactive_with_balance"]=[]
         qs=models.Investments.objects.filter(active=False)
         plio_inactive=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, qs,  2)
-        for id in plio_inactive.list_investments_id():
+        for id in plio_inactive.entries():
             plio=plio_inactive.d(id)
             if plio["total_io_current"]["balance_investment"]!=0:
                 r["investments_inactive_with_balance"].append(plio)
@@ -2112,62 +2112,77 @@ def ReportEvolutionInvested(request, from_year):
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportsInvestmentsLastOperation(request):
     method=RequestGetInteger(request, "method", 0)
-    ld=[]
-    investments=models.Investments.objects.filter(active=True).select_related("accounts", "products")
+    investments=models.Investments.objects.filter(active=True).select_related("accounts", "products", "products__stockmarkets")
     if method==0: #Separated investments
-        plio=ios.IOS.from_qs( timezone.now(), request.user.profile.currency, investments, 1)
+        ios_=ios.IOS.from_qs( timezone.now(), request.user.profile.currency, investments, 1)
         
         investments_urls=[]
-        for investment in plio.qs_investments():
-            ioc_last=plio.io_current_last_operation_excluding_additions(investment.id)
-            investments_urls.append(request.build_absolute_uri(reverse('investments-detail', args=(investment.pk, ))), )
+        for investment in investments:
+            ioc_last=ios_.io_current_last_operation_excluding_additions(investment.id)
+            investments_urls.append(models.Investments.hurl(request, investment.id))
         
             if ioc_last is None:
                 continue
-            ld.append({
-                "id": investment.id, 
-                "name": investment.fullName(), 
-                "datetime": ioc_last["datetime"], 
-                "last_shares": ioc_last['shares'], 
-                "last_price": ioc_last['price_investment'], 
-                "decimals": investment.products.decimals, 
-                "shares": plio.d_total_io_current(investment.id)["shares"],  
-                "balance": plio.d_total_io_current(investment.id)["balance_futures_user"],  
-                "gains": plio.d_total_io_current(investment.id)["gains_gross_user"],  
-                "percentage_last": plio.ioc_percentage_total_user(ioc_last), 
-                "percentage_invested":  plio.total_io_current_percentage_total_user(investment.id).value, 
-                "percentage_sellingpoint": plio.total_io_current_percentage_sellingpoint(investment.id, investment.selling_price).value,   
-                "investments_urls": investments_urls, 
-            })
+            ios_.d_data(investment.id)["name"]=investment.fullName()
+            ios_.d_data(investment.id)["last_datetime"]=ioc_last["datetime"]
+            ios_.d_data(investment.id)["last_shares"]=ioc_last['shares']
+            ios_.d_data(investment.id)["last_price"]=ioc_last['price_investment']
+#                "decimals": virtual_investment_product.decimals, 
+#                "shares": plio.d_total_io_current(virtual_investment_product.id)["shares"],  
+#                "balance": plio.d_total_io_current(virtual_investment_product.id)["balance_futures_user"],  
+#                "gains": plio.d_total_io_current(virtual_investment_product.id)["gains_gross_user"],  
+            ios_.d_data(investment.id)["percentage_last"]= ios_.total_io_current_percentage_total_user(investment.id).value
+            ios_.d_data(investment.id)["percentage_invested"]= ios_.ioc_percentage_total_user(ioc_last)
+            ios_.d_data(investment.id)["percentage_sellingpoint"]=ios_.total_io_current_percentage_sellingpoint(investment.id, investment.selling_price).value
+            ios_.d_data(investment.id)["investments_urls"]= investments_urls
+#            ld.append({
+#                "id": investment.id, 
+#                "name": investment.fullName(), 
+#                "datetime": ioc_last["datetime"], 
+#                "last_shares": ioc_last['shares'], 
+#                "last_price": ioc_last['price_investment'], 
+#                "decimals": investment.products.decimals, 
+#                "shares": plio.d_total_io_current(investment.id)["shares"],  
+#                "balance": plio.d_total_io_current(investment.id)["balance_futures_user"],  
+#                "gains": plio.d_total_io_current(investment.id)["gains_gross_user"],  
+#                "percentage_last": plio.ioc_percentage_total_user(ioc_last), 
+#                "percentage_invested":  plio.total_io_current_percentage_total_user(investment.id).value, 
+#                "percentage_sellingpoint": plio.total_io_current_percentage_sellingpoint(investment.id, investment.selling_price).value,   
+#                "investments_urls": investments_urls, 
+#            })
     elif method==1:#Merginc current operations
-        plio=ios.IOS.from_qs_merging_io_current( timezone.now(), request.user.profile.currency, investments, 1)
-        for virtual_investment_id in plio.list_investments_id():
-            virtual_investment_product=models.Products.objects.get(pk=virtual_investment_id).select_related("stockmarkets")
-            
-            ioc_last=plio.io_current_last_operation_excluding_additions(virtual_investment_id)
+        ios_=ios.IOS.from_qs_merging_io_current( timezone.now(), request.user.profile.currency, investments, 1)
+        
+        products=set()#Son los ids del ios_
+        for inv in investments:
+            products.add(inv.products)
+        products=list(products)
+        
+        
+        for virtual_investment_product in products:
+            ioc_last=ios_.io_current_last_operation_excluding_additions(virtual_investment_product.id)
             investments_urls=[] #Investments merged in this virtual_investment
-            for investment_id in plio.d_investments_ids_merged(virtual_investment_id):
+            for investment_id in ios_.d_investments_ids_merged(virtual_investment_product.id):
                 investments_urls.append(models.Investments.hurl(request, investment_id))
             
             if ioc_last is None:
                 continue
-            ld.append({
-                "id": virtual_investment_product.id, 
-                "name": _("IOC merged investment of '{0}'").format( virtual_investment_product.fullName()), 
-                "datetime": ioc_last["datetime"], 
-                "last_shares": ioc_last['shares'], 
-                "last_price": ioc_last['price_investment'], 
-                "decimals": virtual_investment_product.decimals, 
-                "shares": plio.d_total_io_current(virtual_investment_id)["shares"],  
-                "balance": plio.d_total_io_current(virtual_investment_id)["balance_futures_user"],  
-                "gains": plio.d_total_io_current(virtual_investment_id)["gains_gross_user"],  
-                "percentage_last": plio.total_io_current_percentage_total_user(virtual_investment_id).value, 
-                "percentage_invested": plio.ioc_percentage_total_user(ioc_last), 
-                "percentage_sellingpoint": 0, # plio.percentage_sellingpoint(ioc_last, investment.selling_price).value,   
-                "investments_urls": investments_urls, 
-            })
+            #Añado valores calculados al data para utilizar ios_
+                
+            ios_.d_data(virtual_investment_product.id)["name"]=_("IOC merged investment of '{0}'").format( virtual_investment_product.fullName()) 
+            ios_.d_data(virtual_investment_product.id)["last_datetime"]=ioc_last["datetime"]
+            ios_.d_data(virtual_investment_product.id)["last_shares"]=ioc_last['shares']
+            ios_.d_data(virtual_investment_product.id)["last_price"]=ioc_last['price_investment']
+#                "decimals": virtual_investment_product.decimals, 
+#                "shares": plio.d_total_io_current(virtual_investment_product.id)["shares"],  
+#                "balance": plio.d_total_io_current(virtual_investment_product.id)["balance_futures_user"],  
+#                "gains": plio.d_total_io_current(virtual_investment_product.id)["gains_gross_user"],  
+            ios_.d_data(virtual_investment_product.id)["percentage_last"]= ios_.total_io_current_percentage_total_user(virtual_investment_product.id).value
+            ios_.d_data(virtual_investment_product.id)["percentage_invested"]= ios_.ioc_percentage_total_user(ioc_last)
+            ios_.d_data(virtual_investment_product.id)["percentage_sellingpoint"]=0#: 0, # plio.percentage_sellingpoint(ioc_last, investment.selling_price).value,   
+            ios_.d_data(virtual_investment_product.id)["investments_urls"]= investments_urls
     show_queries_function()
-    return JsonResponse( ld, encoder=MyDjangoJSONEncoder, safe=False)
+    return JsonResponse( ios_.t(), encoder=MyDjangoJSONEncoder, safe=False)
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -2201,7 +2216,7 @@ def ReportRanking(request):
         d["historical_net_gains"]=0
         d["dividends"]=0
         d["investments"]=[]#List of all urls of investments
-        for investments_id in plio.list_investments_id():
+        for investments_id in plio.entries():
             if plio.d_data(investments_id)["products_id"]==product.id:
                 d["investments"].append(request.build_absolute_uri(reverse('investments-detail', args=(investments_id, ))))
                 d["current_net_gains"]=d["current_net_gains"]+plio.d_total_io_current(investments_id)["gains_net_user"]
