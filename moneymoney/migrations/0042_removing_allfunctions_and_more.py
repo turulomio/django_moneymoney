@@ -17,7 +17,7 @@ DROP FUNCTION public.currency_factor(at_datetime timestamp with time zone, curre
 DROP FUNCTION public.is_price_variation_in_time(p_id_products integer, p_percentage double precision, p_datetime timestamp with time zone);
 DROP FUNCTION public.last_penultimate_lastyear(INOUT id integer, at_datetime timestamp with time zone, OUT last_datetime timestamp with time zone, OUT last numeric, OUT penultimate_datetime timestamp with time zone, OUT penultimate numeric, OUT lastyear_datetime timestamp with time zone, OUT lastyear numeric);
 DROP FUNCTION public.money_convert(at_datetime timestamp with time zone, amount_from numeric, currency_from text, currency_to text);
-DROP FUNCTION public.ohcldaily(product_id integer);
+DROP FUNCTION IF EXISTS public.ohcldaily(product_id integer);
 DROP FUNCTION public.ohcldailybeforesplits(product_id integer);
 DROP FUNCTION public.ohclmonthlybeforesplits(product_id integer);
 DROP FUNCTION public.penultimate(INOUT id integer, date date, OUT quote numeric, OUT datetime timestamp with time zone, OUT searched timestamp with time zone);
