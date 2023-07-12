@@ -442,6 +442,8 @@ class IOS():
             }
                 
         lod_data=lod.dod2lod(products)
+        
+        lod.lod_print(lod_data)
 
         #preparing lod_investments
         
@@ -478,7 +480,9 @@ class IOS():
                 t["lazy_quotes"][(products_id, old_ioh["dt_start"])]=None
                 t["lazy_quotes"][(products_id, old_ioh["dt_end"])]=None
                 t["lazy_factors"][(old_ioh["currency_product"], old_ioh["currency_account"], old_ioh["dt_start"])]=None
+                t["lazy_factors"][(old_ioh["currency_account"], old_ioh["currency_user"], old_ioh["dt_start"])]=None
                 t["lazy_factors"][(old_ioh["currency_product"], old_ioh["currency_account"], old_ioh["dt_end"])]=None
+                t["lazy_factors"][(old_ioh["currency_account"], old_ioh["currency_user"], old_ioh["dt_end"])]=None
             t[str(products_id)]["io_historical"]=lod.lod_order_by(t[str(products_id)]["io_historical"], "dt_end")
             
         # I make ios_finish after to get old io_historical too in results
@@ -655,7 +659,12 @@ class IOS():
             dict_with_lf_and_lq puede ser en d o en t segun sea io o ios
         """
         def lf(from_, to_, dt):
-            return dict_with_lf_and_lq["lazy_factors"][(from_, to_, dt)]
+            #Parece que el error es por mal from_, to_
+#            try:
+                return dict_with_lf_and_lq["lazy_factors"][(from_, to_, dt)]
+#            except:
+#                print(dict_with_lf_and_lq["lazy_factors"])
+#                print("No encontrado", (from_,  to_,  dt),  dt.__class__)
             
         def lq(products_id, dt):
             return dict_with_lf_and_lq["lazy_quotes"][(products_id, dt)]

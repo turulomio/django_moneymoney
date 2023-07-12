@@ -5,4 +5,3 @@ class MoneyMoneyConfig(AppConfig):
 
     def ready(self):
         print("Activating signals...")
-        import moneymoney.signals

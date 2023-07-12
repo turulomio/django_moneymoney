@@ -217,6 +217,7 @@ class InvestingCom:
             line_count += 1
         print("Added {} quotes from {} CSV lines".format(len(r), line_count))
         return r
+
     ## Imports data from a CSV file with this struct. It has 6 columns
     ## "Fecha","Último","Apertura","Máximo","Mínimo","Vol.","% var."
     ## "May 23, 2023","10,074","10,060","10,148","9,987","10,36M","-0,08%"

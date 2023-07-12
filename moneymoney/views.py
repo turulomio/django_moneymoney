@@ -2140,35 +2140,25 @@ def ReportCurrentInvestmentsOperations(request):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportRanking(request):
-    plio=ios.IOS.from_all( timezone.now(), request.user.profile.currency, mode=2)
-
-    ld=[]
-    dividends=lod.lod2dod(models.Dividends.objects.all().values("investments_id").annotate(sum=Sum('net')), "investments_id")
-
-    for product in models.Products.objects.order_by().distinct("investments__products").select_related("stockmarkets", "leverages", "productstypes"):
-        d={}
-        d["id"]=product.id
-        d["name"]=product.fullName()
-        d["current_net_gains"]=0
-        d["historical_net_gains"]=0
-        d["dividends"]=0
-        d["investments"]=[]#List of all urls of investments
-        for investments_id in plio.entries():
-            if plio.d_data(investments_id)["products_id"]==product.id:
-                d["investments"].append(request.build_absolute_uri(reverse('investments-detail', args=(investments_id, ))))
-                d["current_net_gains"]=d["current_net_gains"]+plio.d_total_io_current(investments_id)["gains_net_user"]
-                d["historical_net_gains"]=d["historical_net_gains"]+plio.d_total_io_historical(investments_id)["gains_net_user"]
-                if int(investments_id) in dividends:
-                    d["dividends"]=d["dividends"]+dividends[int(investments_id)]["sum"]
-        d["total"]=Decimal(d["current_net_gains"])+Decimal(d["historical_net_gains"])+Decimal(d["dividends"])
-        ld.append(d)
-        
-    ld=lod.lod_order_by(ld, "total", True)
-    ranking=1
-    for d in ld:
-        d["ranking"]=ranking
-        ranking=ranking+1
-    return JsonResponse( ld, encoder=MyDjangoJSONEncoder,     safe=False)
+    qs_investments=models.Investments.objects.all().select_related("products", "products__stockmarkets")
+    ios_=ios.IOS.from_qs_merging_io_current( timezone.now(), request.user.profile.currency, qs_investments,  mode=ios.IOSModes.totals_sumtotals)
+    dividends=lod.lod2dod(models.Dividends.objects.all().values("investments__products__id").annotate(sum=Sum('net')), "investments__products__id")
+    
+    #Ranking generation
+    lod_ranking=[]
+    for products_id in ios_.entries():
+        dividends_value=dividends[int(products_id)]["sum"]  if int(products_id) in dividends else 0
+        lod_ranking.append({
+            "products_id": products_id, 
+            "total": ios_.d_total_io_current(products_id)["gains_net_user"]+ ios_.d_total_io_historical(products_id)["gains_net_user"] + dividends_value
+        })
+        #Add dividend to data
+        ios_.d_data(products_id)["dividends"]=dividends_value
+    lod_ranking=lod.lod_order_by(lod_ranking, "total", reverse=True)
+    for i,  d_rank in enumerate(lod_ranking):
+        ios_.d_data(d_rank["products_id"])["ranking"]=i+1
+#    show_queries_function()
+    return JsonResponse(ios_._t, encoder=MyDjangoJSONEncoder,     safe=False)
     
 
 @api_view(['GET', ])

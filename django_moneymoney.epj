@@ -2,11 +2,145 @@
   "header": {
     "comment": "eric project file for project django_moneymoney",
     "copyright": "Copyright (C) 2023 , ",
-    "saved": "2023-07-07, 14:30:26"
+    "saved": "2023-07-12, 05:37:40"
   },
   "project": {
     "AUTHOR": "",
-    "CHECKERSPARMS": {},
+    "CHECKERSPARMS": {
+      "Pep8Checker": {
+        "AnnotationsChecker": {
+          "AllowStarArgAny": false,
+          "AllowUntypedDefs": false,
+          "AllowUntypedNested": false,
+          "CheckFutureAnnotations": false,
+          "DispatchDecorators": [
+            "singledispatch",
+            "singledispatchmethod"
+          ],
+          "ForceFutureAnnotations": false,
+          "MaximumComplexity": 3,
+          "MaximumLength": 7,
+          "MinimumCoverage": 75,
+          "MypyInitReturn": false,
+          "OverloadDecorators": [
+            "overload"
+          ],
+          "SuppressDummyArgs": false,
+          "SuppressNoneReturning": false
+        },
+        "BlankLines": [
+          2,
+          1
+        ],
+        "BuiltinsChecker": {
+          "chr": [
+            "unichr"
+          ],
+          "str": [
+            "unicode"
+          ]
+        },
+        "CommentedCodeChecker": {
+          "Aggressive": false,
+          "WhiteList": [
+            "pylint",
+            "pyright",
+            "noqa",
+            "type:\\s*ignore",
+            "fmt:\\s*(on|off)",
+            "TODO",
+            "FIXME",
+            "WARNING",
+            "NOTE",
+            "TEST",
+            "DOCU",
+            "XXX"
+          ]
+        },
+        "CopyrightAuthor": "",
+        "CopyrightMinFileSize": 0,
+        "DocstringType": "pep257",
+        "EnabledCheckerCategories": "W, A, C, D, E, I, M, N, NO, S, Y, U, P",
+        "ExcludeFiles": "",
+        "ExcludeMessages": "E121,E123,E126,E226,E24,E704,W503,W504",
+        "FixCodes": "",
+        "FixIssues": false,
+        "FutureChecker": "",
+        "HangClosing": false,
+        "ImportsChecker": {
+          "ApplicationPackageNames": [],
+          "BanRelativeImports": "",
+          "BannedModules": []
+        },
+        "IncludeMessages": "",
+        "LineComplexity": 15,
+        "LineComplexityScore": 10,
+        "MaxCodeComplexity": 10,
+        "MaxDocLineLength": 88,
+        "MaxLineLength": 88,
+        "NameOrderChecker": {
+          "ApplicationPackageNames": [],
+          "CombinedAsImports": false,
+          "SortCaseSensitive": false,
+          "SortFromFirst": false,
+          "SortIgnoringStyle": false,
+          "SortOrder": "natural"
+        },
+        "NoFixCodes": "E501",
+        "RepeatMessages": false,
+        "SecurityChecker": {
+          "CheckTypedException": false,
+          "HardcodedTmpDirectories": [
+            "/tmp",
+            "/var/tmp",
+            "/dev/shm",
+            "~/tmp"
+          ],
+          "InsecureHashes": [
+            "md4",
+            "md5",
+            "sha",
+            "sha1"
+          ],
+          "InsecureSslProtocolVersions": [
+            "PROTOCOL_SSLv2",
+            "SSLv2_METHOD",
+            "SSLv23_METHOD",
+            "PROTOCOL_SSLv3",
+            "PROTOCOL_TLSv1",
+            "PROTOCOL_TLSv1_1",
+            "SSLv3_METHOD",
+            "TLSv1_METHOD",
+            "TLSv1_1_METHOD"
+          ],
+          "WeakKeySizeDsaHigh": "1024",
+          "WeakKeySizeDsaMedium": "2048",
+          "WeakKeySizeEcHigh": "160",
+          "WeakKeySizeEcMedium": "224",
+          "WeakKeySizeRsaHigh": "1024",
+          "WeakKeySizeRsaMedium": "2048"
+        },
+        "ShowIgnored": false,
+        "UnusedChecker": {
+          "IgnoreAbstract": true,
+          "IgnoreDunderGlobals": true,
+          "IgnoreDunderMethods": true,
+          "IgnoreEventHandlerMethods": false,
+          "IgnoreLambdas": false,
+          "IgnoreNestedFunctions": false,
+          "IgnoreOverload": true,
+          "IgnoreOverride": true,
+          "IgnoreSlotMethods": false,
+          "IgnoreStubs": true,
+          "IgnoreVariadicNames": false
+        },
+        "ValidEncodings": "latin-1, utf-8"
+      },
+      "SyntaxChecker": {
+        "AdditionalBuiltins": "",
+        "ExcludeFiles": ""
+      }
+    },
     "DESCRIPTION": "",
     "DOCSTRING": "",
     "DOCUMENTATIONPARMS": {},
