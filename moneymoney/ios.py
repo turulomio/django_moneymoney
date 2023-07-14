@@ -426,6 +426,15 @@ class IOS():
         s=datetime.now()
         old_ios=cls.from_qs(dt, local_currency, qs_investments, IOSModes.ios_totals_sumtotals)#Must have ios, although result can be other mode
         
+        # Sets a dictionary with key products_id and values all investments_id of this products to set at the end
+        investments_id_in_each_product={}
+        for inv in qs_investments:
+            if inv.products_id in investments_id_in_each_product:
+                investments_id_in_each_product[str(inv.products.id)].append(inv.id)
+            else:#Not set yet
+                investments_id_in_each_product[str(inv.products.id)]=[inv.id, ]
+            
+        
         # Preparing lod_data 
         products={}#Temp dictionary
         for investments_id in old_ios.entries():
@@ -494,8 +503,8 @@ class IOS():
         if mode in [IOSModes.ios_totals_sumtotals, IOSModes.totals_sumtotals]:
             for old_investment in qs_investments:
                 t[str(old_investment.products.id)]["data"]["name"]=_("IOC merged investment of '{0}'").format( old_investment.products.fullName()) 
-
-        print("IOS FROM QS MERGING ", datetime.now()-s)
+                t[str(old_investment.products.id)]["data"]["investments_id"]=investments_id_in_each_product[str(old_investment.products.id)]
+                print("IOS FROM QS MERGING ", datetime.now()-s)
         return cls(t)
 
     ## lazy_factors id, dt, from, to
