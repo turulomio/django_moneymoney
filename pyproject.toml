@@ -7,18 +7,18 @@ license = "GPL-3.0 license"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 django = "^4.2.3"
-django-cors-headers = "^4.1.0"
+django-cors-headers = "^4.2.0"
 djangorestframework = "^3.14.0"
 drf-spectacular = "^0.26.2"
 pydicts = "^0.6.0"
 requests = "^2.31.0"
-unogenerator = "^0.31.0"
+unogenerator = "^0.32.0"
 psycopg = "^3.1.9"
 
 [tool.poetry.group.dev.dependencies]
-poethepoet = "^0.20.0"
+poethepoet = "^0.21.1"
 coverage = "^7.2.7"
 
 [build-system]
