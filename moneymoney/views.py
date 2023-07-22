@@ -1775,7 +1775,6 @@ def ReportAnnualIncomeDetails(request, year, month):
                     ioh["id"]=ioh_id
                     ioh["name"]=investment.fullName()
                     ioh["operationstypes"]=request.build_absolute_uri(reverse('operationstypes-detail', args=(ioh["operationstypes_id"],  )))
-                    ioh["years"]=plio.ioh_years(ioh)
                     ioh["currency_user"]=request.user.profile.currency
                     list_ioh.append(ioh)
                     ioh_id=ioh_id+1

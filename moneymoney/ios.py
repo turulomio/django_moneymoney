@@ -76,11 +76,6 @@ class IOS:
             return Percentage()
         return percentage_between(self.basic_results(ioc["investments_id"])["last"], selling_price)
 
-    def total_io_current_percentage_total_user(self, id):
-        if self.d_total_io_current(id)["invested_user"] is None:#initiating xulpymoney
-            return Percentage()
-        return Percentage(self.d_total_io_current(id)['gains_gross_user'], self.d_total_io_current(id)["invested_user"])
-        
     def total_io_current_percentage_sellingpoint(self, id, selling_price):
         if selling_price is None or selling_price==0:
             return Percentage()
@@ -93,7 +88,7 @@ class IOS:
             return 1
         return days
     
-    def ioh_years(self, ioh):
+    def __ioh_years(ioh):
         return round(Decimal((ioh["dt_end"]-ioh["dt_start"]).days/365), 2)
     
     def mode(self):
@@ -114,8 +109,6 @@ class IOS:
     def type(self):
         return self._t["type"]
         
-    def keys(self):
-        return list(self._t.keys())
     def d_data(self, id_):
         return self._t[str(id_)]["data"]
     def d_basic_results(self, id_):
@@ -136,17 +129,7 @@ class IOS:
         return self._t["sum_total_io_current"]
     def sum_total_io_historical(self):
         return self._t["sum_total_io_historical"]
-        
-    def d_investments_ids_merged(self, id_):
-        """
-            This method can only be used with from_qs_merging_io_current
-            old investments_id is set in io["comment"]
-        """
-        s=set()
-        for o in self.d_io(id_):
-            s.add(o["comment"])
-        return list(s)
-        
+
     def investment(self, id_):
         return models.Investments.objects.get(pk=id_)
         
@@ -159,7 +142,7 @@ class IOS:
     def print(self):
         print("Printing IOS")
         print(f" - type: {self.type()}")
-        print(f" - keys: {self.keys()}")
+        print(f" - Entries: {self.entries()}")
         
     def print_d(self, id):
         print(f"*** IO {id} ***")
@@ -232,7 +215,7 @@ class IOS:
     def from_qs(cls, dt,  local_currency,  qs_investments,  mode):
         s=datetime.now()
         qs_investments=qs_investments.select_related("products", "products__leverages", "products__productstypes", "accounts")
-        lod_investments=IOS.qs_investments_to_lod(qs_investments, local_currency)
+        lod_investments=IOS.__qs_investments_to_lod(qs_investments, local_currency)
         lod_=models.Investmentsoperations.objects.filter(investments__in=qs_investments, datetime__lte=dt).order_by("datetime").values()
         
         t=IOS.__calculate_ios_lazy(dt, lod_investments,  lod_,  local_currency)
@@ -261,7 +244,7 @@ class IOS:
         return cls.from_qs(dt, local_currency, models.Investments.objects.all(), mode)
         
     @staticmethod
-    def qs_investments_to_lod(qs, currency_user):
+    def __qs_investments_to_lod(qs, currency_user):
         """
             Converts a qs to a lod investments used in moneymoney_pl
         """
@@ -300,7 +283,7 @@ class IOS:
         return r
         
     @staticmethod
-    def qs_investments_to_lod_ios(qs):
+    def __qs_investments_to_lod_ios(qs):
         """
             Converts a list of unsaved investmentsoperations to a lod_ios used in moneymoney_pl
         """
@@ -766,6 +749,7 @@ class IOS:
         d["total_io_historical"]["gains_net_user"]=0
 
         for h in d["io_historical"]:
+            h['years']=IOS.__ioh_years(h)
             h['account2user_start']=lf(data["currency_account"], data["currency_user"], h["dt_start"] )
             h['account2user_end']=lf(data["currency_account"], data["currency_user"], h["dt_end"] )
             h['gross_start_investment']=0 if h['operationstypes_id'] in (9,10) else abs(h['shares']*h['price_start_investment']*data['real_leverages'])#Transfer shares 9, 10
