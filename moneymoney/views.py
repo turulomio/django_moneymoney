@@ -416,7 +416,6 @@ class OrdersViewSet(viewsets.ModelViewSet):
             set_investments_with_orders_active=set(models.Orders.objects.filter(Q(expiration__gte=date.today()) | Q(expiration__isnull=True), executed__isnull=True).values_list("investments_id", flat=True))
             set_investments_with_orders_expired_days=set(qs_orders_expired_days.values_list("investments_id", flat=True))
             set_investments_with_orders_not_reorderd=set_investments_with_orders_expired_days-set_investments_with_orders_active
-            print(set_investments_with_orders_active, set_investments_with_orders_expired_days, set_investments_with_orders_not_reorderd)
             return qs_orders_expired_days.filter(investments_id__in=list(set_investments_with_orders_not_reorderd))
         elif executed is not None:
             return self.queryset.filter(executed__isnull=False)

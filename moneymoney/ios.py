@@ -31,8 +31,15 @@ class IOSTypes:
     from_qs=1
     from_qs_merging_io_current=2
 
+def NoZ(v):
+    """
+        Returns a boolean if v is None or Zero
+    """
+    if v is None or v==0:
+        return True
+    return False
 
-class IOS():
+class IOS:
     """
         Class to operate with Assets.pl_investment_operations result
         La idea es generar una clase IOS usando funciones estáticas en classmethods( from_qs...)
@@ -90,16 +97,16 @@ class IOS():
             return Percentage()
         return percentage_between(self.basic_results(id)["last"], selling_price)
         
-    def ioc_days(self, ioc):
-            return (date.today()-ioc["datetime"].date()).days
+    @staticmethod
+    def __ioc_days(ioc):
+        days=(date.today()-ioc["datetime"].date()).days
+        if days==0:
+            return 1
+        return days
+    
     def ioh_years(self, ioh):
         return round(Decimal((ioh["dt_end"]-ioh["dt_start"]).days/365), 2)
 
-    def ioc_percentage_apr_user(self, ioc):
-            dias=self.ioc_days(ioc)
-            if dias==0:
-                dias=1
-            return Percentage(self.ioc_percentage_total_user(ioc)*365,  dias)
 
     def ioc_percentage_total_user(self, ioc):
         """
@@ -747,7 +754,11 @@ class IOS():
             c['gains_net_investment']=c['gains_gross_investment'] -c['taxes_investment'] -c['commissions_investment']
             c['gains_net_account']=c['gains_gross_account']-c['taxes_account']-c['commissions_account'] 
             c['gains_net_user']=c['gains_gross_user']-c['taxes_user']-c['commissions_user']
-
+            c['percentage_total_investment'] = Percentage() if NoZ(c["invested_investment"]) else Percentage(c['gains_gross_investment'], c['invested_investment']) 
+            c['percentage_apr_investment']=Percentage(c['percentage_total_investment'].value*365, IOS.__ioc_days(c))
+            
+            
+            
             d["total_io_current"]["balance_user"]=d["total_io_current"]["balance_user"]+c['balance_user']
             d["total_io_current"]["balance_investment"]=d["total_io_current"]["balance_investment"]+c['balance_investment']
             d["total_io_current"]["balance_futures_user"]=d["total_io_current"]["balance_futures_user"]+c['balance_futures_user']
