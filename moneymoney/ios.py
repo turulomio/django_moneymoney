@@ -83,7 +83,7 @@ class IOS:
     def total_io_current_percentage_sellingpoint(self, id, selling_price):
         if selling_price is None or selling_price==0:
             return Percentage()
-        return percentage_between(self.basic_results(id)["last"], selling_price)
+        return percentage_between(self.d_basic_results(id)["last"], selling_price)
         
     @staticmethod
     def __ioc_days(ioc):
@@ -94,16 +94,7 @@ class IOS:
     
     def ioh_years(self, ioh):
         return round(Decimal((ioh["dt_end"]-ioh["dt_start"]).days/365), 2)
-
-
-    def ioc_percentage_total_user(self, ioc):
-        """
-            Returns total porcentage of an current investment operation dictionary
-        """
-        if ioc["invested_user"] is None:#initiating xulpymoney
-            return Percentage()
-        return Percentage(ioc['gains_gross_user'], ioc["invested_user"])
-        
+    
     def mode(self):
         return self._t["mode"]
         
@@ -126,6 +117,8 @@ class IOS:
         return list(self._t.keys())
     def d_data(self, id_):
         return self._t[str(id_)]["data"]
+    def d_basic_results(self, id_):
+        return self._t[str(id_)]["data"]["basic_results"]
     def d_io(self, id_):
         return self._t[str(id_)]["io"]
     def d_io_current(self, id_):
@@ -750,7 +743,8 @@ class IOS:
             c['gains_net_user']=c['gains_gross_user']-c['taxes_user']-c['commissions_user']
             c['percentage_total_investment'] = Percentage() if NoZ(c["invested_investment"]) else Percentage(c['gains_gross_investment'], c['invested_investment']) 
             c['percentage_apr_investment']=Percentage(c['percentage_total_investment'].value*365, IOS.__ioc_days(c))
-            
+            c['percentage_total_user'] = Percentage() if NoZ(c["invested_user"]) else Percentage(c['gains_gross_user'], c['invested_user']) 
+
             
             
             d["total_io_current"]["balance_user"]=d["total_io_current"]["balance_user"]+c['balance_user']
@@ -763,6 +757,7 @@ class IOS:
             d["total_io_current"]["invested_investment"]=d["total_io_current"]["invested_investment"]+c['invested_investment']     
             sumaproducto=sumaproducto+c['shares']*c["price_investment"] 
         d["total_io_current"]["average_price_investment"]=sumaproducto/d["total_io_current"]["shares"] if d["total_io_current"]["shares"]>0 else 0
+        d['total_io_current']['percentage_total_user'] = Percentage() if NoZ(d['total_io_current']["invested_user"]) else Percentage(d['total_io_current']['gains_gross_user'], d['total_io_current']['invested_user']) 
 
         d["total_io_historical"]={}
         d["total_io_historical"]["commissions_account"]=0

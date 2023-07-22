@@ -2096,8 +2096,8 @@ def ReportsInvestmentsLastOperation(request):
             ios_.d_data(investment.id)["last_datetime"]=ioc_last["datetime"]
             ios_.d_data(investment.id)["last_shares"]=ioc_last['shares']
             ios_.d_data(investment.id)["last_price"]=ioc_last['price_investment']
-            ios_.d_data(investment.id)["percentage_last"]= ios_.total_io_current_percentage_total_user(investment.id).value
-            ios_.d_data(investment.id)["percentage_invested"]= ios_.ioc_percentage_total_user(ioc_last)
+            ios_.d_data(investment.id)["percentage_last"]= ios_.d_total_io_current(investment.id)['percentage_total_user']
+            ios_.d_data(investment.id)["percentage_invested"]= ioc_last["percentage_total_user"]
             ios_.d_data(investment.id)["percentage_sellingpoint"]=ios_.total_io_current_percentage_sellingpoint(investment.id, investment.selling_price).value
     elif method==1:#Merginc current operations
         ios_=ios.IOS.from_qs_merging_io_current( timezone.now(), request.user.profile.currency, investments, 1)
@@ -2116,8 +2116,8 @@ def ReportsInvestmentsLastOperation(request):
             ios_.d_data(virtual_investment_product.id)["last_datetime"]=ioc_last["datetime"]
             ios_.d_data(virtual_investment_product.id)["last_shares"]=ioc_last['shares']
             ios_.d_data(virtual_investment_product.id)["last_price"]=ioc_last['price_investment']
-            ios_.d_data(virtual_investment_product.id)["percentage_last"]= ios_.total_io_current_percentage_total_user(virtual_investment_product.id).value
-            ios_.d_data(virtual_investment_product.id)["percentage_invested"]= ios_.ioc_percentage_total_user(ioc_last)
+            ios_.d_data(virtual_investment_product.id)["percentage_last"]= ios_.d_total_io_current(virtual_investment_product.id)['percentage_total_user']
+            ios_.d_data(virtual_investment_product.id)["percentage_invested"]= ioc_last["percentage_total_user"]
             ios_.d_data(virtual_investment_product.id)["percentage_sellingpoint"]=None   
     return JsonResponse( ios_.t(), encoder=MyDjangoJSONEncoder, safe=False)
 
