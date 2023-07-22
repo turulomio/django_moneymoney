@@ -52,19 +52,7 @@ class IOS:
     """
     def __init__(self, t):
         self._t=t
-    
 
-    def basic_results(self, id):
-        """
-        Public method Id is investments id
-        """
-        if not "basic_results" in self._t:
-            self._t["basic_results"]={}
-            
-        products_id=str(self.d_data(str(id))["products_id"])
-        if not products_id in self._t["basic_results"]:
-            self._t["basic_results"][products_id]=models.Products.basic_results_from_products_id(products_id)
-        return self._t["basic_results"][products_id]
         
     def ioc_percentage_annual_user(self, ioc):
         """
@@ -652,9 +640,6 @@ class IOS:
             
     @staticmethod
     def __get_quotes_and_factors(lazy_quotes, lazy_factors):
-        """
-            d es el resultado de __calculate_io_lazy
-        """
         for lz in lazy_quotes.keys():
             products_id, datetime_=lz
             r=models.Quotes.get_quote(products_id, datetime_)
@@ -667,6 +652,15 @@ class IOS:
             lazy_factors[lf]=models.Quotes.currency_factor(datetime_, from_,  to_)
         return lazy_quotes, lazy_factors
 
+    @staticmethod
+    def __set_basic_quotes_in_entries_data(t):
+        #Gets basics result from database
+        basic_results={}
+        for entry in t["entries"]:
+            products_id=t[entry]["data"]["products_id"]
+            if not products_id in basic_results:
+                basic_results[products_id]=models.Products.basic_results_from_products_id(products_id)
+            t[entry]["data"]["basic_results"]=basic_results[products_id]
 
     @staticmethod
     def __calculate_io_finish(d, dict_with_lf_and_lq):
@@ -860,6 +854,9 @@ class IOS:
             del d["lazy_quotes"]
             del d["lazy_factors"]
             t[str(investments_id)]=d
+        
+        #Sets basics_results in data
+        IOS.__set_basic_quotes_in_entries_data(t)
         return t
 
 
