@@ -53,22 +53,23 @@ class IOS:
     def __init__(self, t):
         self._t=t
 
-        
-    def ioc_percentage_annual_user(self, ioc):
+    @staticmethod
+    def __ioc_percentage_annual_investment(d, ioc):
         """
         Public method ioc is a io_current dictionary
         """
+        basic_results=d["data"]["basic_results"]
         if ioc["datetime"].year==date.today().year:
-            lastyear=ioc["price_user"] #Product value, self.money_price(type) not needed.
+            lastyear=ioc["price_investment"] #Product value, self.money_price(type) not needed.
         else:
-            lastyear=self.basic_results(ioc["investments_id"])["lastyear"]
-        if self.basic_results(ioc["investments_id"])["lastyear"] is None or lastyear is None:
+            lastyear=basic_results["lastyear"]
+        if basic_results["lastyear"] is None or lastyear is None:
             return Percentage()
 
         if ioc["shares"]>0:
-            return Percentage(self.basic_results(ioc["investments_id"])["last"]-Decimal(lastyear), lastyear)
+            return Percentage(basic_results["last"]-Decimal(lastyear), lastyear)
         else:
-            return Percentage(-(self.basic_results(ioc["investments_id"])["last"]-Decimal(lastyear)), lastyear)
+            return Percentage(-(basic_results["last"]-Decimal(lastyear)), lastyear)
 
     def ioc_percentage_sellingpoint(self, ioc, selling_price):
         if selling_price is None or selling_price==0:
@@ -743,6 +744,7 @@ class IOS:
             c['gains_net_user']=c['gains_gross_user']-c['taxes_user']-c['commissions_user']
             c['percentage_total_investment'] = Percentage() if NoZ(c["invested_investment"]) else Percentage(c['gains_gross_investment'], c['invested_investment']) 
             c['percentage_apr_investment']=Percentage(c['percentage_total_investment'].value*365, IOS.__ioc_days(c))
+            c['percentage_annual_investment']=IOS.__ioc_percentage_annual_investment(d, c)
             c['percentage_total_user'] = Percentage() if NoZ(c["invested_user"]) else Percentage(c['gains_gross_user'], c['invested_user']) 
 
             
