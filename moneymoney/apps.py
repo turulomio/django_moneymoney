@@ -4,4 +4,5 @@ class MoneyMoneyConfig(AppConfig):
     name = 'moneymoney'
 
     def ready(self):
-        print("Activating signals...")
+        print("Activating signals...")  
+        from . import signals  # noqa

@@ -95,6 +95,13 @@ class CtTestCase(APITestCase):
         """
         print()
         print("test_profile")
+        
+        a=User()
+        a.username="me"
+        a.save()
+        self.assertNotEqual(a, None)
+        
+        
         self.assertNotEqual(self.user_authorized_1.profile, None)
         self.assertNotEqual(self.user_authorized_2.profile, None)
         self.assertNotEqual(self.user_catalog_manager.profile, None)
@@ -206,6 +213,7 @@ class CtTestCase(APITestCase):
         dict_product=tests_helpers.client_get(self, self.client_authorized_1, "/api/products/79329/", status.HTTP_200_OK)
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(product=dict_product["url"], quote=10), status.HTTP_201_CREATED)
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(dict_account["url"], dict_product["url"]), status.HTTP_201_CREATED)
+        
         dict_ios_1=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
         self.assertTrue(models.Accountsoperations.objects.filter(comment=f"10000,{dict_ios_1['id']}").exists())#Comprueba que existe ao
         ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  1)
@@ -215,6 +223,26 @@ class CtTestCase(APITestCase):
         ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  1) #Recaulculates IOS
         self.assertEqual(ios_.d_total_io_current(1)["balance_user"], 9990)
         
+        #IOS.simulation
+        simulation=[
+            {
+                'id': -1, 
+                'operationstypes_id': 4, 
+                'investments_id': dict_investment["id"], 
+                'shares': -1, 
+                'taxes': 0, 
+                'commission': 0, 
+                'price': 10, 
+                'datetime': timezone.now(), 
+                'comment': 'Simulation', 
+                'currency_conversion': 1, 
+            }, 
+        ]
+        ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  1, simulation) #Makes simulation
+        ios_.print_d(1)
+
+        
+        
         
         #IOS.from_merging_io_current
         ## Adding a new investment and new investmentsoperations with same product
@@ -223,8 +251,10 @@ class CtTestCase(APITestCase):
         ios_merged=ios.IOS.from_qs_merging_io_current(timezone.now(), 'EUR', models.Investments.objects.all(), 1)
         self.assertEqual(ios_merged.entries(),  ['79329'])
         
-        ios_merged.print_dumps()
-        ios_merged.print_d(79329)
+#        ios_merged.print_dumps()
+#        ios_merged.print_d(79329)
+        
+        
 
 
         #IOS.from_ids from client

@@ -1017,6 +1017,8 @@ def IOS(request):
         
     dt=RequestGetDtaware(request, "datetime", request.user.profile.zone, timezone.now())
     mode=RequestGetInteger(request, "mode", ios.IOSModes.ios_totals_sumtotals)
+    if request.data["simulation"]:
+        print(request.data["simulation"])
     if classmethod_str=="from_ids":
         ids=RequestGetListOfIntegers(request, "investments[]")
         if all_args_are_not_none( ids):

@@ -76,7 +76,6 @@ def generate_assets_report(request, format):
         doc.addParagraph(_("Assets by bank"), "Heading 2")
         
         dict_bankswithbalance=models.request_get(request._request.build_absolute_uri(reverse('banks-withbalance')), authorization)
-        print(dict_bankswithbalance)
         bankswithbalance=[(_("Bank"), _("Accounts balance"), _("Investments balance"), _("Total balance"))]
         for o in dict_bankswithbalance:
             if o["active"]==True:
@@ -217,7 +216,6 @@ def generate_assets_report(request, format):
     dict_report_current_investmentsoperations=loads(ReportCurrentInvestmentsOperations(request._request).content)
     report_current_investmentsoperations=[(_("Date and time"), _("Name"), _("Operation type"), _("Shares"), _("Price"), _("Invested"), _("Balance"), _("Gross gains"), _("% total"))]
     for o in dict_report_current_investmentsoperations:
-        print(o)
         report_current_investmentsoperations.append((
            dtaware2string(string2dtaware(o["datetime"], "JsUtcIso"), "%Y-%m-%d %H:%M:%S"), 
             o["name"],

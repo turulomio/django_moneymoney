@@ -87,7 +87,7 @@ class IOS:
         if days==0:
             return 1
         return days
-    
+    @staticmethod
     def __ioh_years(ioh):
         return round(Decimal((ioh["dt_end"]-ioh["dt_start"]).days/365), 2)
     
@@ -212,11 +212,18 @@ class IOS:
         return None
 
     @classmethod
-    def from_qs(cls, dt,  local_currency,  qs_investments,  mode):
+    def from_qs(cls, dt,  local_currency,  qs_investments,  mode, simulation=[]):
+        """
+            simulation is a list of dictionary of ios if you want to simulate
+            
+                {'id': 3, 'operationstypes_id': 4, 'investments_id': 2, 'shares': Decimal('1000.000000'), 'taxes': Decimal('0.00'), 'commission': Decimal('0.00'), 'price': Decimal('10.000000'), 'datetime': datetime.datetime(2023, 7, 23, 6, 4, 4, 934773, tzinfo=datetime.timezone.utc), 'comment': '', 'currency_conversion': Decimal('1.0000000000')}
+        """
         s=datetime.now()
         qs_investments=qs_investments.select_related("products", "products__leverages", "products__productstypes", "accounts")
         lod_investments=IOS.__qs_investments_to_lod(qs_investments, local_currency)
         lod_=models.Investmentsoperations.objects.filter(investments__in=qs_investments, datetime__lte=dt).order_by("datetime").values()
+        lod_=list(lod_)+simulation
+        print(lod_)
         
         t=IOS.__calculate_ios_lazy(dt, lod_investments,  lod_,  local_currency)
         t["lazy_quotes"], t["lazy_factors"]=IOS.__get_quotes_and_factors(t["lazy_quotes"], t["lazy_factors"])
@@ -231,17 +238,75 @@ class IOS:
         return cls(t)
 
     @classmethod
-    def from_ids(cls,  dt,  local_currency,  list_ids,  mode):
+    def from_ids(cls,  dt,  local_currency,  list_ids,  mode, simulation=[]):
         """
             Ids de inverstments
         """
         qs_investments=models.Investments.objects.filter(id__in=list_ids)
-        return cls.from_qs(dt, local_currency, qs_investments, mode)
+        return cls.from_qs(dt, local_currency, qs_investments, mode, simulation)
 
 
     @classmethod
-    def from_all(cls,  dt,  local_currency,  mode):
-        return cls.from_qs(dt, local_currency, models.Investments.objects.all(), mode)
+    def from_all(cls,  dt,  local_currency,  mode, simulation=[]):
+        return cls.from_qs(dt, local_currency, models.Investments.objects.all(), mode, simulation)
+        
+
+    @classmethod
+    def from_strategy(cls,  dt,  local_currency,  strategy, mode):
+                
+        def OLD_plio_id_from_strategy(cls, dt,  local_currency,  strategy):
+            """
+                Returns a plio_id adding all io, io_current,io_historical of all investments (plio) and returning only one plio. Only adds, do not calculate
+            """
+            
+            plio=cls.from_ids(dt, local_currency, strategy.investments_ids(), 1)
+            
+            r={}
+            r["data"]={}
+            r["data"]["products_id"]="HETEROGENEOUS"
+            r["data"]["investments_id"]=strategy.investments_ids()
+            r["data"]["multiplier"]="HETEROGENEOUS"
+            r["data"]["currency_product"]="HETEROGENEOUS"
+            r["data"]["productstypes_id"]="HETEROGENEOUS"
+            r["data"]["currency_user"]=local_currency
+            
+            r["io"]=[]
+            for plio_id in plio.entries():
+                for o in plio.d_io(plio_id):
+                    if strategy.dt_from<=o["datetime"] and o["datetime"]<=strategy.dt_to_for_comparations():
+                        r["io"].append(o)
+            r["io"]= sorted(r["io"],  key=lambda item: item['datetime'])
+
+            r["io_current"]=[]
+            for plio_id in plio.entries():
+                for o in plio.d_io_current(plio_id):
+                    if strategy.dt_from<=o["datetime"] and o["datetime"]<=strategy.dt_to_for_comparations():
+                        r["io_current"].append(o)
+            r["io_current"]= sorted(r["io_current"],  key=lambda item: item['datetime'])
+                    
+            r["total_io_current"]={}
+            r["total_io_current"]["balance_user"]=lod.lod_sum(r["io_current"], "balance_user")
+            r["total_io_current"]["balance_investment"]="HETEROGENEOUS"
+            r["total_io_current"]["balance_futures_user"]=lod.lod_sum(r["io_current"], "balance_futures_user")
+            r["total_io_current"]["gains_gross_user"]=lod.lod_sum(r["io_current"], "gains_gross_user")
+            r["total_io_current"]["gains_net_user"]=lod.lod_sum(r["io_current"], "gains_net_user")
+            r["total_io_current"]["shares"]=lod.lod_sum(r["io_current"], "shares")
+            r["total_io_current"]["invested_user"]=lod.lod_sum(r["io_current"], "invested_user")
+            r["total_io_current"]["invested_investment"]="HETEROGENEOUS"
+            
+            r["io_historical"]=[]
+            for plio_id in plio.entries():
+                for o in plio.d_io_historical(plio_id):
+                    if strategy.dt_from<=o["dt_end"] and o["dt_end"]<=strategy.dt_to_for_comparations():
+                        r["io_historical"].append(o)
+            r["io_historical"]= sorted(r["io_historical"],  key=lambda item: item['dt_end'])
+
+            r["total_io_historical"]={}
+            r["total_io_historical"]["gains_net_user"]=lod.lod_sum(r["total_io_historical"], "gains_net_user")
+            return r
+        pass
+        
+
         
     @staticmethod
     def __qs_investments_to_lod(qs, currency_user):
@@ -304,88 +369,9 @@ class IOS:
             })
         return r
 
-    @classmethod
-    def plio_id_from_virtual_investments_simulation(cls, dt,  local_currency,  lod_investment_data, lod_ios_to_simulate, mode):
-        """
-        Devuelve un plio_Id, solo se debe pasar una inversión
-        
-        investments_id canbe virtual  coordinated with data and ios_to_simulate
-        lod_ios_to_simulate must load all io and simulation ios
-        
-        Lod_investments_data
-        [{'products_id': -81742, 'invesments_id': '445', 'multiplier': Decimal('2'), 'currency_account': 'EUR', 'currency_product': 'EUR', 'productstypes_id': 4}]
 
-        Class method lod_simulated_ios must have
-            r.append({
-                "id":-i, 
-                "operationstypes_id": io.operationstypes.id, 
-                "shares": io.shares, 
-                "taxes": io.taxes, 
-                "commission": io.commission, 
-                "price": io.price, 
-                "datetime": io.datetime, 
-                "currency_conversion":io.currency_conversion
-                 "investments_id": virtual_investments_id, 
-            })
-        """
-        lod_ios_to_simulate= sorted(lod_ios_to_simulate,  key=lambda item: item['datetime'])
-        t=IOS.__calculate_ios_lazy(dt, lod_investment_data, lod_ios_to_simulate, local_currency)
-        cls.external_query_factors_quotes(t)
-        t=IOS.__calculate_ios_finish(t, mode)
-        return cls(t).d(lod_investment_data[0]["investments_id"])
         
-        
-    @classmethod
-    def plio_id_from_strategy(cls, dt,  local_currency,  strategy):
-        """
-            Returns a plio_id adding all io, io_current,io_historical of all investments (plio) and returning only one plio. Only adds, do not calculate
-        """
-        
-        plio=cls.from_ids(dt, local_currency, strategy.investments_ids(), 1)
-        
-        r={}
-        r["data"]={}
-        r["data"]["products_id"]="HETEROGENEOUS"
-        r["data"]["investments_id"]=strategy.investments_ids()
-        r["data"]["multiplier"]="HETEROGENEOUS"
-        r["data"]["currency_product"]="HETEROGENEOUS"
-        r["data"]["productstypes_id"]="HETEROGENEOUS"
-        r["data"]["currency_user"]=local_currency
-        
-        r["io"]=[]
-        for plio_id in plio.entries():
-            for o in plio.d_io(plio_id):
-                if strategy.dt_from<=o["datetime"] and o["datetime"]<=strategy.dt_to_for_comparations():
-                    r["io"].append(o)
-        r["io"]= sorted(r["io"],  key=lambda item: item['datetime'])
 
-        r["io_current"]=[]
-        for plio_id in plio.entries():
-            for o in plio.d_io_current(plio_id):
-                if strategy.dt_from<=o["datetime"] and o["datetime"]<=strategy.dt_to_for_comparations():
-                    r["io_current"].append(o)
-        r["io_current"]= sorted(r["io_current"],  key=lambda item: item['datetime'])
-                
-        r["total_io_current"]={}
-        r["total_io_current"]["balance_user"]=lod.lod_sum(r["io_current"], "balance_user")
-        r["total_io_current"]["balance_investment"]="HETEROGENEOUS"
-        r["total_io_current"]["balance_futures_user"]=lod.lod_sum(r["io_current"], "balance_futures_user")
-        r["total_io_current"]["gains_gross_user"]=lod.lod_sum(r["io_current"], "gains_gross_user")
-        r["total_io_current"]["gains_net_user"]=lod.lod_sum(r["io_current"], "gains_net_user")
-        r["total_io_current"]["shares"]=lod.lod_sum(r["io_current"], "shares")
-        r["total_io_current"]["invested_user"]=lod.lod_sum(r["io_current"], "invested_user")
-        r["total_io_current"]["invested_investment"]="HETEROGENEOUS"
-        
-        r["io_historical"]=[]
-        for plio_id in plio.entries():
-            for o in plio.d_io_historical(plio_id):
-                if strategy.dt_from<=o["dt_end"] and o["dt_end"]<=strategy.dt_to_for_comparations():
-                    r["io_historical"].append(o)
-        r["io_historical"]= sorted(r["io_historical"],  key=lambda item: item['dt_end'])
-
-        r["total_io_historical"]={}
-        r["total_io_historical"]["gains_net_user"]=lod.lod_sum(r["total_io_historical"], "gains_net_user")
-        return r
 
         
     @classmethod
@@ -424,7 +410,6 @@ class IOS:
                 
         lod_data=lod.dod2lod(products)
         
-        lod.lod_print(lod_data)
 
         #preparing lod_investments
         
@@ -478,6 +463,44 @@ class IOS:
                 t[str(old_investment.products.id)]["data"]["investments_id"]=investments_id_in_each_product[str(old_investment.products.id)]
                 print("IOS FROM QS MERGING ", datetime.now()-s)
         return cls(t)
+
+        
+    @classmethod
+    def from_qs_merging_io_current_simulation(cls, dt,  local_currency,  qs_investments, mode, new_lod_ios):
+        """
+            Return a plio merging in same virtual (negative) id all investments in qs with same product
+            only io_current and io_historical
+        """
+        def OLD_plio_id_from_virtual_investments_simulation(cls, dt,  local_currency,  lod_investment_data, lod_ios_to_simulate, mode):
+            """
+            Devuelve un plio_Id, solo se debe pasar una inversión
+            
+            investments_id canbe virtual  coordinated with data and ios_to_simulate
+            lod_ios_to_simulate must load all io and simulation ios
+            
+            Lod_investments_data
+            [{'products_id': -81742, 'invesments_id': '445', 'multiplier': Decimal('2'), 'currency_account': 'EUR', 'currency_product': 'EUR', 'productstypes_id': 4}]
+
+            Class method lod_simulated_ios must have
+                r.append({
+                    "id":-i, 
+                    "operationstypes_id": io.operationstypes.id, 
+                    "shares": io.shares, 
+                    "taxes": io.taxes, 
+                    "commission": io.commission, 
+                    "price": io.price, 
+                    "datetime": io.datetime, 
+                    "currency_conversion":io.currency_conversion
+                     "investments_id": virtual_investments_id, 
+                })
+            """
+            lod_ios_to_simulate= sorted(lod_ios_to_simulate,  key=lambda item: item['datetime'])
+            t=IOS.__calculate_ios_lazy(dt, lod_investment_data, lod_ios_to_simulate, local_currency)
+            cls.external_query_factors_quotes(t)
+            t=IOS.__calculate_ios_finish(t, mode)
+            return cls(t).d(lod_investment_data[0]["investments_id"])
+        pass
+
 
     ## lazy_factors id, dt, from, to
     ## lazy_quotes product, timestamp
