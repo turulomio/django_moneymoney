@@ -335,11 +335,6 @@ class IOS:
             })
         return r
 
-
-        
-
-
-        
     @classmethod
     def from_qs_merging_io_current(cls, dt,  local_currency,  qs_investments, mode, simulation=[]):
         """
@@ -838,6 +833,15 @@ class IOS:
         del t["lazy_factors"]
         del t["lazy_quotes"]
         return t
+        
+    def distinct_products_id(self):
+        """
+            Returns all distinct data.products_id from al entries
+        """
+        products=set()#Son los ids del ios_
+        for entry in self.entries():
+            products.add(entry["data"]["products_id"])
+        return list(products)
 
 def empty_io():
     pass

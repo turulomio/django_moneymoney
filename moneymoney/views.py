@@ -2108,24 +2108,17 @@ def ReportsInvestmentsLastOperation(request):
             ios_.d_data(investment.id)["percentage_sellingpoint"]=ios_.total_io_current_percentage_sellingpoint(investment.id, investment.selling_price).value
     elif method==1:#Merginc current operations
         ios_=ios.IOS.from_qs_merging_io_current( timezone.now(), request.user.profile.currency, investments, 1)
-        
-        products=set()#Son los ids del ios_
-        for inv in investments:
-            products.add(inv.products)
-        products=list(products)
-        
-        
-        for virtual_investment_product in products:
-            ioc_last=ios_.io_current_last_operation_excluding_additions(virtual_investment_product.id)            
+        for virtual_investment_product_id in ios_.entries(): #Products_id entries
+            ioc_last=ios_.io_current_last_operation_excluding_additions(virtual_investment_product_id)            
             if ioc_last is None:
                 continue
             #Añado valores calculados al data para utilizar ios_
-            ios_.d_data(virtual_investment_product.id)["last_datetime"]=ioc_last["datetime"]
-            ios_.d_data(virtual_investment_product.id)["last_shares"]=ioc_last['shares']
-            ios_.d_data(virtual_investment_product.id)["last_price"]=ioc_last['price_investment']
-            ios_.d_data(virtual_investment_product.id)["percentage_last"]= ios_.d_total_io_current(virtual_investment_product.id)['percentage_total_user']
-            ios_.d_data(virtual_investment_product.id)["percentage_invested"]= ioc_last["percentage_total_user"]
-            ios_.d_data(virtual_investment_product.id)["percentage_sellingpoint"]=None   
+            ios_.d_data(virtual_investment_product_id)["last_datetime"]=ioc_last["datetime"]
+            ios_.d_data(virtual_investment_product_id)["last_shares"]=ioc_last['shares']
+            ios_.d_data(virtual_investment_product_id)["last_price"]=ioc_last['price_investment']
+            ios_.d_data(virtual_investment_product_id)["percentage_last"]= ios_.d_total_io_current(virtual_investment_product_id)['percentage_total_user']
+            ios_.d_data(virtual_investment_product_id)["percentage_invested"]= ioc_last["percentage_total_user"]
+            ios_.d_data(virtual_investment_product_id)["percentage_sellingpoint"]=None
     return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 @api_view(['GET', ])    
