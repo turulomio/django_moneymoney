@@ -1,25 +1,13 @@
 from datetime import date, datetime
 from decimal import Decimal
 from json import dumps
+from logging import debug
 from moneymoney import models
 from moneymoney.reusing.percentage import Percentage, percentage_between
+from moneymoney.reusing.myjsonencoder import MyJSONEncoderDecimalsAsFloat
 from pydicts import lod
-from base64 import b64encode
-from django.core.serializers.json import DjangoJSONEncoder 
 from django.utils.translation import gettext_lazy as _
 
-class MyDjangoJSONEncoder(DjangoJSONEncoder):    
-    #Converts from dict to json text
-    def default(self, o):
-        if o.__class__.__name__=="Decimal":
-            return str(o)
-        if o.__class__.__name__=="bytes":
-            return b64encode(o).decode("UTF-8")
-        if o.__class__.__name__=="Percentage":
-            return o.value
-        if o.__class__.__name__=="Currency":
-            return o.amount
-        return DjangoJSONEncoder.default(self,o)
 
 class IOSModes:
     sumtotals=3 #Showss only sumtotals
@@ -134,7 +122,7 @@ class IOS:
         return models.Investments.objects.get(pk=id_)
         
     def dumps(self):
-        return dumps(self._t,  indent=4,  cls=MyDjangoJSONEncoder )
+        return dumps(self._t,  indent=4,  cls=MyJSONEncoderDecimalsAsFloat )
         
     def print_dumps(self):
         print(self.dumps())
@@ -223,7 +211,6 @@ class IOS:
         lod_investments=IOS.__qs_investments_to_lod(qs_investments, local_currency)
         lod_=models.Investmentsoperations.objects.filter(investments__in=qs_investments, datetime__lte=dt).order_by("datetime").values()
         lod_=list(lod_)+simulation
-        print(lod_)
         
         t=IOS.__calculate_ios_lazy(dt, lod_investments,  lod_,  local_currency)
         t["lazy_quotes"], t["lazy_factors"]=IOS.__get_quotes_and_factors(t["lazy_quotes"], t["lazy_factors"])
@@ -234,7 +221,7 @@ class IOS:
         if mode in [IOSModes.ios_totals_sumtotals, IOSModes.totals_sumtotals]:
             for investment in qs_investments:
                 t[str(investment.id)]["data"]["name"]=investment.fullName()
-        print("IOS FROM QS", datetime.now()-s)
+        debug("IOS FROM QS", datetime.now()-s)
         return cls(t)
 
     @classmethod
@@ -375,10 +362,13 @@ class IOS:
 
         
     @classmethod
-    def from_qs_merging_io_current(cls, dt,  local_currency,  qs_investments, mode):
+    def from_qs_merging_io_current(cls, dt,  local_currency,  qs_investments, mode, simulation=[]):
         """
             Return a plio merging in same virtual (negative) id all investments in qs with same product
             only io_current and io_historical
+            
+            Remember investments_id is the id of investment we want to add and merge
+            
         """
 
         s=datetime.now()
@@ -432,6 +422,9 @@ class IOS:
                     "currency_conversion": o["investment2account"], 
                 })
         lod_io=lod.lod_order_by(lod_io, "datetime")
+        print(lod_io)
+        print(simulation)
+        lod_io=lod_io+simulation
 
         #Generating new_t
         t=IOS.__calculate_ios_lazy(dt, lod_data,  lod_io,  local_currency)
@@ -461,45 +454,10 @@ class IOS:
             for old_investment in qs_investments:
                 t[str(old_investment.products.id)]["data"]["name"]=_("IOC merged investment of '{0}'").format( old_investment.products.fullName()) 
                 t[str(old_investment.products.id)]["data"]["investments_id"]=investments_id_in_each_product[str(old_investment.products.id)]
-                print("IOS FROM QS MERGING ", datetime.now()-s)
+                debug("IOS FROM QS MERGING ", datetime.now()-s)
         return cls(t)
 
-        
-    @classmethod
-    def from_qs_merging_io_current_simulation(cls, dt,  local_currency,  qs_investments, mode, new_lod_ios):
-        """
-            Return a plio merging in same virtual (negative) id all investments in qs with same product
-            only io_current and io_historical
-        """
-        def OLD_plio_id_from_virtual_investments_simulation(cls, dt,  local_currency,  lod_investment_data, lod_ios_to_simulate, mode):
-            """
-            Devuelve un plio_Id, solo se debe pasar una inversión
-            
-            investments_id canbe virtual  coordinated with data and ios_to_simulate
-            lod_ios_to_simulate must load all io and simulation ios
-            
-            Lod_investments_data
-            [{'products_id': -81742, 'invesments_id': '445', 'multiplier': Decimal('2'), 'currency_account': 'EUR', 'currency_product': 'EUR', 'productstypes_id': 4}]
 
-            Class method lod_simulated_ios must have
-                r.append({
-                    "id":-i, 
-                    "operationstypes_id": io.operationstypes.id, 
-                    "shares": io.shares, 
-                    "taxes": io.taxes, 
-                    "commission": io.commission, 
-                    "price": io.price, 
-                    "datetime": io.datetime, 
-                    "currency_conversion":io.currency_conversion
-                     "investments_id": virtual_investments_id, 
-                })
-            """
-            lod_ios_to_simulate= sorted(lod_ios_to_simulate,  key=lambda item: item['datetime'])
-            t=IOS.__calculate_ios_lazy(dt, lod_investment_data, lod_ios_to_simulate, local_currency)
-            cls.external_query_factors_quotes(t)
-            t=IOS.__calculate_ios_finish(t, mode)
-            return cls(t).d(lod_investment_data[0]["investments_id"])
-        pass
 
 
     ## lazy_factors id, dt, from, to

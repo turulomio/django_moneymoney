@@ -22,8 +22,9 @@ from moneymoney.reusing.connection_dj import execute, cursor_rows, show_queries,
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
 from moneymoney.reusing.percentage import Percentage,  percentage_between
-from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestString, RequestListUrl, id_from_url, all_args_are_not_none, RequestCastingError
-from moneymoney.reusing.responses_json import json_data_response, MyDjangoJSONEncoder, json_success_response
+from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestString, RequestListUrl, id_from_url, all_args_are_not_none, RequestCastingError, RequestInteger
+from moneymoney.reusing.myjsonencoder import MyJSONEncoderDecimalsAsFloat
+from moneymoney.reusing.responses_json import json_data_response, json_success_response
 from requests import delete, post
 #from statistics import median
 from subprocess import run
@@ -62,7 +63,7 @@ class CatalogModelViewSet(viewsets.ModelViewSet):
 @permission_classes([permissions.IsAuthenticated, ])
 @api_view(['GET', ])
 def CatalogManager(request):
-    return JsonResponse( request.user.groups.filter(name="CatalogManager").exists(), encoder=MyDjangoJSONEncoder, safe=False)
+    return JsonResponse( request.user.groups.filter(name="CatalogManager").exists(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 
 @extend_schema(
@@ -91,7 +92,7 @@ def AssetsReport(request):
     with open(filename, "rb") as pdf:
         encoded_string = b64encode(pdf.read())
         r={"filename":path.basename(filename),  "format": format_,  "data":encoded_string.decode("UTF-8"), "mime":mime}
-        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+        return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 class ConceptsViewSet(viewsets.ModelViewSet):
     queryset = models.Concepts.objects.all()
@@ -113,7 +114,7 @@ class ConceptsViewSet(viewsets.ModelViewSet):
                 "operationstypes": request.build_absolute_uri(reverse('operationstypes-detail', args=(o.operationstypes.pk, ))), 
                 "migrable": o.is_migrable(), 
             })
-        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+        return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
     @action(detail=True, methods=['POST'], name='Transfer data from a concept to other', url_path="data_transfer", url_name='data_transfer', permission_classes=[permissions.IsAuthenticated])
     @transaction.atomic
@@ -161,7 +162,7 @@ class ConceptsViewSet(viewsets.ModelViewSet):
         r["median"]=lod.lod_median(rows, 'value')
         r["average"]=lod.lod_average(rows, 'value')
         
-        return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+        return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
     @action(detail=True, methods=["get"], name='Returns historical concept report detail', url_path="historical_report_detail", url_name='historical_report_detail', permission_classes=[permissions.IsAuthenticated])
     def ReportConceptsHistoricalDetail(self, request, pk=None):
         concept= self.get_object()
@@ -218,7 +219,7 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
                 "account_currency": o.accounts.currency, 
                 "is_deletable": o.is_deletable()
             })
-        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+        return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
     @action(detail=True, methods=['GET'], name='Obtain historical payments of a credit card', url_path="payments", url_name='payments', permission_classes=[permissions.IsAuthenticated])
     @transaction.atomic
@@ -244,7 +245,7 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
             order by 
                 accountsoperations.datetime
             """, (creditcard.id, ))
-        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+        return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
         
 
 
@@ -277,8 +278,8 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
                 o.paid=True
                 o.accountsoperations_id=c.id
                 o.save()
-            return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
-        return JsonResponse( False, encoder=MyDjangoJSONEncoder,     safe=False)
+            return JsonResponse( True, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
+        return JsonResponse( False, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
     
 
     
@@ -307,7 +308,7 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
                 "paid_datetime": o.paid_datetime, 
                 "currency": o.creditcards.accounts.currency, 
             })
-        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+        return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 
 
@@ -356,7 +357,7 @@ class Derivatives(APIView):
         lymv_coverage=lod_ymv.lod_ymv_transposition(list(qs_coverage.values('year', 'month', 'amount')), key_value="amount")
             
         r["balance"]=lod_ymv.lod_ymv_transposition_sum(r["derivatives"], lymv_coverage)
-        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)        
+        return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)        
 
 class DividendsViewSet(viewsets.ModelViewSet):
     queryset = models.Dividends.objects.all().select_related("investments", "investments__accounts")
@@ -441,7 +442,7 @@ class OrdersViewSet(viewsets.ModelViewSet):
                 "executed": o.executed,  
                 "current_price": o.investments.products.quote_last().quote, 
             })
-        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+        return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 class OperationstypesViewSet(CatalogModelViewSet):
     queryset = models.Operationstypes.objects.all()
@@ -512,14 +513,14 @@ class StrategiesViewSet(viewsets.ModelViewSet):
                 "additional9": strategy.additional9, 
                 "additional10": strategy.additional10, 
             })
-        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+        return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
         
     @action(detail=True, methods=["get"], name='Gets a plio_id from strategy investments', url_path="plio_id", url_name='plio_id', permission_classes=[permissions.IsAuthenticated])
     def plio_id(self, request, pk=None): 
         strategy=self.get_object()
         if strategy is not None:
             s=ios.IOS.plio_id_from_strategy(timezone.now(), request.user.profile.currency, strategy)
-            return JsonResponse( s, encoder=MyDjangoJSONEncoder,  safe=False)
+            return JsonResponse( s, encoder=MyJSONEncoderDecimalsAsFloat,  safe=False)
         return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
 
 
@@ -619,7 +620,7 @@ class InvestmentsClasses(APIView):
         d["by_product"]=json_classes_by_product()
         d["by_producttype"]=json_classes_by_producttype()
         
-        return JsonResponse( d, encoder=MyDjangoJSONEncoder,     safe=False)
+        return JsonResponse( d, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
 
 class UnogeneratorWorking(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -661,7 +662,7 @@ class Alerts(APIView):
             plio=plio_inactive.d(id)
             if plio["total_io_current"]["balance_investment"]!=0:
                 r["investments_inactive_with_balance"].append(plio)
-        return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+        return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
 
 class Timezones(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -669,7 +670,7 @@ class Timezones(APIView):
     def get(self, request, *args, **kwargs):
         r=list(available_timezones())
         r.sort()
-        return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+        return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
 
 
 class InvestmentsViewSet(viewsets.ModelViewSet):
@@ -744,14 +745,14 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "gains_at_selling_point_investment": o.selling_price*o.products.real_leveraged_multiplier()*plio.d_total_io_current(o.id)["shares"]-plio.d_total_io_current(o.id)["invested_investment"], 
                 "decimals": o.decimals, 
             })
-        return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+        return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
 
     @action(detail=True, methods=["get"], name='Investments operations evolution chart', url_path="operations_evolution_chart", url_name='operations_evolution_chart', permission_classes=[permissions.IsAuthenticated])
     def operations_evolution_chart(self, request, pk=None):
         investment=self.get_object()
         plio=ios.IOS.from_ids(timezone.now(), request.user.profile.currency, [investment.id, ], 1)
         if len(plio.d_io(investment.id))==0:
-            return JsonResponse( _("Insuficient data") , encoder=MyDjangoJSONEncoder, safe=False)
+            return JsonResponse( _("Insuficient data") , encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
         
         qs_dividends=models.Dividends.objects.all().filter(investments=investment).order_by('datetime')
         #Gets investment important datetimes: operations, dividends, init and current time. For each datetime adds another at the beginning of the day, to get mountains in graph
@@ -794,7 +795,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
             "dividends": dividends, 
             "gains": gains, 
         }
-        return JsonResponse( d, encoder=MyDjangoJSONEncoder, safe=False)
+        return JsonResponse( d, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
     queryset = models.Investmentsoperations.objects.select_related("investments").select_related("investments__products").all()
@@ -856,7 +857,7 @@ def AccountTransfer(request):
             if ao_commission is not None:
                 ao_commission.comment=models.Comment().encode(eComment.AccountTransferOriginCommission, ao_origin, ao_destiny, ao_commission)
                 ao_commission.save()
-            return JsonResponse( True,  encoder=MyDjangoJSONEncoder,     safe=False)
+            return JsonResponse( True,  encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
         else:
             return Response({'status': 'Something wrong adding an account transfer'}, status=status.HTTP_400_BAD_REQUEST)    
     if request.method=="PUT": #Update
@@ -864,7 +865,7 @@ def AccountTransfer(request):
         delete(request.build_absolute_uri(), headers = {"Authorization": request.headers["Authorization"], },  data=request.data, verify=False)
         post(request.build_absolute_uri(), headers = {"Authorization": request.headers["Authorization"], },  data=request.data, verify=False)
         print("This should check cert or try with drf internals")
-        return JsonResponse( True,  encoder=MyDjangoJSONEncoder,     safe=False)
+        return JsonResponse( True,  encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
     if request.method=="DELETE":
         if ao_destiny is not None and ao_origin is not None:
             if ao_commission is not None:
@@ -909,7 +910,7 @@ class AccountsViewSet(viewsets.ModelViewSet):
                 "localname": _(o.name), 
                 "decimals": o.decimals, 
             })
-        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+        return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
             
 
@@ -940,8 +941,8 @@ class AccountsViewSet(viewsets.ModelViewSet):
                     "is_editable": o.is_editable(), 
                 })
                 initial_balance=initial_balance + o.amount
-            return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
-        return JsonResponse( "Some parameters are missing", encoder=MyDjangoJSONEncoder, safe=False)
+            return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
+        return JsonResponse( "Some parameters are missing", encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 class AccountsoperationsViewSet(viewsets.ModelViewSet):
     queryset = models.Accountsoperations.objects.select_related("accounts").all()
@@ -969,7 +970,7 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
         ao=self.get_object()
         models.Creditcardsoperations.objects.filter(accountsoperations_id=ao.id).update(paid_datetime=None,  paid=False, accountsoperations_id=None)
         ao.delete() #Must be at the end due to middle queries
-        return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
+        return JsonResponse( True, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
             
 class BanksViewSet(viewsets.ModelViewSet):
     queryset = models.Banks.objects.all()
@@ -1000,41 +1001,46 @@ class BanksViewSet(viewsets.ModelViewSet):
                 "is_deletable": o.is_deletable(), 
                 "localname": _(o.name), 
             })
-        return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+        return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
         
 
 
 
-@api_view(['GET', ])    
+@api_view(['POST', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def IOS(request):
     """
         This view interacts with IOS module
     """
-    classmethod_str=RequestGetString(request, "classmethod_str")
+    classmethod_str=RequestString(request, "classmethod_str")
     if classmethod_str is None:
         return Response({'status': "classmethod_str can't be null"}, status=status.HTTP_400_BAD_REQUEST)
-        
-    dt=RequestGetDtaware(request, "datetime", request.user.profile.zone, timezone.now())
-    mode=RequestGetInteger(request, "mode", ios.IOSModes.ios_totals_sumtotals)
-    if request.data["simulation"]:
-        print(request.data["simulation"])
+    dt=RequestDtaware(request, "datetime", request.user.profile.zone, timezone.now())
+    mode=RequestInteger(request, "mode", ios.IOSModes.ios_totals_sumtotals)
+    
+    #Preparing simulation
+    simulation=request.data["simulation"] if request.data["simulation"] else []
+    for s in simulation:
+        if s["datetime"].__class__==str: #When comes from a post
+            s["datetime"]=string2dtaware(s["datetime"], "JsUtcIso")
+
+#    print(dt, mode, simulation)
     if classmethod_str=="from_ids":
-        ids=RequestGetListOfIntegers(request, "investments[]")
-        if all_args_are_not_none( ids):
-            ios_=ios.IOS.from_ids( dt,  request.user.profile.currency,  ids,  mode)
-            return JsonResponse( ios_.t(), encoder=MyDjangoJSONEncoder, safe=False)
+        ids=RequestListOfIntegers(request, "investments")
+        if all_args_are_not_none( ids, dt, mode, simulation):
+            ios_=ios.IOS.from_ids( dt,  request.user.profile.currency,  ids,  mode, simulation)
+            return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
     elif classmethod_str=="from_all":
-            ios_=ios.IOS.from_all( dt,  request.user.profile.currency,  mode)
-            return JsonResponse( ios_.t(), encoder=MyDjangoJSONEncoder, safe=False)
-    elif classmethod_str=="from_qs_merging_io_current__all":
-            ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.all(),   mode)
-            return JsonResponse( ios_.t(), encoder=MyDjangoJSONEncoder, safe=False)
-    elif classmethod_str=="from_qs_merging_io_current__ids":
-        ids=RequestGetListOfIntegers(request, "investments[]")
-        if all_args_are_not_none( ids):
-            ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.filter(id__in=ids),   mode)
-            return JsonResponse( ios_.t(), encoder=MyDjangoJSONEncoder, safe=False)
+            ios_=ios.IOS.from_all( dt,  request.user.profile.currency,  mode, simulation)
+            return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
+    elif classmethod_str=="from_all_merging_io_current":
+            ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.all(),   mode, simulation)
+            return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
+    elif classmethod_str=="from_ids_merging_io_current":
+        ids=RequestListOfIntegers(request, "investments")
+        if all_args_are_not_none( ids, dt, mode, simulation):
+            ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.filter(id__in=ids),   mode, simulation)
+            return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
     return Response({'status': "classmethod_str wasn't found'"}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -1048,7 +1054,7 @@ def InvestmentsoperationsFull(request):
     ids=RequestGetListOfIntegers(request, "investments[]")
     mode=RequestGetInteger(request, "mode", 1)
     plio=ios.IOS.from_ids( timezone.now(), request.user.profile.currency, ids, mode)
-    return JsonResponse( plio.t(), encoder=MyDjangoJSONEncoder, safe=False)
+    return JsonResponse( plio.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 
 @api_view(['POST', ]) 
@@ -1087,7 +1093,7 @@ def InvestmentsoperationsFullSimulation(request):
     lod_data=[plio_id["data"], ] #It's an array
     lod_all=plio_id["io_current"] + lod_ios_to_simulate
     plio_id_after=ios.IOS.plio_id_from_virtual_investments_simulation(plio_id["data"]["dt"],  request.user.profile.currency, lod_data, lod_all, 1)
-    return JsonResponse( plio_id_after, encoder=MyDjangoJSONEncoder,safe=False)
+    return JsonResponse( plio_id_after, encoder=MyJSONEncoderDecimalsAsFloat,safe=False)
 
 
 
@@ -1110,7 +1116,7 @@ def InvestmentsChangeSellingPrice(request):
                 inv.selling_expiration=selling_expiration
                 inv.save()
         r   = serializers.InvestmentsSerializer(models.Investments.objects.filter(id__in=ids), many=True, context={'request': request}).data
-        return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+        return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
     return Response({'status': 'Investment or selling_price is None'}, status=status.HTTP_404_NOT_FOUND)
 
 
@@ -1172,7 +1178,7 @@ def Currencies(request):
             "product_url": product_url, 
         })
     
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+    return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 class LeveragesViewSet(CatalogModelViewSet):
     queryset = models.Leverages.objects.all()
@@ -1232,7 +1238,7 @@ def ProductsPairs(request):
                 "price_ratio": pr, 
                 "price_ratio_percentage_from_start": percentage_between(first_pr, pr), 
             })
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+    return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 @api_view(['GET', 'DELETE' ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -1254,11 +1260,11 @@ def ProductsQuotesOHCL(request):
             for d in ld_ohcl:
                 if d["date"].year==year and d["date"].month==month:
                     r.append(d)
-            return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+            return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
         if product is not None:
             ld_ohcl=product.ohclDailyBeforeSplits()         
-            return JsonResponse( ld_ohcl, encoder=MyDjangoJSONEncoder, safe=False)
+            return JsonResponse( ld_ohcl, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
             
     elif request.method=="DELETE":
         product=RequestUrl(request, "product", models.Products)
@@ -1266,7 +1272,7 @@ def ProductsQuotesOHCL(request):
         if product is not None and date is not None:
             qs=models.Quotes.objects.filter(products=product, datetime__date=date)
             qs.delete()
-            return JsonResponse(True, encoder=MyDjangoJSONEncoder, safe=False)
+            return JsonResponse(True, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
     return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1298,7 +1304,7 @@ def ProductsRanges(request):
         prm=ProductRangeManager(request, product, percentage_between_ranges, percentage_gains, totalized_operations,  qs_investments=qs_investments, decimals=product.decimals, additional_ranges=additional_ranges)
         prm.setInvestRecomendation(recomendation_methods)
 
-        return JsonResponse( prm.json(), encoder=MyDjangoJSONEncoder, safe=False)
+        return JsonResponse( prm.json(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
     return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
     
     
@@ -1313,17 +1319,17 @@ class ProductsViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         if  request.user.groups.filter(name="CatalogManager").exists() and instance.id>0:
-            return JsonResponse( "Error deleting system product", encoder=MyDjangoJSONEncoder,     safe=False)
+            return JsonResponse( "Error deleting system product", encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
     
         self.perform_destroy(instance)
-        return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
+        return JsonResponse( True, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
 
     @action(detail=True, methods=['POST'], name='Delete last quote of the product', url_path="delete_last_quote", url_name='delete_last_quote', permission_classes=[permissions.IsAuthenticated])
     def delete_last_quote(self, request, pk=None):
         product = self.get_object()
         instance = models.Quotes.objects.filter(products=product).order_by("-datetime")[0]
         self.perform_destroy(instance)
-        return JsonResponse( True, encoder=MyDjangoJSONEncoder,     safe=False)
+        return JsonResponse( True, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
         
 
     @action(detail=False, methods=["GET"], url_path='search_with_quotes', url_name='search_with_quotes')
@@ -1397,7 +1403,7 @@ class ProductsViewSet(viewsets.ModelViewSet):
         lod_percentage=lod_ymv.lod_ymv_transposition_with_percentages(lod_transposition)
         
         r={"quotes":lod_transposition, "percentages":lod_percentage}
-        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+        return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 class ProductspairsViewSet(viewsets.ModelViewSet):
     queryset = models.Productspairs.objects.all()
@@ -1454,7 +1460,7 @@ def ProductsUpdate(request):
         ic=InvestingCom(request, product=None)
         ic.load_from_filename_in_memory(csv_file)
     r=ic.get()
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+    return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
     
 class Profile(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -1481,7 +1487,7 @@ class Profile(APIView):
             "zone": p.zone, 
             "annual_gains_target": p.annual_gains_target, 
         }
-        return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+        return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
         
     @transaction.atomic
     def put(self, request):
@@ -1595,7 +1601,7 @@ def RecomendationMethods(request):
             "name":name, 
             "localname": _(name), 
         })
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder, safe=False)
+    return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 
 @api_view(['GET', ])    
@@ -1647,7 +1653,7 @@ def ReportAnnual(request, year):
         last_month=total['total_user']
         
     r={"last_year_balance": last_year['total_user'],  "dtaware_last_year": dtaware_last_year,  "data": list_}
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+    return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
  
  
 
@@ -1699,7 +1705,7 @@ def ReportAnnualIncome(request, year):
             "total":incomes+gains+expenses+dividends+fast_operations,  
         })
     
-    return JsonResponse( list_, encoder=MyDjangoJSONEncoder, safe=False)
+    return JsonResponse( list_, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -1789,7 +1795,7 @@ def ReportAnnualIncomeDetails(request, year, month):
     r["dividends"]=dividends()
     r["fast_operations"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, eOperationType.FastOperations,  request.user.profile.currency, request.user.profile.zone)
     r["gains"]=listdict_investmentsoperationshistorical(request, year, month, request.user.profile.currency, request.user.profile.zone)
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+    return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
     
 
 
@@ -1865,7 +1871,7 @@ group by productstypes_id""", (year, ))
             "gains_net": d_fast_operations[0]["total"] if len(d_fast_operations)>0 else 0, 
             "dividends_net": 0, 
     })
-    return JsonResponse( l, encoder=MyDjangoJSONEncoder,     safe=False)
+    return JsonResponse( l, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
 
 
 
@@ -1920,7 +1926,7 @@ def ReportConcepts(request):
                 "median":get_median(concept), 
             })
     show_queries_function()
-    return JsonResponse( r, encoder=MyDjangoJSONEncoder,     safe=False)
+    return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
 
 
 
@@ -1962,7 +1968,7 @@ def ReportDividends(request):
             "currency": inv.products.currency, 
         }
         ld_report.append(d)
-    return JsonResponse( ld_report, encoder=MyDjangoJSONEncoder,     safe=False)
+    return JsonResponse( ld_report, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
 
 
 
@@ -2004,7 +2010,7 @@ def ReportEvolutionAssets(request, from_year):
             "expenses":expenses, 
             "total":incomes+gains+dividends+expenses, 
         })
-    return JsonResponse( list_, encoder=MyDjangoJSONEncoder,     safe=False)
+    return JsonResponse( list_, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
     
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -2039,7 +2045,7 @@ def ReportEvolutionAssetsChart(request):
             "investments_user":total["investments_user"], 
             "accounts_user":total["accounts_user"], 
         })
-    return JsonResponse( l, encoder=MyDjangoJSONEncoder,     safe=False)
+    return JsonResponse( l, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
     
 
 
@@ -2075,7 +2081,7 @@ def ReportEvolutionInvested(request, from_year):
         d['investment_commissions']=plio.io_sum_between_dt(dt_from, dt_to, "commission_account")
         list_.append(d)
     
-    return JsonResponse( list_, encoder=MyDjangoJSONEncoder, safe=False)
+    return JsonResponse( list_, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 
 
@@ -2120,7 +2126,7 @@ def ReportsInvestmentsLastOperation(request):
             ios_.d_data(virtual_investment_product.id)["percentage_last"]= ios_.d_total_io_current(virtual_investment_product.id)['percentage_total_user']
             ios_.d_data(virtual_investment_product.id)["percentage_invested"]= ioc_last["percentage_total_user"]
             ios_.d_data(virtual_investment_product.id)["percentage_sellingpoint"]=None   
-    return JsonResponse( ios_.t(), encoder=MyDjangoJSONEncoder, safe=False)
+    return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -2135,7 +2141,7 @@ def ReportCurrentInvestmentsOperations(request):
             ld.append(o)
     ld=lod.lod_order_by(ld, "datetime")
     
-    return JsonResponse( ld, encoder=MyDjangoJSONEncoder, safe=False)
+    return JsonResponse( ld, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -2158,7 +2164,7 @@ def ReportRanking(request):
     for i,  d_rank in enumerate(lod_ranking):
         ios_.d_data(d_rank["products_id"])["ranking"]=i+1
 #    show_queries_function()
-    return JsonResponse(ios_._t, encoder=MyDjangoJSONEncoder,     safe=False)
+    return JsonResponse(ios_._t, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
     
 
 @api_view(['GET', ])

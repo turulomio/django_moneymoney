@@ -204,6 +204,93 @@ class CtTestCase(APITestCase):
         self.assertEqual(r["balance_user_currency"], 1000)
 
 
+
+    @tag("current")
+    def test_IOS_with_client(self):
+        print()
+        print("test_IOS_with_client")
+        
+        #IOS.from_ids
+        dict_account=tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
+        dict_product=tests_helpers.client_get(self, self.client_authorized_1, "/api/products/79329/", status.HTTP_200_OK)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(product=dict_product["url"], quote=10), status.HTTP_201_CREATED)
+        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(dict_account["url"], dict_product["url"]), status.HTTP_201_CREATED)
+        
+        dict_io_1=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+        self.assertTrue(models.Accountsoperations.objects.filter(comment=f"10000,{dict_io_1['id']}").exists())#Comprueba que existe ao
+        
+        #Get IOS_ids of first
+        dict_ios_ids_pp={
+            "datetime":timezone.now(), 
+            "classmethod_str":"from_ids", 
+            "investments": [1, ], 
+            "mode":1, 
+            "currency": "EUR", 
+            "simulation":[], 
+        }
+        dict_ios_ids_1=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_pp, status.HTTP_200_OK)
+        self.assertEqual(dict_ios_ids_1["1"]["total_io_current"]["balance_user"], 10000)
+        dict_io_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"], shares=-1, price=20), status.HTTP_201_CREATED) #Removes one share
+        self.assertTrue(models.Accountsoperations.objects.filter(comment=f"10000,{dict_io_2['id']}").exists())#Comprueba que existe ao
+        
+        dict_ios_ids_2=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_pp, status.HTTP_200_OK)
+        self.assertEqual(dict_ios_ids_2["1"]["total_io_current"]["balance_user"], 9990)
+        
+        #IOS.simulation
+        simulation=[
+            {
+                'id': -1, 
+                'operationstypes_id': 4, 
+                'investments_id': dict_investment["id"], 
+                'shares': -1, 
+                'taxes': 0, 
+                'commission': 0, 
+                'price': 10, 
+                'datetime': timezone.now(), 
+                'comment': 'Simulation', 
+                'currency_conversion': 1, 
+            }, 
+        ]
+        dict_ios_ids_pp["simulation"]=simulation
+        dict_ios_ids_simulation=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_pp, status.HTTP_200_OK)
+        self.assertEqual(dict_ios_ids_simulation["1"]["total_io_current"]["balance_user"], 9980)
+        
+        #IOS.from_merging_io_current
+        ## Adding a new investment and new investmentsoperations with same product
+        dict_investment_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(dict_account["url"], dict_product["url"]), status.HTTP_201_CREATED)
+        dict_io_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment_2["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+       
+        dict_ios_ids_merging_pp={
+            "datetime":timezone.now(), 
+            "classmethod_str":"from_ids_merging_io_current", 
+            "investments": [1, ], 
+            "mode":1, 
+            "currency": "EUR", 
+            "simulation":[], 
+        }
+        dict_ios_ids_merging=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_merging_pp, status.HTTP_200_OK)
+        self.assertEqual(dict_ios_ids_merging["79329"]["total_io_current"]["balance_user"], 9990)
+        
+        #IOS.from_merging_io_current simulation
+        simulation=[
+            {
+                'id': -1, 
+                'operationstypes_id': 4, 
+                'investments_id': dict_investment_2["id"], 
+                'shares': -1, 
+                'taxes': 0, 
+                'commission': 0, 
+                'price': 10, 
+                'datetime': timezone.now(), 
+                'comment': 'Simulation', 
+                'currency_conversion': 1, 
+            }, 
+        ]
+        dict_ios_ids_pp["simulation"]=simulation
+        dict_ios_ids_simulation=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_pp, status.HTTP_200_OK)
+        self.assertEqual(dict_ios_ids_simulation["1"]["total_io_current"]["balance_user"], 9950)
+        
+
     def test_IOS(self):
         print()
         print("test_IOS")
@@ -214,12 +301,12 @@ class CtTestCase(APITestCase):
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(product=dict_product["url"], quote=10), status.HTTP_201_CREATED)
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(dict_account["url"], dict_product["url"]), status.HTTP_201_CREATED)
         
-        dict_ios_1=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
-        self.assertTrue(models.Accountsoperations.objects.filter(comment=f"10000,{dict_ios_1['id']}").exists())#Comprueba que existe ao
+        dict_io_1=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+        self.assertTrue(models.Accountsoperations.objects.filter(comment=f"10000,{dict_io_1['id']}").exists())#Comprueba que existe ao
         ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  1)
         self.assertEqual(ios_.d_total_io_current(1)["balance_user"], 10000)
-        dict_ios_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"], shares=-1, price=20), status.HTTP_201_CREATED) #Removes one share
-        self.assertTrue(models.Accountsoperations.objects.filter(comment=f"10000,{dict_ios_2['id']}").exists())#Comprueba que existe ao
+        dict_io_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"], shares=-1, price=20), status.HTTP_201_CREATED) #Removes one share
+        self.assertTrue(models.Accountsoperations.objects.filter(comment=f"10000,{dict_io_2['id']}").exists())#Comprueba que existe ao
         ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  1) #Recaulculates IOS
         self.assertEqual(ios_.d_total_io_current(1)["balance_user"], 9990)
         
@@ -239,7 +326,7 @@ class CtTestCase(APITestCase):
             }, 
         ]
         ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  1, simulation) #Makes simulation
-        ios_.print_d(1)
+#        ios_.print_d(1)
 
         
         
@@ -247,7 +334,7 @@ class CtTestCase(APITestCase):
         #IOS.from_merging_io_current
         ## Adding a new investment and new investmentsoperations with same product
         dict_investment_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(dict_account["url"], dict_product["url"]), status.HTTP_201_CREATED)
-        dict_ios_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment_2["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+        dict_io_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment_2["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
         ios_merged=ios.IOS.from_qs_merging_io_current(timezone.now(), 'EUR', models.Investments.objects.all(), 1)
         self.assertEqual(ios_merged.entries(),  ['79329'])
         
@@ -260,7 +347,6 @@ class CtTestCase(APITestCase):
         #IOS.from_ids from client
         
         
-    @tag("current")
     def test_ReportConcepts(self):
         print()
         print("test_ReportConcepts")
