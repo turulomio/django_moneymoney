@@ -2088,12 +2088,13 @@ def ReportCurrentInvestmentsOperations(request):
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportRanking(request):
     qs_investments=models.Investments.objects.all().select_related("products", "products__stockmarkets")
-    ios_=ios.IOS.from_qs_merging_io_current( timezone.now(), request.user.profile.currency, qs_investments,  mode=ios.IOSModes.totals_sumtotals)
+    ios_=ios.IOS.from_qs_merging_io_current( timezone.now(), request.user.profile.currency, qs_investments,  mode=ios.IOSModes.ios_totals_sumtotals)
     dividends=lod.lod2dod(models.Dividends.objects.all().values("investments__products__id").annotate(sum=Sum('net')), "investments__products__id")
     
     #Ranking generation
     lod_ranking=[]
     for products_id in ios_.entries():
+        
         dividends_value=dividends[int(products_id)]["sum"]  if int(products_id) in dividends else 0
         lod_ranking.append({
             "products_id": products_id, 
