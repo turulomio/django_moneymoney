@@ -22,7 +22,7 @@ from moneymoney.reusing.connection_dj import execute, cursor_rows, show_queries,
 from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
 from moneymoney.reusing.percentage import Percentage,  percentage_between
-from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestString, RequestListUrl, id_from_url, all_args_are_not_none, RequestCastingError, RequestInteger
+from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestString, RequestListUrl, all_args_are_not_none, RequestCastingError, RequestInteger
 from moneymoney.reusing.myjsonencoder import MyJSONEncoderDecimalsAsFloat
 from moneymoney.reusing.responses_json import json_data_response, json_success_response
 from requests import delete, post
@@ -1047,63 +1047,6 @@ def IOS(request):
             ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.filter(id__in=ids),   mode, simulation)
             return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
     return Response({'status': "classmethod_str wasn't found'"}, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-@api_view(['GET', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def InvestmentsoperationsFull(request):
-    """
-        This view returns a simulated plio_id
-    """
-    ids=RequestGetListOfIntegers(request, "investments[]")
-    mode=RequestGetInteger(request, "mode", 1)
-    plio=ios.IOS.from_ids( timezone.now(), request.user.profile.currency, ids, mode)
-    return JsonResponse( plio.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
-
-
-@api_view(['POST', ]) 
-@permission_classes([permissions.IsAuthenticated, ])
-def InvestmentsoperationsFullSimulation(request):
-    """
-        It uses plio_id io_current o make simulation
-        Using plio_id I can simulate, merged plios, or investments_plios  or even other simulations, but only one. That's the reason  of plio_id not plio.
-    """
-    plio_id=request.data["plio_id"]
-    # Request returns datetime as JsUtcISO. I must convert them to dtaware
-    plio_id["data"]["dt"]=string2dtaware(plio_id["data"]["dt"],  "JsUtcIso", request.user.profile.zone)
-    for o in plio_id["io_current"]:
-        o["datetime"]=string2dtaware(o["datetime"],  "JsUtcIso", request.user.profile.zone)
-        #Ioc current doesn't have price
-        o["shares"]=Decimal(o["shares"])
-        o["price"]=Decimal(o["price_investment"])
-        o["taxes"]=Decimal(o["taxes_account"])
-        o["commission"]=Decimal(o["commissions_account"])
-        o["currency_conversion"]=Decimal(o["investment2account"])
-        
-    listdict=request.data["operations"]
-    lod_ios_to_simulate=[]
-    for i,  d in enumerate(listdict):
-        lod_ios_to_simulate.append({
-                "id":-i, 
-                "operationstypes_id": id_from_url(d["operationstypes"]), 
-                "shares": Decimal(d["shares"]), 
-                "taxes": Decimal(d["taxes"]), 
-                "commission": Decimal(d["commission"]), 
-                "price": Decimal(d["price"]), 
-                "datetime": string2dtaware(d["datetime"],  "JsUtcIso", request.user.profile.zone), 
-                "currency_conversion":Decimal(d["currency_conversion"]), 
-                "investments_id":plio_id["data"]["investments_id"]
-        })
-    lod_data=[plio_id["data"], ] #It's an array
-    lod_all=plio_id["io_current"] + lod_ios_to_simulate
-    plio_id_after=ios.IOS.plio_id_from_virtual_investments_simulation(plio_id["data"]["dt"],  request.user.profile.currency, lod_data, lod_all, 1)
-    return JsonResponse( plio_id_after, encoder=MyJSONEncoderDecimalsAsFloat,safe=False)
-
-
-
-
-
 
 @transaction.atomic
 @api_view(['POST', ])    
