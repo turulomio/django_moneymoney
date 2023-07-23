@@ -5,9 +5,7 @@ from django.test import tag
 from django.utils import timezone
 from json import loads
 from moneymoney import models, ios
-#from moneymoney.reusing.connection_dj import cursor_one_row
 from moneymoney.reusing import tests_helpers
-#from moneymoney.types import eOperationType
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 from django.contrib.auth.models import Group
@@ -276,7 +274,7 @@ class CtTestCase(APITestCase):
             {
                 'id': -1, 
                 'operationstypes_id': 4, 
-                'investments_id': dict_investment_2["id"], 
+                'investments_id': 79329,  
                 'shares': -1, 
                 'taxes': 0, 
                 'commission': 0, 
@@ -286,9 +284,9 @@ class CtTestCase(APITestCase):
                 'currency_conversion': 1, 
             }, 
         ]
-        dict_ios_ids_pp["simulation"]=simulation
-        dict_ios_ids_simulation=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_pp, status.HTTP_200_OK)
-        self.assertEqual(dict_ios_ids_simulation["1"]["total_io_current"]["balance_user"], 9950)
+        dict_ios_ids_merging_pp["simulation"]=simulation
+        dict_ios_ids_simulation=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_merging_pp, status.HTTP_200_OK)
+        self.assertEqual(dict_ios_ids_simulation["79329"]["total_io_current"]["balance_user"], 9980)
         
 
     def test_IOS(self):

@@ -312,27 +312,6 @@ class IOS:
                 "productstypes_id": i.products.productstypes.id, 
             })
         return r
-
-    @staticmethod
-    def list_unsaved_io_to_lod(list_):
-        """
-            Converts a list of unsaved investmentsoperations to a lod_ios used in moneymoney_pl
-        """
-        r=[]
-        for i, io in enumerate(list_):
-            r.append({
-                "id":-i, 
-                "operationstypes_id": io.operationstypes.id, 
-                "investments_id": str(i.investments.id), 
-                "shares": io.shares, 
-                "taxes": io.taxes, 
-                "commission": io.commission, 
-                "price": io.price, 
-                "datetime": io.datetime, 
-                "comment": io.comment, 
-                "currency_conversion":io.currency_conversion
-            })
-        return r
         
     @staticmethod
     def __qs_investments_to_lod_ios(qs):
@@ -367,7 +346,7 @@ class IOS:
             Return a plio merging in same virtual (negative) id all investments in qs with same product
             only io_current and io_historical
             
-            Remember investments_id is the id of investment we want to add and merge
+            To simulate see test.py example
             
         """
 
@@ -422,8 +401,8 @@ class IOS:
                     "currency_conversion": o["investment2account"], 
                 })
         lod_io=lod.lod_order_by(lod_io, "datetime")
-        print(lod_io)
-        print(simulation)
+#        print(lod_io)
+#        print(simulation)
         lod_io=lod_io+simulation
 
         #Generating new_t
