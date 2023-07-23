@@ -237,62 +237,62 @@ class IOS:
     def from_all(cls,  dt,  local_currency,  mode, simulation=[]):
         return cls.from_qs(dt, local_currency, models.Investments.objects.all(), mode, simulation)
         
-
-    @classmethod
-    def from_strategy(cls,  dt,  local_currency,  strategy, mode):
-                
-        def OLD_plio_id_from_strategy(cls, dt,  local_currency,  strategy):
-            """
-                Returns a plio_id adding all io, io_current,io_historical of all investments (plio) and returning only one plio. Only adds, do not calculate
-            """
-            
-            plio=cls.from_ids(dt, local_currency, strategy.investments_ids(), 1)
-            
-            r={}
-            r["data"]={}
-            r["data"]["products_id"]="HETEROGENEOUS"
-            r["data"]["investments_id"]=strategy.investments_ids()
-            r["data"]["multiplier"]="HETEROGENEOUS"
-            r["data"]["currency_product"]="HETEROGENEOUS"
-            r["data"]["productstypes_id"]="HETEROGENEOUS"
-            r["data"]["currency_user"]=local_currency
-            
-            r["io"]=[]
-            for plio_id in plio.entries():
-                for o in plio.d_io(plio_id):
-                    if strategy.dt_from<=o["datetime"] and o["datetime"]<=strategy.dt_to_for_comparations():
-                        r["io"].append(o)
-            r["io"]= sorted(r["io"],  key=lambda item: item['datetime'])
-
-            r["io_current"]=[]
-            for plio_id in plio.entries():
-                for o in plio.d_io_current(plio_id):
-                    if strategy.dt_from<=o["datetime"] and o["datetime"]<=strategy.dt_to_for_comparations():
-                        r["io_current"].append(o)
-            r["io_current"]= sorted(r["io_current"],  key=lambda item: item['datetime'])
-                    
-            r["total_io_current"]={}
-            r["total_io_current"]["balance_user"]=lod.lod_sum(r["io_current"], "balance_user")
-            r["total_io_current"]["balance_investment"]="HETEROGENEOUS"
-            r["total_io_current"]["balance_futures_user"]=lod.lod_sum(r["io_current"], "balance_futures_user")
-            r["total_io_current"]["gains_gross_user"]=lod.lod_sum(r["io_current"], "gains_gross_user")
-            r["total_io_current"]["gains_net_user"]=lod.lod_sum(r["io_current"], "gains_net_user")
-            r["total_io_current"]["shares"]=lod.lod_sum(r["io_current"], "shares")
-            r["total_io_current"]["invested_user"]=lod.lod_sum(r["io_current"], "invested_user")
-            r["total_io_current"]["invested_investment"]="HETEROGENEOUS"
-            
-            r["io_historical"]=[]
-            for plio_id in plio.entries():
-                for o in plio.d_io_historical(plio_id):
-                    if strategy.dt_from<=o["dt_end"] and o["dt_end"]<=strategy.dt_to_for_comparations():
-                        r["io_historical"].append(o)
-            r["io_historical"]= sorted(r["io_historical"],  key=lambda item: item['dt_end'])
-
-            r["total_io_historical"]={}
-            r["total_io_historical"]["gains_net_user"]=lod.lod_sum(r["total_io_historical"], "gains_net_user")
-            return r
-        pass
-        
+#
+#    @classmethod
+#    def from_strategy(cls,  dt,  local_currency,  strategy, mode):
+#                
+#        def OLD_plio_id_from_strategy(cls, dt,  local_currency,  strategy):
+#            """
+#                Returns a plio_id adding all io, io_current,io_historical of all investments (plio) and returning only one plio. Only adds, do not calculate
+#            """
+#            
+#            plio=cls.from_ids(dt, local_currency, strategy.investments_ids(), 1)
+#            
+#            r={}
+#            r["data"]={}
+#            r["data"]["products_id"]="HETEROGENEOUS"
+#            r["data"]["investments_id"]=strategy.investments_ids()
+#            r["data"]["multiplier"]="HETEROGENEOUS"
+#            r["data"]["currency_product"]="HETEROGENEOUS"
+#            r["data"]["productstypes_id"]="HETEROGENEOUS"
+#            r["data"]["currency_user"]=local_currency
+#            
+#            r["io"]=[]
+#            for plio_id in plio.entries():
+#                for o in plio.d_io(plio_id):
+#                    if strategy.dt_from<=o["datetime"] and o["datetime"]<=strategy.dt_to_for_comparations():
+#                        r["io"].append(o)
+#            r["io"]= sorted(r["io"],  key=lambda item: item['datetime'])
+#
+#            r["io_current"]=[]
+#            for plio_id in plio.entries():
+#                for o in plio.d_io_current(plio_id):
+#                    if strategy.dt_from<=o["datetime"] and o["datetime"]<=strategy.dt_to_for_comparations():
+#                        r["io_current"].append(o)
+#            r["io_current"]= sorted(r["io_current"],  key=lambda item: item['datetime'])
+#                    
+#            r["total_io_current"]={}
+#            r["total_io_current"]["balance_user"]=lod.lod_sum(r["io_current"], "balance_user")
+#            r["total_io_current"]["balance_investment"]="HETEROGENEOUS"
+#            r["total_io_current"]["balance_futures_user"]=lod.lod_sum(r["io_current"], "balance_futures_user")
+#            r["total_io_current"]["gains_gross_user"]=lod.lod_sum(r["io_current"], "gains_gross_user")
+#            r["total_io_current"]["gains_net_user"]=lod.lod_sum(r["io_current"], "gains_net_user")
+#            r["total_io_current"]["shares"]=lod.lod_sum(r["io_current"], "shares")
+#            r["total_io_current"]["invested_user"]=lod.lod_sum(r["io_current"], "invested_user")
+#            r["total_io_current"]["invested_investment"]="HETEROGENEOUS"
+#            
+#            r["io_historical"]=[]
+#            for plio_id in plio.entries():
+#                for o in plio.d_io_historical(plio_id):
+#                    if strategy.dt_from<=o["dt_end"] and o["dt_end"]<=strategy.dt_to_for_comparations():
+#                        r["io_historical"].append(o)
+#            r["io_historical"]= sorted(r["io_historical"],  key=lambda item: item['dt_end'])
+#
+#            r["total_io_historical"]={}
+#            r["total_io_historical"]["gains_net_user"]=lod.lod_sum(r["total_io_historical"], "gains_net_user")
+#            return r
+#        pass
+#        
 
         
     @staticmethod
