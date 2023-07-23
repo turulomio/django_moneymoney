@@ -210,6 +210,8 @@ class IOS:
         qs_investments=qs_investments.select_related("products", "products__leverages", "products__productstypes", "accounts")
         lod_investments=IOS.__qs_investments_to_lod(qs_investments, local_currency)
         lod_=models.Investmentsoperations.objects.filter(investments__in=qs_investments, datetime__lte=dt).order_by("datetime").values()
+#        print(list(lod_))
+#        print(simulation)
         lod_=list(lod_)+simulation
         
         t=IOS.__calculate_ios_lazy(dt, lod_investments,  lod_,  local_currency)
@@ -681,7 +683,7 @@ class IOS:
             c['gains_net_account']=c['gains_gross_account']-c['taxes_account']-c['commissions_account'] 
             c['gains_net_user']=c['gains_gross_user']-c['taxes_user']-c['commissions_user']
             c['percentage_total_investment'] = Percentage() if NoZ(c["invested_investment"]) else Percentage(c['gains_gross_investment'], c['invested_investment']) 
-            c['percentage_apr_investment']=Percentage(c['percentage_total_investment'].value*365, IOS.__ioc_days(c))
+            c['percentage_apr_investment']=Percentage() if NoZ(c["percentage_total_investment"].value) else Percentage(c['percentage_total_investment'].value*365, IOS.__ioc_days(c))
             c['percentage_annual_investment']=IOS.__ioc_percentage_annual_investment(d, c)
             c['percentage_total_user'] = Percentage() if NoZ(c["invested_user"]) else Percentage(c['gains_gross_user'], c['invested_user']) 
 

@@ -1023,6 +1023,11 @@ def IOS(request):
     for s in simulation:
         if s["datetime"].__class__==str: #When comes from a post
             s["datetime"]=string2dtaware(s["datetime"], "JsUtcIso")
+            s["shares"]=Decimal(s["shares"])
+            s["taxes"]=Decimal(s["taxes"])
+            s["commission"]=Decimal(s["commission"])
+            s["price"]=Decimal(s["price"])
+            s["currency_conversion"]=Decimal(s["currency_conversion"])
 
 #    print(dt, mode, simulation)
     if classmethod_str=="from_ids":
