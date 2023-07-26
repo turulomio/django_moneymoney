@@ -221,8 +221,8 @@ class CtTestCase(APITestCase):
         dict_ios_ids_pp={
             "datetime":timezone.now(), 
             "classmethod_str":"from_ids", 
-            "investments": [1, ], 
-            "mode":1, 
+            "investments": [dict_investment["id"], ], 
+            "mode":ios.IOSModes.ios_totals_sumtotals, 
             "currency": "EUR", 
             "simulation":[], 
         }
