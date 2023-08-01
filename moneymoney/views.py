@@ -11,7 +11,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 from itertools import permutations
 from math import ceil
@@ -636,8 +636,29 @@ class UnogeneratorWorking(APIView):
             return json_success_response(False, _("Unogenerator server is not working") )
 
 class Alerts(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    @extend_schema(request=None, responses=OpenApiTypes.DATETIME)
+    permission_classes = [permissions.IsAuthenticated]    
+    @extend_schema(
+        description="Returns alerts from the application", 
+        request=None, 
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
+                examples=[
+                    OpenApiExample(
+                        "Response",
+                        value={
+                          "server_time": "2023-08-01T03:55:29.122943+00:00",
+                          "expired_days": 7,
+                          "orders_expired": [],
+                          "accounts_inactive_with_balance": [],
+                          "investments_inactive_with_balance": []
+                        },
+                        response_only=True,
+                    )
+                ],
+            )
+        }, 
+    )
     def get(self, request, *args, **kwargs):
         r={}
         r["server_time"]=timezone.now()
