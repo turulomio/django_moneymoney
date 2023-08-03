@@ -227,12 +227,13 @@ class CtTestCase(APITestCase):
             "simulation":[], 
         }
         dict_ios_ids_1=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_pp, status.HTTP_200_OK)
-        self.assertEqual(dict_ios_ids_1["1"]["total_io_current"]["balance_user"], 10000)
+        first_entry=dict_ios_ids_1["entries"][0]
+        self.assertEqual(dict_ios_ids_1[first_entry]["total_io_current"]["balance_user"], 10000)
         dict_io_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"], shares=-1, price=20), status.HTTP_201_CREATED) #Removes one share
         self.assertTrue(models.Accountsoperations.objects.filter(comment=f"10000,{dict_io_2['id']}").exists())#Comprueba que existe ao
         
         dict_ios_ids_2=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_pp, status.HTTP_200_OK)
-        self.assertEqual(dict_ios_ids_2["1"]["total_io_current"]["balance_user"], 9990)
+        self.assertEqual(dict_ios_ids_2[first_entry]["total_io_current"]["balance_user"], 9990)
         
         #IOS.simulation
         simulation=[
@@ -251,7 +252,7 @@ class CtTestCase(APITestCase):
         ]
         dict_ios_ids_pp["simulation"]=simulation
         dict_ios_ids_simulation=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_pp, status.HTTP_200_OK)
-        self.assertEqual(dict_ios_ids_simulation["1"]["total_io_current"]["balance_user"], 9980)
+        self.assertEqual(dict_ios_ids_simulation[first_entry]["total_io_current"]["balance_user"], 9980)
         
         #IOS.from_merging_io_current
         ## Adding a new investment and new investmentsoperations with same product
@@ -261,13 +262,13 @@ class CtTestCase(APITestCase):
         dict_ios_ids_merging_pp={
             "datetime":timezone.now(), 
             "classmethod_str":"from_ids_merging_io_current", 
-            "investments": [1, ], 
+            "investments": [dict_investment["id"], dict_investment_2["id"] ], 
             "mode":1, 
             "currency": "EUR", 
             "simulation":[], 
         }
         dict_ios_ids_merging=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_merging_pp, status.HTTP_200_OK)
-        self.assertEqual(dict_ios_ids_merging["79329"]["total_io_current"]["balance_user"], 9990)
+        self.assertEqual(dict_ios_ids_merging["79329"]["total_io_current"]["balance_user"], 19990)
         
         #IOS.from_merging_io_current simulation
         simulation=[
@@ -286,7 +287,7 @@ class CtTestCase(APITestCase):
         ]
         dict_ios_ids_merging_pp["simulation"]=simulation
         dict_ios_ids_simulation=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_merging_pp, status.HTTP_200_OK)
-        self.assertEqual(dict_ios_ids_simulation["79329"]["total_io_current"]["balance_user"], 9980)
+        self.assertEqual(dict_ios_ids_simulation["79329"]["total_io_current"]["balance_user"], 19980)
         
 
     def test_IOS(self):
