@@ -736,6 +736,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 last_day_diff= (o.products.quote_last().quote-o.products.quote_penultimate().quote)*plio.d_total_io_current(o.id)["shares"]*o.products.real_leveraged_multiplier()
             except:
                 last_day_diff=0
+                
 
             r.append({
                 "id": o.id,  
@@ -745,8 +746,8 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "url":request.build_absolute_uri(reverse('investments-detail', args=(o.pk, ))), 
                 "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.id, ))), 
                 "products":request.build_absolute_uri(reverse('products-detail', args=(o.products.id, ))), 
-                "last_datetime": o.products.quote_last().datetime, 
-                "last": o.products.quote_last().quote, 
+                "last_datetime": None if o.products.quote_last() is None else o.products.quote_last().datetime, 
+                "last": None if o.products.quote_last() is None else o.products.quote_last().quote, 
                 "daily_difference": last_day_diff, 
                 "daily_percentage": None if o.products.quote_penultimate() is None or o.products.quote_last() is None else percentage_between(o.products.quote_penultimate().quote, o.products.quote_last().quote), 
                 "invested_user": plio.d_total_io_current(o.id)["invested_user"], 
@@ -755,7 +756,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "currency": o.products.currency, 
                 "currency_account": o.accounts.currency, 
                 "percentage_invested": percentage_invested, 
-                "percentage_selling_point": percentage_to_selling_point(plio.d_total_io_current(o.id)["shares"], o.selling_price, o.products.quote_last().quote), 
+                "percentage_selling_point": None if o.products.quote_last() is None else percentage_to_selling_point(plio.d_total_io_current(o.id)["shares"], o.selling_price, o.products.quote_last().quote), 
                 "selling_expiration": o.selling_expiration, 
                 "shares":plio.d_total_io_current(o.id)["shares"], 
                 "balance_percentage": o.balance_percentage, 
