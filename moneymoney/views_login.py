@@ -6,16 +6,11 @@ from django.utils import timezone
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
 from moneymoney.reusing.request_casting import all_args_are_not_none, RequestString
+from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-#@extend_schema(
-#    request=OpenApiTypes.STR,
-#    parameters=[
-#    ],
-#
-#)
 @extend_schema(
     description="Method to login and get auth token", 
     examples=[
@@ -38,11 +33,11 @@ def login(request):
         try:
             user=User.objects.get(username=username)
         except User.DoesNotExist:
-            return Response("Wrong credentials")
+            return Response("Wrong credentials", status=status.HTTP_401_UNAUTHORIZED)
             
         pwd_valid=check_password(password, user.password)
         if not pwd_valid:
-            return Response("Wrong credentials")
+            return Response("Wrong credentials", status=status.HTTP_401_UNAUTHORIZED)
 
         if Token.objects.filter(user=user).exists():#Lo borra
             token=Token.objects.get(user=user)
@@ -53,7 +48,7 @@ def login(request):
         user.save()
         return Response(token.key)
     else:
-        return Response("Wrong credentials")
+        return Response("Wrong credentials", status=status.HTTP_401_UNAUTHORIZED)
     
 @api_view(['POST'])
 def logout(request):
@@ -62,4 +57,4 @@ def logout(request):
         if Token.objects.filter(key=key).exists():
             Token.objects.get(key=key).delete()
             return Response("Logged out")
-    return Response("Invalid token")
+    return Response("Invalid token", status=status.HTTP_403_FORBIDDEN)
