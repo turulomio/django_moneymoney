@@ -6,6 +6,7 @@ from django.utils import timezone
 from json import loads
 from moneymoney import models, ios
 from moneymoney.reusing import tests_helpers
+from pydicts import lod
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 from django.contrib.auth.models import Group
@@ -365,4 +366,14 @@ class CtTestCase(APITestCase):
         self.assertTrue(r)
         r=tests_helpers.client_get(self, self.client_anonymous,  "/catalog_manager/", status.HTTP_200_OK)
         self.assertFalse(r)
+
+
+    def test_Concepts(self):
+        print()
+        print("test_Concepts")
+        
+#        tests_helpers.common_tests_Private
+        # Action used empty
+        r=tests_helpers.client_get(self, self.client_authorized_1,  "/api/concepts/used/", status.HTTP_200_OK)
+        self.assertEqual(lod.lod_sum(r, "used"), 0)
         
