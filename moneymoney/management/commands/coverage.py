@@ -26,4 +26,6 @@ class Command(BaseCommand):
         #Generate fixtures
                 
     def handle(self, *args, **options):
-        system("coverage run --omit=moneymoney/reusing/*.py,moneymoney/migrations/*.py,/usr/lib64/libreoffice/program/uno.py,manage.py manage.py test --settings django_moneymoney.presettings ; coverage html ; firefox htmlcov/index.html")
+        system("coverage run --omit=moneymoney/reusing/*.py,moneymoney/migrations/*.py,/usr/lib64/libreoffice/program/uno.py,manage.py manage.py test --settings django_moneymoney.presettings ; coverage html")
+        print("Now you can open htmlcov/index.html")
+    

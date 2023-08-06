@@ -355,3 +355,14 @@ class CtTestCase(APITestCase):
         tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(), status.HTTP_201_CREATED)
         r=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/concepts/?year={date.today().year}&month={date.today().month}", status.HTTP_200_OK)
         self.assertEqual(len(r["positive"]), 1)
+
+    def test_CatalogManager(self):
+        print()
+        print("test_CatalogManager")
+        r=tests_helpers.client_get(self, self.client_authorized_1,  "/catalog_manager/", status.HTTP_200_OK)
+        self.assertFalse(r)
+        r=tests_helpers.client_get(self, self.client_catalog_manager,  "/catalog_manager/", status.HTTP_200_OK)
+        self.assertTrue(r)
+        r=tests_helpers.client_get(self, self.client_anonymous,  "/catalog_manager/", status.HTTP_200_OK)
+        self.assertFalse(r)
+        
