@@ -15,7 +15,8 @@ drf-spectacular = "^0.26.4"
 pydicts = "^0.6.0"
 requests = "^2.31.0"
 unogenerator = "^0.32.0"
-psycopg = "^3.1.9"
+psycopg = "^3.1.10"
+poetry = "^1.5.1"
 
 [tool.poetry.group.dev.dependencies]
 poethepoet = "^0.21.1"
