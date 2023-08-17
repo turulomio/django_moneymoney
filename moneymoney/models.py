@@ -26,6 +26,8 @@ RANGE_RECOMENDATION_CHOICES =(
     (5, "Strict SMA 100"), 
     (6, "Strict SMA 10, 100"), 
     (7, "None"), 
+    (8, "SMA 10"), 
+    (9, "SMA 5"), 
 )
 PCI_CHOICES =( 
     ('c', _("Call")), 

@@ -198,6 +198,10 @@ class ProductRangeManager(ObjectManager):
             return [100, ]
         elif self.method==6:#ProductRangeInvestRecomendation.Strict SMA 10 , 100:      
             return [10,  100]
+        elif self.method==8:#ProductRangeInvestRecomendation.SMA 10
+            return [10, ]
+        elif self.method==9:#ProductRangeInvestRecomendation.SMA 5
+            return [5, ]
 
     ## Set investment recomendations to all ProductRange objects in array 
     def setInvestRecomendation(self, method):
@@ -237,8 +241,6 @@ class ProductRangeManager(ObjectManager):
             for o in self.arr:
                 number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [100, ], dvm_smas,  "close"))
                 if number_sma_over_price==0:
-                    o.recomendation_invest=True
-                elif number_sma_over_price==1 and o.id % 4==0:
                     o.recomendation_invest=True
                 else: #number_sma_over_price=1 and o.id%4!=0
                     o.recomendation_invest=False
@@ -285,6 +287,36 @@ class ProductRangeManager(ObjectManager):
                 number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [10,  100], dvm_smas,  "close"))
                 if number_sma_over_price<2:
                     o.recomendation_invest=True
+        elif self.method==8: #ProductRangeInvestRecomendation.SMA10 Entry below SMA10 aren't recommended           
+            list_ohcl=self.product.ohclDailyBeforeSplits()
+            dvm=DatetimeValueManager()
+            for d in list_ohcl:
+                dvm.appendDV(d["date"], d["close"])
+            dvm_smas=[]
+            for sma in [10, ]:
+                dvm_smas.append(dvm.sma(sma))
+            
+            for o in self.arr:
+                number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [10, ], dvm_smas,  "close"))
+                if number_sma_over_price==0:
+                    o.recomendation_invest=True
+                else: #number_sma_over_price=1 and o.id%4!=0
+                    o.recomendation_invest=False
+        elif self.method==9: #ProductRangeInvestRecomendation.SMA10 Entry below SMA10 aren't recommended           
+            list_ohcl=self.product.ohclDailyBeforeSplits()
+            dvm=DatetimeValueManager()
+            for d in list_ohcl:
+                dvm.appendDV(d["date"], d["close"])
+            dvm_smas=[]
+            for sma in [5, ]:
+                dvm_smas.append(dvm.sma(sma))
+            
+            for o in self.arr:
+                number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [5, ], dvm_smas,  "close"))
+                if number_sma_over_price==0:
+                    o.recomendation_invest=True
+                else: #number_sma_over_price=1 and o.id%4!=0
+                    o.recomendation_invest=False
 
     def json(self):
         r={}
