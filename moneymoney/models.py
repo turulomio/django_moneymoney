@@ -1340,14 +1340,14 @@ class Assets:
 
         
     @staticmethod
-    def pl_total_balance(dt, local_currency):
+    def pl_total_balance(dt, local_currency, mode=ios.IOSModes.sumtotals):
         """
             Returns a dict with the following keys:
             {'accounts_user': 0, 'investments_user': 0, 'total_user': 0, 'investments_invested_user': 0}
         """
         accounts_user= Accounts.accounts_balance(Accounts.objects.all(), dt, local_currency)["balance_user_currency"]
        
-        plio=ios.IOS.from_all(dt,  local_currency,  mode=3)
+        plio=ios.IOS.from_all(dt,  local_currency,  mode)
 
         r= { 
             "accounts_user": accounts_user, 
@@ -1355,6 +1355,7 @@ class Assets:
             "total_user": accounts_user+Decimal(plio.sum_total_io_current()["balance_user"]),
             "investments_invested_user": plio.sum_total_io_current()["invested_user"],
             "datetime": dt,
+            "zerorisk_user": plio.sum_total_io_current_zerorisk_user()+accounts_user
             }
         return r
 

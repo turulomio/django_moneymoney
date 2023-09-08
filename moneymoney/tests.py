@@ -338,13 +338,9 @@ class CtTestCase(APITestCase):
         ios_merged=ios.IOS.from_qs_merging_io_current(timezone.now(), 'EUR', models.Investments.objects.all(), 1)
         self.assertEqual(ios_merged.entries(),  ['79329'])
         
-#        ios_merged.print_dumps()
-#        ios_merged.print_d(79329)
-        
-        
-
-
-        #IOS.from_ids from client
+        #Get zerorisk balance
+        r=ios_.sum_total_io_current_zerorisk_user()
+        print(r)
         
         
     def test_ReportConcepts(self):

@@ -1990,7 +1990,7 @@ def ReportEvolutionAssets(request, from_year):
 def ReportEvolutionAssetsChart(request):
     def month_results(year, month,  local_currency, local_zone):
         dt=dtaware_month_end(year, month, local_zone)
-        return dt, models.Assets.pl_total_balance(dt, local_currency)
+        return dt, models.Assets.pl_total_balance(dt, local_currency, ios.IOSModes.totals_sumtotals)
     #####################
     year_from=RequestGetInteger(request, "from")
     if year_from==date.today().year:
@@ -2007,7 +2007,6 @@ def ReportEvolutionAssetsChart(request):
         for year,  month in list_months:    
             futures.append(executor.submit(month_results, year, month, request.user.profile.currency,  request.user.profile.zone))
 
-#    futures= sorted(futures, key=lambda future: future.result()[0])#month_end
     for future in futures:
         dt, total=future.result()
         l.append({
@@ -2016,6 +2015,7 @@ def ReportEvolutionAssetsChart(request):
             "invested_user":total["investments_invested_user"], 
             "investments_user":total["investments_user"], 
             "accounts_user":total["accounts_user"], 
+            "zerorisk_user": total["zerorisk_user"], 
         })
     return JsonResponse( l, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
     
