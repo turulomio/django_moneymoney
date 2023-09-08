@@ -8,7 +8,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-django = "^4.2.4"
+django = "^4.2.5"
 django-cors-headers = "^4.2.0"
 djangorestframework = "^3.14.0"
 drf-spectacular = "^0.26.4"
@@ -19,8 +19,8 @@ psycopg = "^3.1.10"
 poetry = "^1.5.1"
 
 [tool.poetry.group.dev.dependencies]
-poethepoet = "^0.22.0"
-coverage = "^7.3.0"
+poethepoet = "^0.22.1"
+coverage = "^7.3.1"
 
 [build-system]
 requires = ["poetry-core"]
