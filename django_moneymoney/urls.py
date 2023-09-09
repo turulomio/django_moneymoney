@@ -63,6 +63,7 @@ urlpatterns=[
     path('reports/evolutionassets/chart/', money_views.ReportEvolutionAssetsChart, name='ReportEvolutionAssetsChart'),
     path('reports/evolutioninvested/<int:from_year>/', money_views.ReportEvolutionInvested, name='ReportEvolutionInvested'),
     path('reports/ranking/', money_views.ReportRanking, name='ReportRanking'),
+    path('reports/zerorisk/', money_views.ReportZeroRisk, name='ReportZeroRisk'),
     path('reports/annual/gainsbyproductstypes/<int:year>/', money_views.ReportAnnualGainsByProductstypes, name='ReportAnnualGainsByProductstypes'),
     path('statistics/', money_views.Statistics, name='Statistics'),
     path('timezones/', money_views.Timezones.as_view(), name='Timezones'),

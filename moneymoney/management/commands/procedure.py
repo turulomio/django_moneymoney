@@ -28,7 +28,7 @@ DJANGO_MONEYMONEY
 MONEYMONEY
   * Cambiar a moneymoney project
   * Add release changelog in README.md
-  * npm run i18n:report
+  * npm run translate
   * mcedit src/locales/es.json
   * git commit -a -m 'moneymoney-{__version__}'
   * git push

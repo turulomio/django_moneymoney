@@ -769,6 +769,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
             })
         return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
 
+
     @action(detail=True, methods=["get"], name='Investments operations evolution chart', url_path="operations_evolution_chart", url_name='operations_evolution_chart', permission_classes=[permissions.IsAuthenticated])
     def operations_evolution_chart(self, request, pk=None):
         investment=self.get_object()
@@ -2132,7 +2133,36 @@ def ReportRanking(request):
         ios_.d_data(d_rank["products_id"])["ranking"]=i+1
 #    show_queries_function()
     return JsonResponse(ios_._t, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
+
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def ReportZeroRisk(request):
+    qs=models.Investments.objects.filter(active=True, products__percentage=0).select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages")
+    plio=ios.IOS.from_qs(timezone.now(),  'EUR',  qs,  mode=ios.IOSModes.totals_sumtotals)        
+    r=[]
+    for o in qs:
+        r.append({
+            "id": o.id,
+            "fullname":o.fullName(), 
+            "url": o.hurl(request, o.pk), 
+            "balance_user": plio.d_total_io_current(o.id)["balance_user"], 
+            "currency": o.products.currency, 
+            "flag": o.products.stockmarkets.country, 
+            "decimals": o.decimals, 
+        })
+        
     
+    qs_accounts=models.Accounts.objects.filter(active=True)
+    r.append({
+        "id": None,
+        "fullname": _("Accounts total balance"), 
+        "url": None, 
+        "balance_user": models.Accounts.accounts_balance(qs_accounts, timezone.now(), 'EUR')["balance_user_currency"], 
+        "currency": o.products.currency, 
+        "flag": o.products.stockmarkets.country, 
+        "decimals": o.decimals, 
+    })
+    return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
 
 @api_view(['GET', ])
 @permission_classes([permissions.IsAuthenticated, ])
