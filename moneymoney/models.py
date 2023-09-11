@@ -1355,8 +1355,11 @@ class Assets:
             "total_user": accounts_user+Decimal(plio.sum_total_io_current()["balance_user"]),
             "investments_invested_user": plio.sum_total_io_current()["invested_user"],
             "datetime": dt,
-            "zerorisk_user": plio.sum_total_io_current_zerorisk_user()+accounts_user
             }
+            
+        if not mode == ios.IOSModes.sumtotals:
+            r["zerorisk_user"]= plio.sum_total_io_current_zerorisk_user()+accounts_user
+            
         return r
 
 class FastOperationsCoverage(models.Model):
