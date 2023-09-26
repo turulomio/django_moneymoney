@@ -11,15 +11,15 @@ python = "^3.11"
 django = "^4.2.5"
 django-cors-headers = "^4.2.0"
 djangorestframework = "^3.14.0"
-drf-spectacular = "^0.26.4"
+drf-spectacular = "^0.26.5"
 pydicts = "^0.6.0"
 requests = "^2.31.0"
 unogenerator = "^0.33.0"
-psycopg = "^3.1.10"
-poetry = "^1.5.1"
+psycopg = "^3.1.11"
 
 [tool.poetry.group.dev.dependencies]
-poethepoet = "^0.22.1"
+poetry = "^1.6.1"
+poethepoet = "^0.23.0"
 coverage = "^7.3.1"
 
 [build-system]
