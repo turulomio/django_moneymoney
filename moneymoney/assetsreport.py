@@ -318,7 +318,7 @@ def generate_assets_report(request, format):
     from moneymoney.views import ReportRanking
     dict_reportranking=loads(ReportRanking(request._request).content)
     ios_ranking=ios.IOS(dict_reportranking)
-    reportranking=[(_("Ranking"), _("Name"), _("Current net gains"), _("Historical net gains"), _("Dividend"), _("Total"))]
+    reportranking=[]
     for products_id in ios_ranking.entries():
         reportranking.append((
             ios_ranking.d_data(products_id)["ranking"], 
@@ -328,14 +328,16 @@ def generate_assets_report(request, format):
             Currency(ios_ranking.d_data(products_id)["dividends"], c), 
             Currency(ios_ranking.d_data(products_id)["total"], c), 
         ))
-
+        
+    reportranking= sorted(reportranking, key=lambda o: o[0])#month_end
+    reportranking.insert(0, [_("Ranking"), _("Name"), _("Current net gains"), _("Historical net gains"), _("Dividend"), _("Total")])
     reportranking.append([
         _("Total"), 
         "", 
-        Currency(lod.lod_sum(dict_reportranking, "current_net_gains"), c), 
-        Currency(lod.lod_sum(dict_reportranking, "historical_net_gains"), c), 
-        Currency(lod.lod_sum(dict_reportranking, "dividends"), c), 
-        Currency(lod.lod_sum(dict_reportranking, "total"), c), 
+        Currency(ios_ranking.sum_total_io_current()["gains_net_user"], c), 
+        Currency(ios_ranking.sum_total_io_historical()["gains_net_user"], c), 
+        Currency(ios_ranking.sum_total_io_historical()["sum_dividends"], c), 
+        Currency(ios_ranking.sum_total_io_historical()["sum_total"], c), 
     ])
     doc.addTableParagraph(reportranking, columnssize_percentages=[7, 43, 12.5, 12.5, 12.5, 12.5 ],  size=5, style="Table1Total")
     
