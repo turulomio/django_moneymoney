@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 from json import loads
 from moneymoney import __version__
-from moneymoney import models
+from moneymoney import models, ios
 from moneymoney.reusing.request_casting import object_from_url
 from moneymoney.reusing.casts import f
 from moneymoney.reusing.currency import  Currency
@@ -57,13 +57,13 @@ def generate_assets_report(request, format):
     #Personal settings
     
     doc.addParagraph(_("Personal settings"), "Heading 1")
-    doc.addParagraph(f(_("Your user currency is set to {c}.")),  "MyStandard")
-    doc.addParagraph(f(_("Your local time zone is set to {request.user.profile.zone}.")),  "MyStandard")
+    doc.addParagraph(_("Your user currency is set to {0}.").format(c),  "MyStandard")
+    doc.addParagraph(_("Your local time zone is set to {0}.").format(request.user.profile.zone),  "MyStandard")
     doc.pageBreak()
     
     # Assets
     doc.addParagraph(_("Assets"), "Heading 1")
-    doc.addParagraph(f(_("Total assets of the user are {vTotal}.")),  "MyStandard")
+    doc.addParagraph(_("Total assets of the user are {0}.").format(vTotal),  "MyStandard")
     if vTotalLastYear.amount>=0:
         moreorless=_("more")
         if (vTotal-vTotalLastYear).amount<0:
@@ -180,7 +180,7 @@ def generate_assets_report(request, format):
     doc.addParagraph(_("Next list is sorted by the distance in percent to the selling point."), "MyStandard")
     dict_investmentswithbalance=models.request_get(request._request.build_absolute_uri(reverse('investments-withbalance'))+"?active=true", authorization)
     dict_investmentswithbalance=lod.lod_order_by(dict_investmentswithbalance, "percentage_selling_point")
-    investmentswithbalance=[(_("Name"), _("Invested"),  _("Balance"), _("Gains"), _("% invested"), _("% selling point"))]
+    investmentswithbalance=[(_("Name"), _("Invested"),  _("Balance"), _("Gains"), _("&percnt; invested"), _("&percnt; selling point"))]
     for o in dict_investmentswithbalance:
         investmentswithbalance.append((
             o["fullname"], 
@@ -310,22 +310,23 @@ def generate_assets_report(request, format):
         "", 
     ])
     doc.addTableParagraph(reportdividends, columnssize_percentages=[50, 10, 10, 10, 10, 10 ],  size=8, style="Table1Total")
-    doc.addParagraph(f(_("If I keep this investment during a year, I'll get {Currency(lod.lod_sum(dict_reportdividends,'estimated'),c)}")), "MyStandard")
+    doc.addParagraph(_("If I keep this investment during a year, I'll get {0}").format(Currency(lod.lod_sum(dict_reportdividends,'estimated'),c)), "MyStandard")
     doc.pageBreak()
     
     # Ranking de investments
     doc.addParagraph(_("Historical investments ranking"), "Heading 1")    
     from moneymoney.views import ReportRanking
     dict_reportranking=loads(ReportRanking(request._request).content)
+    ios_ranking=ios.IOS(dict_reportranking)
     reportranking=[(_("Ranking"), _("Name"), _("Current net gains"), _("Historical net gains"), _("Dividend"), _("Total"))]
-    for o in dict_reportranking:
+    for products_id in ios_ranking.entries():
         reportranking.append((
-            o["ranking"], 
-            o["name"], 
-            Currency(o["current_net_gains"], c), 
-            Currency(o["historical_net_gains"], c), 
-            Currency(o["dividends"], c), 
-            Currency(o["total"], c), 
+            ios_ranking.d_data(products_id)["ranking"], 
+            ios_ranking.d_data(products_id)["name"], 
+            Currency(ios_ranking.d_total_io_current(products_id)["gains_net_user"], c), 
+            Currency(ios_ranking.d_total_io_historical(products_id)["gains_net_user"], c), 
+            Currency(ios_ranking.d_data(products_id)["dividends"], c), 
+            Currency(ios_ranking.d_data(products_id)["total"], c), 
         ))
 
     reportranking.append([

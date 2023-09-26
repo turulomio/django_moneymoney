@@ -200,7 +200,7 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
     def update(self, instance, validated_data):
         request=self.context.get("request")       
         if  request.user.groups.filter(name="CatalogManager").exists() is False and id_from_url(request.data["url"])<100000000:
-            raise ValidationError(_("You cant edit a system product if you're not a Catalog Manager (only developers)"))
+            raise ValidationError(_("You can't edit a system product if you're not a Catalog Manager (only developers)"))
         updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
         return updated
         

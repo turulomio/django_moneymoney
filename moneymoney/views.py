@@ -2122,12 +2122,14 @@ def ReportRanking(request):
     for products_id in ios_.entries():
         
         dividends_value=dividends[int(products_id)]["sum"]  if int(products_id) in dividends else 0
+        total= ios_.d_total_io_current(products_id)["gains_net_user"]+ ios_.d_total_io_historical(products_id)["gains_net_user"] + dividends_value
         lod_ranking.append({
             "products_id": products_id, 
-            "total": ios_.d_total_io_current(products_id)["gains_net_user"]+ ios_.d_total_io_historical(products_id)["gains_net_user"] + dividends_value
+            "total": total, 
         })
         #Add dividend to data
         ios_.d_data(products_id)["dividends"]=dividends_value
+        ios_.d_data(products_id)["total"]=total
     lod_ranking=lod.lod_order_by(lod_ranking, "total", reverse=True)
     for i,  d_rank in enumerate(lod_ranking):
         ios_.d_data(d_rank["products_id"])["ranking"]=i+1

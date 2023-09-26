@@ -3,7 +3,7 @@
 ## DO NOT UPDATE IT IN YOUR CODE
 
 from django.http import JsonResponse
-from .myjsonencoder import MyJSONEncoderDecimalsAsFloat
+from .myjsonencoder import MyJSONEncoder
 
 def json_success_response(success, detail_):
     """
@@ -14,7 +14,7 @@ def json_success_response(success, detail_):
     if not success.__class__.__name__=="bool" or not detail_.__class__.__name__ in ("str", "__proxy__"):
         print("json_succcess_response parameters are wrong")
 
-    return JsonResponse( {"success": success, "detail": detail_}, encoder=MyJSONEncoderDecimalsAsFloat, safe=True)
+    return JsonResponse( {"success": success, "detail": detail_}, encoder=MyJSONEncoder, safe=True)
 
 def json_data_response(success, data,  detail=""):
     """
@@ -26,4 +26,4 @@ def json_data_response(success, data,  detail=""):
     if not success.__class__.__name__=="bool"  or not detail.__class__.__name__ in ("str", "__proxy__") or not data.__class__.__name__ in ["dict", "OrderedDict", "list"]:
         print("json_data_response parameters are wrong")
         
-    return JsonResponse( {"success": success,  "data": data,  "detail": detail}, encoder=MyJSONEncoderDecimalsAsFloat, safe=True)
+    return JsonResponse( {"success": success,  "data": data,  "detail": detail}, encoder=MyJSONEncoder, safe=True)

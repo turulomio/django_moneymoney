@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-09-09 03:34+0000\n"
+"POT-Creation-Date: 2023-09-26 03:01+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -40,14 +40,13 @@ msgstr "Preferencias personales"
 
 #: moneymoney/assetsreport.py:60
 #, python-brace-format
-msgid "Your user currency is set to {c}."
-msgstr "Tu divisa se ha establecido a {c}."
+msgid "Your user currency is set to {0}."
+msgstr "Tu divisa se ha establecido a {0}."
 
 #: moneymoney/assetsreport.py:61
-#, fuzzy, python-brace-format
-#| msgid "Your local time zone is set to {request.local_zone}."
-msgid "Your local time zone is set to {request.user.profile.zone}."
-msgstr "Tu zona horaria se ha establecido a {request.local_zone}."
+#, python-brace-format
+msgid "Your local time zone is set to {0}."
+msgstr "Tu zona horaria se ha establecido a {0}."
 
 #: moneymoney/assetsreport.py:65
 msgid "Assets"
@@ -55,8 +54,8 @@ msgstr "Patrimonio"
 
 #: moneymoney/assetsreport.py:66
 #, python-brace-format
-msgid "Total assets of the user are {vTotal}."
-msgstr "El patrimonio total del usuario es {vTotal}."
+msgid "Total assets of the user are {0}."
+msgstr "El patrimonio total del usuario es {0}."
 
 #: moneymoney/assetsreport.py:68
 msgid "more"
@@ -231,14 +230,11 @@ msgid "Balance"
 msgstr "Saldo"
 
 #: moneymoney/assetsreport.py:183
-#, python-format
-msgid "% invested"
+msgid "&percnt; invested"
 msgstr "% invertido"
 
 #: moneymoney/assetsreport.py:183
-#, fuzzy, python-format
-#| msgid "% selling point"
-msgid "% selling point"
+msgid "&percnt; selling point"
 msgstr "% punto de venta"
 
 #: moneymoney/assetsreport.py:211
@@ -341,16 +337,9 @@ msgid "% Annual"
 msgstr "% Anual"
 
 #: moneymoney/assetsreport.py:313
-#, fuzzy
-#| msgid ""
-#| "If I keep this investment during a year, I'll get "
-#| "{Currency(listdict_sum(dict_reportdividends,'estimated'),c)}"
-msgid ""
-"If I keep this investment during a year, I'll get {Currency(lod."
-"lod_sum(dict_reportdividends,'estimated'),c)}"
-msgstr ""
-"Si mantengo esta inversión durante un año, conseguiré "
-"{Currency(listdict_sum(dict_reportdividends,'estimated'),c)}"
+#, python-brace-format
+msgid "If I keep this investment during a year, I'll get {0}"
+msgstr "Si mantengo esta inversión durante un año, conseguiré {0}"
 
 #: moneymoney/assetsreport.py:317
 msgid "Historical investments ranking"
@@ -378,7 +367,9 @@ msgstr "Acerca de Money Money"
 
 #: moneymoney/assetsreport.py:345
 msgid "Money Money is a opensource software to manage your personal finances."
-msgstr "Money Money es una aplicación OpenSource para gestionar tus finanzas personales"
+msgstr ""
+"Money Money es una aplicación OpenSource para gestionar tus finanzas "
+"personales"
 
 #: moneymoney/hardcoded_strings.py:2
 msgid "AMEX Stock Exchange"
@@ -500,7 +491,7 @@ msgstr "Gasto"
 msgid "Fast investments operations"
 msgstr "Operaciones de inversión rápidas"
 
-#: moneymoney/hardcoded_strings.py:33 moneymoney/views.py:1838
+#: moneymoney/hardcoded_strings.py:33 moneymoney/views.py:1839
 msgid "Fast operations"
 msgstr "Rápidas operaciones"
 
@@ -746,7 +737,8 @@ msgstr "Añadiendo cotizaciones desde la cartera de Investing.com"
 
 #: moneymoney/ios.py:126
 msgid "You need total mode to calculate sum_total_io_current_zerorisk_user"
-msgstr "Necesitas el modo total para calcular sum_total_io_current_zerorisk_user"
+msgstr ""
+"Necesitas el modo total para calcular sum_total_io_current_zerorisk_user"
 
 #: moneymoney/ios.py:388
 #, python-brace-format
@@ -772,7 +764,7 @@ msgstr "Los impuestos y las comisiones deben ser igual o mayor que cero"
 #: moneymoney/models.py:938
 #, python-brace-format
 msgid "Error saving '{0}'. Datetime it's in the future"
-msgstr ""
+msgstr "Error al guardar '{0}'. La fecha y la hora está en el futuro"
 
 #: moneymoney/models.py:942
 #, python-brace-format
@@ -837,17 +829,13 @@ msgstr ""
 msgid "Refund of {} payment of which had an amount of {}"
 msgstr "Devolución de {} pagos con un importe de {}"
 
-#: moneymoney/serializers.py:195
+#: moneymoney/serializers.py:195 moneymoney/serializers.py:203
 msgid ""
 "You can't edit a system product if you're not a Catalog Manager (only "
 "developers)"
 msgstr ""
-
-#: moneymoney/serializers.py:203
-msgid ""
-"You cant edit a system product if you're not a Catalog Manager (only "
-"developers)"
-msgstr ""
+"No puedes editar un producto de sistema si no eres un gestor de catálogos "
+"(solo desarrolladores)"
 
 #: moneymoney/views.py:524
 msgid "Strategy was not found"
@@ -859,119 +847,84 @@ msgstr "El servidor Unogenerator está funcionando"
 
 #: moneymoney/views.py:636
 msgid "Unogenerator server is not working"
-msgstr ""
+msgstr "El servidor Unogenerator no está funcionando"
 
 #: moneymoney/views.py:729
 msgid "You must set active parameter"
-msgstr ""
+msgstr "Debe establecer el parametro activo"
 
-#: moneymoney/views.py:777
+#: moneymoney/views.py:778
 msgid "Insuficient data"
 msgstr "Datos insuficientes"
 
-#: moneymoney/views.py:1593 moneymoney/views.py:1646
+#: moneymoney/views.py:1594 moneymoney/views.py:1647
 msgid "January"
 msgstr "Enero"
 
-#: moneymoney/views.py:1594 moneymoney/views.py:1647
+#: moneymoney/views.py:1595 moneymoney/views.py:1648
 msgid "February"
 msgstr "Febrero"
 
-#: moneymoney/views.py:1595 moneymoney/views.py:1648
+#: moneymoney/views.py:1596 moneymoney/views.py:1649
 msgid "March"
 msgstr "Marzo"
 
-#: moneymoney/views.py:1596 moneymoney/views.py:1649
+#: moneymoney/views.py:1597 moneymoney/views.py:1650
 msgid "April"
 msgstr "Abril"
 
-#: moneymoney/views.py:1597 moneymoney/views.py:1650
+#: moneymoney/views.py:1598 moneymoney/views.py:1651
 msgid "May"
 msgstr "Mayo"
 
-#: moneymoney/views.py:1598 moneymoney/views.py:1651
+#: moneymoney/views.py:1599 moneymoney/views.py:1652
 msgid "June"
 msgstr "Junio"
 
-#: moneymoney/views.py:1599 moneymoney/views.py:1652
+#: moneymoney/views.py:1600 moneymoney/views.py:1653
 msgid "July"
 msgstr "Julio"
 
-#: moneymoney/views.py:1600 moneymoney/views.py:1653
+#: moneymoney/views.py:1601 moneymoney/views.py:1654
 msgid "August"
 msgstr "Agosto"
 
-#: moneymoney/views.py:1601 moneymoney/views.py:1654
+#: moneymoney/views.py:1602 moneymoney/views.py:1655
 msgid "September"
 msgstr "Septiembre"
 
-#: moneymoney/views.py:1602 moneymoney/views.py:1655
+#: moneymoney/views.py:1603 moneymoney/views.py:1656
 msgid "October"
 msgstr "Octubre"
 
-#: moneymoney/views.py:1603 moneymoney/views.py:1656
+#: moneymoney/views.py:1604 moneymoney/views.py:1657
 msgid "November"
 msgstr "Noviembre"
 
-#: moneymoney/views.py:1604 moneymoney/views.py:1657
+#: moneymoney/views.py:1605 moneymoney/views.py:1658
 msgid "December"
 msgstr "Diciembre"
 
-#: moneymoney/views.py:1868
+#: moneymoney/views.py:1869
 msgid "You must set year and month parameters"
-msgstr ""
+msgstr "Debes establecer los parámetros de fecha y mes"
 
-#: moneymoney/views.py:2141
+#: moneymoney/views.py:2158
+msgid "Accounts total balance"
+msgstr "Saldo total de las cuentas"
+
+#: moneymoney/views.py:2171
 msgid "Accounts"
 msgstr "Cuentas"
 
-#: moneymoney/views.py:2141
+#: moneymoney/views.py:2171
 msgid "Accounts operations"
 msgstr "Operaciones de cuentas"
 
-#: moneymoney/views.py:2141
+#: moneymoney/views.py:2171
 msgid "Banks"
 msgstr "Bancos"
 
-#: moneymoney/views.py:2141
+#: moneymoney/views.py:2171
 msgid "Concept"
 msgstr "Concepto"
-
-#~ msgid "Write the password for {}"
-#~ msgstr "Escriba la contraseña para {}"
-
-#~ msgid "Postgres database connection parameters"
-#~ msgstr "Parámetros de la conexión a la base de datos Postgres"
-
-#~ msgid "Postgresql user"
-#~ msgstr "Usuario de Postgresql"
-
-#~ msgid "Postgresql server port"
-#~ msgstr "Puerto del servidor Postgresql"
-
-#~ msgid "Postgresql server address"
-#~ msgstr "Dirección del servidor de Postgresql"
-
-#~ msgid "Postgresql database"
-#~ msgstr "Base de datos Postgresql"
-
-#~ msgid "Y"
-#~ msgstr "S"
-
-#~ msgid "N"
-#~ msgstr "N"
-
-#~ msgid "Please enter '{}' or '{}'"
-#~ msgstr "Por favor introduzca '{}' o '{}'"
-
-#~ msgid "Press a key to continue..."
-#~ msgstr "Pulse una tecla para continuar..."
-
-#~ msgid "More than one day of difference"
-#~ msgstr "Más de un día de diferencia"
-
-#~ msgid "Created"
-#~ msgstr "Creado"
-
-#~ msgid "Updated"
-#~ msgstr "Actualizado"

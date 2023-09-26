@@ -43,7 +43,7 @@ class MyJSONEncoder(JSONEncoder):
     def default(self, o):
         # See "Date Time String Format" in the ECMA-262 specification.
         if isinstance(o, datetime):
-            return o.isoformat()
+            return o.isoformat().replace("+00:00","Z")
         elif isinstance(o, date):
             return o.isoformat()
         elif isinstance(o, time):
