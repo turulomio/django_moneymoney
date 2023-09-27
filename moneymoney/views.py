@@ -26,7 +26,7 @@ from moneymoney.reusing.request_casting import RequestBool, RequestDate, Request
 from moneymoney.reusing.myjsonencoder import MyJSONEncoderDecimalsAsFloat
 from moneymoney.reusing.responses_json import json_data_response, json_success_response
 from requests import delete, post
-#from statistics import median
+from statistics import median
 from subprocess import run
 from os import path
 from pydicts import lod, lod_ymv
@@ -1849,20 +1849,31 @@ group by productstypes_id""", (year, ))
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportConcepts(request):
-    def get_median(concept):
-#        Request.objects.extra({ "month": ExtractMonth('date_creation'),
-#                        "year": ExtractYear('date_creation') })
-#               .values('month', 'year')
-#               .annotate(total=Count('month'))
-#               .values('month', 'year', 'total')
-#        
-#        amounts=list(models.Accountsoperations.objects.filter(concepts=concept).values_list("amount", flat=True)) + \
-#        list(models.Creditcardsoperations.objects.filter(concepts=concept).values_list("amount", flat=True))
-#        amounts.sort()
-#        return median(amounts)
-        return 0
+
+    ## Get all Medians
     
-    
+    def get_median(lod):
+        list_=[]
+        for d in lod:
+            list_.append(d["amount"])
+        list_.sort()
+        return median(list_)
+    data={}
+    for model in [models.Accountsoperations, models.Creditcardsoperations]:#Repite codigo para cada modelo
+        
+        qs_ao=model.objects.annotate(
+            year=ExtractYear('datetime'),
+            month=ExtractMonth('datetime'),
+        ).values('year', 'month', 'concepts__id').annotate(sum=Sum('amount')).order_by("year", "month", "concepts_id")
+        #Genera diccionario key as concept_id y dentro un lod_ymv
+        for d in qs_ao:
+            new_d={'year': d["year"], 'month':d["month"], "amount":d["sum"]}
+            if d["concepts__id"] in data:
+                data[d["concepts__id"]].append(new_d)
+            else:
+                data[d["concepts__id"]]=[new_d, ]
+
+    #Makes report
     year=RequestGetInteger(request, "year")
     month=RequestGetInteger(request,  "month")
     if year is None or month is None:
@@ -1886,7 +1897,7 @@ def ReportConcepts(request):
                 "name": concept.name, 
                 "total": d["sum"], 
                 "percentage_total": Percentage(d["sum"], total_month_positives), 
-                "median":get_median(concept),
+                "median":get_median(data[d["concepts__id"]]),
             })   
         else:
             r["negative"].append({
@@ -1894,13 +1905,9 @@ def ReportConcepts(request):
                 "name": concept.name, 
                 "total": d["sum"], 
                 "percentage_total": Percentage(d["sum"], total_month_negatives), 
-                "median":get_median(concept), 
+                "median":get_median(data[d["concepts__id"]]),
             })
-    show_queries_function()
     return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
-
-
-
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
