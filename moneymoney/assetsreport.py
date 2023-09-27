@@ -180,7 +180,7 @@ def generate_assets_report(request, format):
     doc.addParagraph(_("Next list is sorted by the distance in percent to the selling point."), "MyStandard")
     dict_investmentswithbalance=models.request_get(request._request.build_absolute_uri(reverse('investments-withbalance'))+"?active=true", authorization)
     dict_investmentswithbalance=lod.lod_order_by(dict_investmentswithbalance, "percentage_selling_point")
-    investmentswithbalance=[(_("Name"), _("Invested"),  _("Balance"), _("Gains"), _("&percnt; invested"), _("&percnt; selling point"))]
+    investmentswithbalance=[(_("Name"), _("Invested"),  _("Balance"), _("Gains"), _("\\% invested"), _("\\% selling point"))]
     for o in dict_investmentswithbalance:
         investmentswithbalance.append((
             o["fullname"], 
@@ -214,7 +214,7 @@ def generate_assets_report(request, format):
     doc.addParagraph(_("Current investment operations"),"Heading 2")
     from moneymoney.views import ReportCurrentInvestmentsOperations
     dict_report_current_investmentsoperations=loads(ReportCurrentInvestmentsOperations(request._request).content)
-    report_current_investmentsoperations=[(_("Date and time"), _("Name"), _("Operation type"), _("Shares"), _("Price"), _("Invested"), _("Balance"), _("Gross gains"), _("% total"))]
+    report_current_investmentsoperations=[(_("Date and time"), _("Name"), _("Operation type"), _("Shares"), _("Price"), _("Invested"), _("Balance"), _("Gross gains"), _("\\% total"))]
     for o in dict_report_current_investmentsoperations:
         report_current_investmentsoperations.append((
            dtaware2string(string2dtaware(o["datetime"], "JsUtcIso"), "%Y-%m-%d %H:%M:%S"), 
@@ -271,7 +271,7 @@ def generate_assets_report(request, format):
     doc.addParagraph(_("Investments orders"), "Heading 1")
     dict_orders_list=models.request_get(request._request.build_absolute_uri(reverse('orders-list'))+"?active=true", authorization)
     dict_orders_list=lod.lod_order_by(dict_orders_list, "percentage_from_price", reverse=True)
-    orders_list=[( _("Date"), _("Expiration"), _("Investment"), _("Shares"), _("Price"), _("Amount"), _("% from current price"))]
+    orders_list=[( _("Date"), _("Expiration"), _("Investment"), _("Shares"), _("Price"), _("Amount"), _("\\% from current price"))]
     for o in dict_orders_list:
         orders_list.append((
             o["date"], 
@@ -290,7 +290,7 @@ def generate_assets_report(request, format):
     doc.addParagraph(_("Dividend estimations report"), "Heading 1")
     from moneymoney.views import ReportDividends
     dict_reportdividends=loads(ReportDividends(request._request).content)
-    reportdividends=[( _("Name"), _("Current price"), _("DPS"), _("Shares"), _("Estimated"), _("% Annual"))]
+    reportdividends=[( _("Name"), _("Current price"), _("DPS"), _("Shares"), _("Estimated"), _("\\% Annual"))]
     for o in dict_reportdividends:
         reportdividends.append((
             o["name"], 

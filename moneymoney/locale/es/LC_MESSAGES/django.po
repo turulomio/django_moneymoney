@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-09-27 02:42+0000\n"
+"POT-Creation-Date: 2023-09-27 19:13+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -230,11 +230,11 @@ msgid "Balance"
 msgstr "Saldo"
 
 #: moneymoney/assetsreport.py:183
-msgid "&percnt; invested"
+msgid "\\% invested"
 msgstr "% invertido"
 
 #: moneymoney/assetsreport.py:183
-msgid "&percnt; selling point"
+msgid "\\% selling point"
 msgstr "% punto de venta"
 
 #: moneymoney/assetsreport.py:211
@@ -267,7 +267,7 @@ msgid "Price"
 msgstr "Precio"
 
 #: moneymoney/assetsreport.py:217
-msgid "% total"
+msgid "\\% total"
 msgstr "% total"
 
 #: moneymoney/assetsreport.py:250
@@ -311,7 +311,7 @@ msgid "Amount"
 msgstr "Cantidad"
 
 #: moneymoney/assetsreport.py:274
-msgid "% from current price"
+msgid "\\% from current price"
 msgstr "% desde el precio actual"
 
 #: moneymoney/assetsreport.py:290
@@ -331,7 +331,7 @@ msgid "Estimated"
 msgstr "Estimado"
 
 #: moneymoney/assetsreport.py:293
-msgid "% Annual"
+msgid "\\% Annual"
 msgstr "% Anual"
 
 #: moneymoney/assetsreport.py:313
@@ -371,7 +371,7 @@ msgstr ""
 
 #: moneymoney/hardcoded_strings.py:2
 msgid "AMEX Stock Exchange"
-msgstr ""
+msgstr "Mercado AMEX"
 
 #: moneymoney/hardcoded_strings.py:3
 msgid "Account"
@@ -489,7 +489,7 @@ msgstr "Gasto"
 msgid "Fast investments operations"
 msgstr "Operaciones de inversión rápidas"
 
-#: moneymoney/hardcoded_strings.py:33 moneymoney/views.py:1839
+#: moneymoney/hardcoded_strings.py:33 moneymoney/views.py:1836
 msgid "Fast operations"
 msgstr "Rápidas operaciones"
 
@@ -603,11 +603,11 @@ msgstr "Bolsa de Milán"
 
 #: moneymoney/hardcoded_strings.py:61
 msgid "NYSE Stock Exchange"
-msgstr ""
+msgstr "Bolsa de Nueva York"
 
 #: moneymoney/hardcoded_strings.py:62
 msgid "Nasdaq Stock Exchange"
-msgstr ""
+msgstr "Bolsa de valores Nasdaq"
 
 #: moneymoney/hardcoded_strings.py:63
 msgid "Not listed on official markets"
@@ -835,94 +835,94 @@ msgstr ""
 "No puedes editar un producto de sistema si no eres un gestor de catálogos "
 "(solo desarrolladores)"
 
-#: moneymoney/views.py:524
+#: moneymoney/views.py:521
 msgid "Strategy was not found"
 msgstr "No se ha encontrado la estrategia"
 
-#: moneymoney/views.py:634
+#: moneymoney/views.py:631
 msgid "Unogenerator server is working"
 msgstr "El servidor Unogenerator está funcionando"
 
-#: moneymoney/views.py:636
+#: moneymoney/views.py:633
 msgid "Unogenerator server is not working"
 msgstr "El servidor Unogenerator no está funcionando"
 
-#: moneymoney/views.py:729
+#: moneymoney/views.py:726
 msgid "You must set active parameter"
 msgstr "Debe establecer el parametro activo"
 
-#: moneymoney/views.py:778
+#: moneymoney/views.py:775
 msgid "Insuficient data"
 msgstr "Datos insuficientes"
 
-#: moneymoney/views.py:1594 moneymoney/views.py:1647
+#: moneymoney/views.py:1591 moneymoney/views.py:1644
 msgid "January"
 msgstr "Enero"
 
-#: moneymoney/views.py:1595 moneymoney/views.py:1648
+#: moneymoney/views.py:1592 moneymoney/views.py:1645
 msgid "February"
 msgstr "Febrero"
 
-#: moneymoney/views.py:1596 moneymoney/views.py:1649
+#: moneymoney/views.py:1593 moneymoney/views.py:1646
 msgid "March"
 msgstr "Marzo"
 
-#: moneymoney/views.py:1597 moneymoney/views.py:1650
+#: moneymoney/views.py:1594 moneymoney/views.py:1647
 msgid "April"
 msgstr "Abril"
 
-#: moneymoney/views.py:1598 moneymoney/views.py:1651
+#: moneymoney/views.py:1595 moneymoney/views.py:1648
 msgid "May"
 msgstr "Mayo"
 
-#: moneymoney/views.py:1599 moneymoney/views.py:1652
+#: moneymoney/views.py:1596 moneymoney/views.py:1649
 msgid "June"
 msgstr "Junio"
 
-#: moneymoney/views.py:1600 moneymoney/views.py:1653
+#: moneymoney/views.py:1597 moneymoney/views.py:1650
 msgid "July"
 msgstr "Julio"
 
-#: moneymoney/views.py:1601 moneymoney/views.py:1654
+#: moneymoney/views.py:1598 moneymoney/views.py:1651
 msgid "August"
 msgstr "Agosto"
 
-#: moneymoney/views.py:1602 moneymoney/views.py:1655
+#: moneymoney/views.py:1599 moneymoney/views.py:1652
 msgid "September"
 msgstr "Septiembre"
 
-#: moneymoney/views.py:1603 moneymoney/views.py:1656
+#: moneymoney/views.py:1600 moneymoney/views.py:1653
 msgid "October"
 msgstr "Octubre"
 
-#: moneymoney/views.py:1604 moneymoney/views.py:1657
+#: moneymoney/views.py:1601 moneymoney/views.py:1654
 msgid "November"
 msgstr "Noviembre"
 
-#: moneymoney/views.py:1605 moneymoney/views.py:1658
+#: moneymoney/views.py:1602 moneymoney/views.py:1655
 msgid "December"
 msgstr "Diciembre"
 
-#: moneymoney/views.py:1869
+#: moneymoney/views.py:1877
 msgid "You must set year and month parameters"
 msgstr "Debes establecer los parámetros de fecha y mes"
 
-#: moneymoney/views.py:2166
+#: moneymoney/views.py:2170
 msgid "Accounts total balance"
 msgstr "Saldo total de las cuentas"
 
-#: moneymoney/views.py:2179
+#: moneymoney/views.py:2183
 msgid "Accounts"
 msgstr "Cuentas"
 
-#: moneymoney/views.py:2179
+#: moneymoney/views.py:2183
 msgid "Accounts operations"
 msgstr "Operaciones de cuentas"
 
-#: moneymoney/views.py:2179
+#: moneymoney/views.py:2183
 msgid "Banks"
 msgstr "Bancos"
 
-#: moneymoney/views.py:2179
+#: moneymoney/views.py:2183
 msgid "Concept"
 msgstr "Concepto"

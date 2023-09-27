@@ -161,8 +161,8 @@ class ConceptsViewSet(viewsets.ModelViewSet):
         r["total"]=lod.lod_sum(json_concepts_historical, "total")
         r["median"]=lod.lod_median(rows, 'value')
         r["average"]=lod.lod_average(rows, 'value')
-        
         return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
+
     @action(detail=True, methods=["get"], name='Returns historical concept report detail', url_path="historical_report_detail", url_name='historical_report_detail', permission_classes=[permissions.IsAuthenticated])
     def ReportConceptsHistoricalDetail(self, request, pk=None):
         concept= self.get_object()
@@ -178,10 +178,7 @@ class ConceptsViewSet(viewsets.ModelViewSet):
             "ao":  serializers.AccountsoperationsSerializer(qs_ao, many=True, context={'request': request}).data, 
             "cco":  serializers.CreditcardsoperationsSerializer(qs_cco, many=True, context={'request': request}).data, 
         }        
-        return json_data_response(True, data,  "Ok")
-        
-
-
+        return JsonResponse( data, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 class CreditcardsViewSet(viewsets.ModelViewSet):
     queryset = models.Creditcards.objects.select_related("accounts").all()

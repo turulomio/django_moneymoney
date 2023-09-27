@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-09-27 02:42+0000\n"
+"POT-Creation-Date: 2023-09-27 19:12+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -237,13 +237,14 @@ msgid "Balance"
 msgstr ""
 
 #: moneymoney/assetsreport.py:183
-#, fuzzy
+#, fuzzy, python-format
 #| msgid "Investments"
-msgid "&percnt; invested"
+msgid "\\% invested"
 msgstr "Инвестиции"
 
 #: moneymoney/assetsreport.py:183
-msgid "&percnt; selling point"
+#, python-format
+msgid "\\% selling point"
 msgstr ""
 
 #: moneymoney/assetsreport.py:211
@@ -274,7 +275,7 @@ msgid "Price"
 msgstr ""
 
 #: moneymoney/assetsreport.py:217
-msgid "% total"
+msgid "\\% total"
 msgstr ""
 
 #: moneymoney/assetsreport.py:250
@@ -329,7 +330,7 @@ msgstr ""
 
 #: moneymoney/assetsreport.py:274
 #, python-format
-msgid "% from current price"
+msgid "\\% from current price"
 msgstr ""
 
 #: moneymoney/assetsreport.py:290
@@ -351,7 +352,7 @@ msgid "Estimated"
 msgstr "Счета"
 
 #: moneymoney/assetsreport.py:293
-msgid "% Annual"
+msgid "\\% Annual"
 msgstr ""
 
 #: moneymoney/assetsreport.py:313
@@ -511,7 +512,7 @@ msgstr ""
 msgid "Fast investments operations"
 msgstr "Инвестиции"
 
-#: moneymoney/hardcoded_strings.py:33 moneymoney/views.py:1839
+#: moneymoney/hardcoded_strings.py:33 moneymoney/views.py:1836
 #, fuzzy
 #| msgid "Accounts"
 msgid "Fast operations"
@@ -857,103 +858,113 @@ msgid ""
 "developers)"
 msgstr ""
 
-#: moneymoney/views.py:524
+#: moneymoney/views.py:521
 msgid "Strategy was not found"
 msgstr ""
 
-#: moneymoney/views.py:634
+#: moneymoney/views.py:631
 msgid "Unogenerator server is working"
 msgstr ""
 
-#: moneymoney/views.py:636
+#: moneymoney/views.py:633
 msgid "Unogenerator server is not working"
 msgstr ""
 
-#: moneymoney/views.py:729
+#: moneymoney/views.py:726
 msgid "You must set active parameter"
 msgstr ""
 
-#: moneymoney/views.py:778
+#: moneymoney/views.py:775
 #, fuzzy
 #| msgid "Investments"
 msgid "Insuficient data"
 msgstr "Инвестиции"
 
-#: moneymoney/views.py:1594 moneymoney/views.py:1647
+#: moneymoney/views.py:1591 moneymoney/views.py:1644
 msgid "January"
 msgstr ""
 
-#: moneymoney/views.py:1595 moneymoney/views.py:1648
+#: moneymoney/views.py:1592 moneymoney/views.py:1645
 msgid "February"
 msgstr ""
 
-#: moneymoney/views.py:1596 moneymoney/views.py:1649
+#: moneymoney/views.py:1593 moneymoney/views.py:1646
 msgid "March"
 msgstr ""
 
-#: moneymoney/views.py:1597 moneymoney/views.py:1650
+#: moneymoney/views.py:1594 moneymoney/views.py:1647
 msgid "April"
 msgstr ""
 
-#: moneymoney/views.py:1598 moneymoney/views.py:1651
+#: moneymoney/views.py:1595 moneymoney/views.py:1648
 msgid "May"
 msgstr ""
 
-#: moneymoney/views.py:1599 moneymoney/views.py:1652
+#: moneymoney/views.py:1596 moneymoney/views.py:1649
 msgid "June"
 msgstr ""
 
-#: moneymoney/views.py:1600 moneymoney/views.py:1653
+#: moneymoney/views.py:1597 moneymoney/views.py:1650
 msgid "July"
 msgstr ""
 
-#: moneymoney/views.py:1601 moneymoney/views.py:1654
+#: moneymoney/views.py:1598 moneymoney/views.py:1651
 msgid "August"
 msgstr ""
 
-#: moneymoney/views.py:1602 moneymoney/views.py:1655
+#: moneymoney/views.py:1599 moneymoney/views.py:1652
 msgid "September"
 msgstr ""
 
-#: moneymoney/views.py:1603 moneymoney/views.py:1656
+#: moneymoney/views.py:1600 moneymoney/views.py:1653
 msgid "October"
 msgstr ""
 
-#: moneymoney/views.py:1604 moneymoney/views.py:1657
+#: moneymoney/views.py:1601 moneymoney/views.py:1654
 msgid "November"
 msgstr ""
 
-#: moneymoney/views.py:1605 moneymoney/views.py:1658
+#: moneymoney/views.py:1602 moneymoney/views.py:1655
 msgid "December"
 msgstr ""
 
-#: moneymoney/views.py:1869
+#: moneymoney/views.py:1877
 msgid "You must set year and month parameters"
 msgstr ""
 
-#: moneymoney/views.py:2166
+#: moneymoney/views.py:2170
 #, fuzzy
 #| msgid "Accounts"
 msgid "Accounts total balance"
 msgstr "Счета"
 
-#: moneymoney/views.py:2179
+#: moneymoney/views.py:2183
 msgid "Accounts"
 msgstr "Счета"
 
-#: moneymoney/views.py:2179
+#: moneymoney/views.py:2183
 #, fuzzy
 #| msgid "Accounts"
 msgid "Accounts operations"
 msgstr "Счета"
 
-#: moneymoney/views.py:2179
+#: moneymoney/views.py:2183
 msgid "Banks"
 msgstr "банки"
 
-#: moneymoney/views.py:2179
+#: moneymoney/views.py:2183
 msgid "Concept"
 msgstr ""
+
+#, fuzzy
+#~| msgid "Investments"
+#~ msgid "&percnt; invested"
+#~ msgstr "Инвестиции"
+
+#, fuzzy, python-format
+#~| msgid "Investments"
+#~ msgid "%% invested"
+#~ msgstr "Инвестиции"
 
 #~ msgid "Django Money"
 #~ msgstr "Джанго Деньги"
