@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-09-26 03:01+0000\n"
+"POT-Creation-Date: 2023-09-27 02:42+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -100,7 +100,7 @@ msgstr "Saldo total"
 #: moneymoney/assetsreport.py:104 moneymoney/assetsreport.py:142
 #: moneymoney/assetsreport.py:168 moneymoney/assetsreport.py:198
 #: moneymoney/assetsreport.py:233 moneymoney/assetsreport.py:305
-#: moneymoney/assetsreport.py:320 moneymoney/assetsreport.py:332
+#: moneymoney/assetsreport.py:333 moneymoney/assetsreport.py:335
 msgid "Total"
 msgstr "Total"
 
@@ -161,7 +161,7 @@ msgstr "Ganancias de inversión del año actual agrupadas por tipo de producto"
 
 #: moneymoney/assetsreport.py:132 moneymoney/assetsreport.py:158
 #: moneymoney/assetsreport.py:183 moneymoney/assetsreport.py:217
-#: moneymoney/assetsreport.py:293 moneymoney/assetsreport.py:320
+#: moneymoney/assetsreport.py:293 moneymoney/assetsreport.py:333
 msgid "Name"
 msgstr "Nombre"
 
@@ -311,8 +311,6 @@ msgid "Amount"
 msgstr "Cantidad"
 
 #: moneymoney/assetsreport.py:274
-#, fuzzy, python-format
-#| msgid "% from current price"
 msgid "% from current price"
 msgstr "% desde el precio actual"
 
@@ -345,27 +343,27 @@ msgstr "Si mantengo esta inversión durante un año, conseguiré {0}"
 msgid "Historical investments ranking"
 msgstr "Clasificación histórica de inversiones"
 
-#: moneymoney/assetsreport.py:320
+#: moneymoney/assetsreport.py:333
 msgid "Ranking"
 msgstr "Clasificación"
 
-#: moneymoney/assetsreport.py:320
+#: moneymoney/assetsreport.py:333
 msgid "Current net gains"
 msgstr "Ganancias netas actuales"
 
-#: moneymoney/assetsreport.py:320
+#: moneymoney/assetsreport.py:333
 msgid "Historical net gains"
 msgstr "Ganancias netas históricas"
 
-#: moneymoney/assetsreport.py:320
+#: moneymoney/assetsreport.py:333
 msgid "Dividend"
 msgstr "Dividendo"
 
-#: moneymoney/assetsreport.py:344
+#: moneymoney/assetsreport.py:347
 msgid "About Money Money"
 msgstr "Acerca de Money Money"
 
-#: moneymoney/assetsreport.py:345
+#: moneymoney/assetsreport.py:348
 msgid "Money Money is a opensource software to manage your personal finances."
 msgstr ""
 "Money Money es una aplicación OpenSource para gestionar tus finanzas "
@@ -909,22 +907,22 @@ msgstr "Diciembre"
 msgid "You must set year and month parameters"
 msgstr "Debes establecer los parámetros de fecha y mes"
 
-#: moneymoney/views.py:2158
+#: moneymoney/views.py:2166
 msgid "Accounts total balance"
 msgstr "Saldo total de las cuentas"
 
-#: moneymoney/views.py:2171
+#: moneymoney/views.py:2179
 msgid "Accounts"
 msgstr "Cuentas"
 
-#: moneymoney/views.py:2171
+#: moneymoney/views.py:2179
 msgid "Accounts operations"
 msgstr "Operaciones de cuentas"
 
-#: moneymoney/views.py:2171
+#: moneymoney/views.py:2179
 msgid "Banks"
 msgstr "Bancos"
 
-#: moneymoney/views.py:2171
+#: moneymoney/views.py:2179
 msgid "Concept"
 msgstr "Concepto"

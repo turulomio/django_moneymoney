@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-09-26 03:01+0000\n"
+"POT-Creation-Date: 2023-09-27 02:42+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -97,7 +97,7 @@ msgstr ""
 #: moneymoney/assetsreport.py:104 moneymoney/assetsreport.py:142
 #: moneymoney/assetsreport.py:168 moneymoney/assetsreport.py:198
 #: moneymoney/assetsreport.py:233 moneymoney/assetsreport.py:305
-#: moneymoney/assetsreport.py:320 moneymoney/assetsreport.py:332
+#: moneymoney/assetsreport.py:333 moneymoney/assetsreport.py:335
 msgid "Total"
 msgstr ""
 
@@ -154,7 +154,7 @@ msgstr ""
 
 #: moneymoney/assetsreport.py:132 moneymoney/assetsreport.py:158
 #: moneymoney/assetsreport.py:183 moneymoney/assetsreport.py:217
-#: moneymoney/assetsreport.py:293 moneymoney/assetsreport.py:320
+#: moneymoney/assetsreport.py:293 moneymoney/assetsreport.py:333
 msgid "Name"
 msgstr ""
 
@@ -333,27 +333,27 @@ msgstr ""
 msgid "Historical investments ranking"
 msgstr ""
 
-#: moneymoney/assetsreport.py:320
+#: moneymoney/assetsreport.py:333
 msgid "Ranking"
 msgstr ""
 
-#: moneymoney/assetsreport.py:320
+#: moneymoney/assetsreport.py:333
 msgid "Current net gains"
 msgstr ""
 
-#: moneymoney/assetsreport.py:320
+#: moneymoney/assetsreport.py:333
 msgid "Historical net gains"
 msgstr ""
 
-#: moneymoney/assetsreport.py:320
+#: moneymoney/assetsreport.py:333
 msgid "Dividend"
 msgstr ""
 
-#: moneymoney/assetsreport.py:344
+#: moneymoney/assetsreport.py:347
 msgid "About Money Money"
 msgstr ""
 
-#: moneymoney/assetsreport.py:345
+#: moneymoney/assetsreport.py:348
 msgid "Money Money is a opensource software to manage your personal finances."
 msgstr ""
 
@@ -891,22 +891,22 @@ msgstr ""
 msgid "You must set year and month parameters"
 msgstr ""
 
-#: moneymoney/views.py:2158
+#: moneymoney/views.py:2166
 msgid "Accounts total balance"
 msgstr ""
 
-#: moneymoney/views.py:2171
+#: moneymoney/views.py:2179
 msgid "Accounts"
 msgstr ""
 
-#: moneymoney/views.py:2171
+#: moneymoney/views.py:2179
 msgid "Accounts operations"
 msgstr ""
 
-#: moneymoney/views.py:2171
+#: moneymoney/views.py:2179
 msgid "Banks"
 msgstr ""
 
-#: moneymoney/views.py:2171
+#: moneymoney/views.py:2179
 msgid "Concept"
 msgstr ""
