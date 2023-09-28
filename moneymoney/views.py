@@ -282,29 +282,33 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
     
 
     @action(detail=True, methods=['GET'], name='Get a list of creditcards operations with balance', url_path="operationswithbalance", url_name='operationswithbalance', permission_classes=[permissions.IsAuthenticated])
-    @transaction.atomic
     def operationswithbalance(self, request, pk=None):   
         creditcard=self.get_object()
         paid=RequestGetBool(request, 'paid')
+        accountsoperations_id=RequestGetInteger(request, "accountsoperations_id")
+        balance=0
         if paid is not None:
-            initial_balance=0
-            qs=models.Creditcardsoperations.objects.select_related("creditcards", "concepts").filter(paid=paid, creditcards=creditcard).order_by("datetime")
+            qs=models.Creditcardsoperations.objects.select_related("creditcards", "concepts", "creditcards__accounts").filter(paid=paid, creditcards=creditcard).order_by("datetime")
+        if accountsoperations_id is not None:
+            qs=models.Creditcardsoperations.objects.select_related("creditcards", "concepts", "creditcards__accounts").filter(accountsoperations__id=accountsoperations_id).order_by("datetime")
 
         r=[]
         for o in qs:
+            balance=balance+o.amount
             r.append({
                 "id": o.id,  
                 "url": request.build_absolute_uri(reverse('creditcardsoperations-detail', args=(o.pk, ))), 
                 "datetime":o.datetime, 
                 "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(o.concepts.pk, ))), 
                 "amount": o.amount, 
-                "balance":  initial_balance + o.amount, 
+                "balance":  balance, 
                 "comment": models.Comment().decode(o.comment), 
                 "creditcards":request.build_absolute_uri(reverse('creditcards-detail', args=(o.creditcards.pk, ))), 
                 "paid": o.paid, 
                 "paid_datetime": o.paid_datetime, 
                 "currency": o.creditcards.accounts.currency, 
             })
+        show_queries_function()
         return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 
@@ -313,15 +317,15 @@ class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
     queryset = models.Creditcardsoperations.objects.all().select_related("creditcards").select_related("creditcards__accounts")
     serializer_class = serializers.CreditcardsoperationsSerializer
     permission_classes = [permissions.IsAuthenticated]  
-    
-        
-    def get_queryset(self):
-        ##Saca los pagos hechos en esta operación de cuenta
-        accountsoperations_id=RequestGetInteger(self.request, 'accountsoperations_id')
-        if accountsoperations_id is not None:
-            return self.queryset.filter(accountsoperations__id=accountsoperations_id)
-        else:
-            return self.queryset.all()
+#    
+#        
+#    def get_queryset(self):
+#        ##Saca los pagos hechos en esta operación de cuenta
+#        accountsoperations_id=RequestGetInteger(self.request, 'accountsoperations_id')
+#        if accountsoperations_id is not None:
+#            return self.queryset.filter(accountsoperations__id=accountsoperations_id)
+#        else:
+#            return self.queryset.all()
 
 
     
