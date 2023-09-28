@@ -15,7 +15,6 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiRespon
 from drf_spectacular.types import OpenApiTypes
 from itertools import permutations
 from math import ceil
-from mimetypes import guess_extension
 from moneymoney import models, serializers, ios
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.reusing.connection_dj import execute, cursor_rows, show_queries, show_queries_function
@@ -70,13 +69,15 @@ def CatalogManager(request):
         OpenApiParameter(name='outputformat', description='Output report format', required=True, type=str, default="pdf"), 
     ],
 )
-@api_view(['GET', ])    
+@api_view(['POST', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def AssetsReport(request):
     """
         Generate user assets report
+        Charts are part of the request in dict request.data
     """
-    format_=RequestGetString(request, "outputformat", "pdf")
+    print(request.data.keys())
+    format_=RequestString(request, "outputformat", "pdf")
     if format_=="pdf":
         mime="application/pdf"
     elif format_=="odt":
@@ -662,12 +663,12 @@ class Alerts(APIView):
         
         #Expired orders calling other viewset from this viewsets
         r["expired_days"]=7
-        r["orders_expired"]=models.request_get(request._request.build_absolute_uri(reverse('orders-list'))+f"?expired_days={r['expired_days']}", request.user.auth_token.key)
+        r["orders_expired"]=models.requests_get(request._request.build_absolute_uri(reverse('orders-list'))+f"?expired_days={r['expired_days']}", request.user.auth_token.key)
         
         
         # Get all inactive accounts status
         r["accounts_inactive_with_balance"]=[]
-        lod_accounts=models.request_get(request._request.build_absolute_uri(reverse('accounts-list'))+"withbalance/?active=false", request.user.auth_token.key)
+        lod_accounts=models.requests_get(request._request.build_absolute_uri(reverse('accounts-list'))+"withbalance/?active=false", request.user.auth_token.key)
         for d in lod_accounts:
             if d["balance_account"]!=0:
                 r["accounts_inactive_with_balance"].append(d)
@@ -2184,23 +2185,6 @@ def Statistics(request):
     for name, cls in ((_("Accounts"), models.Accounts), (_("Accounts operations"), models.Accountsoperations), (_("Banks"), models.Banks), (_("Concept"),  models.Concepts)):
         r.append({"name": name, "value":cls.objects.all().count()})
     return JsonResponse(r, safe=False)
-
-@api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated, ])
-## Stores a filename encoded to base64 in /TMPFILE
-## @param data     data:image/png;base64,ABVC
-## @filename photo Without extension
-def StoreFile(request):
-    data=RequestString(request, "data")
-    filename=RequestString(request, "filename")
-    if all_args_are_not_none(data, filename):
-        mime=data.split(";")[0].split(":")[1]
-        extension=guess_extension(mime)
-        content=data.split(",")[1]
-        with open(f"{settings.TMPDIR}/{filename}{extension}", "wb") as f:
-            f.write(b64decode(content))
-        return JsonResponse(True, safe=False)  
-    return JsonResponse(False, safe=False)  
 
 class EstimationsDpsViewSet(viewsets.ModelViewSet):
     queryset = models.EstimationsDps.objects.all()

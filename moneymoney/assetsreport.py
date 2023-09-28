@@ -1,8 +1,7 @@
+from base64 import b64decode
 from datetime import date, datetime
-from django.conf import settings
 from django.urls import reverse
 from django.utils.translation import gettext as _
-from json import loads
 from moneymoney import __version__
 from moneymoney import models, ios
 from moneymoney.reusing.request_casting import object_from_url
@@ -15,12 +14,13 @@ from pydicts import lod
 from unogenerator import ODT
 from unogenerator.commons import bytes_after_trim_image
 
-
+    
+def image_bytes(b64str):
+    bytes_=b64decode(b64str.split(",")[1])
+    return bytes_after_trim_image(bytes_, "png")
     
 
 def generate_assets_report(request, format):
-    from moneymoney.views import ReportAnnual
-    authorization=request.user.auth_token.key
     c=request.user.profile.currency
     year=date.today().year
     template=f"{path.dirname(__file__)}/templates/AssetsReport.odt"
@@ -39,13 +39,11 @@ def generate_assets_report(request, format):
     doc.find_and_replace("__DATETIME__", str(doc.statistics.init))
 
     doc.find_and_delete_until_the_end_of_document('Styles to remove')
-    
-    dict_report_annual=loads(ReportAnnual(request._request, year ).content)
+    dict_report_annual=models.requests_get(request.build_absolute_uri(reverse('ReportAnnual', args=(year,  ))), request.user).json()
     vTotalLastYear=Currency(dict_report_annual["last_year_balance"], c)
     vTotal=Currency(dict_report_annual["data"][11]["total"], c)
     
-    from moneymoney.views import ReportAnnualGainsByProductstypes
-    dict_report_annual_gainsbyproductstypes=loads(ReportAnnualGainsByProductstypes(request._request, year).content)
+    dict_report_annual_gainsbyproductstypes=models.requests_get(request.build_absolute_uri(reverse('ReportAnnualGainsByProductstypes', args=(year,  ))), request.user).json()
     vTotal_gains_net=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "gains_net"), c)
     vTotal_dividends_net=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "dividends_net"), c)
     vTotal_gains_gross=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "gains_gross"), c)
@@ -75,7 +73,7 @@ def generate_assets_report(request, format):
         # Assets by bank
         doc.addParagraph(_("Assets by bank"), "Heading 2")
         
-        dict_bankswithbalance=models.request_get(request._request.build_absolute_uri(reverse('banks-withbalance')), authorization)
+        dict_bankswithbalance=models.requests_get(request.build_absolute_uri(reverse('banks-withbalance')), request.user).json()
         bankswithbalance=[(_("Bank"), _("Accounts balance"), _("Investments balance"), _("Total balance"))]
         for o in dict_bankswithbalance:
             if o["active"]==True:
@@ -94,9 +92,9 @@ def generate_assets_report(request, format):
         doc.addTableParagraph(report_annual, columnssize_percentages=[10, 18, 18, 18, 18, 18 ],  size=7, name="TableReportAnnual", style="Table1Total")
 
         # Assests current year incomes
-        from moneymoney.views import ReportAnnualIncome
         doc.addParagraph(_("Assets current year detail"), "Heading 2")
-        dict_report_annual_income=loads(ReportAnnualIncome(request._request, year).content)
+        dict_report_annual_income=models.requests_get(request.build_absolute_uri(reverse('ReportAnnualIncome', args=(year,  ))), request.user).json()
+
         report_annual_income=[(_("Month"), _("Incomes"), _("Expenses"), _("Gains"), _("Dividends"), _("Total"))]
         for o in dict_report_annual_income:
             report_annual_income.append((o["month"], Currency(o["incomes"], c), Currency(o["expenses"], c), Currency(o["gains"], c), Currency(o["dividends"], c), Currency(o["total"], c)))
@@ -123,7 +121,7 @@ def generate_assets_report(request, format):
         ### Assets evolution graphic
         doc.addParagraph(_("Assets graphical evolution"), "Heading 2")
         
-        doc.addImageParagraph([bytes_after_trim_image(f"{settings.TMPDIR}/assetsreport_evolution.png", "png"), ], 26, 14, "Illustration")
+        doc.addImageParagraph([image_bytes(request.data["chart_assets"]), ], 26, 14, "Illustration")
         doc.pageBreak()
         
         
@@ -153,7 +151,7 @@ def generate_assets_report(request, format):
 
     ## Accounts
     doc.addParagraph(_("Current Accounts"), "Heading 1")
-    dict_accountswithbalance=models.request_get(request._request.build_absolute_uri(reverse('accounts-withbalance')), authorization)
+    dict_accountswithbalance=models.requests_get(request.build_absolute_uri(reverse('accounts-withbalance')), request.user).json()
 
     accountswithbalance=[(_("Name"), _("Number"), _("Balance account"), _("Balance user currency"))]
     for o in dict_accountswithbalance:
@@ -178,7 +176,7 @@ def generate_assets_report(request, format):
     
     doc.addParagraph(_("Investments list"), "Heading 2")
     doc.addParagraph(_("Next list is sorted by the distance in percent to the selling point."), "MyStandard")
-    dict_investmentswithbalance=models.request_get(request._request.build_absolute_uri(reverse('investments-withbalance'))+"?active=true", authorization)
+    dict_investmentswithbalance=models.requests_get(request.build_absolute_uri(reverse('investments-withbalance'))+"?active=true", request.user).json()
     dict_investmentswithbalance=lod.lod_order_by(dict_investmentswithbalance, "percentage_selling_point")
     investmentswithbalance=[(_("Name"), _("Invested"),  _("Balance"), _("Gains"), _("\\% invested"), _("\\% selling point"))]
     for o in dict_investmentswithbalance:
@@ -212,8 +210,8 @@ def generate_assets_report(request, format):
 
     ## Current Investment Operations list
     doc.addParagraph(_("Current investment operations"),"Heading 2")
-    from moneymoney.views import ReportCurrentInvestmentsOperations
-    dict_report_current_investmentsoperations=loads(ReportCurrentInvestmentsOperations(request._request).content)
+    dict_report_current_investmentsoperations=models.requests_get(request.build_absolute_uri(reverse('ReportCurrentInvestmentsOperations')), request.user).json()
+
     report_current_investmentsoperations=[(_("Date and time"), _("Name"), _("Operation type"), _("Shares"), _("Price"), _("Invested"), _("Balance"), _("Gross gains"), _("\\% total"))]
     for o in dict_report_current_investmentsoperations:
         report_current_investmentsoperations.append((
@@ -251,25 +249,24 @@ def generate_assets_report(request, format):
   
     width=None
     height=12
-    doc.addImageParagraph([bytes_after_trim_image(f"{settings.TMPDIR}/assetsreport_classes_by_percentage.png", "png")], width, height, "Illustration")
+    doc.addImageParagraph([image_bytes(request.data["chart_pie_percentage"]), ], width, height, "Illustration")
 
     doc.addParagraph(_("Investments group by investment type"), "Heading 2")
-    doc.addImageParagraph([bytes_after_trim_image(f"{settings.TMPDIR}/assetsreport_classes_by_producttype.png", "png"), ], width, height, "Illustration")
+    doc.addImageParagraph([image_bytes(request.data["chart_pie_producttype"]), ], width, height, "Illustration")
 
     doc.addParagraph(_("Investments group by leverage"), "Heading 2")        
-    doc.addImageParagraph([bytes_after_trim_image(f"{settings.TMPDIR}/assetsreport_classes_by_leverage.png", "png"), ], width, height, "Illustration")
-
-    doc.addParagraph(_("Investments group by investment product"), "Heading 2")
-    doc.addImageParagraph([bytes_after_trim_image(f"{settings.TMPDIR}/assetsreport_classes_by_product.png", "png"), ], width, height, "Illustration")
-
-    doc.addParagraph(_("Investments group by Call/Put/Inline"), "Heading 2")
-    doc.addImageParagraph([bytes_after_trim_image(f"{settings.TMPDIR}/assetsreport_classes_by_pci.png", "png"),  ], width, height, "Illustration")
+    doc.addImageParagraph([image_bytes(request.data["chart_pie_leverage"]), ], width, height, "Illustration")
     
+    doc.addParagraph(_("Investments group by investment product"), "Heading 2")
+    doc.addImageParagraph([image_bytes(request.data["chart_pie_product"]), ], width, height, "Illustration")
+    
+    doc.addParagraph(_("Investments group by Call/Put/Inline"), "Heading 2")
+    doc.addImageParagraph([image_bytes(request.data["chart_pie_pci"]), ], width, height, "Illustration")    
     doc.pageBreak("Landscape")
     
     #Orders report
     doc.addParagraph(_("Investments orders"), "Heading 1")
-    dict_orders_list=models.request_get(request._request.build_absolute_uri(reverse('orders-list'))+"?active=true", authorization)
+    dict_orders_list=models.requests_get(request.build_absolute_uri(reverse('orders-list'))+"?active=true", request.user).json()
     dict_orders_list=lod.lod_order_by(dict_orders_list, "percentage_from_price", reverse=True)
     orders_list=[( _("Date"), _("Expiration"), _("Investment"), _("Shares"), _("Price"), _("Amount"), _("\\% from current price"))]
     for o in dict_orders_list:
@@ -288,8 +285,8 @@ def generate_assets_report(request, format):
     
     #Dividend report
     doc.addParagraph(_("Dividend estimations report"), "Heading 1")
-    from moneymoney.views import ReportDividends
-    dict_reportdividends=loads(ReportDividends(request._request).content)
+    dict_reportdividends=models.requests_get(request.build_absolute_uri(reverse('ReportDividends')), request.user).json()
+
     reportdividends=[( _("Name"), _("Current price"), _("DPS"), _("Shares"), _("Estimated"), _("\\% Annual"))]
     for o in dict_reportdividends:
         reportdividends.append((
@@ -314,9 +311,8 @@ def generate_assets_report(request, format):
     doc.pageBreak()
     
     # Ranking de investments
-    doc.addParagraph(_("Historical investments ranking"), "Heading 1")    
-    from moneymoney.views import ReportRanking
-    dict_reportranking=loads(ReportRanking(request._request).content)
+    doc.addParagraph(_("Historical investments ranking"), "Heading 1")
+    dict_reportranking=models.requests_get(request.build_absolute_uri(reverse('ReportRanking')), request.user).json()
     ios_ranking=ios.IOS(dict_reportranking)
     reportranking=[]
     for products_id in ios_ranking.entries():

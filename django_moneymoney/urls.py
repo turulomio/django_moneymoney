@@ -40,7 +40,6 @@ urlpatterns=[
     path('catalog_manager/', money_views.CatalogManager, name='CatalogManager'),
     path('currencies/', money_views.Currencies, name='Currencies'),
     path('derivatives/', money_views.Derivatives.as_view(), name='Derivatives'),
-    path('storefile/', money_views.StoreFile, name='StoreFile'),
     path('investments/classes/', money_views.InvestmentsClasses.as_view(), name='InvestmentsClasses'),
     path('investments/changesellingprice/', money_views.InvestmentsChangeSellingPrice, name='InvestmentsChangeSellingPrice'),
     path('ios/', money_views.IOS, name='IOS'),

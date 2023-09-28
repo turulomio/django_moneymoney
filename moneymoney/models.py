@@ -6,7 +6,6 @@ from django.db.models import Case, When, Sum
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
-from json import loads
 from moneymoney import ios
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.reusing.casts import string2list_of_integers
@@ -1371,10 +1370,13 @@ class FastOperationsCoverage(models.Model):
     class Meta:
         managed = True
         
-        
-
-def request_get(absolute_url, user_token):
-    ## verify should be changed
-    a=get(absolute_url, headers={'Authorization': f'Token {user_token}'}, verify=False)
-    return loads(a.content)
+def requests_get(url, user):
+    headers={
+        'Authorization': f"Token {user.auth_token.key}",
+#            'Accept-Language': `${localStorage.locale}-${localStorage.locale}`,
+        'Content-Type':'application/json'
+    }
+    
+    
+    return get(url, headers=headers)
 
