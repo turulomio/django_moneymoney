@@ -24,7 +24,6 @@ from moneymoney.reusing.decorators import ptimeit
 from moneymoney.reusing.percentage import Percentage,  percentage_between
 from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestString, RequestListUrl, all_args_are_not_none, RequestCastingError, RequestInteger
 from moneymoney.reusing.myjsonencoder import MyJSONEncoderDecimalsAsFloat
-from moneymoney.reusing.responses_json import json_data_response, json_success_response
 from requests import delete, post
 from statistics import median
 from subprocess import run
@@ -631,10 +630,7 @@ class UnogeneratorWorking(APIView):
         responses=OpenApiTypes.OBJECT
     )
     def get(self, request, *args, **kwargs):
-        if is_server_working():
-            return json_success_response(True, _("Unogenerator server is working") )
-        else:
-            return json_success_response(False, _("Unogenerator server is not working") )
+        return Response( is_server_working(), status=status.HTTP_200_OK)
 
 class Alerts(APIView):
     permission_classes = [permissions.IsAuthenticated]    
@@ -1356,8 +1352,9 @@ class ProductsViewSet(viewsets.ModelViewSet):
                 row["lastyear"]=None if p.quote_lastyear() is None else p.quote_lastyear().quote
                 row["percentage_last_year"]=None if row["lastyear"] is None else Percentage(row["last"]-row["lastyear"], row["lastyear"])
                 rows.append(row)
-            return json_data_response(True, rows, "Products search done")
-        return json_data_response(False, rows, "Products search error")
+            return JsonResponse( rows,  encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
+        return Response("Products search error", status=status.HTTP_400_BAD_REQUEST)
+
 
     @action(detail=True, methods=['GET'], name='Get product historical information report', url_path="historical_information", url_name='historical_information', permission_classes=[permissions.IsAuthenticated])
     def historical_information(self, request, pk=None):
@@ -1510,8 +1507,8 @@ class QuotesMassiveUpdate(APIView):
 
         ic=InvestingCom(request, product)
         ic.load_from_bytes(bytes_)
-        r=ic.append_from_historical_rare_date()
-        return json_data_response( True, r,  "Quotes massive update success")
+        r=ic.append_from_historical_rare_date()        
+        return JsonResponse( r,  encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
  
 class QuotesViewSet(viewsets.ModelViewSet):
     queryset = models.Quotes.objects.all().select_related("products")
