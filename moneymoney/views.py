@@ -76,7 +76,6 @@ def AssetsReport(request):
         Generate user assets report
         Charts are part of the request in dict request.data
     """
-    print(request.data.keys())
     format_=RequestString(request, "outputformat", "pdf")
     if format_=="pdf":
         mime="application/pdf"
@@ -663,12 +662,12 @@ class Alerts(APIView):
         
         #Expired orders calling other viewset from this viewsets
         r["expired_days"]=7
-        r["orders_expired"]=models.requests_get(request._request.build_absolute_uri(reverse('orders-list'))+f"?expired_days={r['expired_days']}", request.user.auth_token.key)
+        r["orders_expired"]=models.requests_get(request.build_absolute_uri(reverse('orders-list'))+f"?expired_days={r['expired_days']}", request.user).json()
         
         
         # Get all inactive accounts status
         r["accounts_inactive_with_balance"]=[]
-        lod_accounts=models.requests_get(request._request.build_absolute_uri(reverse('accounts-list'))+"withbalance/?active=false", request.user.auth_token.key)
+        lod_accounts=models.requests_get(request.build_absolute_uri(reverse('accounts-list'))+"withbalance/?active=false", request.user).json()
         for d in lod_accounts:
             if d["balance_account"]!=0:
                 r["accounts_inactive_with_balance"].append(d)
