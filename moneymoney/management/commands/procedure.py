@@ -24,7 +24,7 @@ DJANGO_MONEYMONEY
   * python manage.py doxygen
   * git commit -a -m 'django_moneymoney-{__version__}'
   * git push
-  * Hacer un nuevo tag en GitHub de django_moneymoney
+  * Hacer un nuevo tag en GitHub de django_moneymoney con un texto vacio
 
 MONEYMONEY
   * Cambiar a moneymoney project
@@ -33,6 +33,6 @@ MONEYMONEY
   * mcedit src/locales/es.json
   * git commit -a -m 'moneymoney-{__version__}'
   * git push
-  * Hacer un nuevo tag en GitHub de moneymoney
+  * Hacer un nuevo tag en GitHub de moneymoney añadiendo el contenido del README
 """)
 
