@@ -1378,5 +1378,5 @@ def requests_get(url, user):
     }
     
     
-    return get(url, headers=headers)
+    return get(url, headers=headers, verify=False)
 
