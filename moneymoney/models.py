@@ -1370,10 +1370,12 @@ class FastOperationsCoverage(models.Model):
     class Meta:
         managed = True
         
-def requests_get(url, user):
+def requests_get(url, request):
+    from django.utils.translation import get_language_from_request
+    language = get_language_from_request(request)
     headers={
-        'Authorization': f"Token {user.auth_token.key}",
-#            'Accept-Language': `${localStorage.locale}-${localStorage.locale}`,
+        'Authorization': f"Token {request.user.auth_token.key}",
+        'Accept-Language': f"{language}-{language}",
         'Content-Type':'application/json'
     }
     

@@ -16,6 +16,10 @@ SECRET_KEY = 'CHANGEME-CHANGEME-CHANGEME-CHANGEME-CHANGEME-CHANGEME'
 ## Defines is a Debug environment
 DEBUG = True
 
+
+if DEBUG is True:
+    print ("You should remove DEBUG=True for production systems")
+
 ALLOWED_HOSTS = ['localhost', '127.0.0.1' ]
 
 REST_FRAMEWORK={ 

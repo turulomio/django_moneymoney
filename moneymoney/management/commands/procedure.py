@@ -17,6 +17,7 @@ class Command(BaseCommand):
 DJANGO_MONEYMONEY
   * Change version and version datetime in moneymoney/__init__.py
   * python manage.py procedure
+  * python manage.py makedbmessages
   * python manage.py makemessages --all
   * mcedit moneymoney/locale/es/LC_MESSAGES/django.po
   * python manage.py compilemessages

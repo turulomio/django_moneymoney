@@ -39,11 +39,11 @@ def generate_assets_report(request, format):
     doc.find_and_replace("__DATETIME__", str(doc.statistics.init))
 
     doc.find_and_delete_until_the_end_of_document('Styles to remove')
-    dict_report_annual=models.requests_get(request.build_absolute_uri(reverse('ReportAnnual', args=(year,  ))), request.user).json()
+    dict_report_annual=models.requests_get(request.build_absolute_uri(reverse('ReportAnnual', args=(year,  ))), request).json()
     vTotalLastYear=Currency(dict_report_annual["last_year_balance"], c)
     vTotal=Currency(dict_report_annual["data"][11]["total"], c)
     
-    dict_report_annual_gainsbyproductstypes=models.requests_get(request.build_absolute_uri(reverse('ReportAnnualGainsByProductstypes', args=(year,  ))), request.user).json()
+    dict_report_annual_gainsbyproductstypes=models.requests_get(request.build_absolute_uri(reverse('ReportAnnualGainsByProductstypes', args=(year,  ))), request).json()
     vTotal_gains_net=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "gains_net"), c)
     vTotal_dividends_net=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "dividends_net"), c)
     vTotal_gains_gross=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "gains_gross"), c)
@@ -73,7 +73,7 @@ def generate_assets_report(request, format):
         # Assets by bank
         doc.addParagraph(_("Assets by bank"), "Heading 2")
         
-        dict_bankswithbalance=models.requests_get(request.build_absolute_uri(reverse('banks-withbalance')), request.user).json()
+        dict_bankswithbalance=models.requests_get(request.build_absolute_uri(reverse('banks-withbalance')), request).json()
         bankswithbalance=[(_("Bank"), _("Accounts balance"), _("Investments balance"), _("Total balance"))]
         for o in dict_bankswithbalance:
             if o["active"]==True:
@@ -93,7 +93,7 @@ def generate_assets_report(request, format):
 
         # Assests current year incomes
         doc.addParagraph(_("Assets current year detail"), "Heading 2")
-        dict_report_annual_income=models.requests_get(request.build_absolute_uri(reverse('ReportAnnualIncome', args=(year,  ))), request.user).json()
+        dict_report_annual_income=models.requests_get(request.build_absolute_uri(reverse('ReportAnnualIncome', args=(year,  ))), request).json()
 
         report_annual_income=[(_("Month"), _("Incomes"), _("Expenses"), _("Gains"), _("Dividends"), _("Total"))]
         for o in dict_report_annual_income:
@@ -151,7 +151,7 @@ def generate_assets_report(request, format):
 
     ## Accounts
     doc.addParagraph(_("Current Accounts"), "Heading 1")
-    dict_accountswithbalance=models.requests_get(request.build_absolute_uri(reverse('accounts-withbalance')), request.user).json()
+    dict_accountswithbalance=models.requests_get(request.build_absolute_uri(reverse('accounts-withbalance')), request).json()
 
     accountswithbalance=[(_("Name"), _("Number"), _("Balance account"), _("Balance user currency"))]
     for o in dict_accountswithbalance:
@@ -176,7 +176,7 @@ def generate_assets_report(request, format):
     
     doc.addParagraph(_("Investments list"), "Heading 2")
     doc.addParagraph(_("Next list is sorted by the distance in percent to the selling point."), "MyStandard")
-    dict_investmentswithbalance=models.requests_get(request.build_absolute_uri(reverse('investments-withbalance'))+"?active=true", request.user).json()
+    dict_investmentswithbalance=models.requests_get(request.build_absolute_uri(reverse('investments-withbalance'))+"?active=true", request).json()
     dict_investmentswithbalance=lod.lod_order_by(dict_investmentswithbalance, "percentage_selling_point")
     investmentswithbalance=[(_("Name"), _("Invested"),  _("Balance"), _("Gains"), _("\\% invested"), _("\\% selling point"))]
     for o in dict_investmentswithbalance:
@@ -210,15 +210,14 @@ def generate_assets_report(request, format):
 
     ## Current Investment Operations list
     doc.addParagraph(_("Current investment operations"),"Heading 2")
-    dict_report_current_investmentsoperations=models.requests_get(request.build_absolute_uri(reverse('ReportCurrentInvestmentsOperations')), request.user).json()
+    dict_report_current_investmentsoperations=models.requests_get(request.build_absolute_uri(reverse('ReportCurrentInvestmentsOperations')), request).json()
 
     report_current_investmentsoperations=[(_("Date and time"), _("Name"), _("Operation type"), _("Shares"), _("Price"), _("Invested"), _("Balance"), _("Gross gains"), _("\\% total"))]
     for o in dict_report_current_investmentsoperations:
         report_current_investmentsoperations.append((
            dtaware2string(string2dtaware(o["datetime"], "JsUtcIso"), "%Y-%m-%d %H:%M:%S"), 
             o["name"],
-            object_from_url(request.build_absolute_uri(reverse('operationstypes-detail', args=(o["operationstypes_id"], ))), models.Operationstypes).name, 
-
+            _(object_from_url(request.build_absolute_uri(reverse('operationstypes-detail', args=(o["operationstypes_id"], ))), models.Operationstypes).name), 
             o['shares'], 
             Currency(o["price_user"], c), 
             Currency(o["invested_user"], c), 
@@ -266,7 +265,7 @@ def generate_assets_report(request, format):
     
     #Orders report
     doc.addParagraph(_("Investments orders"), "Heading 1")
-    dict_orders_list=models.requests_get(request.build_absolute_uri(reverse('orders-list'))+"?active=true", request.user).json()
+    dict_orders_list=models.requests_get(request.build_absolute_uri(reverse('orders-list'))+"?active=true", request).json()
     dict_orders_list=lod.lod_order_by(dict_orders_list, "percentage_from_price", reverse=True)
     orders_list=[( _("Date"), _("Expiration"), _("Investment"), _("Shares"), _("Price"), _("Amount"), _("\\% from current price"))]
     for o in dict_orders_list:
@@ -285,7 +284,7 @@ def generate_assets_report(request, format):
     
     #Dividend report
     doc.addParagraph(_("Dividend estimations report"), "Heading 1")
-    dict_reportdividends=models.requests_get(request.build_absolute_uri(reverse('ReportDividends')), request.user).json()
+    dict_reportdividends=models.requests_get(request.build_absolute_uri(reverse('ReportDividends')), request).json()
 
     reportdividends=[( _("Name"), _("Current price"), _("DPS"), _("Shares"), _("Estimated"), _("\\% Annual"))]
     for o in dict_reportdividends:
@@ -312,7 +311,7 @@ def generate_assets_report(request, format):
     
     # Ranking de investments
     doc.addParagraph(_("Historical investments ranking"), "Heading 1")
-    dict_reportranking=models.requests_get(request.build_absolute_uri(reverse('ReportRanking')), request.user).json()
+    dict_reportranking=models.requests_get(request.build_absolute_uri(reverse('ReportRanking')), request).json()
     ios_ranking=ios.IOS(dict_reportranking)
     reportranking=[]
     for products_id in ios_ranking.entries():
