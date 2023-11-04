@@ -66,7 +66,7 @@ def CatalogManager(request):
 
 @extend_schema(
     parameters=[
-        OpenApiParameter(name='outputformat', description='Output report format', required=True, type=str, default="pdf"), 
+        OpenApiParameter(name='format', description='Output report format', required=True, type=str, default="pdf"), 
     ],
 )
 @api_view(['POST', ])    
@@ -76,7 +76,7 @@ def AssetsReport(request):
         Generate user assets report
         Charts are part of the request in dict request.data
     """
-    format_=RequestString(request, "outputformat", "pdf")
+    format_=RequestString(request, "format", "pdf")
     if format_=="pdf":
         mime="application/pdf"
     elif format_=="odt":
@@ -88,8 +88,8 @@ def AssetsReport(request):
 
     from moneymoney.assetsreport import generate_assets_report
     filename=generate_assets_report(request, format_)
-    with open(filename, "rb") as pdf:
-        encoded_string = b64encode(pdf.read())
+    with open(filename, "rb") as doc:
+        encoded_string = b64encode(doc.read())
         r={"filename":path.basename(filename),  "format": format_,  "data":encoded_string.decode("UTF-8"), "mime":mime}
         return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 

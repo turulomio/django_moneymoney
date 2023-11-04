@@ -335,13 +335,12 @@ def generate_assets_report(request, format):
         Currency(ios_ranking.sum_total_io_historical()["sum_total"], c), 
     ])
     doc.addTableParagraph(reportranking, columnssize_percentages=[7, 43, 12.5, 12.5, 12.5, 12.5 ],  size=5, style="Table1Total")
-    
+    doc.pageBreak()
     
     
     # About
     doc.addParagraph(_("About Money Money"), "Heading 1")
     doc.addParagraph(_("Money Money is a opensource software to manage your personal finances."))
-    doc.pageBreak()
     
     
     # Document Generation
