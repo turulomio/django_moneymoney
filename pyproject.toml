@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django_moneymoney"
-version = "0.1.0"
+version = "1.2.0"
 description = "Personal accounting and financial system"
 authors = ["turulomio <turulomio@yahoo.es>"]
 license = "GPL-3.0 license"

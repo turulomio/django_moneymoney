@@ -11,6 +11,7 @@ class Command(BaseCommand):
         system (f"""sed -i '3s/.*/  "version": "{__version__}",/' ../moneymoney/package.json""")
         system (f"""sed -i '15s/.*/        version: "{__version__}",/' ../moneymoney/src/store.js""")
         system (f"""sed -i '16s/.*/        versiondate: new Date({d.year}, {d.month-1}, {d.day}, {d.hour}, {d.minute}),/' ../moneymoney/src/store.js""")
+        system (f"""sed -i '3s/.*/version = "{__version__}"/' pyproject.toml""")
 
         print()
         print(f"""To release a new version:
