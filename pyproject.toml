@@ -14,6 +14,7 @@ djangorestframework = ">=3.14.0"
 drf-spectacular = ">=0.26.5"
 pydicts = ">=0.9.0"
 requests = ">=2.31.0"
+request-casting = ">=0.4.0"
 unogenerator = ">=0.33.0"
 psycopg = ">=3.1.11"
 
