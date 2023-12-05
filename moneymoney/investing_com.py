@@ -160,9 +160,7 @@ class InvestingCom:
             else:
                 products=Products.objects.filter(ticker_investingcom=f"{row[1]}#{row[2]}").select_related("stockmarkets")
                 code=f"{row[1]}#{row[2]}"
-                
-                
-                
+
             if len(products)==0:
                 r.append({"product":None,   "code":code,  "log": "Product wasn't found"})
 
@@ -174,7 +172,8 @@ class InvestingCom:
                         quote.products=product
                         date_=casts.str2date(row[16], "DD/MM")
                         quote.datetime=casts.dtaware(date_, product.stockmarkets.closes, product.stockmarkets.zone)#Without 4 microseconds becaouse is not a ohcl
-                        quote.quote=casts.str2decimal(row[3])
+                        quote.quote=casts.str2decimal(row[3], type=1)
+
                         quotes_count=quotes_count+1
                         d["log"]=quote.save()
                     except:
@@ -183,14 +182,14 @@ class InvestingCom:
                     try:
                         quote=Quotes()
                         quote.products=product
-                        quote.datetime=casts.str2dtaware(row[16],"%H:%M:%S", self.request.user.profile.zone)
-                        quote.quote=casts.str2decimal(row[3])
+                        dtnaive=casts.str2dtnaive(row[16],"%H:%M:%S")
+                        quote.datetime=casts.dtaware(dtnaive.date(), dtnaive.time(), self.request.user.profile.zone)     
+                        quote.quote=casts.str2decimal(row[3], type=1)
                         quotes_count=quotes_count+1
                         d["log"]=quote.save()
                     except:
                         d["log"]="Error parsing hour" + str(row)
                 r.append(d)
-        print("Products found updating portfolio", len(r))
         return r
 
     ## Imports data from a CSV file with this struct. It has 6 columns
@@ -205,10 +204,11 @@ class InvestingCom:
                 ohcl=OHCLDaily(
                     self.product, 
                     casts.str2date(row[0], "DD.MM.YYYY"), 
-                    casts.str2decimal(row[2]), 
-                    casts.str2decimal(row[3]), 
-                    casts.str2decimal(row[1]), 
-                    casts.str2decimal(row[4])
+
+                    casts.str2decimal(row[2], type=1), 
+                    casts.str2decimal(row[3], type=1), 
+                    casts.str2decimal(row[1], type=1), 
+                    casts.str2decimal(row[4], type=1)
                 )
                 r=r+ohcl.generate_4_quotes()
 #                except:
@@ -227,7 +227,8 @@ class InvestingCom:
             if self.product.productstypes.id==types.eProductType.Fund:
                 date_=datetime.strptime(row[0], "%b %d, %Y")
                 dateends=self.product.stockmarkets.dtaware_closes(date_)
-                quote_=casts.str2decimal(row[2].replace(",", "#").replace(".",",").replace("#",""))
+                quote_=casts.str2decimal(row[2].replace(",", "#").replace(".",",").replace("#",""), type=1)
+
                 quote=Quotes(products=self.product, datetime=dateends, quote=quote_)
                 r.append({"product": self.product.fullName(),   "code":self.product.ticker_investingcom, "log":quote.save()})
         
@@ -238,10 +239,11 @@ class InvestingCom:
                     ohcl=OHCLDaily(
                         self.product, 
                         casts.str2date(row[0], "DD.MM.YYYY"), 
-                        casts.str2decimal(row[2]), 
-                        casts.str2decimal(row[3]), 
-                        casts.str2decimal(row[1]), 
-                        casts.str2decimal(row[4])
+                        casts.str2decimal(row[2], type=1), 
+                        casts.str2decimal(row[3], type=1), 
+                        casts.str2decimal(row[1], type=1), 
+                        casts.str2decimal(row[4], type=1)
+
                     )
                     r=r+ohcl.generate_4_quotes()
     #                except:
