@@ -41,6 +41,12 @@ SPECTACULAR_SETTINGS = {
     'VERSION': __version__,
     'SERVE_INCLUDE_SCHEMA': False,
     'SCHEMA_PATH_PREFIX_INSERT': '',
+    'COMPONENT_SPLIT_REQUEST': True,    
+    # available SwaggerUI configuration parameters
+    # https://swagger.io/docs/open-source-tools/swagger-ui/usage/configuration/
+    "SWAGGER_UI_SETTINGS": {
+        "persistAuthorization": True,
+    },
 }
 
 ## Application definitions
