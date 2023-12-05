@@ -173,6 +173,7 @@ class InvestingCom:
                         date_=casts.str2date(row[16], "DD/MM")
                         quote.datetime=casts.dtaware(date_, product.stockmarkets.closes, product.stockmarkets.zone)#Without 4 microseconds becaouse is not a ohcl
                         quote.quote=casts.str2decimal(row[3], type=1)
+
                         quotes_count=quotes_count+1
                         d["log"]=quote.save()
                     except:
@@ -203,6 +204,7 @@ class InvestingCom:
                 ohcl=OHCLDaily(
                     self.product, 
                     casts.str2date(row[0], "DD.MM.YYYY"), 
+
                     casts.str2decimal(row[2], type=1), 
                     casts.str2decimal(row[3], type=1), 
                     casts.str2decimal(row[1], type=1), 
@@ -226,6 +228,7 @@ class InvestingCom:
                 date_=datetime.strptime(row[0], "%b %d, %Y")
                 dateends=self.product.stockmarkets.dtaware_closes(date_)
                 quote_=casts.str2decimal(row[2].replace(",", "#").replace(".",",").replace("#",""), type=1)
+
                 quote=Quotes(products=self.product, datetime=dateends, quote=quote_)
                 r.append({"product": self.product.fullName(),   "code":self.product.ticker_investingcom, "log":quote.save()})
         
@@ -240,6 +243,7 @@ class InvestingCom:
                         casts.str2decimal(row[3], type=1), 
                         casts.str2decimal(row[1], type=1), 
                         casts.str2decimal(row[4], type=1)
+
                     )
                     r=r+ohcl.generate_4_quotes()
     #                except:
