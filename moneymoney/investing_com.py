@@ -5,8 +5,7 @@ from moneymoney import types
 from csv import reader
 from datetime import timedelta
 from io import StringIO
-from moneymoney.reusing.casts import string2decimal
-from moneymoney.reusing.datetime_functions import dtaware, string2date, string2dtaware
+from pydicts import casts
 
 class OHCLDaily:
     def __init__(self, product, date_, open, high, close, low):
@@ -114,7 +113,7 @@ class InvestingCom:
 #                            try:
 #                                quote=Quote(self.mem)
 #                                quote.product=product
-#                                date_=string2date(row[7], "DD/MM")
+#                                date_=casts.str2date(row[7], "DD/MM")
 #                                quote.datetime=dtaware(date_,quote.product.stockmarket.closes,self.mem.localzone_name)#Without 4 microseconds becaouse is not a ohcl
 #                                quote.quote=string2decimal(row[2])
 #                                self.append(quote)
@@ -173,9 +172,9 @@ class InvestingCom:
                     try:
                         quote=Quotes()
                         quote.products=product
-                        date_=string2date(row[16], "DD/MM")
-                        quote.datetime=dtaware(date_, product.stockmarkets.closes, product.stockmarkets.zone)#Without 4 microseconds becaouse is not a ohcl
-                        quote.quote=string2decimal(row[3])
+                        date_=casts.str2date(row[16], "DD/MM")
+                        quote.datetime=casts.dtaware(date_, product.stockmarkets.closes, product.stockmarkets.zone)#Without 4 microseconds becaouse is not a ohcl
+                        quote.quote=casts.str2decimal(row[3])
                         quotes_count=quotes_count+1
                         d["log"]=quote.save()
                     except:
@@ -184,8 +183,8 @@ class InvestingCom:
                     try:
                         quote=Quotes()
                         quote.products=product
-                        quote.datetime=string2dtaware(row[16],"%H:%M:%S", self.request.user.profile.zone)
-                        quote.quote=string2decimal(row[3])
+                        quote.datetime=casts.str2dtaware(row[16],"%H:%M:%S", self.request.user.profile.zone)
+                        quote.quote=casts.str2decimal(row[3])
                         quotes_count=quotes_count+1
                         d["log"]=quote.save()
                     except:
@@ -205,11 +204,11 @@ class InvestingCom:
 #                try:
                 ohcl=OHCLDaily(
                     self.product, 
-                    string2date(row[0], "DD.MM.YYYY"), 
-                    string2decimal(row[2]), 
-                    string2decimal(row[3]), 
-                    string2decimal(row[1]), 
-                    string2decimal(row[4])
+                    casts.str2date(row[0], "DD.MM.YYYY"), 
+                    casts.str2decimal(row[2]), 
+                    casts.str2decimal(row[3]), 
+                    casts.str2decimal(row[1]), 
+                    casts.str2decimal(row[4])
                 )
                 r=r+ohcl.generate_4_quotes()
 #                except:
@@ -228,7 +227,7 @@ class InvestingCom:
             if self.product.productstypes.id==types.eProductType.Fund:
                 date_=datetime.strptime(row[0], "%b %d, %Y")
                 dateends=self.product.stockmarkets.dtaware_closes(date_)
-                quote_=string2decimal(row[2].replace(",", "#").replace(".",",").replace("#",""))
+                quote_=casts.str2decimal(row[2].replace(",", "#").replace(".",",").replace("#",""))
                 quote=Quotes(products=self.product, datetime=dateends, quote=quote_)
                 r.append({"product": self.product.fullName(),   "code":self.product.ticker_investingcom, "log":quote.save()})
         
@@ -238,11 +237,11 @@ class InvestingCom:
     #                try:
                     ohcl=OHCLDaily(
                         self.product, 
-                        string2date(row[0], "DD.MM.YYYY"), 
-                        string2decimal(row[2]), 
-                        string2decimal(row[3]), 
-                        string2decimal(row[1]), 
-                        string2decimal(row[4])
+                        casts.str2date(row[0], "DD.MM.YYYY"), 
+                        casts.str2decimal(row[2]), 
+                        casts.str2decimal(row[3]), 
+                        casts.str2decimal(row[1]), 
+                        casts.str2decimal(row[4])
                     )
                     r=r+ohcl.generate_4_quotes()
     #                except:

@@ -14,17 +14,10 @@ def reusing():
         print("Update code in local without downloading was selected with --local")
     if local==False:
         download_from_github("turulomio", "reusingcode", "django/connection_dj.py", "moneymoney/reusing")
-        download_from_github("turulomio", "reusingcode", "django/request_casting.py", "moneymoney/reusing")
-        download_from_github("turulomio", "reusingcode", "python/casts.py", "moneymoney/reusing")
-        download_from_github("turulomio", "reusingcode", "python/currency.py", "moneymoney/reusing")
         download_from_github("turulomio", "reusingcode", "python/decorators.py", "moneymoney/reusing")
         download_from_github("turulomio", "reusingcode", "python/file_functions.py", "moneymoney/reusing")
-        download_from_github("turulomio", "reusingcode", "python/percentage.py", "moneymoney/reusing")
         download_from_github("turulomio", "reusingcode", "python/github.py", "moneymoney/reusing")
-        download_from_github("turulomio", "reusingcode", "python/datetime_functions.py", "moneymoney/reusing")
-        download_from_github("turulomio", "reusingcode", "python/sqlparser.py", "moneymoney/reusing")
         download_from_github("turulomio", "reusingcode", "python/libmanagers.py", "moneymoney/reusing")
-        download_from_github("turulomio", "reusingcode", "python/myjsonencoder.py", "moneymoney/reusing")
         download_from_github("turulomio", "django_calories_tracker", "calories_tracker/tests_helpers.py", "moneymoney/reusing")
 
     replace_in_file("moneymoney/reusing/libmanagers.py", "from datetime_functions", "from .datetime_functions")

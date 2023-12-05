@@ -4,14 +4,12 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 from moneymoney import __version__
 from moneymoney import models, ios
-from moneymoney.reusing.request_casting import object_from_url
-from moneymoney.reusing.casts import f
-from moneymoney.reusing.currency import  Currency
-from moneymoney.reusing.datetime_functions import dtaware2string, string2dtaware, dtnaive2string
-from moneymoney.reusing.percentage import  Percentage
 from os import path
-from pydicts import lod
+from pydicts import lod, casts
+from request_casting import request_casting
 from unogenerator import ODT
+from unogenerator.reusing.currency import Currency
+from unogenerator.reusing.percentage import  Percentage
 from unogenerator.commons import bytes_after_trim_image
 
     
@@ -66,7 +64,7 @@ def generate_assets_report(request, format):
         moreorless=_("more")
         if (vTotal-vTotalLastYear).amount<0:
             moreorless=_("less")
-        doc.addParagraph(f(_("At last year end you had {vTotalLastYear}, so it's a {Percentage(vTotal-vTotalLastYear, vTotalLastYear)} {moreorless} of the total assets at the end of the last year.")), "MyStandard")
+        doc.addParagraph(_("At last year end you had {0}, so it's a {1} {2} of the total assets at the end of the last year.").format(vTotalLastYear, Percentage(vTotal-vTotalLastYear, vTotalLastYear), moreorless ), "MyStandard")
     
     
     
@@ -111,8 +109,7 @@ def generate_assets_report(request, format):
                 
         ## Target
         doc.addParagraph(
-            f(_("Up to date you have got {vTotal_gains_dividends_net} (net gains + net dividends) what represents a {Percentage(vTotal_gains_dividends_net, vTotalLastYear)} of the total assets at the end of the last year.")), 
-            "MyStandard"
+            _("Up to date you have got {0} (net gains + net dividends) what represents a {1} of the total assets at the end of the last year.").format(vTotal_gains_dividends_net, Percentage(vTotal_gains_dividends_net, vTotalLastYear)), "MyStandard"
         )
         
         
@@ -145,8 +142,8 @@ def generate_assets_report(request, format):
         ])
         doc.addTableParagraph(report_annual_gainsbyproductstypes,  size=8, style="Table1Total")
         
-        doc.addParagraph(f(_("Gross gains + Gross dividends = {vTotal_gains_dividends_gross}.")),  "MyStandard")
-        doc.addParagraph(f(_("Net gains + Net dividends = {vTotal_gains_dividends_net}.")),  "MyStandard")
+        doc.addParagraph(_("Gross gains + Gross dividends = {0}.").format(vTotal_dividends_gross),  "MyStandard")
+        doc.addParagraph(_("Net gains + Net dividends = {0}.").format(vTotal_gains_dividends_net),  "MyStandard")
         doc.pageBreak()
 
     ## Accounts
@@ -206,7 +203,7 @@ def generate_assets_report(request, format):
     gains_negatives=Currency(lod.lod_sum_negatives(dict_investmentswithbalance, "gains_user"), c)
     gains=gains_positives+gains_negatives
     if invested_user.isZero()==False:
-        doc.addParagraph(f(_("Investment gains (positive minus negative results): {gains_positives} - {-gains_negatives} are {gains}.")), "MyStandard")
+        doc.addParagraph(_("Investment gains (positive minus negative results): {0} - {1} are {2}.").format(gains_positives, -gains_negatives, gains), "MyStandard")
 
     ## Current Investment Operations list
     doc.addParagraph(_("Current investment operations"),"Heading 2")
@@ -215,9 +212,9 @@ def generate_assets_report(request, format):
     report_current_investmentsoperations=[(_("Date and time"), _("Name"), _("Operation type"), _("Shares"), _("Price"), _("Invested"), _("Balance"), _("Gross gains"), _("\\% total"))]
     for o in dict_report_current_investmentsoperations:
         report_current_investmentsoperations.append((
-           dtaware2string(string2dtaware(o["datetime"], "JsUtcIso"), "%Y-%m-%d %H:%M:%S"), 
+           casts.dtaware2str(casts.str2dtaware(o["datetime"], "JsUtcIso"), "%Y-%m-%d %H:%M:%S"), 
             o["name"],
-            _(object_from_url(request.build_absolute_uri(reverse('operationstypes-detail', args=(o["operationstypes_id"], ))), models.Operationstypes).name), 
+            _(request_casting.object_from_url(request.build_absolute_uri(reverse('operationstypes-detail', args=(o["operationstypes_id"], ))), models.Operationstypes).name), 
             o['shares'], 
             Currency(o["price_user"], c), 
             Currency(o["invested_user"], c), 
@@ -344,7 +341,7 @@ def generate_assets_report(request, format):
     
     
     # Document Generation
-    filename='/tmp/AssetsReport-{}.pdf'.format(dtnaive2string(datetime.now(), "%Y%m%d%H%M"))
+    filename='/tmp/AssetsReport-{}.pdf'.format(casts.dtnaive2str(datetime.now(), "%Y%m%d%H%M"))
     if format=="pdf":
         doc.export_pdf(filename)
     elif format=="odt":
