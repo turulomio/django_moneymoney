@@ -1306,13 +1306,13 @@ rpds-py = ">=0.7.0"
 
 [[package]]
 name = "request-casting"
-version = "0.4.0"
+version = "0.5.0"
 description = "Provide method to cast django request data for POST and GET methods"
 optional = false
 python-versions = ">3.8,<4.0"
 files = [
-    {file = "request_casting-0.4.0-py3-none-any.whl", hash = "sha256:3b7d67d3c5b2e477cc5020732c59ad9428a86ec987112436865f1d474e92a923"},
-    {file = "request_casting-0.4.0.tar.gz", hash = "sha256:37c13c7e399181c238848e5fa19cd9c0481c4ccebf9fa309111f873e68bb33ab"},
+    {file = "request_casting-0.5.0-py3-none-any.whl", hash = "sha256:26265d4c40d9ad2beca4ff5baea35c61858175a75b62c70205af4270b6affddc"},
+    {file = "request_casting-0.5.0.tar.gz", hash = "sha256:31c5855182b3f390f27e215040e1c95697199ce04f8b3e9be50311f0191542e6"},
 ]
 
 [package.dependencies]
@@ -1760,4 +1760,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0"
-content-hash = "af69fe8edb0d74e0d96326dc929cf950149977f71e947dcf54f2295fe0fdd0bd"
+content-hash = "c3a748aa5f2b1927b6e04417434a02851a7b8951504d51026b8ca370b37c7de2"

@@ -1051,7 +1051,6 @@ def IOS(request):
 
 #    print(dt, mode, simulation)
     if classmethod_str=="from_ids":
-        print(request.data)
         ids=RequestListOfIntegers(request, "investments")
         if all_args_are_not_none( ids, dt, mode, simulation):
             ios_=ios.IOS.from_ids( dt,  request.user.profile.currency,  ids,  mode, simulation)
