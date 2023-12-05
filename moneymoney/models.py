@@ -8,11 +8,9 @@ from django.utils.translation import gettext as _
 from django.utils import timezone
 from moneymoney import ios
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
-from moneymoney.reusing.casts import string2list_of_integers
 from moneymoney.reusing.connection_dj import cursor_rows
-from moneymoney.reusing.currency import Currency
-from moneymoney.reusing.datetime_functions import dtaware_month_end, dtaware, dtaware2string, dtaware_day_end_from_date, dtaware_year_end
-from pydicts import lod_ymv
+from unogenerator.reusing.currency import Currency
+from pydicts import lod_ymv, casts
 from requests import get
 
 Decimal
@@ -151,10 +149,10 @@ class Stockmarkets(models.Model):
     ## Returns the close time of a given date
     def dtaware_closes(self, date):
 
-        return dtaware(date, self.closes, self.zone)
+        return casts.dtaware(date, self.closes, self.zone)
     
     def dtaware_closes_futures(self, date):
-        return dtaware(date, self.closes_futures, self.zone)
+        return casts.dtaware(date, self.closes_futures, self.zone)
 
     def dtaware_today_closes_futures(self):
         return self.dtaware_closes_futures(date.today())
@@ -165,10 +163,10 @@ class Stockmarkets(models.Model):
 
     ## Returns the starttime of a given date
     def dtaware_starts(self, date):
-        return dtaware(date, self.starts, self.zone)
+        return casts.dtaware(date, self.starts, self.zone)
     ## Returns a datetime with timezone with the todays stockmarket closes
     def dtaware_today_starts(self):
-        return dtaware(date.today(), self.starts, self.zone)
+        return casts.dtaware(date.today(), self.starts, self.zone)
 
 
     ## When we don't know the datetime of a quote because the webpage we are scrapping doesn't gives us, we can use this functions
@@ -188,15 +186,15 @@ class Stockmarkets(models.Model):
                 return self.dtaware_today_closes()
             elif now<self.dtaware_today_starts():
                 if now.weekday()>0:#Tuesday to Friday
-                    return dtaware(date.today()-timedelta(days=1), self.closes, self.zone)
+                    return casts.dtaware(date.today()-timedelta(days=1), self.closes, self.zone)
                 else: #Monday
-                    return dtaware(date.today()-timedelta(days=3), self.closes, self.zone)
+                    return casts.dtaware(date.today()-timedelta(days=3), self.closes, self.zone)
             else:
                 return now
         elif now.weekday()==5:#Saturday
-            return dtaware(date.today()-timedelta(days=1), self.closes, self.zone)
+            return casts.dtaware(date.today()-timedelta(days=1), self.closes, self.zone)
         elif now.weekday()==6:#Sunday
-            return dtaware(date.today()-timedelta(days=2), self.closes, self.zone)
+            return casts.dtaware(date.today()-timedelta(days=2), self.closes, self.zone)
 
     ## When we don't know the date pf a quote of a one quote by day product. For example funds... we'll use this function
     ## - If it's saturday or sunday it returns last thursday at close time
@@ -206,13 +204,13 @@ class Stockmarkets(models.Model):
         now=self.zone.now()
         if now.weekday()<5:#Weekday
             if now.weekday()>0:#Tuesday to Friday
-                return dtaware(date.today()-timedelta(days=1), self.closes, self.zone)
+                return casts.dtaware(date.today()-timedelta(days=1), self.closes, self.zone)
             else: #Monday
-                return dtaware(date.today()-timedelta(days=3), self.closes, self.zone)
+                return casts.dtaware(date.today()-timedelta(days=3), self.closes, self.zone)
         elif now.weekday()==5:#Saturday
-            return dtaware(date.today()-timedelta(days=2), self.closes, self.zone)
+            return casts.dtaware(date.today()-timedelta(days=2), self.closes, self.zone)
         elif now.weekday()==6:#Sunday
-            return dtaware(date.today()-timedelta(days=3), self.closes, self.zone)
+            return casts.dtaware(date.today()-timedelta(days=3), self.closes, self.zone)
 
 
 class Accountsoperations(models.Model):
@@ -437,7 +435,7 @@ class Dividends(models.Model):
             
             d=d.values("datetime__year","datetime__month").annotate(sum=Sum("net"))
             for o in  d:
-                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["sum"], currency, request.user.profile.currency)})
+                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(casts.dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["sum"], currency, request.user.profile.currency)})
         return lod_ymv.lod_ymv_transposition(ld)
 
     @transaction.atomic
@@ -756,7 +754,7 @@ class Products(models.Model):
         if self.quote_last() is None:
             return None
         if hasattr(self, "_quote_penultimate") is False:
-            dt_penultimate=dtaware_day_end_from_date(self.quote_last().datetime.date()-timedelta(days=1), 'UTC')#Better utc to assure
+            dt_penultimate=casts.dtaware_day_end_from_date(self.quote_last().datetime.date()-timedelta(days=1), 'UTC')#Better utc to assure
             self._quote_penultimate=Quotes.get_quote(self.id, dt_penultimate)
         return self._quote_penultimate
         
@@ -768,7 +766,7 @@ class Products(models.Model):
         if self.quote_last() is None:
             return None
         if hasattr(self, "_quote_lastyear") is False:
-            dt_lastyear=dtaware_year_end(self.quote_last().datetime.year-1, 'UTC')
+            dt_lastyear=casts.dtaware_year_end(self.quote_last().datetime.year-1, 'UTC')
             self._quote_lastyear=Quotes.get_quote(self.id, dt_lastyear)
         return self._quote_lastyear
         
@@ -814,12 +812,12 @@ class Products(models.Model):
         if quote_last is not None:
             r["last_datetime"]=quote_last.datetime
             r["last"]=quote_last.quote
-            dt_penultimate=dtaware_day_end_from_date(quote_last.datetime.date()-timedelta(days=1), 'UTC')#Better utc to assure
+            dt_penultimate=casts.dtaware_day_end_from_date(quote_last.datetime.date()-timedelta(days=1), 'UTC')#Better utc to assure
             quote_penultimate=Quotes.get_quote(products_id, dt_penultimate)
             if quote_penultimate is not None:
                 r["penultimate_datetime"]=quote_penultimate.datetime
                 r["penultimate"]=quote_penultimate.quote
-                dt_lastyear=dtaware_year_end(dt.year-1, 'UTC')
+                dt_lastyear=casts.dtaware_year_end(dt.year-1, 'UTC')
                 quote_lastyear=Quotes.get_quote(products_id, dt_lastyear)
                 if quote_lastyear is not None:
                     r["lastyear_datetime"]=quote_lastyear.datetime
@@ -1030,7 +1028,8 @@ class Strategies(models.Model):
         
     ## Returns a list with investments ids, due to self.investments is a text string
     def investments_ids(self):
-        return string2list_of_integers(self.investments)
+        s=f"[{self.investments}]"#old string2list of integers
+        return eval(s)
         
     ## Returns a queryset with the investments of the strategy, due to self.investments is a text strings
     def investments_queryset(self):
@@ -1075,7 +1074,7 @@ class Comment:
         """Returns (code,args)"""
         string=string
         try:
-            number=string2list_of_integers(string, separator=",")
+            number=eval(f"[{string}]")#old string2list_of integers
             if len(number)==1:
                 code=number[0]
                 args=[]
@@ -1173,7 +1172,7 @@ class Comment:
                 if not self.validateLength(1, code, args): return string
                 cco=Creditcardsoperations.objects.get(pk=args[0])
                 money=Currency(cco.amount, cco.creditcards.accounts.currency)
-                return _("Refund of {} payment of which had an amount of {}").format(dtaware2string(cco.datetime), money)
+                return _("Refund of {} payment of which had an amount of {}").format(casts.dtaware2str(cco.datetime), money)
 #        except:
 #            return _("Error decoding comment {}").format(string)
 
@@ -1214,7 +1213,7 @@ class Comment:
                 if not self.validateLength(1, code, args): return string
                 cco=Creditcardsoperations.objects.get(pk=args[0])
                 money=Currency(cco.amount, cco.creditcards.accounts.currency)
-                return _("Refund of {} payment of which had an amount of {}").format(dtaware2string(cco.datetime), money)
+                return _("Refund of {} payment of which had an amount of {}").format(casts.dtaware2str(cco.datetime), money)
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
@@ -1289,14 +1288,14 @@ class Assets:
             
             ao=ao.values("datetime__year","datetime__month").annotate(Sum("amount")).order_by("datetime__year", "datetime__month")
             for o in  ao:
-                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
+                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(casts.dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
 
             cc=Creditcardsoperations.objects.filter(concepts__operationstypes__id=operationstypes_id, creditcards__accounts__currency=currency)
             if year is not None:
                 cc=cc.filter(datetime__year=year)
             cc=cc.values("datetime__year","datetime__month").annotate(Sum("amount")) 
             for o in  cc:
-                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
+                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(casts.dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
         return lod_ymv.lod_ymv_transposition(ld)
 
     ## This method should take care of diffrent currenciesç
@@ -1316,14 +1315,14 @@ class Assets:
             
             ao=ao.values("datetime__year","datetime__month").annotate(Sum("amount")).order_by("datetime__year", "datetime__month")
             for o in  ao:
-                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
+                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(casts.dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
 
             cc=Creditcardsoperations.objects.filter(concepts__id__in=concepts_ids, creditcards__accounts__currency=currency)
             if year is not None:
                 cc=cc.filter(datetime__year=year)
             cc=cc.values("datetime__year","datetime__month").annotate(Sum("amount")) 
             for o in  cc:
-                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
+                ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(casts.dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["amount__sum"], currency, request.user.profile.currency)})
         return lod_ymv.lod_ymv_transposition(ld)
 
     @staticmethod

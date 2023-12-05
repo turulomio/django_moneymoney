@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 from moneymoney.reusing.libmanagers import ObjectManager, DatetimeValueManager
 from moneymoney import models, ios
-from moneymoney.reusing.percentage import Percentage
+from unogenerator.reusing.percentage import Percentage
 
 class ProductRange():
     def __init__(self, request,  id=None,  product=None,  value=None, percentage_down=None,  percentage_up=None, totalized_operations=True, decimals=2):

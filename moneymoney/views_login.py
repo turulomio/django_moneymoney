@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
-from moneymoney.reusing.request_casting import all_args_are_not_none, RequestString
+from request_casting.request_casting import all_args_are_not_none, RequestString
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view

@@ -18,11 +18,11 @@ from math import ceil
 from moneymoney import models, serializers, ios
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.reusing.connection_dj import execute, cursor_rows, show_queries, show_queries_function
-from moneymoney.reusing.datetime_functions import dtaware_month_start,  dtaware_month_end, dtaware_year_end, string2dtaware, dtaware_year_start, months
+from pydicts.casts import dtaware_month_start,  dtaware_month_end, dtaware_year_end, str2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
-from moneymoney.reusing.percentage import Percentage,  percentage_between
-from moneymoney.reusing.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestGetString, RequestGetUrl, RequestGetBool, RequestGetInteger, RequestGetListOfIntegers, RequestGetDtaware, RequestListOfIntegers, RequestString, RequestListUrl, all_args_are_not_none, RequestCastingError, RequestInteger
-from moneymoney.reusing.myjsonencoder import MyJSONEncoderDecimalsAsFloat
+from unogenerator.reusing.percentage import Percentage,  percentage_between
+from request_casting.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestString, RequestInteger, RequestListOfIntegers, RequestListOfUrls, all_args_are_not_none, RequestCastingError
+from pydicts.myjsonencoder import MyJSONEncoderDecimalsAsFloat
 from requests import delete, post
 from statistics import median
 from subprocess import run
@@ -165,8 +165,8 @@ class ConceptsViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"], name='Returns historical concept report detail', url_path="historical_report_detail", url_name='historical_report_detail', permission_classes=[permissions.IsAuthenticated])
     def ReportConceptsHistoricalDetail(self, request, pk=None):
         concept= self.get_object()
-        year=RequestGetInteger(request, "year")
-        month=RequestGetInteger(request, "month")
+        year=RequestInteger(request, "year")
+        month=RequestInteger(request, "month")
         if all_args_are_not_none(concept, year, month) is False:
             return Response({'status': 'year,month or concept is None'}, status=status.HTTP_400_BAD_REQUEST)
     
@@ -185,8 +185,8 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]      
     
     def get_queryset(self):
-        active=RequestGetBool(self.request, 'active')
-        account_id=RequestGetInteger(self.request, 'account')
+        active=RequestBool(self.request, 'active')
+        account_id=RequestInteger(self.request, 'account')
 
         if account_id is not None and active is not None:
             return self.queryset.filter(accounts_id=account_id,  active=active).order_by("name")
@@ -283,8 +283,8 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['GET'], name='Get a list of creditcards operations with balance', url_path="operationswithbalance", url_name='operationswithbalance', permission_classes=[permissions.IsAuthenticated])
     def operationswithbalance(self, request, pk=None):   
         creditcard=self.get_object()
-        paid=RequestGetBool(request, 'paid')
-        accountsoperations_id=RequestGetInteger(request, "accountsoperations_id")
+        paid=RequestBool(request, 'paid')
+        accountsoperations_id=RequestInteger(request, "accountsoperations_id")
         balance=0
         if paid is not None:
             qs=models.Creditcardsoperations.objects.select_related("creditcards", "concepts", "creditcards__accounts").filter(paid=paid, creditcards=creditcard).order_by("datetime")
@@ -320,7 +320,7 @@ class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
 #        
 #    def get_queryset(self):
 #        ##Saca los pagos hechos en esta operación de cuenta
-#        accountsoperations_id=RequestGetInteger(self.request, 'accountsoperations_id')
+#        accountsoperations_id=RequestInteger(self.request, 'accountsoperations_id')
 #        if accountsoperations_id is not None:
 #            return self.queryset.filter(accountsoperations__id=accountsoperations_id)
 #        else:
@@ -369,8 +369,8 @@ class DividendsViewSet(viewsets.ModelViewSet):
     ##            var headers={...this.myheaders(),params:{investments: [1,2,3],otra:"OTTRA"}}
     ##            return axios.get(`${this.$store.state.apiroot}/api/dividends/`, headers)
     def get_queryset(self):
-        investments_ids=RequestGetListOfIntegers(self.request,"investments[]") 
-        datetime=RequestGetDtaware(self.request, 'from', self.request.user.profile.zone)
+        investments_ids=RequestListOfIntegers(self.request,"investments[]") 
+        datetime=RequestDtaware(self.request, 'from', self.request.user.profile.zone)
         if len(investments_ids)>0 and datetime is None:
             return self.queryset.filter(investments__in=investments_ids).order_by("datetime")
         elif len(investments_ids)>0 and datetime is not None:
@@ -386,7 +386,7 @@ class DpsViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         try:
-            product=RequestGetUrl(self.request, 'product', models.Products)
+            product=RequestUrl(self.request, 'product', models.Products)
         except RequestCastingError as e:
             print(e)
             return self.queryset.none()
@@ -400,10 +400,10 @@ class OrdersViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]  
 
     def get_queryset(self):
-        active=RequestGetBool(self.request, 'active')
-        expired=RequestGetBool(self.request, 'expired')
-        expired_days=RequestGetInteger(self.request, 'expired_days')
-        executed=RequestGetBool(self.request, 'executed')
+        active=RequestBool(self.request, 'active')
+        expired=RequestBool(self.request, 'expired')
+        expired_days=RequestInteger(self.request, 'expired_days')
+        executed=RequestBool(self.request, 'executed')
         if active is not None:
             return self.queryset.filter(Q(expiration__gte=date.today()) | Q(expiration__isnull=True), executed__isnull=True)
         elif expired is not None:
@@ -461,9 +461,9 @@ class StrategiesViewSet(viewsets.ModelViewSet):
         ],
     )
     def list(self, request):
-        active=RequestGetBool(request, "active")
-        investment=RequestGetUrl(request, "investment", models.Investments)
-        type=RequestGetInteger(request, "type")
+        active=RequestBool(request, "active")
+        investment=RequestUrl(request, "investment", models.Investments)
+        type=RequestInteger(request, "type")
         if all_args_are_not_none(active, investment, type):
             self.queryset=self.queryset.filter(dt_to__isnull=active,  investments__contains=investment.id, type=type)
         serializer = serializers.StrategiesSerializer(self.queryset, many=True, context={'request': request})
@@ -471,7 +471,7 @@ class StrategiesViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], name='List investments with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
     def withbalance(self, request): 
-        active=RequestGetBool(request, 'active')
+        active=RequestBool(request, 'active')
         if active is None:
             qs=models.Strategies.objects.all() 
         else:
@@ -698,8 +698,8 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         # To get active or inactive accounts
-        active=RequestGetBool(self.request, "active")
-        bank_id=RequestGetInteger(self.request,"bank")
+        active=RequestBool(self.request, "active")
+        bank_id=RequestInteger(self.request,"bank")
 
         if bank_id is not None:
             return self.queryset.filter(accounts__banks__id=bank_id,  active=True)
@@ -721,7 +721,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
             else:#Long short products
                 return Percentage(-(selling_price-last_quote), last_quote)
         #######################################      
-        active=RequestGetBool(request, "active")
+        active=RequestBool(request, "active")
         if active is None:        
             return Response({'detail': _('You must set active parameter')}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -902,8 +902,8 @@ class AccountsViewSet(viewsets.ModelViewSet):
     
     
     def get_queryset(self):
-        active=RequestGetBool(self.request, 'active')
-        bank_id=RequestGetInteger(self.request, 'bank')
+        active=RequestBool(self.request, 'active')
+        bank_id=RequestInteger(self.request, 'bank')
 
         if bank_id is not None:
             return self.queryset.filter(banks__id=bank_id,   active=True)
@@ -937,8 +937,8 @@ class AccountsViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"], name='List accounts operations with balance calculations of an account', url_path="monthoperations", url_name='monthoperations', permission_classes=[permissions.IsAuthenticated])
     def monthoperations(self, request, pk=None):
         account=self.get_object()
-        year=RequestGetInteger(request, 'year')
-        month=RequestGetInteger(request, 'month')
+        year=RequestInteger(request, 'year')
+        month=RequestInteger(request, 'month')
         
         if all_args_are_not_none( year, month):
             dt_initial=dtaware_month_start(year, month, request.user.profile.zone)
@@ -971,10 +971,10 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
     
     
     def get_queryset(self):
-        search=RequestGetString(self.request, 'search')
-        concept=RequestGetUrl(self.request, 'concept', models.Concepts)
-        year=RequestGetInteger(self.request, 'year')
-        month=RequestGetInteger(self.request, 'month')
+        search=RequestString(self.request, 'search')
+        concept=RequestUrl(self.request, 'concept', models.Concepts)
+        year=RequestInteger(self.request, 'year')
+        month=RequestInteger(self.request, 'month')
 
         if search is not None:
             return self.queryset.filter(comment__icontains=search)
@@ -998,7 +998,7 @@ class BanksViewSet(viewsets.ModelViewSet):
     serializer_class =  serializers.BanksSerializer
 
     def get_queryset(self):
-        active=RequestGetBool(self.request, "active")
+        active=RequestBool(self.request, "active")
         if active is not None:
             return self.queryset.filter(active=active)
         return self.queryset
@@ -1042,7 +1042,7 @@ def IOS(request):
     simulation=request.data["simulation"] if request.data["simulation"] else []
     for s in simulation:
         if s["datetime"].__class__==str: #When comes from a post
-            s["datetime"]=string2dtaware(s["datetime"], "JsUtcIso")
+            s["datetime"]=str2dtaware(s["datetime"], "JsUtcIso")
             s["shares"]=Decimal(s["shares"])
             s["taxes"]=Decimal(s["taxes"])
             s["commission"]=Decimal(s["commission"])
@@ -1051,6 +1051,7 @@ def IOS(request):
 
 #    print(dt, mode, simulation)
     if classmethod_str=="from_ids":
+        print(request.data)
         ids=RequestListOfIntegers(request, "investments")
         if all_args_are_not_none( ids, dt, mode, simulation):
             ios_=ios.IOS.from_ids( dt,  request.user.profile.currency,  ids,  mode, simulation)
@@ -1074,7 +1075,7 @@ def IOS(request):
 def InvestmentsChangeSellingPrice(request):
     selling_price=RequestDecimal(request, "selling_price")
     selling_expiration=RequestDate(request, "selling_expiration")
-    investments=RequestListUrl(request, "investments", models.Investments)
+    investments=RequestListOfUrls(request, "investments", models.Investments)
     ids=[]
     if investments is not None and selling_price is not None: #Pricce 
         with transaction.atomic():
@@ -1168,9 +1169,9 @@ def ProductsPairs(request):
     """
         @param currency_conversion Boolean. If product's hasn't currency conversion this can help
     """
-    product_better=RequestGetUrl(request, "a", models.Products)
-    product_worse=RequestGetUrl(request, "b", models.Products)
-    interval_minutes=RequestGetInteger(request, "interval_minutes", 1)
+    product_better=RequestUrl(request, "a", models.Products)
+    product_worse=RequestUrl(request, "b", models.Products)
+    interval_minutes=RequestInteger(request, "interval_minutes", 1)
     
     common_quotes=cursor_rows("""
         select 
@@ -1217,9 +1218,9 @@ def ProductsPairs(request):
 ## products/quotes/ohcl?product=url&date=2022-4-1
 def ProductsQuotesOHCL(request):
     if request.method=="GET":
-        product=RequestGetUrl(request, "product", models.Products)
-        year=RequestGetInteger(request, "year")
-        month=RequestGetInteger(request, "month")
+        product=RequestUrl(request, "product", models.Products)
+        year=RequestInteger(request, "year")
+        month=RequestInteger(request, "month")
         
         if product is not None and year is not None and month is not None:
             ld_ohcl=product.ohclDailyBeforeSplits()       
@@ -1248,23 +1249,23 @@ def ProductsQuotesOHCL(request):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ProductsRanges(request):
-    product=RequestGetUrl(request, "product", models.Products)
-    totalized_operations=RequestGetBool(request, "totalized_operations") 
-    percentage_between_ranges=RequestGetInteger(request, "percentage_between_ranges")
+    product=RequestUrl(request, "product", models.Products)
+    totalized_operations=RequestBool(request, "totalized_operations") 
+    percentage_between_ranges=RequestInteger(request, "percentage_between_ranges")
 
     if percentage_between_ranges is not None:
         percentage_between_ranges=percentage_between_ranges/1000
-    percentage_gains=RequestGetInteger(request, "percentage_gains")
+    percentage_gains=RequestInteger(request, "percentage_gains")
     if percentage_gains is not None:
         percentage_gains=percentage_gains/1000
-    amount_to_invest=RequestGetInteger(request, "amount_to_invest")
-    recomendation_methods=RequestGetInteger(request, "recomendation_methods")
-    investments_ids=RequestGetListOfIntegers(request,"investments[]") 
+    amount_to_invest=RequestInteger(request, "amount_to_invest")
+    recomendation_methods=RequestInteger(request, "recomendation_methods")
+    investments_ids=RequestListOfIntegers(request,"investments[]") 
     if len(investments_ids)>0:
         qs_investments=models.Investments.objects.filter(id__in=investments_ids)
     else:
         qs_investments=models.Investments.objects.none()
-    additional_ranges=RequestGetInteger(request, "additional_ranges", 3)
+    additional_ranges=RequestInteger(request, "additional_ranges", 3)
 
     if all_args_are_not_none(product, totalized_operations,  percentage_between_ranges, percentage_gains, amount_to_invest, recomendation_methods):
         from moneymoney.productrange import ProductRangeManager
@@ -1306,7 +1307,7 @@ class ProductsViewSet(viewsets.ModelViewSet):
             Search products and return them with last, penultimate, and last year quotes
         """
   
-        search=RequestGetString(request, "search")
+        search=RequestString(request, "search")
         if all_args_are_not_none(search):
             
             if search ==":FAVORITES":
@@ -1522,11 +1523,11 @@ class QuotesViewSet(viewsets.ModelViewSet):
     ## api/quotes/?product=url Showss all quotes of a product
     ## api/quotes/?product=url&month=1&year=2021 Showss all quotes of a product in a month
     def get_queryset(self):
-        product=RequestGetUrl(self.request, 'product', models.Products)
-        future=RequestGetBool(self.request, 'future')
-        last=RequestGetBool(self.request, 'last')
-        month=RequestGetInteger(self.request, 'month')
-        year=RequestGetInteger(self.request, 'year')
+        product=RequestUrl(self.request, 'product', models.Products)
+        future=RequestBool(self.request, 'future')
+        last=RequestBool(self.request, 'last')
+        month=RequestInteger(self.request, 'month')
+        year=RequestInteger(self.request, 'year')
         
         if future is True:
             return models.Quotes.objects.all().filter(datetime__gte=timezone.now()).select_related("products").order_by("datetime")
@@ -1872,8 +1873,8 @@ def ReportConcepts(request):
                 data[d["concepts__id"]]=[new_d, ]
 
     #Makes report
-    year=RequestGetInteger(request, "year")
-    month=RequestGetInteger(request,  "month")
+    year=RequestInteger(request, "year")
+    month=RequestInteger(request,  "month")
     if year is None or month is None:
         return Response({'details': _('You must set year and month parameters')}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -1998,7 +1999,7 @@ def ReportEvolutionAssetsChart(request):
         dt=dtaware_month_end(year, month, local_zone)
         return dt, models.Assets.pl_total_balance(dt, local_currency, ios.IOSModes.totals_sumtotals)
     #####################
-    year_from=RequestGetInteger(request, "from")
+    year_from=RequestInteger(request, "from")
     if year_from==date.today().year:
         months_12=date.today()-timedelta(days=365)
         list_months=months(months_12.year, months_12.month)
@@ -2071,7 +2072,7 @@ def ReportEvolutionInvested(request, from_year):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportsInvestmentsLastOperation(request):
-    method=RequestGetInteger(request, "method", 0)
+    method=RequestInteger(request, "method", 0)
     investments=models.Investments.objects.filter(active=True).select_related("accounts", "products", "products__stockmarkets")
     if method==0: #Separated investments
         ios_=ios.IOS.from_qs( timezone.now(), request.user.profile.currency, investments, 1)
@@ -2192,7 +2193,7 @@ class EstimationsDpsViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         # To get active or inactive accounts
-        product=RequestGetUrl(self.request, "product", models.Products)
+        product=RequestUrl(self.request, "product", models.Products)
         if product is not None:
             return self.queryset.filter(products=product)
         else:
@@ -2208,8 +2209,8 @@ class FastOperationsCoverageViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        year=RequestGetInteger(self.request, 'year')
-        month=RequestGetInteger(self.request, 'month')
+        year=RequestInteger(self.request, 'year')
+        month=RequestInteger(self.request, 'month')
         if all_args_are_not_none(year, month):
             return self.queryset.filter(datetime__year=year, datetime__month=month)
         return self.queryset
