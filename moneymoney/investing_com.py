@@ -160,9 +160,7 @@ class InvestingCom:
             else:
                 products=Products.objects.filter(ticker_investingcom=f"{row[1]}#{row[2]}").select_related("stockmarkets")
                 code=f"{row[1]}#{row[2]}"
-                
-                
-                
+
             if len(products)==0:
                 r.append({"product":None,   "code":code,  "log": "Product wasn't found"})
 
@@ -191,8 +189,6 @@ class InvestingCom:
                     except:
                         d["log"]="Error parsing hour" + str(row)
                 r.append(d)
-        print("Products found updating portfolio", len(r))
-        print(r)
         return r
 
     ## Imports data from a CSV file with this struct. It has 6 columns
