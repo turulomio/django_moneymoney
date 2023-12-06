@@ -184,13 +184,7 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.CreditcardsSerializer
     permission_classes = [permissions.IsAuthenticated]      
     
-    @extend_schema(
-        parameters=[
-            OpenApiParameter(name='active', description='Filter by active accounts', required=False, type=bool), 
-            OpenApiParameter(name='account', description='Filter by account', required=False, type=OpenApiTypes.URI), 
-        ],
-    )
-    def list(self, request):
+    def queryset_for_list_methods(self):
         active=RequestBool(self.request, 'active')
         account_id=RequestInteger(self.request, 'account')
 
@@ -200,13 +194,28 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
             self.queryset=self.queryset.filter(active=active).order_by("name")
         else:
             self.queryset=self.queryset.order_by("name")
-        serializer = serializers.CreditcardsSerializer(self.queryset, many=True, context={'request': request})
+        return self.queryset
+    
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='active', description='Filter by active accounts', required=False, type=bool), 
+            OpenApiParameter(name='account', description='Filter by account', required=False, type=OpenApiTypes.URI), 
+        ],
+    )
+    def list(self, request):
+        serializer = serializers.CreditcardsSerializer(self.queryset_for_list_methods(), many=True, context={'request': request})
         return Response(serializer.data)
-
+        
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='active', description='Filter by active accounts', required=False, type=bool), 
+            OpenApiParameter(name='account', description='Filter by account', required=False, type=OpenApiTypes.URI), 
+        ],
+    )
     @action(detail=False, methods=["get"], name='List creditcards with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
     def withbalance(self, request):    
         r=[]
-        for o in self.get_queryset():
+        for o in self.queryset_for_list_methods():
             if o.deferred==False:
                 balance=0
             else:
@@ -914,13 +923,9 @@ class AccountsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.AccountsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
-    @extend_schema(
-        parameters=[
-            OpenApiParameter(name='active', description='Filter by active accounts', required=False, type=OpenApiTypes.BOOL), 
-            OpenApiParameter(name='bank', description='Filter by bank', required=False, type=OpenApiTypes.URI), 
-        ],
-    )
-    def list(self, request):
+    
+    def queryset_for_list_methods(self):
+        
         active=RequestBool(self.request, 'active')
         bank_id=RequestInteger(self.request, 'bank')
 
@@ -928,14 +933,28 @@ class AccountsViewSet(viewsets.ModelViewSet):
             self.queryset=self.queryset.filter(banks__id=bank_id,   active=True)
         elif active is not None:
             self.queryset=self.queryset.filter(active=active)
-        serializer = serializers.AccountsSerializer(self.queryset, many=True, context={'request': request})
+        return self.queryset
+    
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='active', description='Filter by active accounts', required=False, type=OpenApiTypes.BOOL), 
+            OpenApiParameter(name='bank', description='Filter by bank', required=False, type=OpenApiTypes.URI), 
+        ],
+    )
+    def list(self, request):
+        serializer = serializers.AccountsSerializer(self.queryset_for_list_methods(), many=True, context={'request': request})
         return Response(serializer.data)
 
-
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='active', description='Filter by active accounts', required=False, type=OpenApiTypes.BOOL), 
+            OpenApiParameter(name='bank', description='Filter by bank', required=False, type=OpenApiTypes.URI), 
+        ],
+    )
     @action(detail=False, methods=["get"], name='List accounts with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
     def withbalance(self, request):
         r=[]
-        for o in self.get_queryset():
+        for o in self.queryset_for_list_methods():
             balance=o.balance(timezone.now(), request.user.profile.currency ) 
             r.append({
                 "id": o.id,  
@@ -1027,22 +1046,30 @@ class BanksViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]  
     serializer_class =  serializers.BanksSerializer
 
+    def queryset_for_list_methods(self):
+        active=RequestBool(self.request, "active")
+        if active is not None:
+            self.queryset=self.queryset.filter(active=active)
+        return self.queryset
+
     @extend_schema(
         parameters=[
             OpenApiParameter(name='active', description='Filter by active banks', required=False, type=OpenApiTypes.BOOL), 
         ],
     )
     def list(self, request):
-        active=RequestBool(self.request, "active")
-        if active is not None:
-            self.queryset=self.queryset.filter(active=active)
-        serializer = serializers.BanksSerializer(self.queryset, many=True, context={'request': request})
+        serializer = serializers.BanksSerializer(self.queryset_for_list_methods(), many=True, context={'request': request})
         return Response(serializer.data)
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='active', description='Filter by active banks', required=False, type=OpenApiTypes.BOOL), 
+        ],
+    )
     @action(detail=False, methods=["get"], name='List banks with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
     def withbalance(self, request):
         r=[]
-        for o in self.get_queryset():
+        for o in self.queryset_for_list_methods():
             balance_accounts=o.balance_accounts()
             balance_investments=o.balance_investments(request)
             r.append({
