@@ -11,7 +11,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiExample
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiExample, inline_serializer
 from drf_spectacular.types import OpenApiTypes
 from itertools import permutations
 from math import ceil
@@ -743,6 +743,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 return Percentage(-(selling_price-last_quote), last_quote)
         #######################################      
         active=RequestBool(request, "active")
+        print(active)
         if active is None:        
             return Response({'detail': _('You must set active parameter')}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -922,9 +923,7 @@ class AccountsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.AccountsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
-    
     def queryset_for_list_methods(self):
-        
         active=RequestBool(self.request, 'active')
         bank_id=RequestInteger(self.request, 'bank')
 
@@ -932,6 +931,7 @@ class AccountsViewSet(viewsets.ModelViewSet):
             self.queryset=self.queryset.filter(banks__id=bank_id,   active=True)
         elif active is not None:
             self.queryset=self.queryset.filter(active=active)
+
         return self.queryset
     
     @extend_schema(
@@ -943,6 +943,7 @@ class AccountsViewSet(viewsets.ModelViewSet):
     def list(self, request):
         serializer = serializers.AccountsSerializer(self.queryset_for_list_methods(), many=True, context={'request': request})
         return Response(serializer.data)
+
 
     @extend_schema(
         parameters=[
