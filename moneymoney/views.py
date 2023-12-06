@@ -743,7 +743,6 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 return Percentage(-(selling_price-last_quote), last_quote)
         #######################################      
         active=RequestBool(request, "active")
-        print(active)
         if active is None:        
             return Response({'detail': _('You must set active parameter')}, status=status.HTTP_400_BAD_REQUEST)
 
