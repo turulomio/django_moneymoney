@@ -48,6 +48,11 @@ class Accounts(models.Model):
     def __str__(self):
         return self.fullName()
         
+
+    @staticmethod
+    def hurl(request, id):
+        return request.build_absolute_uri(reverse('accounts-detail', args=(id, )))
+        
     def fullName(self):
         return "{} ({})".format(_(self.name), _(self.banks.name))
         

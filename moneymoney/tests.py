@@ -86,6 +86,10 @@ class CtTestCase(APITestCase):
         cls.assertTrue(cls, models.Operationstypes.objects.all().count()>0,  "There aren't operationstypes")
         cls.assertTrue(cls, models.Products.objects.all().count()>0, "There aren't products")
         cls.assertTrue(cls, models.Concepts.objects.all().count()>0, "There aren't concepts")
+        
+        cls.bank=models.Banks.objects.create(name="Fixture bank", active=True)
+        cls.account=models.Accounts.objects.create(name="Fixture account", active=True, banks=cls.bank, currency="EUR", decimals=2)
+        cls.product=models.Products.objects.get(id=79228)
 
 
     def test_profile(self):
@@ -201,14 +205,18 @@ class CtTestCase(APITestCase):
         qs_accounts=models.Accounts.objects.filter(active=True)
         r=models.Accounts.accounts_balance(qs_accounts, timezone.now(), 'EUR')
         self.assertEqual(r["balance_user_currency"], 1000)
-
-
-
-    @tag("current")
-    def test_IOS_with_client(self):
-        print()
-        print("test_IOS_with_client")
         
+    @tag("current")
+    def test_Investments(self):
+        dict_account=tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
+        dict_product=tests_helpers.client_get(self, self.client_authorized_1, "/api/products/79228/", status.HTTP_200_OK)
+        payload=models.Investments.post_payload(products=dict_product["url"], accounts=dict_account["url"])
+        tests_helpers.common_tests_Collaborative(self, "/api/investments/", payload, self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
+
+
+
+
+    def test_IOS_with_client(self):
         #IOS.from_ids
         dict_account=tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
         dict_product=tests_helpers.client_get(self, self.client_authorized_1, "/api/products/79329/", status.HTTP_200_OK)

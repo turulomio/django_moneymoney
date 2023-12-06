@@ -11,7 +11,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiExample, inline_serializer
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 from itertools import permutations
 from math import ceil
@@ -30,7 +30,7 @@ from os import path
 from pydicts import lod, lod_ymv
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
-from rest_framework import viewsets, permissions, status, serializers as drf_serializers
+from rest_framework import viewsets, permissions, status#, serializers as drf_serializers
 from rest_framework.views import APIView
 from zoneinfo import available_timezones
 from tempfile import TemporaryDirectory
@@ -696,17 +696,18 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.InvestmentsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
-    def get_queryset(self):
-        # To get active or inactive accounts
+    def list(self, request):
+        """
+            It's better to ovverride list than get_queryset due to active is a class_attribute, and list only is for list and queryset for all methods
+        """
         active=RequestBool(self.request, "active")
         bank_id=RequestInteger(self.request,"bank")
-
         if bank_id is not None:
-            return self.queryset.filter(accounts__banks__id=bank_id,  active=True)
+            self.queryset=self.queryset.filter(accounts__banks__id=bank_id,  active=True)
         elif active is not None:
-            return self.queryset.filter(active=active)
-        else:
-            return self.queryset
+            self.queryset=self.queryset.filter(active=active)
+        serializer = serializers.InvestmentsSerializer(self.queryset, many=True, context={'request': request})
+        return Response(serializer.data)
             
     
     @action(detail=False, methods=["get"], name='List investments with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
@@ -722,12 +723,14 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 return Percentage(-(selling_price-last_quote), last_quote)
         #######################################      
         active=RequestBool(request, "active")
+        print(active)
         if active is None:        
             return Response({'detail': _('You must set active parameter')}, status=status.HTTP_400_BAD_REQUEST)
 
-        plio=ios.IOS.from_qs(timezone.now(),  'EUR',  models.Investments.objects.filter(active=active),  mode=2)
+        qs_investments=models.Investments.objects.filter(active=active).select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages")
+        plio=ios.IOS.from_qs(timezone.now(), 'EUR', qs_investments,  mode=2)
         r=[]
-        for o in self.get_queryset().select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages"):
+        for o in qs_investments:
             percentage_invested=None if plio.d_total_io_current(o.id)["invested_user"]==0 else  plio.d_total_io_current(o.id)["gains_gross_user"]/plio.d_total_io_current(o.id)["invested_user"]
             try:                
                 last_day_diff= (o.products.quote_last().quote-o.products.quote_penultimate().quote)*plio.d_total_io_current(o.id)["shares"]*o.products.real_leveraged_multiplier()
