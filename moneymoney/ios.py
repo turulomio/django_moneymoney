@@ -58,6 +58,29 @@ class IOS:
             return Percentage(basic_results["last"]-Decimal(lastyear), lastyear)
         else:
             return Percentage(-(basic_results["last"]-Decimal(lastyear)), lastyear)
+            
+    @staticmethod
+    def __ioc_percentage_annual_user(d, ioc):
+        """
+        Public method ioc is a io_current dictionary
+            o['investment2account']=o['currency_conversion']
+        """
+        basic_results=d["data"]["basic_results"]
+        if ioc["datetime"].year==date.today().year:
+            lastyear=ioc["price_user"] 
+            if lastyear is None:
+                return Percentage()
+        else:
+            if basic_results["lastyear"] is None:
+                return Percentage()
+            lastyear=basic_results["lastyear"]*ioc["investment2account"]*ioc["account2user"]
+
+        last=basic_results["last"]*ioc["investment2account"]*ioc["account2user"]
+
+        if ioc["shares"]>0:
+            return Percentage(last-Decimal(lastyear), lastyear)
+        else:
+            return Percentage(-(last-Decimal(lastyear)), lastyear)
 
     def ioc_percentage_sellingpoint(self, ioc, selling_price):
         if selling_price is None or selling_price==0:
@@ -643,7 +666,8 @@ class IOS:
             c['percentage_apr_investment']=Percentage() if NoZ(c["percentage_total_investment"].value) else Percentage(c['percentage_total_investment'].value*365, IOS.__ioc_days(c))
             c['percentage_annual_investment']=IOS.__ioc_percentage_annual_investment(d, c)
             c['percentage_total_user'] = Percentage() if NoZ(c["invested_user"]) else Percentage(c['gains_gross_user'], c['invested_user']) 
-
+            c['percentage_apr_user']=Percentage() if NoZ(c["percentage_total_user"].value) else Percentage(c['percentage_total_user'].value*365, IOS.__ioc_days(c))
+            c['percentage_annual_user']=IOS.__ioc_percentage_annual_user(d, c)
             
             
             d["total_io_current"]["balance_user"]=d["total_io_current"]["balance_user"]+c['balance_user']
