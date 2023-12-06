@@ -11,13 +11,13 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiExample
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiExample, inline_serializer
 from drf_spectacular.types import OpenApiTypes
 from itertools import permutations
 from math import ceil
 from moneymoney import models, serializers, ios
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
-from moneymoney.reusing.connection_dj import execute, cursor_rows, show_queries, show_queries_function
+from moneymoney.reusing.connection_dj import cursor_rows, show_queries, show_queries_function
 from pydicts.casts import dtaware_month_start,  dtaware_month_end, dtaware_year_end, str2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
 from unogenerator.reusing.percentage import Percentage,  percentage_between
@@ -30,7 +30,7 @@ from os import path
 from pydicts import lod, lod_ymv
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, serializers as drf_serializers
 from rest_framework.views import APIView
 from zoneinfo import available_timezones
 from tempfile import TemporaryDirectory
@@ -114,18 +114,28 @@ class ConceptsViewSet(viewsets.ModelViewSet):
                 "migrable": o.is_migrable(), 
             })
         return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
+        
 
+    @extend_schema(
+        request=inline_serializer(
+           name='ConceptsDataTransfer',
+           fields={
+               'to': drf_serializers.CharField(),
+           }
+       ), 
+        description="Makes a IOS object", 
+    )
     @action(detail=True, methods=['POST'], name='Transfer data from a concept to other', url_path="data_transfer", url_name='data_transfer', permission_classes=[permissions.IsAuthenticated])
     @transaction.atomic
     def data_transfer(self, request, pk=None):
         concept_to=RequestUrl(request, "to", models.Concepts)
         if concept_to is not None:
             concept_from=self.get_object()
-            execute("update accountsoperations set concepts_id=%s where concepts_id=%s", (concept_to.id, concept_from.id))
-            execute("update creditcardsoperations set concepts_id=%s where concepts_id=%s", (concept_to.id, concept_from.id))
-            execute("update dividends set concepts_id=%s where concepts_id=%s", (concept_to.id, concept_from.id))
-            return Response({'status': 'details'}, status=status.HTTP_200_OK)
-        return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
+            models.Accountsoperations.objects.filter(concepts=concept_from).update(concepts=concept_to)
+            models.Creditcardsoperations.objects.filter(concepts=concept_from).update(concepts=concept_to)
+            models.Dividends.objects.filter(concepts=concept_from).update(concepts=concept_to)
+            return Response(status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
     @action(detail=True, methods=["get"], name='Returns historical concept report', url_path="historical_report", url_name='historical_report', permission_classes=[permissions.IsAuthenticated])
