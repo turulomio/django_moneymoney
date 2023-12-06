@@ -344,8 +344,7 @@ class CtTestCase(APITestCase):
         r=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/concepts/?year={date.today().year}&month={date.today().month}", status.HTTP_200_OK)
         self.assertEqual(len(r["positive"]), 1)
         
-    @tag("current")
-    def test_ConceptsDataTransfer(self):
+    def test_Concepts_DataTransfer(self):
         # New personal concept
         dict_concept_from=tests_helpers.client_post(self, self.client_authorized_1, "/api/concepts/", models.Concepts.post_payload(name="Concept from"), status.HTTP_201_CREATED)
         
@@ -370,6 +369,21 @@ class CtTestCase(APITestCase):
         dict_dividend_after=tests_helpers.client_get(self, self.client_authorized_1, dict_dividend["url"]  , status.HTTP_200_OK)
         self.assertEqual(dict_dividend_after["concepts"], dict_concept_to["url"])
         
+        
+    @tag("current")
+    def test_Creditcards_Payments(self):        
+        # We create a credit card and a creditcard operation and make a payment
+        dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(), status.HTTP_201_CREATED)
+        dict_cco_1=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"]), status.HTTP_201_CREATED)
+        dict_cco_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"]), status.HTTP_201_CREATED)
+        dict_cco_3=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"]), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, f"{dict_cc['url']}pay/",  {"dt_payment":timezone.now(), "cco":[dict_cco_1["id"], ]}, status.HTTP_200_OK)
+        tests_helpers.client_post(self, self.client_authorized_1, f"{dict_cc['url']}pay/",  {"dt_payment":timezone.now(), "cco":[dict_cco_2["id"], dict_cco_3["id"] ]}, status.HTTP_200_OK)
+        
+        #We list payments
+        dict_payments=tests_helpers.client_get(self, self.client_authorized_1, f"{dict_cc['url']}payments/", status.HTTP_200_OK)
+        self.assertTrue(dict_payments[0]["count"], 1)
+        self.assertTrue(dict_payments[1]["count"], 2)
         
 
     def test_CatalogManager(self):

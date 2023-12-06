@@ -256,27 +256,18 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def payments(self, request, pk=None):
         creditcard=self.get_object()
-        r=cursor_rows("""
-            select 
-                count(accountsoperations.id), 
-                accountsoperations.id as accountsoperations_id, 
-                accountsoperations.amount, 
-                accountsoperations.datetime 
-            from 
-                accountsoperations, 
-                creditcardsoperations 
-            where 
-                creditcardsoperations.accountsoperations_id=accountsoperations.id and 
-                creditcards_id=%s and 
-                accountsoperations.concepts_id=40 
-            group by 
-                accountsoperations.id, 
-                accountsoperations.amount, 
-                accountsoperations.datetime
-            order by 
-                accountsoperations.datetime
-            """, (creditcard.id, ))
-        return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
+        lod_=list(models.Creditcardsoperations.objects.filter(
+            creditcards=creditcard, 
+            accountsoperations__concepts__id=eConcept.CreditCardBilling, 
+        ).order_by("accountsoperations__datetime").values(
+            "accountsoperations__id", 
+            "accountsoperations__amount", 
+            "accountsoperations__datetime"
+        ).annotate(count=Count("id")))
+        lod.lod_rename_key(lod_, "accountsoperations__id", "accountsoperations_id")
+        lod.lod_rename_key(lod_, "accountsoperations__amount", "amount")
+        lod.lod_rename_key(lod_, "accountsoperations__datetime", "datetime")
+        return JsonResponse( lod_, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
         
 
 
@@ -309,8 +300,8 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
                 o.paid=True
                 o.accountsoperations_id=c.id
                 o.save()
-            return JsonResponse( True, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
-        return JsonResponse( False, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
+            return Response(status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
     
 
     
