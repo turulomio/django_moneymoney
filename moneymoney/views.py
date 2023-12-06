@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from django.conf import settings
 from django.core.management import call_command
-from django.db import transaction
+from django.db import transaction, connection
 from django.db.models import prefetch_related_objects, Count, Sum, Q, Max, Subquery
 from django.db.models.functions.datetime import ExtractMonth, ExtractYear
 from django.urls import reverse
@@ -17,7 +17,7 @@ from itertools import permutations
 from math import ceil
 from moneymoney import models, serializers, ios
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
-from moneymoney.reusing.connection_dj import cursor_rows, show_queries, show_queries_function
+from moneymoney.reusing.connection_dj import cursor_rows, show_queries
 from pydicts.casts import dtaware_month_start,  dtaware_month_end, dtaware_year_end, str2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
 from unogenerator.reusing.percentage import Percentage,  percentage_between
@@ -36,7 +36,14 @@ from zoneinfo import available_timezones
 from tempfile import TemporaryDirectory
 from unogenerator.server import is_server_working
 
-ptimeit, show_queries, show_queries_function
+ptimeit, show_queries
+##  This method can be used as a function when decorators are not allowed (DRF actions)
+def show_queries_function():
+    sum_=0
+    for d in connection.queries:
+        print (f"[{d['time']}] {d['sql']}")
+        sum_=sum_+float(d['time'])
+    print (f"{len(connection.queries)} db queries took {round(sum_*1000,2)} ms")
 
 class GroupCatalogManager(permissions.BasePermission):
     """Permiso que comprueba si pertenece al grupo CatalogManager """
