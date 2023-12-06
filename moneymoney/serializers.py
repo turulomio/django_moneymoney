@@ -4,9 +4,12 @@ from moneymoney import models
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from django.utils.translation import gettext as _
-from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.utils import extend_schema_field, extend_schema_serializer, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 from request_casting.request_casting import id_from_url
+
+
+
 
 
 class SuccessSerializer(serializers.Serializer):
@@ -274,3 +277,40 @@ class FastOperationsCoverageSerializer(serializers.HyperlinkedModelSerializer):
 
     def get_currency(self, o):
         return o.investments.products.currency
+        
+@extend_schema_serializer(
+    component_name="IOSRequest", 
+    examples = [
+         OpenApiExample(
+            'from_ids',
+            summary='from_ids',
+            description='from_ids description',
+            value={
+                'classmethod_str': "from_ids",
+                'datetime': "2019-01-01T12:12:12Z", 
+                'mode':1, 
+                'simulation': [], 
+                'investments': [1, 2, 3]
+            },
+            request_only=True, # signal that example only applies to requests
+        ),
+         OpenApiExample(
+            'from_all',
+            summary='from_all summary',
+            description='from_all description',
+            value={
+                'classmethod_str': "from_all",
+                'datetime': "2019-01-01T12:12:12Z", 
+                'mode':1, 
+                'simulation': [], 
+            },
+            request_only=True, # signal that example only applies to requests
+        ),
+    ]
+)
+class IOSRequestSerializer(serializers.Serializer):
+    classmethod_str = serializers.CharField(max_length=200)
+    datetime=serializers.DateTimeField()
+    mode= serializers.IntegerField()
+    simulation=InvestmentsoperationsSerializer(many=True)
+    investments = serializers.ListField(child = serializers.IntegerField())

@@ -11,7 +11,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiExample, inline_serializer
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 from itertools import permutations
 from math import ceil
@@ -30,7 +30,7 @@ from os import path
 from pydicts import lod, lod_ymv
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
-from rest_framework import viewsets, permissions, status#, serializers as drf_serializers
+from rest_framework import viewsets, permissions, status
 from rest_framework.views import APIView
 from zoneinfo import available_timezones
 from tempfile import TemporaryDirectory
@@ -1087,69 +1087,61 @@ class BanksViewSet(viewsets.ModelViewSet):
         
 
 
-@extend_schema(
-#    request=inline_serializer(
-#        name="IOS2", 
-#        fields={
-#            "classmethod_str": drf_serializers.CharField, 
-#            "datetime": drf_serializers.DateTimeField, 
-#            "mode": drf_serializers.IntegerField, 
-#            "simulation": drf_serializers.BooleanField, 
-#        }, 
-#    ), 
-        examples=[
-        OpenApiExample('Login example',value={"classmethod_str": "username", "datetime":"password", "mode":1, "simulation":[]})
-    ],
-    methods=["POST"], 
-    description="Makes a IOS object", 
-)
 
-@api_view(['POST', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def IOS(request):
-    """
-        This view interacts with IOS module
-    """
-    classmethod_str=RequestString(request, "classmethod_str")
-    if classmethod_str is None:
-        return Response({'status': "classmethod_str can't be null"}, status=status.HTTP_400_BAD_REQUEST)
-    dt=RequestDtaware(request, "datetime", request.user.profile.zone, timezone.now())
-    mode=RequestInteger(request, "mode", ios.IOSModes.ios_totals_sumtotals)
-    
-    #Preparing simulation
-    simulation=request.data["simulation"] if request.data["simulation"] else []
-    for s in simulation:
-        if s["datetime"].__class__==str: #When comes from a post
-            s["datetime"]=str2dtaware(s["datetime"], "JsUtcIso")
-            s["shares"]=Decimal(s["shares"])
-            s["taxes"]=Decimal(s["taxes"])
-            s["commission"]=Decimal(s["commission"])
-            s["price"]=Decimal(s["price"])
-            s["currency_conversion"]=Decimal(s["currency_conversion"])
 
-#    print(dt, mode, simulation)
-    if classmethod_str=="from_ids":
-        ids=RequestListOfIntegers(request, "investments")
-        if all_args_are_not_none( ids, dt, mode, simulation):
-            ios_=ios.IOS.from_ids( dt,  request.user.profile.currency,  ids,  mode, simulation) 
-            show_queries_function()
-            return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
-    elif classmethod_str=="from_all":
-            ios_=ios.IOS.from_all( dt,  request.user.profile.currency,  mode, simulation)
-            show_queries_function()
-            return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
-    elif classmethod_str=="from_all_merging_io_current":
-            ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.all(),   mode, simulation)
-            show_queries_function()
-            return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
-    elif classmethod_str=="from_ids_merging_io_current":
-        ids=RequestListOfIntegers(request, "investments")
-        if all_args_are_not_none( ids, dt, mode, simulation):
-            ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.filter(id__in=ids),   mode, simulation)
-            show_queries_function()
-            return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
-    show_queries_function()
-    return Response({'status': "classmethod_str wasn't found'"}, status=status.HTTP_400_BAD_REQUEST)
+class IOS(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    @extend_schema(
+        request=serializers.IOSRequestSerializer, 
+        description="Makes a IOS object", 
+    )
+    def post(self, request, *args, **kwargs):
+        """
+            This view interacts with IOS module
+        """
+        print(request.data)
+        classmethod_str=RequestString(request, "classmethod_str")
+        if classmethod_str is None:
+            return Response({'status': "classmethod_str can't be null"}, status=status.HTTP_400_BAD_REQUEST)
+        dt=RequestDtaware(request, "datetime", request.user.profile.zone, timezone.now())
+        mode=RequestInteger(request, "mode", ios.IOSModes.ios_totals_sumtotals)
+        
+        #Preparing simulation
+        simulation=request.data["simulation"] if request.data["simulation"] else []
+        
+        for s in simulation:
+            if s["datetime"].__class__==str: #When comes from a post
+                s["datetime"]=str2dtaware(s["datetime"], "JsUtcIso")
+                s["shares"]=Decimal(s["shares"])
+                s["taxes"]=Decimal(s["taxes"])
+                s["commission"]=Decimal(s["commission"])
+                s["price"]=Decimal(s["price"])
+                s["currency_conversion"]=Decimal(s["currency_conversion"])
+
+    #    print(dt, mode, simulation)
+        if classmethod_str=="from_ids":
+            ids=RequestListOfIntegers(request, "investments")
+            print("CM", classmethod_str, dt, mode, simulation, ids)
+            if all_args_are_not_none( ids, dt, mode, simulation):
+                ios_=ios.IOS.from_ids( dt,  request.user.profile.currency,  ids,  mode, simulation) 
+                show_queries_function()
+                return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
+        elif classmethod_str=="from_all":
+                ios_=ios.IOS.from_all( dt,  request.user.profile.currency,  mode, simulation)
+                show_queries_function()
+                return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
+        elif classmethod_str=="from_all_merging_io_current":
+                ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.all(),   mode, simulation)
+                show_queries_function()
+                return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
+        elif classmethod_str=="from_ids_merging_io_current":
+            ids=RequestListOfIntegers(request, "investments")
+            if all_args_are_not_none( ids, dt, mode, simulation):
+                ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.filter(id__in=ids),   mode, simulation)
+                show_queries_function()
+                return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
+        show_queries_function()
+        return Response({'status': "classmethod_str wasn't found'"}, status=status.HTTP_400_BAD_REQUEST)
 
 @transaction.atomic
 @api_view(['POST', ])    
