@@ -1027,12 +1027,17 @@ class BanksViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]  
     serializer_class =  serializers.BanksSerializer
 
-    def get_queryset(self):
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='active', description='Filter by active banks', required=False, type=OpenApiTypes.BOOL), 
+        ],
+    )
+    def list(self, request):
         active=RequestBool(self.request, "active")
         if active is not None:
-            return self.queryset.filter(active=active)
-        return self.queryset
-
+            self.queryset=self.queryset.filter(active=active)
+        serializer = serializers.BanksSerializer(self.queryset, many=True, context={'request': request})
+        return Response(serializer.data)
 
     @action(detail=False, methods=["get"], name='List banks with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
     def withbalance(self, request):
@@ -1566,13 +1571,23 @@ class QuotesViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.QuotesSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
-    
-    ## api/quotes/ Show all quotes of the database
-    ## api/quotes/?future=true Show all quotes with datetime in the future for debugging
-    ## api/quotes/?last=true Shows all products last Quotes
-    ## api/quotes/?product=url Showss all quotes of a product
-    ## api/quotes/?product=url&month=1&year=2021 Showss all quotes of a product in a month
-    def get_queryset(self):
+    @extend_schema(
+        description="""
+api/quotes/ Show all quotes of the database
+api/quotes/?future=true Show all quotes with datetime in the future for debugging
+api/quotes/?last=true Shows all products last Quotes
+api/quotes/?product=url Showss all quotes of a product
+api/quotes/?product=url&month=1&year=2021 Showss all quotes of a product in a month
+        """, 
+        parameters=[
+            OpenApiParameter(name='product', description='Filter by product', required=False, type=OpenApiTypes.URI), 
+            OpenApiParameter(name='future', description='Filter by quotes set in future', required=False, type=OpenApiTypes.BOOL), 
+            OpenApiParameter(name='last', description='Filter by last quotes', required=False, type=OpenApiTypes.BOOL), 
+            OpenApiParameter(name='month', description='Filter by month', required=False, type=OpenApiTypes.INT), 
+            OpenApiParameter(name='year', description='Filter by year', required=False, type=OpenApiTypes.INT), 
+        ],
+    )
+    def list(self, request):
         product=RequestUrl(self.request, 'product', models.Products)
         future=RequestBool(self.request, 'future')
         last=RequestBool(self.request, 'last')
@@ -1580,11 +1595,11 @@ class QuotesViewSet(viewsets.ModelViewSet):
         year=RequestInteger(self.request, 'year')
         
         if future is True:
-            return models.Quotes.objects.all().filter(datetime__gte=timezone.now()).select_related("products").order_by("datetime")
+            self.queryset=self.queryset.filter(datetime__gte=timezone.now()).select_related("products").order_by("datetime")
                 
         ## Search last quote of al linvestments
         if last is True:
-            qs=models.Quotes.objects.raw("""
+            self.queryset=models.Quotes.objects.raw("""
                 select 
                     id, 
                     quotes.products_id, 
@@ -1600,16 +1615,14 @@ class QuotesViewSet(viewsets.ModelViewSet):
                     quotes.datetime desc
             """)
             #Querysets with raw sql can use select_related, but with one more query you can use this
-            prefetch_related_objects(qs, 'products')
-            return qs
+            prefetch_related_objects(self.queryset, 'products')
 
         if all_args_are_not_none(product, year, month):
-            return self.queryset.filter(products=product, datetime__year=year, datetime__month=month).order_by("datetime")
+            self.queryset=self.queryset.filter(products=product, datetime__year=year, datetime__month=month).order_by("datetime")
         if product is not None:
-            return self.queryset.filter(products=product).order_by("datetime")
-
-        return self.queryset
-
+            self.queryset=self.queryset.filter(products=product).order_by("datetime")
+        serializer = serializers.QuotesSerializer(self.queryset, many=True, context={'request': request})
+        return Response(serializer.data)
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -2241,13 +2254,18 @@ class EstimationsDpsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.EstimationsDpsSerializer
     permission_classes = [permissions.IsAuthenticated]      
     
-    def get_queryset(self):
-        # To get active or inactive accounts
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='product', description='Filter by product', required=False, type=OpenApiTypes.URI), 
+        ],
+    )
+    def list(self, request):
         product=RequestUrl(self.request, "product", models.Products)
         if product is not None:
             return self.queryset.filter(products=product)
-        else:
-            return self.queryset
+        serializer = serializers.EstimationsDpsSerializer(self.queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+
     
 class StockmarketsViewSet(CatalogModelViewSet):
     queryset = models.Stockmarkets.objects.all()
@@ -2258,9 +2276,16 @@ class FastOperationsCoverageViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.FastOperationsCoverageSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='year', description='Filter by year', required=False, type=OpenApiTypes.INT), 
+            OpenApiParameter(name='month', description='Filter by year', required=False, type=OpenApiTypes.INT), 
+        ],
+    )
+    def list(self, request):
         year=RequestInteger(self.request, 'year')
         month=RequestInteger(self.request, 'month')
         if all_args_are_not_none(year, month):
-            return self.queryset.filter(datetime__year=year, datetime__month=month)
-        return self.queryset
+            self.queryset= self.queryset.filter(datetime__year=year, datetime__month=month)
+        serializer = serializers.FastOperationsCoverageSerializer(self.queryset, many=True, context={'request': request})
+        return Response(serializer.data)
