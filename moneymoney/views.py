@@ -21,7 +21,7 @@ from moneymoney.reusing.connection_dj import execute, cursor_rows, show_queries,
 from pydicts.casts import dtaware_month_start,  dtaware_month_end, dtaware_year_end, str2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
 from unogenerator.reusing.percentage import Percentage,  percentage_between
-from request_casting.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestString, RequestInteger, RequestListOfIntegers, RequestListOfUrls, all_args_are_not_none, RequestCastingError
+from request_casting.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestString, RequestInteger, RequestListOfIntegers, RequestListOfUrls, all_args_are_not_none
 from pydicts.myjsonencoder import MyJSONEncoderDecimalsAsFloat
 from requests import delete, post
 from statistics import median
@@ -385,31 +385,43 @@ class DpsViewSet(viewsets.ModelViewSet):
     queryset = models.Dps.objects.all()
     serializer_class = serializers.DpsSerializer
     permission_classes = [permissions.IsAuthenticated]      
-    
-    def get_queryset(self):
-        try:
-            product=RequestUrl(self.request, 'product', models.Products)
-        except RequestCastingError as e:
-            print(e)
-            return self.queryset.none()
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='product', description='Filter by product', required=False, type=OpenApiTypes.URI), 
+        ],
+    )
+    def list(self, request):
+        product=RequestUrl(self.request, 'product', models.Products)
         if all_args_are_not_none(product):
-            return self.queryset.filter(products=product)
-        return self.queryset
+            self.queryset=self.queryset.filter(products=product)
+        serializer = serializers.DpsSerializer(self.queryset, many=True, context={'request': request})
+        return Response(serializer.data)
 
 class OrdersViewSet(viewsets.ModelViewSet):
     queryset = models.Orders.objects.select_related("investments","investments__accounts","investments__products","investments__products__productstypes","investments__products__leverages").all()
     serializer_class = serializers.OrdersSerializer
     permission_classes = [permissions.IsAuthenticated]  
 
-    def get_queryset(self):
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='active', description='Filter actives', required=False, type=OpenApiTypes.BOOL),  
+            OpenApiParameter(name='expired', description='Filter expired orders', required=False, type=OpenApiTypes.BOOL), 
+            OpenApiParameter(name='expired_days', description='Filter expired days', required=False, type=OpenApiTypes.INT), 
+            OpenApiParameter(name='executed', description='Filter executed', required=False, type=OpenApiTypes.BOOL), 
+
+],
+    )
+    def list(self, request):  
         active=RequestBool(self.request, 'active')
         expired=RequestBool(self.request, 'expired')
         expired_days=RequestInteger(self.request, 'expired_days')
         executed=RequestBool(self.request, 'executed')
         if active is not None:
-            return self.queryset.filter(Q(expiration__gte=date.today()) | Q(expiration__isnull=True), executed__isnull=True)
+            self.queryset=self.queryset.filter(Q(expiration__gte=date.today()) | Q(expiration__isnull=True), executed__isnull=True)
         elif expired is not None:
-            return self.queryset.filter(expiration__lte=date.today(),  executed__isnull=True)
+            self.queryset=self.queryset.filter(expiration__lte=date.today(),  executed__isnull=True)
         elif expired_days is not None:
             """
                 Returns orders that have expired in last expired_days and that haven't been reordered. Used to alert expired orders
@@ -419,15 +431,12 @@ class OrdersViewSet(viewsets.ModelViewSet):
             set_investments_with_orders_active=set(models.Orders.objects.filter(Q(expiration__gte=date.today()) | Q(expiration__isnull=True), executed__isnull=True).values_list("investments_id", flat=True))
             set_investments_with_orders_expired_days=set(qs_orders_expired_days.values_list("investments_id", flat=True))
             set_investments_with_orders_not_reorderd=set_investments_with_orders_expired_days-set_investments_with_orders_active
-            return qs_orders_expired_days.filter(investments_id__in=list(set_investments_with_orders_not_reorderd))
+            self.queryset=qs_orders_expired_days.filter(investments_id__in=list(set_investments_with_orders_not_reorderd))
         elif executed is not None:
-            return self.queryset.filter(executed__isnull=False)
-        else:
-            return self.queryset
-
-    def list(self, request):  
+            self.queryset=self.queryset.filter(executed__isnull=False)        
+        
         r=[]
-        for o in self.get_queryset():
+        for o in self.queryset:
             r.append({
                 "id": o.id,  
                 "url": request.build_absolute_uri(reverse('orders-detail', args=(o.pk, ))), 
@@ -905,16 +914,23 @@ class AccountsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.AccountsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
-    
-    def get_queryset(self):
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='active', description='Filter by active accounts', required=False, type=OpenApiTypes.BOOL), 
+            OpenApiParameter(name='bank', description='Filter by bank', required=False, type=OpenApiTypes.URI), 
+        ],
+    )
+    def list(self, request):
         active=RequestBool(self.request, 'active')
         bank_id=RequestInteger(self.request, 'bank')
 
         if bank_id is not None:
-            return self.queryset.filter(banks__id=bank_id,   active=True)
+            self.queryset=self.queryset.filter(banks__id=bank_id,   active=True)
         elif active is not None:
-            return self.queryset.filter(active=active)
-        return self.queryset
+            self.queryset=self.queryset.filter(active=active)
+        serializer = serializers.AccountsSerializer(self.queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+
 
     @action(detail=False, methods=["get"], name='List accounts with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
     def withbalance(self, request):
@@ -974,20 +990,29 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.AccountsoperationsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
-    
-    def get_queryset(self):
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='search', description='Filter by search', required=False, type=OpenApiTypes.STR), 
+            OpenApiParameter(name='concept', description='Filter by concept', required=False, type=OpenApiTypes.URI), 
+            OpenApiParameter(name='year', description='Filter by year', required=False, type=OpenApiTypes.INT), 
+            OpenApiParameter(name='month', description='Filter by month', required=False, type=OpenApiTypes.INT), 
+        ],
+    )
+    def list(self, request):     
         search=RequestString(self.request, 'search')
         concept=RequestUrl(self.request, 'concept', models.Concepts)
         year=RequestInteger(self.request, 'year')
         month=RequestInteger(self.request, 'month')
 
         if search is not None:
-            return self.queryset.filter(comment__icontains=search)
+            self.queryset=self.queryset.filter(comment__icontains=search)
         if all_args_are_not_none(concept, year, month):
-            return self.queryset.filter(concepts=concept, datetime__year=year, datetime__month=month)
+            self.queryset=self.queryset.filter(concepts=concept, datetime__year=year, datetime__month=month)
         if all_args_are_not_none(concept, year):
-            return self.queryset.filter(concepts=concept, datetime__year=year)
-        return self.queryset
+            self.queryset=self.queryset.filter(concepts=concept, datetime__year=year)
+        serializer = serializers.AccountsoperationsSerializer(self.queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+
 
     @action(detail=True, methods=['POST'], name='Refund all cco paid in an ao', url_path="ccpaymentrefund", url_name='ccpaymentrefund', permission_classes=[permissions.IsAuthenticated])
     @transaction.atomic
