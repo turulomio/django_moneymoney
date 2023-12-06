@@ -184,15 +184,24 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.CreditcardsSerializer
     permission_classes = [permissions.IsAuthenticated]      
     
-    def get_queryset(self):
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='active', description='Filter by active accounts', required=False, type=bool), 
+            OpenApiParameter(name='account', description='Filter by account', required=False, type=OpenApiTypes.URI), 
+        ],
+    )
+    def list(self, request):
         active=RequestBool(self.request, 'active')
         account_id=RequestInteger(self.request, 'account')
 
-        if account_id is not None and active is not None:
-            return self.queryset.filter(accounts_id=account_id,  active=active).order_by("name")
+        if all_args_are_not_none(active, account_id):
+            self.queryset= self.queryset.filter(accounts_id=account_id,  active=active).order_by("name")
         elif active is not None:
-            return self.queryset.filter(active=active).order_by("name")
-        return self.queryset.order_by("name")
+            self.queryset=self.queryset.filter(active=active).order_by("name")
+        else:
+            self.queryset=self.queryset.order_by("name")
+        serializer = serializers.CreditcardsSerializer(self.queryset, many=True, context={'request': request})
+        return Response(serializer.data)
 
     @action(detail=False, methods=["get"], name='List creditcards with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
     def withbalance(self, request):    
@@ -316,16 +325,6 @@ class CreditcardsoperationsViewSet(viewsets.ModelViewSet):
     queryset = models.Creditcardsoperations.objects.all().select_related("creditcards").select_related("creditcards__accounts")
     serializer_class = serializers.CreditcardsoperationsSerializer
     permission_classes = [permissions.IsAuthenticated]  
-#    
-#        
-#    def get_queryset(self):
-#        ##Saca los pagos hechos en esta operación de cuenta
-#        accountsoperations_id=RequestInteger(self.request, 'accountsoperations_id')
-#        if accountsoperations_id is not None:
-#            return self.queryset.filter(accountsoperations__id=accountsoperations_id)
-#        else:
-#            return self.queryset.all()
-
 
     
 class Derivatives(APIView):
@@ -364,21 +363,24 @@ class DividendsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.DividendsSerializer
     permission_classes = [permissions.IsAuthenticated] 
     
-    
-    ## To use this methos use axios 
-    ##            var headers={...this.myheaders(),params:{investments: [1,2,3],otra:"OTTRA"}}
-    ##            return axios.get(`${this.$store.state.apiroot}/api/dividends/`, headers)
-    def get_queryset(self):
-        investments_ids=RequestListOfIntegers(self.request,"investments[]") 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='investments[]', description='Filter by investments', required=False, type=OpenApiTypes.OBJECT), 
+            OpenApiParameter(name='datetime', description='Filter by datetime from', required=False, type=OpenApiTypes.DATETIME), 
+        ],
+    )
+    def list(self, request):       
+        investments_ids=RequestListOfIntegers(self.request,"investments[]", []) 
         datetime=RequestDtaware(self.request, 'from', self.request.user.profile.zone)
         if len(investments_ids)>0 and datetime is None:
-            return self.queryset.filter(investments__in=investments_ids).order_by("datetime")
+            self.queryset=self.queryset.filter(investments__in=investments_ids).order_by("datetime")
         elif len(investments_ids)>0 and datetime is not None:
-            return self.queryset.filter(investments__in=investments_ids,  datetime__gte=datetime).order_by("datetime")
+            self.queryset=self.queryset.filter(investments__in=investments_ids,  datetime__gte=datetime).order_by("datetime")
         else:
-            return self.queryset.order_by("datetime")
-    
-    
+            self.queryset=self.queryset.order_by("datetime")
+        serializer = serializers.DividendsSerializer(self.queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+
 class DpsViewSet(viewsets.ModelViewSet):
     queryset = models.Dps.objects.all()
     serializer_class = serializers.DpsSerializer
