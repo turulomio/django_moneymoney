@@ -1,6 +1,6 @@
 from sys import argv
 from moneymoney.reusing.github import download_from_github
-from moneymoney.reusing.file_functions import replace_in_file
+#from moneymoney.reusing.file_functions import replace_in_file
 
 def reusing():
     """
@@ -17,7 +17,5 @@ def reusing():
         download_from_github("turulomio", "reusingcode", "python/decorators.py", "moneymoney/reusing")
         download_from_github("turulomio", "reusingcode", "python/file_functions.py", "moneymoney/reusing")
         download_from_github("turulomio", "reusingcode", "python/github.py", "moneymoney/reusing")
-        download_from_github("turulomio", "reusingcode", "python/libmanagers.py", "moneymoney/reusing")
         download_from_github("turulomio", "django_calories_tracker", "calories_tracker/tests_helpers.py", "moneymoney/reusing")
 
-    replace_in_file("moneymoney/reusing/libmanagers.py", "from datetime_functions", "from .datetime_functions")

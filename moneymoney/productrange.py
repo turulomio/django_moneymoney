@@ -2,9 +2,34 @@ from datetime import date
 from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
-from moneymoney.reusing.libmanagers import ObjectManager, DatetimeValueManager
 from moneymoney import models, ios
 from unogenerator.reusing.percentage import Percentage
+
+
+## INTEGRATE IN PYDICTS
+
+## Return find less or equal dv of a given datetime
+## @param dt datetime
+def lod_dtv_find_le(lod_dtv_, dt):
+    for o in reversed(lod_dtv_):
+        if o["datetime"]<=dt:
+            return o
+    return None
+
+def lod_dtv_sma(lod_dtv, period):
+    """
+        From a lod with datetime and value keys returns other lod_dv with the sma
+    """
+    r=[]
+    for i in range(period, len(lod_dtv)):
+        d={}
+        d["value"]=0
+        d["datetime"]=lod_dtv[i]["datetime"]
+        for p in range(period):
+            d["value"]=d["value"]+lod_dtv[i-p]["value"]
+        d["value"]=d["value"]/period
+        r.append(d)
+    return r
 
 class ProductRange():
     def __init__(self, request,  id=None,  product=None,  value=None, percentage_down=None,  percentage_up=None, totalized_operations=True, decimals=2):
@@ -100,9 +125,8 @@ class ProductRange():
 ## @param is a queryset of investments
 ## @param additional_ranges. Number ranges to show over and down calculated limits
 
-class ProductRangeManager(ObjectManager):
+class ProductRangeManager:
     def __init__(self, request, product, percentage_down, percentage_up, totalized_operations=True, decimals=2, qs_investments=[], additional_ranges=3):
-        ObjectManager.__init__(self)
         self.totalized_operations=totalized_operations
         self.request=request
         self.product=product
@@ -182,8 +206,8 @@ class ProductRangeManager(ObjectManager):
         # Compare dt sma with price and return a List with smas integers
         r=[]
         for i, dvm_sma in enumerate(dvm_smas):
-            sma_value=dvm_sma.find_le(dt)
-            if sma_value is not None and  price<sma_value.value:
+            sma_value=lod_dtv_find_le(dvm_sma, dt)
+            if sma_value is not None and  price<sma_value["value"]:
                 r.append(smas[i])
         return r
 
@@ -214,12 +238,12 @@ class ProductRangeManager(ObjectManager):
                 o.recomendation_invest=True
         elif self.method==2:#ProductRangeInvestRecomendation.ThreeSMA:      
             list_ohcl=self.product.ohclDailyBeforeSplits()
-            dvm=DatetimeValueManager()
+            lod_dtv_=[]
             for d in list_ohcl:
-                dvm.appendDV(d["date"], d["close"])
+                lod_dtv_.append({"datetime":d["date"], "value":d["close"]})
             dvm_smas=[]
             for sma in [10, 50, 200]:
-                dvm_smas.append(dvm.sma(sma))
+                dvm_smas.append(lod_dtv_sma(lod_dtv_, sma))
             
             for o in self.arr:
                 number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [10, 50, 200], dvm_smas,  "close"))
@@ -231,12 +255,12 @@ class ProductRangeManager(ObjectManager):
                     o.recomendation_invest=True
         elif self.method==3: #ProductRangeInvestRecomendation.SMA100:           
             list_ohcl=self.product.ohclDailyBeforeSplits()
-            dvm=DatetimeValueManager()
+            lod_dtv_=[]
             for d in list_ohcl:
-                dvm.appendDV(d["date"], d["close"])
+                lod_dtv_.append({"datetime":d["date"], "value":d["close"]})
             dvm_smas=[]
             for sma in [100, ]:
-                dvm_smas.append(dvm.sma(sma))
+                dvm_smas.append(lod_dtv_sma(lod_dtv_, sma))
             
             for o in self.arr:
                 number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [100, ], dvm_smas,  "close"))
@@ -246,12 +270,13 @@ class ProductRangeManager(ObjectManager):
                     o.recomendation_invest=False
         elif self.method==4:#ProductRangeInvestRecomendation.StrictThreeSMA:      
             list_ohcl=self.product.ohclDailyBeforeSplits()
-            dvm=DatetimeValueManager()
+            
+            lod_dtv_=[]
             for d in list_ohcl:
-                dvm.appendDV(d["date"], d["close"])
+                lod_dtv_.append({"datetime":d["date"], "value":d["close"]})
             dvm_smas=[]
             for sma in [10, 50, 200]:
-                dvm_smas.append(dvm.sma(sma))
+                dvm_smas.append(lod_dtv_sma(lod_dtv_, sma))
             
             for o in self.arr:
                 number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [10, 50, 200], dvm_smas,  "close"))
@@ -261,12 +286,13 @@ class ProductRangeManager(ObjectManager):
                     o.recomendation_invest=True
         elif self.method==5: #ProductRangeInvestRecomendation.SMA100 STRICT:           
             list_ohcl=self.product.ohclDailyBeforeSplits()
-            dvm=DatetimeValueManager()
+
+            lod_dtv_=[]
             for d in list_ohcl:
-                dvm.appendDV(d["date"], d["close"])
+                lod_dtv_.append({"datetime":d["date"], "value":d["close"]})
             dvm_smas=[]
             for sma in [100, ]:
-                dvm_smas.append(dvm.sma(sma))
+                dvm_smas.append(lod_dtv_sma(lod_dtv_, sma))
             
             for o in self.arr:
                 number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [100, ], dvm_smas,  "close"))
@@ -276,12 +302,13 @@ class ProductRangeManager(ObjectManager):
                     o.recomendation_invest=False
         elif self.method==6:#ProductRangeInvestRecomendation.Strict SMA 10 , 100:      
             list_ohcl=self.product.ohclDailyBeforeSplits()
-            dvm=DatetimeValueManager()
+
+            lod_dtv_=[]
             for d in list_ohcl:
-                dvm.appendDV(d["date"], d["close"])
+                lod_dtv_.append({"datetime":d["date"], "value":d["close"]})
             dvm_smas=[]
-            for sma in [10,  100]:
-                dvm_smas.append(dvm.sma(sma))
+            for sma in [10, 100, ]:
+                dvm_smas.append(lod_dtv_sma(lod_dtv_, sma))
             
             for o in self.arr:
                 number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [10,  100], dvm_smas,  "close"))
@@ -289,12 +316,13 @@ class ProductRangeManager(ObjectManager):
                     o.recomendation_invest=True
         elif self.method==8: #ProductRangeInvestRecomendation.SMA10 Entry below SMA10 aren't recommended           
             list_ohcl=self.product.ohclDailyBeforeSplits()
-            dvm=DatetimeValueManager()
+
+            lod_dtv_=[]
             for d in list_ohcl:
-                dvm.appendDV(d["date"], d["close"])
+                lod_dtv_.append({"datetime":d["date"], "value":d["close"]})
             dvm_smas=[]
             for sma in [10, ]:
-                dvm_smas.append(dvm.sma(sma))
+                dvm_smas.append(lod_dtv_sma(lod_dtv_, sma))
             
             for o in self.arr:
                 number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [10, ], dvm_smas,  "close"))
@@ -304,12 +332,13 @@ class ProductRangeManager(ObjectManager):
                     o.recomendation_invest=False
         elif self.method==9: #ProductRangeInvestRecomendation.SMA10 Entry below SMA10 aren't recommended           
             list_ohcl=self.product.ohclDailyBeforeSplits()
-            dvm=DatetimeValueManager()
+
+            lod_dtv_=[]
             for d in list_ohcl:
-                dvm.appendDV(d["date"], d["close"])
+                lod_dtv_.append({"datetime":d["date"], "value":d["close"]})
             dvm_smas=[]
             for sma in [5, ]:
-                dvm_smas.append(dvm.sma(sma))
+                dvm_smas.append(lod_dtv_sma(lod_dtv_, sma))
             
             for o in self.arr:
                 number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [5, ], dvm_smas,  "close"))
@@ -322,18 +351,18 @@ class ProductRangeManager(ObjectManager):
         r={}
         ohcl=[]
         ld_ohcl=self.product.ohclDailyBeforeSplits()         
-        dvm=DatetimeValueManager()
+        lod_dtv_=[]
         for d in ld_ohcl:
             ohcl.append((d["date"], d["close"]))
-            dvm.appendDV(d["date"], d["close"])
+            lod_dtv_.append({"datetime":d["date"], "value":d["close"]})
         
         #Series for variable smas
         smas=[]
         for sma_ in self.list_of_sma_of_current_method():   
             
             sma={"name": f"SMA{sma_}", "data":[]}
-            for o in dvm.sma(sma_):
-                sma["data"].append((o.datetime, o.value))
+            for o in lod_dtv_sma(lod_dtv_, sma_):
+                sma["data"].append((o["datetime"], o["value"]))
                 
             smas.append(sma)
 
