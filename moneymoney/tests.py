@@ -96,8 +96,6 @@ class CtTestCase(APITestCase):
         """
             Test created users has its profile automatically generated
         """
-        print()
-        print("test_profile")
         
         a=User()
         a.username="me"
@@ -190,8 +188,6 @@ class CtTestCase(APITestCase):
 #        tests_helpers.common_tests_Private(self,  '/api/banks/', models.Banks.post_payload(),  self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
 
     def test_Accounts(self):
-        print()
-        print("test_Accounts")
         
         #accounts_balance with empty database
         qs_accounts=models.Accounts.objects.filter(active=True)
@@ -217,12 +213,10 @@ class CtTestCase(APITestCase):
 
     def test_IOS_with_client(self):
         #IOS.from_ids
-        dict_account=tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
-        dict_product=tests_helpers.client_get(self, self.client_authorized_1, "/api/products/79329/", status.HTTP_200_OK)
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(product=dict_product["url"], quote=10), status.HTTP_201_CREATED)
-        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(dict_account["url"], dict_product["url"]), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
+        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
         
-        dict_io_1=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+        dict_io_1=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(investments=dict_investment["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
         self.assertTrue(models.Accountsoperations.objects.filter(comment=f"10000,{dict_io_1['id']}").exists())#Comprueba que existe ao
         
         #Get IOS_ids of first
@@ -264,14 +258,14 @@ class CtTestCase(APITestCase):
         
         #IOS.from_merging_io_current
         ## Adding a new investment and new investmentsoperations with same product
-        dict_investment_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(dict_account["url"], dict_product["url"]), status.HTTP_201_CREATED)
-        dict_io_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment_2["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+        dict_investment_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
+        dict_io_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(investments=dict_investment_2["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
        
         dict_ios_ids_merging_pp={
             "datetime":timezone.now(), 
             "classmethod_str":"from_ids_merging_io_current", 
             "investments": [dict_investment["id"], dict_investment_2["id"] ], 
-            "mode":1, 
+            "mode":ios.IOSModes.ios_totals_sumtotals, 
             "currency": "EUR", 
             "simulation":[], 
         }
@@ -299,23 +293,16 @@ class CtTestCase(APITestCase):
         
 
     def test_IOS(self):
-        print()
-        print("test_IOS")
-        
-        #IOS.from_ids
-        dict_account=tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
-        dict_product=tests_helpers.client_get(self, self.client_authorized_1, "/api/products/79329/", status.HTTP_200_OK)
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(product=dict_product["url"], quote=10), status.HTTP_201_CREATED)
-        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(dict_account["url"], dict_product["url"]), status.HTTP_201_CREATED)
-        
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
+        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
         dict_io_1=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
         self.assertTrue(models.Accountsoperations.objects.filter(comment=f"10000,{dict_io_1['id']}").exists())#Comprueba que existe ao
-        ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  1)
-        self.assertEqual(ios_.d_total_io_current(1)["balance_user"], 10000)
+        ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals)
+        self.assertEqual(ios_.d_total_io_current(dict_investment["id"])["balance_user"], 10000)
         dict_io_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"], shares=-1, price=20), status.HTTP_201_CREATED) #Removes one share
         self.assertTrue(models.Accountsoperations.objects.filter(comment=f"10000,{dict_io_2['id']}").exists())#Comprueba que existe ao
-        ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  1) #Recaulculates IOS
-        self.assertEqual(ios_.d_total_io_current(1)["balance_user"], 9990)
+        ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals) #Recaulculates IOS
+        self.assertEqual(ios_.d_total_io_current(dict_investment["id"])["balance_user"], 9990)
         
         #IOS.simulation
         simulation=[
@@ -332,7 +319,7 @@ class CtTestCase(APITestCase):
                 'currency_conversion': 1, 
             }, 
         ]
-        ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  1, simulation) #Makes simulation
+        ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals, simulation) #Makes simulation
 #        ios_.print_d(1)
 
         
@@ -340,14 +327,13 @@ class CtTestCase(APITestCase):
         
         #IOS.from_merging_io_current
         ## Adding a new investment and new investmentsoperations with same product
-        dict_investment_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(dict_account["url"], dict_product["url"]), status.HTTP_201_CREATED)
+        dict_investment_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
         dict_io_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment_2["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
-        ios_merged=ios.IOS.from_qs_merging_io_current(timezone.now(), 'EUR', models.Investments.objects.all(), 1)
+        ios_merged=ios.IOS.from_qs_merging_io_current(timezone.now(), 'EUR', models.Investments.objects.all(), ios.IOSModes.ios_totals_sumtotals)
         self.assertEqual(ios_merged.entries(),  ['79329'])
         
         #Get zerorisk balance
-        r=ios_.sum_total_io_current_zerorisk_user()
-        print(r)
+        ios_.sum_total_io_current_zerorisk_user()
         
         
     def test_ReportConcepts(self):
@@ -387,8 +373,6 @@ class CtTestCase(APITestCase):
         
 
     def test_CatalogManager(self):
-        print()
-        print("test_CatalogManager")
         r=tests_helpers.client_get(self, self.client_authorized_1,  "/catalog_manager/", status.HTTP_200_OK)
         self.assertFalse(r)
         r=tests_helpers.client_get(self, self.client_catalog_manager,  "/catalog_manager/", status.HTTP_200_OK)
@@ -398,8 +382,6 @@ class CtTestCase(APITestCase):
 
 
     def test_Concepts(self):
-        print()
-        print("test_Concepts")
         
 #        tests_helpers.common_tests_Private
         # Action used empty

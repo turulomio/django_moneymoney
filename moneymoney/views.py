@@ -335,7 +335,6 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
                 "paid_datetime": o.paid_datetime, 
                 "currency": o.creditcards.accounts.currency, 
             })
-        show_queries_function()
         return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 
@@ -1109,7 +1108,6 @@ class IOS(APIView):
         """
             This view interacts with IOS module
         """
-        print(request.data)
         classmethod_str=RequestString(request, "classmethod_str")
         if classmethod_str is None:
             return Response({'status': "classmethod_str can't be null"}, status=status.HTTP_400_BAD_REQUEST)
@@ -1131,26 +1129,20 @@ class IOS(APIView):
     #    print(dt, mode, simulation)
         if classmethod_str=="from_ids":
             ids=RequestListOfIntegers(request, "investments")
-            print("CM", classmethod_str, dt, mode, simulation, ids)
             if all_args_are_not_none( ids, dt, mode, simulation):
                 ios_=ios.IOS.from_ids( dt,  request.user.profile.currency,  ids,  mode, simulation) 
-                show_queries_function()
                 return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
         elif classmethod_str=="from_all":
                 ios_=ios.IOS.from_all( dt,  request.user.profile.currency,  mode, simulation)
-                show_queries_function()
                 return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
         elif classmethod_str=="from_all_merging_io_current":
                 ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.all(),   mode, simulation)
-                show_queries_function()
                 return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
         elif classmethod_str=="from_ids_merging_io_current":
             ids=RequestListOfIntegers(request, "investments")
             if all_args_are_not_none( ids, dt, mode, simulation):
                 ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.filter(id__in=ids),   mode, simulation)
-                show_queries_function()
                 return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
-        show_queries_function()
         return Response({'status': "classmethod_str wasn't found'"}, status=status.HTTP_400_BAD_REQUEST)
 
 @transaction.atomic
@@ -2237,7 +2229,6 @@ def ReportRanking(request):
     lod_ranking=lod.lod_order_by(lod_ranking, "total", reverse=True)
     for i,  d_rank in enumerate(lod_ranking):
         ios_.d_data(d_rank["products_id"])["ranking"]=i+1
-#    show_queries_function()
     return JsonResponse(ios_._t, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
 
 @api_view(['GET', ])    

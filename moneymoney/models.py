@@ -638,7 +638,7 @@ class Investmentsoperations(models.Model):
 
 
     @staticmethod
-    def post_payload(investments, datetime=timezone.now(), shares=1000, price=10,  taxes=0, commission=0,  operationstypes="http://testserver/api/operationstypes/4/", currency_conversion=1):
+    def post_payload(investments="http://testserver/api/investments/1/", datetime=timezone.now(), shares=1000, price=10,  taxes=0, commission=0,  operationstypes="http://testserver/api/operationstypes/4/", currency_conversion=1):
         return {
             "operationstypes": operationstypes, 
             "investments": investments, 
@@ -972,10 +972,10 @@ class Quotes(models.Model):
 
 
     @staticmethod
-    def post_payload(product, datetime=timezone.now(), quote=10):
+    def post_payload(products="http://testserver/api/products/79329/", datetime=timezone.now(), quote=10):
         return {
             "datetime": datetime, 
-            "products": product, 
+            "products": products, 
             "quote": quote, 
         }
 
