@@ -2266,7 +2266,7 @@ class EstimationsDpsViewSet(viewsets.ModelViewSet):
     def list(self, request):
         product=RequestUrl(self.request, "product", models.Products)
         if product is not None:
-            return self.queryset.filter(products=product)
+            self.queryset=self.queryset.filter(products=product).order_by("year")
         serializer = serializers.EstimationsDpsSerializer(self.queryset, many=True, context={'request': request})
         return Response(serializer.data)
 

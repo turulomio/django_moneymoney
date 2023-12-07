@@ -207,9 +207,19 @@ class CtTestCase(APITestCase):
         dict_product=tests_helpers.client_get(self, self.client_authorized_1, "/api/products/79228/", status.HTTP_200_OK)
         payload=models.Investments.post_payload(products=dict_product["url"], accounts=dict_account["url"])
         tests_helpers.common_tests_Collaborative(self, "/api/investments/", payload, self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
+        
 
-
-
+    @tag("current")
+    def test_EstimationsDps(self):
+        # common _tests
+        tests_helpers.common_tests_Collaborative(self, "/api/estimationsdps/", models.EstimationsDps.post_payload(), self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
+        
+        # two estimations same product
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/estimationsdps/",  models.EstimationsDps.post_payload(estimation=1), status.HTTP_201_CREATED)
+        dict_estimationdps_1=tests_helpers.client_post(self, self.client_authorized_1, "/api/estimationsdps/",  models.EstimationsDps.post_payload(estimation=2), status.HTTP_201_CREATED)
+        dict_estimationsdps=tests_helpers.client_get(self, self.client_authorized_1, f"/api/estimationsdps/?product={dict_estimationdps_1['products']}", status.HTTP_200_OK)
+        self.assertTrue(len(dict_estimationsdps),  1)
+        self.assertTrue(dict_estimationsdps[0]["estimation"], 2)
 
     def test_IOS_with_client(self):
         #IOS.from_ids
@@ -370,7 +380,6 @@ class CtTestCase(APITestCase):
         self.assertEqual(dict_dividend_after["concepts"], dict_concept_to["url"])
         
         
-    @tag("current")
     def test_Creditcards_Payments(self):        
         # We create a credit card and a creditcard operation and make a payment
         dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(), status.HTTP_201_CREATED)

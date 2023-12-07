@@ -1302,12 +1302,20 @@ class EstimationsDps(models.Model):
         managed = True
         db_table = 'estimations_dps'
 
+    @staticmethod
+    def post_payload(year=date.today().year,  products="http://testserver/api/products/79329/",  estimation=0.52,  date_estimation=date.today()):
+        return {
+            "year":year, 
+            "products": products, 
+            "estimation": estimation, 
+            "date_estimation": date_estimation, 
+        }
+
     @transaction.atomic
     def save(self, *args, **kwargs):
         if self.id is None and EstimationsDps.objects.filter(year=self.year, products=self.products).exists(): 
             old=EstimationsDps.objects.get(year=self.year, products=self.products)
             self.id=old.id #To update it
-            print("Updated estimation dps")
         models.Model.save(self)
 
 class Dps(models.Model):
