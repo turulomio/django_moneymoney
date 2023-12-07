@@ -155,6 +155,9 @@ class ConceptsViewSet(viewsets.ModelViewSet):
         """, [concept.id, concept.id])
             rows=functions.dictfetchall(c)
 
+        if len(rows)==0:
+            return JsonResponse( {"data":[], "total":0, "median":0, "average":0}, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
+            
         firstyear=int(rows[0]['year'])
         # Create all data spaces filling year
         for year in range(firstyear, date.today().year+1):
@@ -198,14 +201,11 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
     def queryset_for_list_methods(self):
         active=RequestBool(self.request, 'active')
         account_id=RequestInteger(self.request, 'account')
-
-        if all_args_are_not_none(active, account_id):
-            self.queryset= self.queryset.filter(accounts_id=account_id,  active=active).order_by("name")
-        elif active is not None:
-            self.queryset=self.queryset.filter(active=active).order_by("name")
-        else:
-            self.queryset=self.queryset.order_by("name")
-        return self.queryset
+        if active is not None:
+            self.queryset=self.queryset.filter(active=active)
+        if account_id is not None:
+            self.queryset= self.queryset.filter(accounts_id=account_id)
+        return self.queryset.order_by("name")
     
     @extend_schema(
         parameters=[
