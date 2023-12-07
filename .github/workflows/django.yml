@@ -32,4 +32,5 @@ jobs:
     - name: Run Tests
       run: |
         source $(poetry env info -p)/bin/activate
+        cat /home/runner/.cache/pypoetry/virtualenvs/django-moneymoney-IeUdnFMg-py3.11/pyvenv.cfg
         python manage.py test
