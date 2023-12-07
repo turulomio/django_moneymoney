@@ -13,7 +13,6 @@ def reusing():
         local=True
         print("Update code in local without downloading was selected with --local")
     if local==False:
-        download_from_github("turulomio", "reusingcode", "django/connection_dj.py", "moneymoney/reusing")
         download_from_github("turulomio", "reusingcode", "python/decorators.py", "moneymoney/reusing")
         download_from_github("turulomio", "reusingcode", "python/file_functions.py", "moneymoney/reusing")
         download_from_github("turulomio", "reusingcode", "python/github.py", "moneymoney/reusing")

@@ -1,14 +1,13 @@
 from datetime import date, timedelta
 from decimal import Decimal
 from django.contrib.auth.models import User
-from django.db import models, transaction
+from django.db import models, transaction, connection
 from django.db.models import Case, When, Sum
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
-from moneymoney import ios
+from moneymoney import ios, functions
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
-from moneymoney.reusing.connection_dj import cursor_rows
 from unogenerator.reusing.currency import Currency
 from pydicts import lod_ymv, casts
 from requests import get
@@ -884,47 +883,55 @@ class Products(models.Model):
         
     def ohclMonthlyBeforeSplits(self):
         if hasattr(self, "_ohcl_monthly_before_splits") is False:
-            self._ohcl_monthly_before_splits=cursor_rows("""select 
-                t.products_id,
-                date_part('year',date) as year, 
-                date_part('month', date) as month, 
-                (array_agg(t.open order by date))[1] as open, 
-                min(t.low) as low, 
-                max(t.high) as high, 
-                (array_agg(t.close order by date desc))[1] as close 
-            from (
+            with connection.cursor() as c:
+                c.execute("""
+                    select 
+                        t.products_id,
+                        date_part('year',date) as year, 
+                        date_part('month', date) as month, 
+                        (array_agg(t.open order by date))[1] as open, 
+                        min(t.low) as low, 
+                        max(t.high) as high, 
+                        (array_agg(t.close order by date desc))[1] as close 
+                    from (
+                    
+                    select 
+                        quotes.products_id, 
+                        datetime::date as date, 
+                        (array_agg(quote order by datetime))[1] as open, 
+                        min(quote) as low, 
+                        max(quote) as high, 
+                        (array_agg(quote order by datetime desc))[1] as close 
+                    from quotes 
+                    where quotes.products_id=%s
+                    group by quotes.products_id, datetime::date 
+                    order by datetime::date
+                    
+                    
+                    ) as t
+                    group by t.products_id,  year, month 
+                    order by year, month""", (self.id, ))
             
-            select 
-                quotes.products_id, 
-                datetime::date as date, 
-                (array_agg(quote order by datetime))[1] as open, 
-                min(quote) as low, 
-                max(quote) as high, 
-                (array_agg(quote order by datetime desc))[1] as close 
-            from quotes 
-            where quotes.products_id=%s
-            group by quotes.products_id, datetime::date 
-            order by datetime::date
-            
-            
-            ) as t
-            group by t.products_id,  year, month 
-            order by year, month""", (self.id, ))
+        
+                self._ohcl_monthly_before_splits=functions.dictfechall(c)
         return self._ohcl_monthly_before_splits
 
     def ohclDailyBeforeSplits(self):
         if hasattr(self, "_ohcl_daily_before_splits") is False:
-            self._ohcl_daily_before_splits=cursor_rows("""select 
-                quotes.products_id, 
-                datetime::date as date, 
-                (array_agg(quote order by datetime))[1] as open, 
-                min(quote) as low, 
-                max(quote) as high, 
-                (array_agg(quote order by datetime desc))[1] as close 
-            from quotes 
-            where quotes.products_id=%s
-            group by quotes.products_id, datetime::date 
-            order by datetime::date """, (self.id, ))
+            with connection.cursor() as c:
+                c.execute("""
+                    select 
+                        quotes.products_id, 
+                        datetime::date as date, 
+                        (array_agg(quote order by datetime))[1] as open, 
+                        min(quote) as low, 
+                        max(quote) as high, 
+                        (array_agg(quote order by datetime desc))[1] as close 
+                    from quotes 
+                    where quotes.products_id=%s
+                    group by quotes.products_id, datetime::date 
+                    order by datetime::date """, (self.id, ))
+                self._ohcl_daily_before_splits=functions.dictfechall(c)
         return self._ohcl_daily_before_splits
         
     @staticmethod

@@ -15,9 +15,8 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiRespon
 from drf_spectacular.types import OpenApiTypes
 from itertools import permutations
 from math import ceil
-from moneymoney import models, serializers, ios
+from moneymoney import models, serializers, ios, functions
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
-from moneymoney.reusing.connection_dj import cursor_rows, show_queries
 from pydicts.casts import dtaware_month_start,  dtaware_month_end, dtaware_year_end, str2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
 from unogenerator.reusing.percentage import Percentage,  percentage_between
@@ -36,14 +35,8 @@ from zoneinfo import available_timezones
 from tempfile import TemporaryDirectory
 from unogenerator.server import is_server_working
 
-ptimeit, show_queries
-##  This method can be used as a function when decorators are not allowed (DRF actions)
-def show_queries_function():
-    sum_=0
-    for d in connection.queries:
-        print (f"[{d['time']}] {d['sql']}")
-        sum_=sum_+float(d['time'])
-    print (f"{len(connection.queries)} db queries took {round(sum_*1000,2)} ms")
+ptimeit
+
 
 class GroupCatalogManager(permissions.BasePermission):
     """Permiso que comprueba si pertenece al grupo CatalogManager """
@@ -150,16 +143,17 @@ class ConceptsViewSet(viewsets.ModelViewSet):
         concept= self.get_object()
         r={}
         json_concepts_historical=[]
-        
-        rows=cursor_rows("""
+        with connection.cursor() as c:
+            c.execute("""
         select date_part('year',datetime)::int as year,  date_part('month',datetime)::int as month, sum(amount) as value 
         from ( 
-                    SELECT accountsoperations.datetime, accountsoperations.concepts_id,  accountsoperations.amount  FROM accountsoperations where concepts_id={0} 
+                    SELECT accountsoperations.datetime, accountsoperations.concepts_id,  accountsoperations.amount  FROM accountsoperations where concepts_id=%s 
                         UNION ALL 
-                    SELECT creditcardsoperations.datetime, creditcardsoperations.concepts_id, creditcardsoperations.amount FROM creditcardsoperations where concepts_id={0}
+                    SELECT creditcardsoperations.datetime, creditcardsoperations.concepts_id, creditcardsoperations.amount FROM creditcardsoperations where concepts_id=%s
                 ) as uni 
         group by date_part('year',datetime), date_part('month',datetime) order by 1,2 ;
-        """.format(concept.id))
+        """, [concept.id, concept.id])
+            rows=functions.dictfetchall(c)
 
         firstyear=int(rows[0]['year'])
         # Create all data spaces filling year
@@ -1246,24 +1240,27 @@ def ProductsPairs(request):
     product_better=RequestUrl(request, "a", models.Products)
     product_worse=RequestUrl(request, "b", models.Products)
     interval_minutes=RequestInteger(request, "interval_minutes", 1)
+
+    with connection.cursor() as c:
+        c.execute("""
+            select 
+                a.datetime, 
+                a.datetime-b.datetime as diff, 
+                a.quote as quote_a, 
+                b.quote as quote_b, 
+                a.products_id as product_a, 
+                b.products_id as product_b  
+            from 
+                (select * from quotes where products_id=%s) as a, 
+                (select * from quotes where products_id=%s) as b 
+            where 
+                date_trunc('hour',a.datetime)=date_trunc('hour',b.datetime) and 
+                a.datetime-b.datetime between %s and %s     
+            order by
+                a.datetime
+        """, [product_worse.id, product_better.id, timedelta(minutes=-interval_minutes), timedelta(minutes=interval_minutes) ])
+        common_quotes=functions.dictfetchall(c)
     
-    common_quotes=cursor_rows("""
-        select 
-            a.datetime, 
-            a.datetime-b.datetime as diff, 
-            a.quote as quote_a, 
-            b.quote as quote_b, 
-            a.products_id as product_a, 
-            b.products_id as product_b  
-        from 
-            (select * from quotes where products_id=%s) as a, 
-            (select * from quotes where products_id=%s) as b 
-        where 
-            date_trunc('hour',a.datetime)=date_trunc('hour',b.datetime) and 
-            a.datetime-b.datetime between %s and %s     
-        order by
-            a.datetime
-    """, [product_worse.id, product_better.id, timedelta(minutes=-interval_minutes), timedelta(minutes=interval_minutes) ])
     
     r={}
     r["product_a"]={"name":product_better.fullName(), "currency": product_better.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_better.id, ))), "current_price": product_better.quote_last().quote}
@@ -1767,7 +1764,9 @@ def ReportAnnualIncomeDetails(request, year, month):
         r=[]
         balance=0
         for currency in models.Accounts.currencies():
-            for i,  op in enumerate(cursor_rows("""
+            
+            with connection.cursor() as c:
+                c.execute("""
                 select 
                     datetime,
                     concepts_id, 
@@ -1800,21 +1799,23 @@ def ReportAnnualIncomeDetails(request, year, month):
                     accounts.id=creditcards.accounts_id and
                     creditcards.id=creditcardsoperations.creditcards_id and
                     creditcardsoperations.concepts_id=concepts.id
-                """, (operationstypes_id, year, month,  currency, operationstypes_id, year, month,  currency))):
-                if local_currency==currency:
-                    balance=balance+op["amount"]
-                    r.append({
-                        "id":-i, 
-                        "datetime": op['datetime'], 
-                        "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(op["concepts_id"], ))), 
-                        "amount":op['amount'], 
-                        "balance": balance,
-                        "comment_decoded":models.Comment().decode(op["comment"]), 
-                        "currency": currency, 
-                        "accounts": request.build_absolute_uri(reverse('accounts-detail', args=(op["accounts_id"], ))), 
-                    })
-                else:
-                    print("TODO")
+                """, (operationstypes_id, year, month,  currency, operationstypes_id, year, month,  currency))
+                    
+                for i,  op in enumerate(functions.dictfetchall(c)):
+                    if local_currency==currency:
+                        balance=balance+op["amount"]
+                        r.append({
+                            "id":-i, 
+                            "datetime": op['datetime'], 
+                            "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(op["concepts_id"], ))), 
+                            "amount":op['amount'], 
+                            "balance": balance,
+                            "comment_decoded":models.Comment().decode(op["comment"]), 
+                            "currency": currency, 
+                            "accounts": request.build_absolute_uri(reverse('accounts-detail', args=(op["accounts_id"], ))), 
+                        })
+                    else:
+                        print("TODO")
                 
             r= sorted(r,  key=lambda item: item['datetime'])
     #            r=r+money_convert(dtaware_month_end(year, month, local_zone), balance, currency, local_currency)
@@ -1855,15 +1856,6 @@ def ReportAnnualIncomeDetails(request, year, month):
 @permission_classes([permissions.IsAuthenticated, ])
 
 def ReportAnnualGainsByProductstypes(request, year):
-#    gains=cursor_rows("""
-#select 
-#    investments.id, 
-#    productstypes_id, 
-#    (ios(investments.id, make_timestamp(%s,12,31,23,59,59)::timestamp with time zone, %s, 'investmentsoperations')).io_historical 
-#from  
-#    investments, 
-#    products 
-#where investments.products_id=products.id""", (year, request.user.profile.currency, ))
     dt_from=dtaware_year_start(year, request.user.profile.zone)
     dt_to=dtaware_year_end(year, request.user.profile.zone)
 
@@ -1871,30 +1863,24 @@ def ReportAnnualGainsByProductstypes(request, year):
     
     #This inner joins its made to see all productstypes_id even if they are Null.
     # Subquery for dividends is used due to if I make a where from dividends table I didn't get null productstypes_id
-    dividends=cursor_rows("""
-select  
-    productstypes_id, 
-    sum(dividends.gross) as gross,
-    sum(dividends.net) as net
-from 
-    products
-    left join investments on products.id=investments.products_id
-    left join (select * from dividends where extract('year' from datetime)=%s) dividends on investments.id=dividends.investments_id
-group by productstypes_id""", (year, ))
+    with connection.cursor() as c:
+        c.execute("""
+            select  
+                productstypes_id, 
+                sum(dividends.gross) as gross,
+                sum(dividends.net) as net
+            from 
+                products
+                left join investments on products.id=investments.products_id
+                left join (select * from dividends where extract('year' from datetime)=%s) dividends on investments.id=dividends.investments_id
+            group by productstypes_id""", (year, ))
+        dividends=functions.dictfetchall(c)
     dividends_dict=lod.lod2dod(dividends, "productstypes_id")
     l=[]
     for pt in models.Productstypes.objects.all():
         gains_net=plio.io_historical_sum_between_dt(dt_from, dt_to, "gains_net_user", pt.id)
         gains_gross=plio.io_historical_sum_between_dt(dt_from, dt_to, "gains_gross_user", pt.id)
-#        gains_net, gains_gross= 0, 0
         dividends_gross, dividends_net=0, 0
-#        for row in gains:
-#            if row["productstypes_id"]==pt.id:
-#                io_historical=eval(row["io_historical"])
-#                for ioh in io_historical:
-#                    if int(ioh["dt_end"][0:4])==year:
-#                        gains_net=gains_net+ioh["gains_net_user"]
-#                        gains_gross=gains_gross+ioh["gains_gross_user"]
         try:
             dividends_gross=dividends_dict[pt.id]["gross"]
         except:
