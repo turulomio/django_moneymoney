@@ -23,9 +23,12 @@ from os import system
 
 class Command(BaseCommand):
     help = 'Dumpdata command for catalog models only'
-        #Generate fixtures
-                
+        
     def handle(self, *args, **options):
-        system("coverage run --omit=moneymoney/reusing/*.py,moneymoney/migrations/*.py,/usr/lib64/libreoffice/program/uno.py,manage.py manage.py test --settings django_moneymoney.presettings ; coverage report;coverage html")
+        if options["settings"] is None: #Settings camesfrom basecommand
+            str_settings=""
+        else:
+            str_settings=f" --settings {options['settings']}"
+        system(f"coverage run --omit=moneymoney/reusing/*.py,moneymoney/migrations/*.py,/usr/lib64/libreoffice/program/uno.py,manage.py manage.py test {str_settings}; coverage report;coverage html")
         print("Now you can open htmlcov/index.html")
     
