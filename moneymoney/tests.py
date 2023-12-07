@@ -379,9 +379,9 @@ class CtTestCase(APITestCase):
         dict_dividend_after=tests_helpers.client_get(self, self.client_authorized_1, dict_dividend["url"]  , status.HTTP_200_OK)
         self.assertEqual(dict_dividend_after["concepts"], dict_concept_to["url"])
         
-        
         # Bad request
-        tests_helpers.client_post(self, self.client_authorized_1, f"{dict_concept_from['url']}data_transfer/", {}, status.HTTP_400_BAD_REQUEST)        
+        tests_helpers.client_post(self, self.client_authorized_1, f"{dict_concept_from['url']}data_transfer/", {}, status.HTTP_400_BAD_REQUEST)
+
     @tag("current")
     def test_Concepts_HistoricalData(self):
         # We create an accounts operations, creditcardsoperations and dividends with this new concept        
