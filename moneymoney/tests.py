@@ -94,7 +94,7 @@ class CtTestCase(APITestCase):
         cls.now=timezone.now()
 
 
-    def test_profile(self):
+    def test_Profile(self):
         """
             Test created users has its profile automatically generated
         """
@@ -355,7 +355,6 @@ class CtTestCase(APITestCase):
         r=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/concepts/?year={date.today().year}&month={date.today().month}", status.HTTP_200_OK)
         self.assertEqual(len(r["positive"]), 1)
         
-    @tag("current")
     def test_Concepts_DataTransfer(self):
         # New personal concept
         dict_concept_from=tests_helpers.client_post(self, self.client_authorized_1, "/api/concepts/", models.Concepts.post_payload(name="Concept from"), status.HTTP_201_CREATED)
@@ -439,7 +438,6 @@ class CtTestCase(APITestCase):
         lod_=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/creditcards/?active=true&accounts=4", status.HTTP_200_OK)
         self.assertEqual(len(lod_), 1)
 
-    @tag("current")
     def test_Creditcards_WithBalance(self):
         # create cc one active and one inactive
         dict_debit=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(deferred=False), status.HTTP_201_CREATED)
@@ -480,9 +478,48 @@ class CtTestCase(APITestCase):
 
 
     def test_Concepts(self):
-        
-#        tests_helpers.common_tests_Private
         # Action used empty
         r=tests_helpers.client_get(self, self.client_authorized_1,  "/api/concepts/used/", status.HTTP_200_OK)
         self.assertEqual(lod.lod_sum(r, "used"), 0)
         
+
+    @tag("current")
+    def test_ProductsRange(self):
+        def generate_url(d):            
+            call=f"?product={d['product']}&totalized_operations={d['totalized_operations']}&percentage_between_ranges={d['percentage_between_ranges']}&percentage_gains={d['percentage_gains']}&amount_to_invest={d['amount_to_invest']}&recomendation_methods={d['recomendation_methods']}"
+            for o in d["investments"]:
+                call=call+f"&investments[]={o}"
+            return f"/products/ranges/{call}"
+        ############################################
+        # Product hasn't quotes
+        d={
+            "product": "http://testserver/api/products/79329/",   
+            "recomendation_methods":2,  
+            "investments":[] ,
+            "totalized_operations":True, 
+            "percentage_between_ranges":2500, 
+            "percentage_gains":2500, 
+            "amount_to_invest": 10000
+        }
+        tests_helpers.client_get(self, self.client_authorized_1, generate_url(d) , status.HTTP_400_BAD_REQUEST)
+        
+        #Adding a quote and test again without investments
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
+        tests_helpers.client_get(self, self.client_authorized_1, generate_url(d) , status.HTTP_200_OK)
+
+        #Adding an investment operation and an order
+        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/",  models.Investmentsoperations.post_payload(investments=dict_investment["url"]), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/orders/",  models.Orders.post_payload(date_=self.now.date(), investments=dict_investment["url"]), status.HTTP_201_CREATED)
+        d={
+            "product": "http://testserver/api/products/79329/",   
+            "recomendation_methods":3,  
+            "investments":[dict_investment["id"], ] ,
+            "totalized_operations":True, 
+            "percentage_between_ranges":2500, 
+            "percentage_gains":2500, 
+            "amount_to_invest": 10000
+        }
+        r=tests_helpers.client_get(self, self.client_authorized_1, generate_url(d) , status.HTTP_200_OK)
+        print(r)
+

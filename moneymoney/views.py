@@ -1331,12 +1331,15 @@ def ProductsRanges(request):
         percentage_gains=percentage_gains/1000
     amount_to_invest=RequestInteger(request, "amount_to_invest")
     recomendation_methods=RequestInteger(request, "recomendation_methods")
-    investments_ids=RequestListOfIntegers(request,"investments[]") 
+    investments_ids=RequestListOfIntegers(request,"investments[]", []) 
     if len(investments_ids)>0:
         qs_investments=models.Investments.objects.filter(id__in=investments_ids)
     else:
         qs_investments=models.Investments.objects.none()
     additional_ranges=RequestInteger(request, "additional_ranges", 3)
+
+    if not models.Quotes.objects.filter(products=product).exists():    
+        return Response(_("This product hasn't quotes. You need at least one"),  status=status.HTTP_400_BAD_REQUEST)
 
     if all_args_are_not_none(product, totalized_operations,  percentage_between_ranges, percentage_gains, amount_to_invest, recomendation_methods):
         from moneymoney.productrange import ProductRangeManager
@@ -1345,7 +1348,7 @@ def ProductsRanges(request):
         prm.setInvestRecomendation(recomendation_methods)
 
         return JsonResponse( prm.json(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
-    return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
+    return Response( status=status.HTTP_400_BAD_REQUEST)
     
     
 ## Has annotate investments__count en el queryset
