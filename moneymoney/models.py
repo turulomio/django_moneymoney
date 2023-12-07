@@ -913,7 +913,7 @@ class Products(models.Model):
                     order by year, month""", (self.id, ))
             
         
-                self._ohcl_monthly_before_splits=functions.dictfechall(c)
+                self._ohcl_monthly_before_splits=functions.dictfetchall(c)
         return self._ohcl_monthly_before_splits
 
     def ohclDailyBeforeSplits(self):
@@ -931,7 +931,7 @@ class Products(models.Model):
                     where quotes.products_id=%s
                     group by quotes.products_id, datetime::date 
                     order by datetime::date """, (self.id, ))
-                self._ohcl_daily_before_splits=functions.dictfechall(c)
+                self._ohcl_daily_before_splits=functions.dictfetchall(c)
         return self._ohcl_daily_before_splits
         
     @staticmethod
