@@ -23,6 +23,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install Dependencies
       run: |
+        sudo apt-get install python3-uno
         python -m pip install --upgrade pip
         pip install .
     - name: Run Tests
