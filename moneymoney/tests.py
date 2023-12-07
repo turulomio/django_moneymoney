@@ -398,7 +398,6 @@ class CtTestCase(APITestCase):
         dict_historical_report_2=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/concepts/2/historical_report/", status.HTTP_200_OK)
         self.assertEqual(dict_historical_report_2["total"], 0)
 
-    @tag("current")
     def test_Concepts_HistoricalDataDetailed(self):
         # We create an accounts operations, creditcardsoperations and dividends with this new concept        
         dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(), status.HTTP_201_CREATED)
@@ -415,8 +414,43 @@ class CtTestCase(APITestCase):
         self.assertEqual(len(dict_historical_report_empty["cco"]), 0)
         # Bad request
         tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/concepts/1/historical_report_detail/", status.HTTP_400_BAD_REQUEST)
+                
+
+    def test_Creditcards(self):
+        # common _tests y deja creada una activa
+        tests_helpers.common_tests_Collaborative(self, "/api/creditcards/", models.Creditcards.post_payload(), self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
         
+        # create cc one active and one inactive
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(active=False), status.HTTP_201_CREATED)
         
+        # List all
+        lod_all=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/creditcards/", status.HTTP_200_OK)
+        self.assertEqual(len(lod_all), 2)
+        
+        # List active
+        lod_=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/creditcards/?active=true", status.HTTP_200_OK)
+        self.assertEqual(len(lod_), 1)
+        
+        # List account 2
+        lod_=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/creditcards/?account=200", status.HTTP_200_OK)
+        self.assertEqual(len(lod_), 0)
+        
+        # List active accounts=1
+        lod_=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/creditcards/?active=true&accounts=4", status.HTTP_200_OK)
+        self.assertEqual(len(lod_), 1)
+
+    @tag("current")
+    def test_Creditcards_WithBalance(self):
+        # create cc one active and one inactive
+        dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(active=False), status.HTTP_201_CREATED)
+        
+        #Creates a cco
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"], amount=22.22), status.HTTP_201_CREATED)
+        
+        # Compares balance
+        lod_=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/creditcards/withbalance/", status.HTTP_200_OK)
+        self.assertEqual(lod_[0]["balance"], 22.22)
+
     def test_Creditcards_Payments(self):        
         # We create a credit card and a creditcard operation and make a payment
         dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(), status.HTTP_201_CREATED)
