@@ -442,14 +442,18 @@ class CtTestCase(APITestCase):
     @tag("current")
     def test_Creditcards_WithBalance(self):
         # create cc one active and one inactive
-        dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(active=False), status.HTTP_201_CREATED)
+        dict_debit=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(deferred=False), status.HTTP_201_CREATED)
+        dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(deferred=True), status.HTTP_201_CREATED)
         
         #Creates a cco
         tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"], amount=22.22), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_debit["url"], amount=22.22), status.HTTP_201_CREATED)
         
         # Compares balance
         lod_=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/creditcards/withbalance/", status.HTTP_200_OK)
-        self.assertEqual(lod_[0]["balance"], 22.22)
+        self.assertEqual(len(lod_), 2)
+        self.assertEqual(lod_[0]["balance"], 0)#not deferred (debit)
+        self.assertEqual(lod_[1]["balance"], 22.22)
 
     def test_Creditcards_Payments(self):        
         # We create a credit card and a creditcard operation and make a payment
