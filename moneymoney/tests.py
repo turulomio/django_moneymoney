@@ -90,6 +90,8 @@ class CtTestCase(APITestCase):
         cls.bank=models.Banks.objects.create(name="Fixture bank", active=True)
         cls.account=models.Accounts.objects.create(name="Fixture account", active=True, banks=cls.bank, currency="EUR", decimals=2)
         cls.product=models.Products.objects.get(id=79228)
+        
+        cls.now=timezone.now()
 
 
     def test_profile(self):
@@ -382,12 +384,12 @@ class CtTestCase(APITestCase):
         # Bad request
         tests_helpers.client_post(self, self.client_authorized_1, f"{dict_concept_from['url']}data_transfer/", {}, status.HTTP_400_BAD_REQUEST)
 
-    @tag("current")
+
     def test_Concepts_HistoricalData(self):
         # We create an accounts operations, creditcardsoperations and dividends with this new concept        
         dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(), status.HTTP_201_CREATED)
         for i in range(5):
-            tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(datetime=timezone.now().replace(year= 2010+i)), status.HTTP_201_CREATED)
+            tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(datetime=self.now.replace(year= 2010+i)), status.HTTP_201_CREATED)
             tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"]), status.HTTP_201_CREATED)
         # We transfer data from concept_from to concept_to
         dict_historical_report_1=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/concepts/1/historical_report/", status.HTTP_200_OK)
@@ -395,6 +397,24 @@ class CtTestCase(APITestCase):
         # Empty request
         dict_historical_report_2=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/concepts/2/historical_report/", status.HTTP_200_OK)
         self.assertEqual(dict_historical_report_2["total"], 0)
+
+    @tag("current")
+    def test_Concepts_HistoricalDataDetailed(self):
+        # We create an accounts operations, creditcardsoperations and dividends with this new concept        
+        dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(), status.HTTP_201_CREATED)
+        for i in range(2):
+            tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(), status.HTTP_201_CREATED)
+            tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"]), status.HTTP_201_CREATED)
+        # We transfer data from concept_from to concept_to
+        dict_historical_report_1=tests_helpers.client_get(self, self.client_authorized_1, f"http://testserver/api/concepts/1/historical_report_detail/?year={self.now.year}&month={self.now.month}", status.HTTP_200_OK)
+        self.assertEqual(len(dict_historical_report_1["ao"]), 2)
+        self.assertEqual(len(dict_historical_report_1["cco"]), 2)
+        # Empty request
+        dict_historical_report_empty=tests_helpers.client_get(self, self.client_authorized_1, f"http://testserver/api/concepts/2/historical_report_detail/?year={self.now.year}&month={self.now.month}", status.HTTP_200_OK)
+        self.assertEqual(len(dict_historical_report_empty["ao"]), 0)
+        self.assertEqual(len(dict_historical_report_empty["cco"]), 0)
+        # Bad request
+        tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/concepts/1/historical_report_detail/", status.HTTP_400_BAD_REQUEST)
         
         
     def test_Creditcards_Payments(self):        
