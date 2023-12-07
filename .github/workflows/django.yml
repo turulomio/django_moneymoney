@@ -33,4 +33,4 @@ jobs:
       run: |
         source /home/runner/.cache/pypoetry/virtualenvs/django-moneymoney-IeUdnFMg-py3.11//bin/activate
         cat /home/runner/.cache/pypoetry/virtualenvs/django-moneymoney-IeUdnFMg-py3.11/pyvenv.cfg
-        python manage.py test
+        /home/runner/.cache/pypoetry/virtualenvs/django-moneymoney-IeUdnFMg-py3.11/bin/python manage.py test
