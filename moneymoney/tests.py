@@ -209,7 +209,6 @@ class CtTestCase(APITestCase):
         tests_helpers.common_tests_Collaborative(self, "/api/investments/", payload, self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
         
 
-    @tag("current")
     def test_EstimationsDps(self):
         # common _tests
         tests_helpers.common_tests_Collaborative(self, "/api/estimationsdps/", models.EstimationsDps.post_payload(), self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
@@ -346,7 +345,7 @@ class CtTestCase(APITestCase):
         ios_.sum_total_io_current_zerorisk_user()
         
         
-    def test_ReportConcepts(self):
+    def test_ConceptsReport(self):
         #test empty
         tests_helpers.client_get(self, self.client_authorized_1, f"/reports/concepts/?year={date.today().year}&month={date.today().month}", status.HTTP_200_OK)
         #test value
@@ -354,6 +353,7 @@ class CtTestCase(APITestCase):
         r=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/concepts/?year={date.today().year}&month={date.today().month}", status.HTTP_200_OK)
         self.assertEqual(len(r["positive"]), 1)
         
+    @tag("current")
     def test_Concepts_DataTransfer(self):
         # New personal concept
         dict_concept_from=tests_helpers.client_post(self, self.client_authorized_1, "/api/concepts/", models.Concepts.post_payload(name="Concept from"), status.HTTP_201_CREATED)
@@ -378,6 +378,23 @@ class CtTestCase(APITestCase):
         self.assertEqual(dict_cco_after["concepts"], dict_concept_to["url"])
         dict_dividend_after=tests_helpers.client_get(self, self.client_authorized_1, dict_dividend["url"]  , status.HTTP_200_OK)
         self.assertEqual(dict_dividend_after["concepts"], dict_concept_to["url"])
+        
+        
+        # Bad request
+        tests_helpers.client_post(self, self.client_authorized_1, f"{dict_concept_from['url']}data_transfer/", {}, status.HTTP_400_BAD_REQUEST)        
+    @tag("current")
+    def test_Concepts_HistoricalData(self):
+        # We create an accounts operations, creditcardsoperations and dividends with this new concept        
+        dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(), status.HTTP_201_CREATED)
+        for i in range(5):
+            tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(datetime=timezone.now().replace(year= 2010+i)), status.HTTP_201_CREATED)
+            tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"]), status.HTTP_201_CREATED)
+        # We transfer data from concept_from to concept_to
+        dict_historical_report_1=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/concepts/1/historical_report/", status.HTTP_200_OK)
+        self.assertEqual(dict_historical_report_1["total"], 10000)
+        # Empty request
+        dict_historical_report_2=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/concepts/2/historical_report/", status.HTTP_200_OK)
+        self.assertEqual(dict_historical_report_2["total"], 0)
         
         
     def test_Creditcards_Payments(self):        

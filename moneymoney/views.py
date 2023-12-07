@@ -155,6 +155,9 @@ class ConceptsViewSet(viewsets.ModelViewSet):
         """, [concept.id, concept.id])
             rows=functions.dictfetchall(c)
 
+        if len(rows)==0:
+            return JsonResponse( {"data":[], "total":0, "median":0, "average":0}, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
+            
         firstyear=int(rows[0]['year'])
         # Create all data spaces filling year
         for year in range(firstyear, date.today().year+1):
