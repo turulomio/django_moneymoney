@@ -1331,7 +1331,7 @@ def ProductsRanges(request):
         percentage_gains=percentage_gains/1000
     amount_to_invest=RequestInteger(request, "amount_to_invest")
     recomendation_methods=RequestInteger(request, "recomendation_methods")
-    investments_ids=RequestListOfIntegers(request,"investments[]") 
+    investments_ids=RequestListOfIntegers(request,"investments[]", []) 
     if len(investments_ids)>0:
         qs_investments=models.Investments.objects.filter(id__in=investments_ids)
     else:
