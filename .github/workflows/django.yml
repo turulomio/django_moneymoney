@@ -31,4 +31,5 @@ jobs:
         poetry install
     - name: Run Tests
       run: |
+        source $(poetry env info -p)/bin/activate
         python manage.py test
