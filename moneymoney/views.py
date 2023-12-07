@@ -4,20 +4,19 @@ from datetime import date, timedelta
 from decimal import Decimal
 from django.conf import settings
 from django.core.management import call_command
-from django.db import transaction
+from django.db import transaction, connection
 from django.db.models import prefetch_related_objects, Count, Sum, Q, Max, Subquery
 from django.db.models.functions.datetime import ExtractMonth, ExtractYear
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiExample
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiExample, inline_serializer
 from drf_spectacular.types import OpenApiTypes
 from itertools import permutations
 from math import ceil
-from moneymoney import models, serializers, ios
+from moneymoney import models, serializers, ios, functions
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
-from moneymoney.reusing.connection_dj import execute, cursor_rows, show_queries, show_queries_function
 from pydicts.casts import dtaware_month_start,  dtaware_month_end, dtaware_year_end, str2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
 from unogenerator.reusing.percentage import Percentage,  percentage_between
@@ -30,13 +29,14 @@ from os import path
 from pydicts import lod, lod_ymv
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, serializers as drf_serializers
 from rest_framework.views import APIView
 from zoneinfo import available_timezones
 from tempfile import TemporaryDirectory
 from unogenerator.server import is_server_working
 
-ptimeit, show_queries, show_queries_function
+ptimeit
+
 
 class GroupCatalogManager(permissions.BasePermission):
     """Permiso que comprueba si pertenece al grupo CatalogManager """
@@ -114,18 +114,28 @@ class ConceptsViewSet(viewsets.ModelViewSet):
                 "migrable": o.is_migrable(), 
             })
         return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
+        
 
+    @extend_schema(
+        request=inline_serializer(
+           name='ConceptsDataTransfer',
+           fields={
+               'to': drf_serializers.CharField(),
+           }
+       ), 
+        description="Makes a IOS object", 
+    )
     @action(detail=True, methods=['POST'], name='Transfer data from a concept to other', url_path="data_transfer", url_name='data_transfer', permission_classes=[permissions.IsAuthenticated])
     @transaction.atomic
     def data_transfer(self, request, pk=None):
         concept_to=RequestUrl(request, "to", models.Concepts)
         if concept_to is not None:
             concept_from=self.get_object()
-            execute("update accountsoperations set concepts_id=%s where concepts_id=%s", (concept_to.id, concept_from.id))
-            execute("update creditcardsoperations set concepts_id=%s where concepts_id=%s", (concept_to.id, concept_from.id))
-            execute("update dividends set concepts_id=%s where concepts_id=%s", (concept_to.id, concept_from.id))
-            return Response({'status': 'details'}, status=status.HTTP_200_OK)
-        return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
+            models.Accountsoperations.objects.filter(concepts=concept_from).update(concepts=concept_to)
+            models.Creditcardsoperations.objects.filter(concepts=concept_from).update(concepts=concept_to)
+            models.Dividends.objects.filter(concepts=concept_from).update(concepts=concept_to)
+            return Response(status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
     @action(detail=True, methods=["get"], name='Returns historical concept report', url_path="historical_report", url_name='historical_report', permission_classes=[permissions.IsAuthenticated])
@@ -133,16 +143,17 @@ class ConceptsViewSet(viewsets.ModelViewSet):
         concept= self.get_object()
         r={}
         json_concepts_historical=[]
-        
-        rows=cursor_rows("""
+        with connection.cursor() as c:
+            c.execute("""
         select date_part('year',datetime)::int as year,  date_part('month',datetime)::int as month, sum(amount) as value 
         from ( 
-                    SELECT accountsoperations.datetime, accountsoperations.concepts_id,  accountsoperations.amount  FROM accountsoperations where concepts_id={0} 
+                    SELECT accountsoperations.datetime, accountsoperations.concepts_id,  accountsoperations.amount  FROM accountsoperations where concepts_id=%s 
                         UNION ALL 
-                    SELECT creditcardsoperations.datetime, creditcardsoperations.concepts_id, creditcardsoperations.amount FROM creditcardsoperations where concepts_id={0}
+                    SELECT creditcardsoperations.datetime, creditcardsoperations.concepts_id, creditcardsoperations.amount FROM creditcardsoperations where concepts_id=%s
                 ) as uni 
         group by date_part('year',datetime), date_part('month',datetime) order by 1,2 ;
-        """.format(concept.id))
+        """, [concept.id, concept.id])
+            rows=functions.dictfetchall(c)
 
         firstyear=int(rows[0]['year'])
         # Create all data spaces filling year
@@ -239,27 +250,18 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def payments(self, request, pk=None):
         creditcard=self.get_object()
-        r=cursor_rows("""
-            select 
-                count(accountsoperations.id), 
-                accountsoperations.id as accountsoperations_id, 
-                accountsoperations.amount, 
-                accountsoperations.datetime 
-            from 
-                accountsoperations, 
-                creditcardsoperations 
-            where 
-                creditcardsoperations.accountsoperations_id=accountsoperations.id and 
-                creditcards_id=%s and 
-                accountsoperations.concepts_id=40 
-            group by 
-                accountsoperations.id, 
-                accountsoperations.amount, 
-                accountsoperations.datetime
-            order by 
-                accountsoperations.datetime
-            """, (creditcard.id, ))
-        return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
+        lod_=list(models.Creditcardsoperations.objects.filter(
+            creditcards=creditcard, 
+            accountsoperations__concepts__id=eConcept.CreditCardBilling, 
+        ).order_by("accountsoperations__datetime").values(
+            "accountsoperations__id", 
+            "accountsoperations__amount", 
+            "accountsoperations__datetime"
+        ).annotate(count=Count("id")))
+        lod.lod_rename_key(lod_, "accountsoperations__id", "accountsoperations_id")
+        lod.lod_rename_key(lod_, "accountsoperations__amount", "amount")
+        lod.lod_rename_key(lod_, "accountsoperations__datetime", "datetime")
+        return JsonResponse( lod_, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
         
 
 
@@ -292,8 +294,8 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
                 o.paid=True
                 o.accountsoperations_id=c.id
                 o.save()
-            return JsonResponse( True, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
-        return JsonResponse( False, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
+            return Response(status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
     
 
     
@@ -325,7 +327,6 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
                 "paid_datetime": o.paid_datetime, 
                 "currency": o.creditcards.accounts.currency, 
             })
-        show_queries_function()
         return JsonResponse( r, encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
 
 
@@ -1099,7 +1100,6 @@ class IOS(APIView):
         """
             This view interacts with IOS module
         """
-        print(request.data)
         classmethod_str=RequestString(request, "classmethod_str")
         if classmethod_str is None:
             return Response({'status': "classmethod_str can't be null"}, status=status.HTTP_400_BAD_REQUEST)
@@ -1121,26 +1121,20 @@ class IOS(APIView):
     #    print(dt, mode, simulation)
         if classmethod_str=="from_ids":
             ids=RequestListOfIntegers(request, "investments")
-            print("CM", classmethod_str, dt, mode, simulation, ids)
             if all_args_are_not_none( ids, dt, mode, simulation):
                 ios_=ios.IOS.from_ids( dt,  request.user.profile.currency,  ids,  mode, simulation) 
-                show_queries_function()
                 return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
         elif classmethod_str=="from_all":
                 ios_=ios.IOS.from_all( dt,  request.user.profile.currency,  mode, simulation)
-                show_queries_function()
                 return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
         elif classmethod_str=="from_all_merging_io_current":
                 ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.all(),   mode, simulation)
-                show_queries_function()
                 return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
         elif classmethod_str=="from_ids_merging_io_current":
             ids=RequestListOfIntegers(request, "investments")
             if all_args_are_not_none( ids, dt, mode, simulation):
                 ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.filter(id__in=ids),   mode, simulation)
-                show_queries_function()
                 return JsonResponse( ios_.t(), encoder=MyJSONEncoderDecimalsAsFloat, safe=False)
-        show_queries_function()
         return Response({'status': "classmethod_str wasn't found'"}, status=status.HTTP_400_BAD_REQUEST)
 
 @transaction.atomic
@@ -1246,24 +1240,27 @@ def ProductsPairs(request):
     product_better=RequestUrl(request, "a", models.Products)
     product_worse=RequestUrl(request, "b", models.Products)
     interval_minutes=RequestInteger(request, "interval_minutes", 1)
+
+    with connection.cursor() as c:
+        c.execute("""
+            select 
+                a.datetime, 
+                a.datetime-b.datetime as diff, 
+                a.quote as quote_a, 
+                b.quote as quote_b, 
+                a.products_id as product_a, 
+                b.products_id as product_b  
+            from 
+                (select * from quotes where products_id=%s) as a, 
+                (select * from quotes where products_id=%s) as b 
+            where 
+                date_trunc('hour',a.datetime)=date_trunc('hour',b.datetime) and 
+                a.datetime-b.datetime between %s and %s     
+            order by
+                a.datetime
+        """, [product_worse.id, product_better.id, timedelta(minutes=-interval_minutes), timedelta(minutes=interval_minutes) ])
+        common_quotes=functions.dictfetchall(c)
     
-    common_quotes=cursor_rows("""
-        select 
-            a.datetime, 
-            a.datetime-b.datetime as diff, 
-            a.quote as quote_a, 
-            b.quote as quote_b, 
-            a.products_id as product_a, 
-            b.products_id as product_b  
-        from 
-            (select * from quotes where products_id=%s) as a, 
-            (select * from quotes where products_id=%s) as b 
-        where 
-            date_trunc('hour',a.datetime)=date_trunc('hour',b.datetime) and 
-            a.datetime-b.datetime between %s and %s     
-        order by
-            a.datetime
-    """, [product_worse.id, product_better.id, timedelta(minutes=-interval_minutes), timedelta(minutes=interval_minutes) ])
     
     r={}
     r["product_a"]={"name":product_better.fullName(), "currency": product_better.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_better.id, ))), "current_price": product_better.quote_last().quote}
@@ -1767,7 +1764,9 @@ def ReportAnnualIncomeDetails(request, year, month):
         r=[]
         balance=0
         for currency in models.Accounts.currencies():
-            for i,  op in enumerate(cursor_rows("""
+            
+            with connection.cursor() as c:
+                c.execute("""
                 select 
                     datetime,
                     concepts_id, 
@@ -1800,21 +1799,23 @@ def ReportAnnualIncomeDetails(request, year, month):
                     accounts.id=creditcards.accounts_id and
                     creditcards.id=creditcardsoperations.creditcards_id and
                     creditcardsoperations.concepts_id=concepts.id
-                """, (operationstypes_id, year, month,  currency, operationstypes_id, year, month,  currency))):
-                if local_currency==currency:
-                    balance=balance+op["amount"]
-                    r.append({
-                        "id":-i, 
-                        "datetime": op['datetime'], 
-                        "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(op["concepts_id"], ))), 
-                        "amount":op['amount'], 
-                        "balance": balance,
-                        "comment_decoded":models.Comment().decode(op["comment"]), 
-                        "currency": currency, 
-                        "accounts": request.build_absolute_uri(reverse('accounts-detail', args=(op["accounts_id"], ))), 
-                    })
-                else:
-                    print("TODO")
+                """, (operationstypes_id, year, month,  currency, operationstypes_id, year, month,  currency))
+                    
+                for i,  op in enumerate(functions.dictfetchall(c)):
+                    if local_currency==currency:
+                        balance=balance+op["amount"]
+                        r.append({
+                            "id":-i, 
+                            "datetime": op['datetime'], 
+                            "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(op["concepts_id"], ))), 
+                            "amount":op['amount'], 
+                            "balance": balance,
+                            "comment_decoded":models.Comment().decode(op["comment"]), 
+                            "currency": currency, 
+                            "accounts": request.build_absolute_uri(reverse('accounts-detail', args=(op["accounts_id"], ))), 
+                        })
+                    else:
+                        print("TODO")
                 
             r= sorted(r,  key=lambda item: item['datetime'])
     #            r=r+money_convert(dtaware_month_end(year, month, local_zone), balance, currency, local_currency)
@@ -1855,15 +1856,6 @@ def ReportAnnualIncomeDetails(request, year, month):
 @permission_classes([permissions.IsAuthenticated, ])
 
 def ReportAnnualGainsByProductstypes(request, year):
-#    gains=cursor_rows("""
-#select 
-#    investments.id, 
-#    productstypes_id, 
-#    (ios(investments.id, make_timestamp(%s,12,31,23,59,59)::timestamp with time zone, %s, 'investmentsoperations')).io_historical 
-#from  
-#    investments, 
-#    products 
-#where investments.products_id=products.id""", (year, request.user.profile.currency, ))
     dt_from=dtaware_year_start(year, request.user.profile.zone)
     dt_to=dtaware_year_end(year, request.user.profile.zone)
 
@@ -1871,30 +1863,24 @@ def ReportAnnualGainsByProductstypes(request, year):
     
     #This inner joins its made to see all productstypes_id even if they are Null.
     # Subquery for dividends is used due to if I make a where from dividends table I didn't get null productstypes_id
-    dividends=cursor_rows("""
-select  
-    productstypes_id, 
-    sum(dividends.gross) as gross,
-    sum(dividends.net) as net
-from 
-    products
-    left join investments on products.id=investments.products_id
-    left join (select * from dividends where extract('year' from datetime)=%s) dividends on investments.id=dividends.investments_id
-group by productstypes_id""", (year, ))
+    with connection.cursor() as c:
+        c.execute("""
+            select  
+                productstypes_id, 
+                sum(dividends.gross) as gross,
+                sum(dividends.net) as net
+            from 
+                products
+                left join investments on products.id=investments.products_id
+                left join (select * from dividends where extract('year' from datetime)=%s) dividends on investments.id=dividends.investments_id
+            group by productstypes_id""", (year, ))
+        dividends=functions.dictfetchall(c)
     dividends_dict=lod.lod2dod(dividends, "productstypes_id")
     l=[]
     for pt in models.Productstypes.objects.all():
         gains_net=plio.io_historical_sum_between_dt(dt_from, dt_to, "gains_net_user", pt.id)
         gains_gross=plio.io_historical_sum_between_dt(dt_from, dt_to, "gains_gross_user", pt.id)
-#        gains_net, gains_gross= 0, 0
         dividends_gross, dividends_net=0, 0
-#        for row in gains:
-#            if row["productstypes_id"]==pt.id:
-#                io_historical=eval(row["io_historical"])
-#                for ioh in io_historical:
-#                    if int(ioh["dt_end"][0:4])==year:
-#                        gains_net=gains_net+ioh["gains_net_user"]
-#                        gains_gross=gains_gross+ioh["gains_gross_user"]
         try:
             dividends_gross=dividends_dict[pt.id]["gross"]
         except:
@@ -2227,7 +2213,6 @@ def ReportRanking(request):
     lod_ranking=lod.lod_order_by(lod_ranking, "total", reverse=True)
     for i,  d_rank in enumerate(lod_ranking):
         ios_.d_data(d_rank["products_id"])["ranking"]=i+1
-#    show_queries_function()
     return JsonResponse(ios_._t, encoder=MyJSONEncoderDecimalsAsFloat,     safe=False)
 
 @api_view(['GET', ])    

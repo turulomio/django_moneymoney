@@ -1,14 +1,13 @@
 from datetime import date, timedelta
 from decimal import Decimal
 from django.contrib.auth.models import User
-from django.db import models, transaction
+from django.db import models, transaction, connection
 from django.db.models import Case, When, Sum
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
-from moneymoney import ios
+from moneymoney import ios, functions
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
-from moneymoney.reusing.connection_dj import cursor_rows
 from unogenerator.reusing.currency import Currency
 from pydicts import lod_ymv, casts
 from requests import get
@@ -362,6 +361,14 @@ class Concepts(models.Model):
         for c in Concepts.objects.all():
             dict_concepts[c.id]=c
         return dict_concepts
+        
+    @staticmethod
+    def post_payload(name="New concept", operationstypes="http://testserver/api/operationstypes/1/", editable=True):
+        return {
+            "name": name, 
+            "operationstypes": operationstypes, 
+            "editable": editable
+        }
 
 class Creditcards(models.Model):
     name = models.TextField()
@@ -383,6 +390,17 @@ class Creditcards(models.Model):
         if Creditcardsoperations.objects.filter(creditcards_id=self.id).exists():
             return False
         return True
+        
+    @staticmethod
+    def post_payload(name="New credit card", accounts="http://testserver/api/accounts/4/", deferred=True, maximumbalance=1000, active=True, number="12341234123412341243"):
+        return {
+            "name": name, 
+            "accounts": accounts, 
+            "deferred": deferred, 
+            "maximumbalance": maximumbalance, 
+            "active": active, 
+            "number": number, 
+        }
 
 class Creditcardsoperations(models.Model):
     concepts = models.ForeignKey(Concepts, models.DO_NOTHING)
@@ -397,6 +415,18 @@ class Creditcardsoperations(models.Model):
     class Meta:
         managed = True
         db_table = 'creditcardsoperations'
+        
+    @staticmethod
+    def post_payload(creditcards="http://testserver/api/creditcards/1/",  concepts="http://testserver/api/concepts/1/", amount=1000,  comment="Opening account", datetime=timezone.now(), paid=False, paid_datetime=None):
+        return {
+            "concepts":concepts, 
+            "amount": amount, 
+            "comment": comment, 
+            "creditcards": creditcards, 
+            "datetime": datetime, 
+            "paid": paid, 
+            "paid_datetime": paid_datetime, 
+        }
 
 
 class Dividends(models.Model):
@@ -414,6 +444,22 @@ class Dividends(models.Model):
     class Meta:
         managed = True
         db_table = 'dividends'
+
+
+    @staticmethod
+    def post_payload(investments="http://testserver/api/investments/1/", gross=1000, taxes=210, net=790, dps=0.1, datetime=timezone.now(), accountsoperations=None, commission=10, concepts="http://testserver/api/concepts/1/", currency_conversion=1):
+        return {
+            "investments": investments,
+            "gross": gross, 
+            "taxes": taxes, 
+            "net":net, 
+            "dps": dps, 
+            "datetime":datetime, 
+            "accountsoperations": accountsoperations, 
+            "commission": commission, 
+            "concepts": concepts, 
+            "currency_conversion":currency_conversion, 
+        }
 
     @transaction.atomic
     def delete(self):
@@ -497,18 +543,17 @@ class Investments(models.Model):
 
 
     @staticmethod
-    def post_payload(accounts, products):
+    def post_payload(name="Investment for testing", active="True", accounts="http://testserver/api/accounts/4/", selling_price=0, products="http://testserver/api/products/79329/", selling_expiration=None, daily_adjustment=False, balance_percentage=100, decimals=6):
         return {
-            "name": "Investment for testing",
-           "active": True, 
+            "name": name,
+            "active": active, 
             "accounts": accounts, 
-            "selling_price":0, 
+            "selling_price":selling_price, 
             "products": products, 
-            "selling_expiration":None, 
-            "daily_adjustment":False, 
-            "balance_percentage":100, 
-            "amount": 1200, 
-            "decimals": 6, 
+            "selling_expiration":selling_expiration, 
+            "daily_adjustment": daily_adjustment, 
+            "balance_percentage": balance_percentage, 
+            "decimals": decimals, 
         }
 
     ## Función que devuelve un booleano si una cuenta es borrable, es decir, que no tenga registros dependientes.
@@ -592,7 +637,7 @@ class Investmentsoperations(models.Model):
 
 
     @staticmethod
-    def post_payload(investments, datetime=timezone.now(), shares=1000, price=10,  taxes=0, commission=0,  operationstypes="http://testserver/api/operationstypes/4/", currency_conversion=1):
+    def post_payload(investments="http://testserver/api/investments/1/", datetime=timezone.now(), shares=1000, price=10,  taxes=0, commission=0,  operationstypes="http://testserver/api/operationstypes/4/", currency_conversion=1):
         return {
             "operationstypes": operationstypes, 
             "investments": investments, 
@@ -838,47 +883,55 @@ class Products(models.Model):
         
     def ohclMonthlyBeforeSplits(self):
         if hasattr(self, "_ohcl_monthly_before_splits") is False:
-            self._ohcl_monthly_before_splits=cursor_rows("""select 
-                t.products_id,
-                date_part('year',date) as year, 
-                date_part('month', date) as month, 
-                (array_agg(t.open order by date))[1] as open, 
-                min(t.low) as low, 
-                max(t.high) as high, 
-                (array_agg(t.close order by date desc))[1] as close 
-            from (
+            with connection.cursor() as c:
+                c.execute("""
+                    select 
+                        t.products_id,
+                        date_part('year',date) as year, 
+                        date_part('month', date) as month, 
+                        (array_agg(t.open order by date))[1] as open, 
+                        min(t.low) as low, 
+                        max(t.high) as high, 
+                        (array_agg(t.close order by date desc))[1] as close 
+                    from (
+                    
+                    select 
+                        quotes.products_id, 
+                        datetime::date as date, 
+                        (array_agg(quote order by datetime))[1] as open, 
+                        min(quote) as low, 
+                        max(quote) as high, 
+                        (array_agg(quote order by datetime desc))[1] as close 
+                    from quotes 
+                    where quotes.products_id=%s
+                    group by quotes.products_id, datetime::date 
+                    order by datetime::date
+                    
+                    
+                    ) as t
+                    group by t.products_id,  year, month 
+                    order by year, month""", (self.id, ))
             
-            select 
-                quotes.products_id, 
-                datetime::date as date, 
-                (array_agg(quote order by datetime))[1] as open, 
-                min(quote) as low, 
-                max(quote) as high, 
-                (array_agg(quote order by datetime desc))[1] as close 
-            from quotes 
-            where quotes.products_id=%s
-            group by quotes.products_id, datetime::date 
-            order by datetime::date
-            
-            
-            ) as t
-            group by t.products_id,  year, month 
-            order by year, month""", (self.id, ))
+        
+                self._ohcl_monthly_before_splits=functions.dictfetchall(c)
         return self._ohcl_monthly_before_splits
 
     def ohclDailyBeforeSplits(self):
         if hasattr(self, "_ohcl_daily_before_splits") is False:
-            self._ohcl_daily_before_splits=cursor_rows("""select 
-                quotes.products_id, 
-                datetime::date as date, 
-                (array_agg(quote order by datetime))[1] as open, 
-                min(quote) as low, 
-                max(quote) as high, 
-                (array_agg(quote order by datetime desc))[1] as close 
-            from quotes 
-            where quotes.products_id=%s
-            group by quotes.products_id, datetime::date 
-            order by datetime::date """, (self.id, ))
+            with connection.cursor() as c:
+                c.execute("""
+                    select 
+                        quotes.products_id, 
+                        datetime::date as date, 
+                        (array_agg(quote order by datetime))[1] as open, 
+                        min(quote) as low, 
+                        max(quote) as high, 
+                        (array_agg(quote order by datetime desc))[1] as close 
+                    from quotes 
+                    where quotes.products_id=%s
+                    group by quotes.products_id, datetime::date 
+                    order by datetime::date """, (self.id, ))
+                self._ohcl_daily_before_splits=functions.dictfetchall(c)
         return self._ohcl_daily_before_splits
         
     @staticmethod
@@ -926,10 +979,10 @@ class Quotes(models.Model):
 
 
     @staticmethod
-    def post_payload(product, datetime=timezone.now(), quote=10):
+    def post_payload(products="http://testserver/api/products/79329/", datetime=timezone.now(), quote=10):
         return {
             "datetime": datetime, 
-            "products": product, 
+            "products": products, 
             "quote": quote, 
         }
 
