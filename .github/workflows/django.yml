@@ -41,6 +41,6 @@ jobs:
         pip install .
     - name: Run Tests
       run: |
-        sudo apt search plpython3
-        sudo apt install postgresql-plpython3
+        sudo apt search postgresql
+        sudo apt install postgresql-plpython3-14/jammy-updates
         python manage.py test
