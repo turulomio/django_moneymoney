@@ -8,8 +8,8 @@ from django.utils.translation import gettext as _
 from django.utils import timezone
 from moneymoney import ios, functions
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
-from unogenerator.reusing.currency import Currency
 from pydicts import lod_ymv, casts
+from pydicts.currency import Currency
 from requests import get
 
 Decimal
@@ -731,6 +731,8 @@ class Orders(models.Model):
         
     def currency_amount(self):
         return Currency(self.price*self.shares*self.investments.products.real_leveraged_multiplier(), self.investments.products.currency)
+
+            
         
     def needs_stop_loss_warning(self):
         if self.shares>0 and self.price>self.investments.products.quote_last().quote:
@@ -1245,43 +1247,43 @@ class Comment:
 #            return _("Error decoding comment {}").format(string)
 
     def decode_objects(self, string):
-            (code, args)=self.get(string)
-            if code==None:
+        (code, args)=self.get(string)
+        if code==None:
+            return None
+
+        if code==eComment.InvestmentOperation:
+            if not self.validateLength(1, code, args): return None
+            io=Investmentsoperations.objects.select_related("investments").get(pk=args[0])
+            return io
+
+        elif code in (eComment.AccountTransferOrigin,  eComment.AccountTransferDestiny, eComment.AccountTransferOriginCommission):
+            if not self.validateLength(3, code, args): return None
+            aoo=Accountsoperations.objects.get(pk=args[0])
+            aod=Accountsoperations.objects.get(pk=args[1])
+            if args[2]==-1:
+                aoc=None
+            else:
+                aoc=Accountsoperations.objects.get(pk=args[2])
+            return {"origin":aoo, "destiny":aod, "commission":aoc }
+
+        elif code==eComment.Dividend:#Comentario de cuenta asociada al dividendo
+            if not self.validateLength(1, code, args): return None
+            try:
+                return Dividends.objects.get(pk=args[0])
+            except:
                 return None
 
-            if code==eComment.InvestmentOperation:
-                if not self.validateLength(1, code, args): return None
-                io=Investmentsoperations.objects.select_related("investments").get(pk=args[0])
-                return io
+        elif code==eComment.CreditCardBilling:#Facturaci´on de tarjeta diferida
+            if not self.validateLength(2, code, args): return string
+            creditcard=Creditcards.objects.get(pk=args[0])
+            operaccount=Accountsoperations.objects.get(pk=args[1])
+            return {"creditcard":creditcard, "operaccount":operaccount}
 
-            elif code in (eComment.AccountTransferOrigin,  eComment.AccountTransferDestiny, eComment.AccountTransferOriginCommission):
-                if not self.validateLength(3, code, args): return None
-                aoo=Accountsoperations.objects.get(pk=args[0])
-                aod=Accountsoperations.objects.get(pk=args[1])
-                if args[2]==-1:
-                    aoc=None
-                else:
-                    aoc=Accountsoperations.objects.get(pk=args[2])
-                return {"origin":aoo, "destiny":aod, "commission":aoc }
-
-            elif code==eComment.Dividend:#Comentario de cuenta asociada al dividendo
-                if not self.validateLength(1, code, args): return None
-                try:
-                    return Dividends.objects.get(pk=args[0])
-                except:
-                    return None
-
-            elif code==eComment.CreditCardBilling:#Facturaci´on de tarjeta diferida
-                if not self.validateLength(2, code, args): return string
-                creditcard=Creditcards.objects.get(pk=args[0])
-                operaccount=Accountsoperations.objects.get(pk=args[1])
-                return {"creditcard":creditcard, "operaccount":operaccount}
-
-            elif code==eComment.CreditCardRefund:#Devolución de tarjeta
-                if not self.validateLength(1, code, args): return string
-                cco=Creditcardsoperations.objects.get(pk=args[0])
-                money=Currency(cco.amount, cco.creditcards.accounts.currency)
-                return _("Refund of {} payment of which had an amount of {}").format(casts.dtaware2str(cco.datetime), money)
+        elif code==eComment.CreditCardRefund:#Devolución de tarjeta
+            if not self.validateLength(1, code, args): return string
+            cco=Creditcardsoperations.objects.get(pk=args[0])
+            money=Currency(cco.amount, cco.creditcards.accounts.currency)
+            return _("Refund of {} payment of which had an amount of {}").format(casts.dtaware2str(cco.datetime), money)
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)

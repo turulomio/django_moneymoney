@@ -6,10 +6,10 @@ from moneymoney import __version__
 from moneymoney import models, ios
 from os import path
 from pydicts import lod, casts
+from pydicts.currency import Currency
+from pydicts.percentage import Percentage
 from request_casting import request_casting
 from unogenerator import ODT
-from unogenerator.reusing.currency import Currency
-from unogenerator.reusing.percentage import  Percentage
 from unogenerator.commons import bytes_after_trim_image
 
     
