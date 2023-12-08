@@ -8,7 +8,6 @@ from django.utils.translation import gettext as _
 from django.utils import timezone
 from moneymoney import ios, functions
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
-from unogenerator.reusing.currency import Currency
 from pydicts import lod_ymv, casts
 from requests import get
 
@@ -730,7 +729,11 @@ class Orders(models.Model):
         db_table = 'orders'
         
     def currency_amount(self):
-        return Currency(self.price*self.shares*self.investments.products.real_leveraged_multiplier(), self.investments.products.currency)
+        if functions.can_import_uno_moneymoney():
+            from unogenerator import Currency
+            return Currency(self.price*self.shares*self.investments.products.real_leveraged_multiplier(), self.investments.products.currency)
+
+            
         
     def needs_stop_loss_warning(self):
         if self.shares>0 and self.price>self.investments.products.quote_last().quote:
@@ -1188,6 +1191,8 @@ class Comment:
         return True
 
     def decode(self, string):
+        if functions.can_import_uno_moneymoney():
+            from unogenerator import Currency
             if string=="":
                 return ""
 #        try:
@@ -1245,6 +1250,8 @@ class Comment:
 #            return _("Error decoding comment {}").format(string)
 
     def decode_objects(self, string):
+        if functions.can_import_uno_moneymoney():
+            from unogenerator import Currency
             (code, args)=self.get(string)
             if code==None:
                 return None

@@ -19,7 +19,7 @@ from moneymoney import models, serializers, ios, functions
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from pydicts.casts import dtaware_month_start,  dtaware_month_end, dtaware_year_end, str2dtaware, dtaware_year_start, months
 from moneymoney.reusing.decorators import ptimeit
-from unogenerator.reusing.percentage import Percentage,  percentage_between
+from unogenerator.percentage import Percentage,  percentage_between
 from request_casting.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestString, RequestInteger, RequestListOfIntegers, RequestListOfUrls, all_args_are_not_none
 from pydicts.myjsonencoder import MyJSONEncoderDecimalsAsFloat
 from requests import delete, post
@@ -33,7 +33,6 @@ from rest_framework import viewsets, permissions, status, serializers as drf_ser
 from rest_framework.views import APIView
 from zoneinfo import available_timezones
 from tempfile import TemporaryDirectory
-from unogenerator.server import is_server_working
 
 ptimeit
 
@@ -651,7 +650,9 @@ class UnogeneratorWorking(APIView):
         responses=OpenApiTypes.OBJECT
     )
     def get(self, request, *args, **kwargs):
-        return Response( is_server_working(), status=status.HTTP_200_OK)
+        if functions.can_import_uno_moneymoney():
+            from unogenerator.server import is_server_working
+            return Response( is_server_working(), status=status.HTTP_200_OK)
 
 class Alerts(APIView):
     permission_classes = [permissions.IsAuthenticated]    
