@@ -90,9 +90,11 @@ class CtTestCase(APITestCase):
         cls.bank=models.Banks.objects.create(name="Fixture bank", active=True)
         cls.account=models.Accounts.objects.create(name="Fixture account", active=True, banks=cls.bank, currency="EUR", decimals=2)
         cls.product=models.Products.objects.get(id=79228)
+        
+        cls.now=timezone.now()
 
 
-    def test_profile(self):
+    def test_Profile(self):
         """
             Test created users has its profile automatically generated
         """
@@ -209,7 +211,6 @@ class CtTestCase(APITestCase):
         tests_helpers.common_tests_Collaborative(self, "/api/investments/", payload, self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
         
 
-    @tag("current")
     def test_EstimationsDps(self):
         # common _tests
         tests_helpers.common_tests_Collaborative(self, "/api/estimationsdps/", models.EstimationsDps.post_payload(), self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
@@ -346,7 +347,7 @@ class CtTestCase(APITestCase):
         ios_.sum_total_io_current_zerorisk_user()
         
         
-    def test_ReportConcepts(self):
+    def test_ConceptsReport(self):
         #test empty
         tests_helpers.client_get(self, self.client_authorized_1, f"/reports/concepts/?year={date.today().year}&month={date.today().month}", status.HTTP_200_OK)
         #test value
@@ -379,7 +380,79 @@ class CtTestCase(APITestCase):
         dict_dividend_after=tests_helpers.client_get(self, self.client_authorized_1, dict_dividend["url"]  , status.HTTP_200_OK)
         self.assertEqual(dict_dividend_after["concepts"], dict_concept_to["url"])
         
+        # Bad request
+        tests_helpers.client_post(self, self.client_authorized_1, f"{dict_concept_from['url']}data_transfer/", {}, status.HTTP_400_BAD_REQUEST)
+
+
+    def test_Concepts_HistoricalData(self):
+        # We create an accounts operations, creditcardsoperations and dividends with this new concept        
+        dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(), status.HTTP_201_CREATED)
+        for i in range(5):
+            tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(datetime=self.now.replace(year= 2010+i)), status.HTTP_201_CREATED)
+            tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"]), status.HTTP_201_CREATED)
+        # We transfer data from concept_from to concept_to
+        dict_historical_report_1=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/concepts/1/historical_report/", status.HTTP_200_OK)
+        self.assertEqual(dict_historical_report_1["total"], 10000)
+        # Empty request
+        dict_historical_report_2=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/concepts/2/historical_report/", status.HTTP_200_OK)
+        self.assertEqual(dict_historical_report_2["total"], 0)
+
+    def test_Concepts_HistoricalDataDetailed(self):
+        # We create an accounts operations, creditcardsoperations and dividends with this new concept        
+        dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(), status.HTTP_201_CREATED)
+        for i in range(2):
+            tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(), status.HTTP_201_CREATED)
+            tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"]), status.HTTP_201_CREATED)
+        # We transfer data from concept_from to concept_to
+        dict_historical_report_1=tests_helpers.client_get(self, self.client_authorized_1, f"http://testserver/api/concepts/1/historical_report_detail/?year={self.now.year}&month={self.now.month}", status.HTTP_200_OK)
+        self.assertEqual(len(dict_historical_report_1["ao"]), 2)
+        self.assertEqual(len(dict_historical_report_1["cco"]), 2)
+        # Empty request
+        dict_historical_report_empty=tests_helpers.client_get(self, self.client_authorized_1, f"http://testserver/api/concepts/2/historical_report_detail/?year={self.now.year}&month={self.now.month}", status.HTTP_200_OK)
+        self.assertEqual(len(dict_historical_report_empty["ao"]), 0)
+        self.assertEqual(len(dict_historical_report_empty["cco"]), 0)
+        # Bad request
+        tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/concepts/1/historical_report_detail/", status.HTTP_400_BAD_REQUEST)
+                
+
+    def test_Creditcards(self):
+        # common _tests y deja creada una activa
+        tests_helpers.common_tests_Collaborative(self, "/api/creditcards/", models.Creditcards.post_payload(), self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
         
+        # create cc one active and one inactive
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(active=False), status.HTTP_201_CREATED)
+        
+        # List all
+        lod_all=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/creditcards/", status.HTTP_200_OK)
+        self.assertEqual(len(lod_all), 2)
+        
+        # List active
+        lod_=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/creditcards/?active=true", status.HTTP_200_OK)
+        self.assertEqual(len(lod_), 1)
+        
+        # List account 2
+        lod_=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/creditcards/?account=200", status.HTTP_200_OK)
+        self.assertEqual(len(lod_), 0)
+        
+        # List active accounts=1
+        lod_=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/creditcards/?active=true&accounts=4", status.HTTP_200_OK)
+        self.assertEqual(len(lod_), 1)
+
+    def test_Creditcards_WithBalance(self):
+        # create cc one active and one inactive
+        dict_debit=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(deferred=False), status.HTTP_201_CREATED)
+        dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(deferred=True), status.HTTP_201_CREATED)
+        
+        #Creates a cco
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"], amount=22.22), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_debit["url"], amount=22.22), status.HTTP_201_CREATED)
+        
+        # Compares balance
+        lod_=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/creditcards/withbalance/", status.HTTP_200_OK)
+        self.assertEqual(len(lod_), 2)
+        self.assertEqual(lod_[0]["balance"], 0)#not deferred (debit)
+        self.assertEqual(lod_[1]["balance"], 22.22)
+
     def test_Creditcards_Payments(self):        
         # We create a credit card and a creditcard operation and make a payment
         dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(), status.HTTP_201_CREATED)
@@ -405,9 +478,48 @@ class CtTestCase(APITestCase):
 
 
     def test_Concepts(self):
-        
-#        tests_helpers.common_tests_Private
         # Action used empty
         r=tests_helpers.client_get(self, self.client_authorized_1,  "/api/concepts/used/", status.HTTP_200_OK)
         self.assertEqual(lod.lod_sum(r, "used"), 0)
         
+
+    @tag("current")
+    def test_ProductsRange(self):
+        def generate_url(d):            
+            call=f"?product={d['product']}&totalized_operations={d['totalized_operations']}&percentage_between_ranges={d['percentage_between_ranges']}&percentage_gains={d['percentage_gains']}&amount_to_invest={d['amount_to_invest']}&recomendation_methods={d['recomendation_methods']}"
+            for o in d["investments"]:
+                call=call+f"&investments[]={o}"
+            return f"/products/ranges/{call}"
+        ############################################
+        # Product hasn't quotes
+        d={
+            "product": "http://testserver/api/products/79329/",   
+            "recomendation_methods":2,  
+            "investments":[] ,
+            "totalized_operations":True, 
+            "percentage_between_ranges":2500, 
+            "percentage_gains":2500, 
+            "amount_to_invest": 10000
+        }
+        tests_helpers.client_get(self, self.client_authorized_1, generate_url(d) , status.HTTP_400_BAD_REQUEST)
+        
+        #Adding a quote and test again without investments
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
+        tests_helpers.client_get(self, self.client_authorized_1, generate_url(d) , status.HTTP_200_OK)
+
+        #Adding an investment operation and an order
+        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/",  models.Investmentsoperations.post_payload(investments=dict_investment["url"]), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/orders/",  models.Orders.post_payload(date_=self.now.date(), investments=dict_investment["url"]), status.HTTP_201_CREATED)
+        d={
+            "product": "http://testserver/api/products/79329/",   
+            "recomendation_methods":3,  
+            "investments":[dict_investment["id"], ] ,
+            "totalized_operations":True, 
+            "percentage_between_ranges":2500, 
+            "percentage_gains":2500, 
+            "amount_to_invest": 10000
+        }
+        r=tests_helpers.client_get(self, self.client_authorized_1, generate_url(d) , status.HTTP_200_OK)
+        print(r)
+
