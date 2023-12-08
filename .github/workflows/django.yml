@@ -9,11 +9,11 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     services:
       postgres:
-        image: postgres:14/jammy
+        image: postgres-latest
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
