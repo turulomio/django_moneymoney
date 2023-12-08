@@ -13,7 +13,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:latest
+        image: postgres:14/jammy
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -41,6 +41,5 @@ jobs:
         pip install .
     - name: Run Tests
       run: |
-        sudo apt search postgresql
-        sudo apt install postgresql-plpython3-14/jammy-updates
+        sudo apt install postgresql-plpython3
         python manage.py test
