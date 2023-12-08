@@ -48,7 +48,6 @@ files = [
 
 [package.dependencies]
 colorama = {version = "*", markers = "os_name == \"nt\""}
-importlib-metadata = {version = ">=4.6", markers = "python_version < \"3.10\""}
 packaging = ">=19.0"
 pyproject_hooks = "*"
 tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
@@ -413,16 +412,13 @@ files = [
 
 [[package]]
 name = "django"
-
 version = "5.0"
 description = "A high-level Python web framework that encourages rapid development and clean, pragmatic design."
 optional = false
 python-versions = ">=3.10"
 files = [
-
     {file = "Django-5.0-py3-none-any.whl", hash = "sha256:3a9fd52b8dbeae335ddf4a9dfa6c6a0853a1122f1fb071a8d5eca979f73a05c8"},
     {file = "Django-5.0.tar.gz", hash = "sha256:7d29e14dfbc19cb6a95a4bd669edbde11f5d4c6a71fdaa42c2d40b6846e807f7"},
-
 ]
 
 [package.dependencies]
@@ -952,7 +948,6 @@ cleo = ">=2.1.0,<3.0.0"
 crashtest = ">=0.4.1,<0.5.0"
 dulwich = ">=0.21.2,<0.22.0"
 fastjsonschema = ">=2.18.0,<3.0.0"
-importlib-metadata = {version = ">=4.4", markers = "python_version < \"3.10\""}
 installer = ">=0.7.0,<0.8.0"
 keyring = ">=24.0.0,<25.0.0"
 packaging = ">=20.5"
@@ -1107,7 +1102,6 @@ files = [
 ]
 
 [package.dependencies]
-
 ordered-set = "*"
 
 [package.extras]
@@ -1308,13 +1302,13 @@ full = ["numpy"]
 
 [[package]]
 name = "referencing"
-version = "0.31.1"
+version = "0.32.0"
 description = "JSON Referencing + Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "referencing-0.31.1-py3-none-any.whl", hash = "sha256:c19c4d006f1757e3dd75c4f784d38f8698d87b649c54f9ace14e5e8c9667c01d"},
-    {file = "referencing-0.31.1.tar.gz", hash = "sha256:81a1471c68c9d5e3831c30ad1dd9815c45b558e596653db751a2bfdd17b3b9ec"},
+    {file = "referencing-0.32.0-py3-none-any.whl", hash = "sha256:bdcd3efb936f82ff86f993093f6da7435c7de69a3b3a5a06678a6050184bee99"},
+    {file = "referencing-0.32.0.tar.gz", hash = "sha256:689e64fe121843dcfd57b71933318ef1f91188ffb45367332700a86ac8fd6161"},
 ]
 
 [package.dependencies]
@@ -1611,13 +1605,13 @@ files = [
 
 [[package]]
 name = "unogenerator"
-version = "0.37.0"
+version = "0.38.0"
 description = "Libreoffice files generator programmatically with python and Libreoffice server instances"
 optional = false
 python-versions = ">3.8,<4.0"
 files = [
-    {file = "unogenerator-0.37.0-py3-none-any.whl", hash = "sha256:b283b7c002f6a2328cd79fd61007f5a0501dd8f8f35548cf29d422fadd3ca164"},
-    {file = "unogenerator-0.37.0.tar.gz", hash = "sha256:3e8108d1f6c21c330ae10318ce5d0e6062cc942ffed3e8f41eef6c83a09ba39e"},
+    {file = "unogenerator-0.38.0-py3-none-any.whl", hash = "sha256:0e3ee2bd89bf259b83a853ac154b730931c213d7a87031b5a0504b70969608f1"},
+    {file = "unogenerator-0.38.0.tar.gz", hash = "sha256:a82d92e453aca48474352bc5eadacbe5c45a2a19633cc42d58a7718165e8dedd"},
 ]
 
 [package.dependencies]
@@ -1776,7 +1770,5 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 
 [metadata]
 lock-version = "2.0"
-
 python-versions = ">=3.10,<4.0"
 content-hash = "6e943512a72cf2803fc1edbc99bb7ffb62236374b13af7472da8bd25dc4b377c"
-
