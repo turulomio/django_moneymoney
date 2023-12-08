@@ -41,5 +41,5 @@ jobs:
         pip install .
     - name: Run Tests
       run: |
-        sudo apt install postgresql-plpython3
+        sudo apt --fix-broken install postgresql-plpython3
         python manage.py test
