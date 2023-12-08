@@ -1,0 +1,2 @@
+class CanImportUnoException(Exception):
+    pass
