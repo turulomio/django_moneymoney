@@ -1,7 +1,7 @@
 from django.urls import reverse_lazy
 from getpass import getuser
 from moneymoney import __version__
-from os import path, makedirs
+from os import path, makedirs, environ
 from shutil import rmtree
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -110,6 +110,17 @@ DATABASES = {
     }
 }
 
+if environ.get('GITHUB_WORKFLOW'):
+    DATABASES = {
+        'default': {
+           'ENGINE': 'django.db.backends.postgresql',
+           'NAME': 'github_actions',
+           'USER': 'postgres',
+           'PASSWORD': 'postgres',
+           'HOST': '127.0.0.1',
+           'PORT': '5432',
+        }
+    }
 CONCURRENCY_DB_CONNECTIONS_BY_USER=8
 
 ## Locale paths in source distribution
