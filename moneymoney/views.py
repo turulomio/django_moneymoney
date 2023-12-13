@@ -1465,28 +1465,25 @@ def ProductsUpdate(request):
     if auto is True:
         with TemporaryDirectory() as tmp:
             run(f"""wget --header="Host: es.investing.com" \
-    --header="User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:92.0) Gecko/20100101 Firefox/92.0" \
-    --header="Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8" \
-    --header="Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3" \
-    --header="Accept-Encoding: gzip, deflate, br" \
-    --header="Alt-Used: es.investing.com" \
-    --header="Connection: keep-alive" \
-    --referer="{request.user.profile.investing_com_referer}" \
-    --header="{request.user.profile.investing_com_cookie}" \
-    --header="Upgrade-Insecure-Requests: 1" \
-    --header="Sec-Fetch-Dest: document" \
-    --header="Sec-Fetch-Mode: navigate" \
-    --header="Sec-Fetch-Site: same-origin" \
-    --header="Sec-Fetch-User: ?1" \
-    --header="Pragma: no-cache" \
-    --header="Cache-Control: no-cache" \
-    --header="TE: trailers" \
-    "{request.user.profile.investing_com_url}" -O {tmp}/portfolio.csv""", shell=True, capture_output=True)
-    
-            ic=InvestingCom(request, product=None)
-            ic.load_from_filename_in_disk(f"{tmp}/portfolio.csv")
+                --header="User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:92.0) Gecko/20100101 Firefox/92.0" \
+                --header="Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8" \
+                --header="Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3" \
+                --header="Accept-Encoding: gzip, deflate, br" \
+                --header="Alt-Used: es.investing.com" \
+                --header="Connection: keep-alive" \
+                --referer="{request.user.profile.investing_com_referer}" \
+                --header="{request.user.profile.investing_com_cookie}" \
+                --header="Upgrade-Insecure-Requests: 1" \
+                --header="Sec-Fetch-Dest: document" \
+                --header="Sec-Fetch-Mode: navigate" \
+                --header="Sec-Fetch-Site: same-origin" \
+                --header="Sec-Fetch-User: ?1" \
+                --header="Pragma: no-cache" \
+                --header="Cache-Control: no-cache" \
+                --header="TE: trailers" \
+                "{request.user.profile.investing_com_url}" -O {tmp}/portfolio.csv""", shell=True, capture_output=True)
+            ic=InvestingCom.from_filename_in_disk(request.user.profile.zone, f"{tmp}/portfolio.csv")
     else:
-        
         # if not GET, then proceed
         if "csv_file1" not in request.FILES:
             return Response({'status': 'You must upload a file'}, status=status.HTTP_404_NOT_FOUND)
@@ -1500,8 +1497,7 @@ def ProductsUpdate(request):
         if csv_file.multiple_chunks():
             return Response({'status': "Uploaded file is too big ({} MB).".format(csv_file.size/(1000*1000),)}, status=status.HTTP_404_NOT_FOUND)
 
-        ic=InvestingCom(request, product=None)
-        ic.load_from_filename_in_memory(csv_file)
+        ic=InvestingCom.from_filename_in_memory(request.user.profile.zone, csv_file)
     r=ic.get()
     return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
     
