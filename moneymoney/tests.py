@@ -483,7 +483,6 @@ class CtTestCase(APITestCase):
         self.assertEqual(lod.lod_sum(r, "used"), 0)
         
 
-    @tag("current")
     def test_ProductsRange(self):
         def generate_url(d):            
             call=f"?product={d['product']}&totalized_operations={d['totalized_operations']}&percentage_between_ranges={d['percentage_between_ranges']}&percentage_gains={d['percentage_gains']}&amount_to_invest={d['amount_to_invest']}&recomendation_methods={d['recomendation_methods']}"
@@ -523,3 +522,6 @@ class CtTestCase(APITestCase):
         r=tests_helpers.client_get(self, self.client_authorized_1, generate_url(d) , status.HTTP_200_OK)
         print(r)
 
+    @tag("current")
+    def test_investing_com(self):
+        pass
