@@ -401,13 +401,13 @@ test-randomorder = ["pytest-randomly"]
 
 [[package]]
 name = "distlib"
-version = "0.3.7"
+version = "0.3.8"
 description = "Distribution utilities"
 optional = false
 python-versions = "*"
 files = [
-    {file = "distlib-0.3.7-py2.py3-none-any.whl", hash = "sha256:2e24928bc811348f0feb63014e97aaae3037f2cf48712d51ae61df7fd6075057"},
-    {file = "distlib-0.3.7.tar.gz", hash = "sha256:9dafe54b34a028eafd95039d5e5d4851a13734540f1331060d31c9916e7147a8"},
+    {file = "distlib-0.3.8-py2.py3-none-any.whl", hash = "sha256:034db59a0b96f8ca18035f36290806a9a6e6bd9d1ff91e45a7f172eb17e51784"},
+    {file = "distlib-0.3.8.tar.gz", hash = "sha256:1530ea13e350031b6312d8580ddb6b27a104275a31106523b8f123787f494f64"},
 ]
 
 [[package]]
@@ -462,13 +462,13 @@ pytz = "*"
 
 [[package]]
 name = "drf-spectacular"
-version = "0.26.5"
+version = "0.27.0"
 description = "Sane and flexible OpenAPI 3 schema generation for Django REST framework"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "drf-spectacular-0.26.5.tar.gz", hash = "sha256:aee55330a774ba8a9cbdb125714d1c9ee05a8aafd3ce3be8bfd26527649aeb44"},
-    {file = "drf_spectacular-0.26.5-py3-none-any.whl", hash = "sha256:c0002a820b11771fdbf37853deb371947caf0159d1afeeffe7598e964bc1db94"},
+    {file = "drf-spectacular-0.27.0.tar.gz", hash = "sha256:18d7ae74b2b5d533fd31f1c591ebaa5cce1447e0976ced927401e3163040dea9"},
+    {file = "drf_spectacular-0.27.0-py3-none-any.whl", hash = "sha256:6ab2d20674244e8c940c2883f744b43c34fc68c70ea3aefa802f574108c9699b"},
 ]
 
 [package.dependencies]
@@ -1078,13 +1078,13 @@ files = [
 
 [[package]]
 name = "pydicts"
-version = "0.10.0"
+version = "0.11.0"
 description = "Module to use dictionaries in various situations"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pydicts-0.10.0-py3-none-any.whl", hash = "sha256:20abbeeb94bdb228b11f60d5f9ecae71f9375a6245be7cde92012dbcc462eb37"},
-    {file = "pydicts-0.10.0.tar.gz", hash = "sha256:c44e63bd40d83f1f4d0e609a82109f25664356358a043ae89bbf6dc9f1277f7d"},
+    {file = "pydicts-0.11.0-py3-none-any.whl", hash = "sha256:b29272ba6d9d561ff4dde421eaf36fe323f3806c8628ca840a8d5807648c3cdb"},
+    {file = "pydicts-0.11.0.tar.gz", hash = "sha256:80c7808e2016eb87cb316ac0e5213a9018c930ce0bd4cac68a60d7873928febe"},
 ]
 
 [package.dependencies]
@@ -1583,13 +1583,13 @@ files = [
 
 [[package]]
 name = "typing-extensions"
-version = "4.8.0"
+version = "4.9.0"
 description = "Backported and Experimental Type Hints for Python 3.8+"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "typing_extensions-4.8.0-py3-none-any.whl", hash = "sha256:8f92fc8806f9a6b641eaa5318da32b44d401efaac0f6678c9bc448ba3605faa0"},
-    {file = "typing_extensions-4.8.0.tar.gz", hash = "sha256:df8e4339e9cb77357558cbdbceca33c303714cf861d1eef15e1070055ae8b7ef"},
+    {file = "typing_extensions-4.9.0-py3-none-any.whl", hash = "sha256:af72aea155e91adfc61c3ae9e0e342dbc0cba726d6cba4b6c72c1f34e47291cd"},
+    {file = "typing_extensions-4.9.0.tar.gz", hash = "sha256:23478f88c37f27d76ac8aee6c905017a143b0b1b886c3c9f66bc2fd94f9f5783"},
 ]
 
 [[package]]
@@ -1771,4 +1771,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<4.0"
-content-hash = "ed512add4c054ac712e8572cec4465e1bd0ead9cb827628f82ae27c31bad0d93"
+content-hash = "a1514478b6f03dd16a93ab4237c04857ab5e586dbad64b15a6f69cdcd3e7b150"
