@@ -47,46 +47,61 @@ class OHCLDaily:
         
 
 class InvestingCom:
-    def __init__(self, request,  product=None):
-        self.request=request
-        self.product=product
+    def __init__(self, timezone_name):
+        self.timezone_name=timezone_name
+        self.product=None
         self.log=[]
-    
-    def load_from_filename_in_memory(self, filename_in_memory):
-        self.filename_in_memory=filename_in_memory
-        self.filename_in_memory.seek(0)
-        self.csv_object=reader(StringIO(self.filename_in_memory.read().decode('utf-8')))
-        self.columns=self.get_number_of_csv_columns()
-
-    def load_from_filename_in_disk(self, filename_in_disk):
-        self.csv_object=reader(open(filename_in_disk, mode="r", encoding="utf-8"))
-        self.columns=self.get_number_of_csv_columns()
+        self.lol=[]#List of list with the info obtained from memory, disk ...
         
-            
-    def load_from_bytes(self, bytes_):
-        self.csv_object=reader(StringIO(bytes_.decode("UTF-8")))
-        self.columns=self.get_number_of_csv_columns()
+    @classmethod
+    def from_filename_in_memory(cls, timezone_name, filename_in_memory):
+        """
+            Crea un investingCom leyendo en memoria un lol y cargandolo
+            Una vez cargado se generan las quotes con get()
+        """
+        r=cls(timezone_name)
+        filename_in_memory.seek(0)
+        csv_object=reader(StringIO(filename_in_memory.read().decode('utf-8')))
+        for row in csv_object:
+            r.lol.append(row)
+        return r
+
+    @classmethod
+    def from_filename_in_disk(cls, timezone_name, filename_in_disk):
+        r=cls(timezone_name)
+        csv_object=reader(open(filename_in_disk, mode="r", encoding="utf-8"))
+        for row in csv_object:
+            r.lol.append(row)
+        return r
+
+    @classmethod
+    def from_bytes(cls, timezone_name, bytes_):
+        r=cls(timezone_name)
+        csv_object=reader(StringIO(bytes_.decode("UTF-8")))
+        for row in csv_object:
+            r.lol.append(row)
+        return r
+
+    @classmethod
+    def from_lol(cls, timezone_name, lol):
+        r=cls(timezone_name)
+        r.lol=lol
+        return r
         
     def get(self):
+        if len(self.lol)==0:
+            return
+        columns=len(self.lol[0])
         if self.product==None: #Several products
-            if self.columns==8:
-#                messages.info(self.request,"append_from_default")
+            if columns==8:
                 return self.append_from_default()
-            elif self.columns==39:
+            elif columns==39:
                 self.log.append(_("Adding quotes from Investing.com portfolio"))
                 return self.append_from_portfolio()
             else:
-#                messages.error(self.request,"The number of columns doesn't match: {}".format(self.columns))
                 return "NUMBER OF COLUMNS DOESN'T MATCH"
         else:
-#            messages.info(self.request, "append_from_historical")
             return self.append_from_historical()
-            
-
-    def get_number_of_csv_columns(self):
-        for row in self.csv_object:
-            return len(row)
-        return -1
         
     ## Used by InvestingCom, to load indexes components, it has 8 columns
     ## 0 Índice 
@@ -153,7 +168,7 @@ class InvestingCom:
     def append_from_portfolio(self):
         r=[]
         quotes_count = 0
-        for row in self.csv_object:
+        for row in self.lol:
             if row[2]=="":
                 products=Products.objects.filter(ticker_investingcom=row[1]).select_related("stockmarkets")
                 code=f"{row[1]}"
@@ -172,7 +187,9 @@ class InvestingCom:
                         quote.products=product
                         date_=casts.str2date(row[16], "DD/MM")
                         quote.datetime=casts.dtaware(date_, product.stockmarkets.closes, product.stockmarkets.zone)#Without 4 microseconds becaouse is not a ohcl
-                        quote.quote=casts.str2decimal(row[3], decimal_separator=",")
+                        row[3]=row[3].replace(".", "")#Remove thousand separator                        
+                        row[3]=row[3].replace(",", ".")#Change decimal separator to point
+                        quote.quote=casts.str2decimal(row[3])
 
                         quotes_count=quotes_count+1
                         d["log"]=quote.save()
@@ -183,8 +200,10 @@ class InvestingCom:
                         quote=Quotes()
                         quote.products=product
                         dtnaive=casts.str2dtnaive(row[16],"%H:%M:%S")
-                        quote.datetime=casts.dtaware(dtnaive.date(), dtnaive.time(), self.request.user.profile.zone)     
-                        quote.quote=casts.str2decimal(row[3], decimal_separator=",")
+                        quote.datetime=casts.dtaware(dtnaive.date(), dtnaive.time(), self.timezone_name)     
+                        row[3]=row[3].replace(".", "")#Remove thousand separator                        
+                        row[3]=row[3].replace(",", ".")#Change decimal separator to point
+                        quote.quote=casts.str2decimal(row[3])
                         quotes_count=quotes_count+1
                         d["log"]=quote.save()
                     except:
@@ -201,14 +220,16 @@ class InvestingCom:
         for row in self.csv_object:
             if line_count >0:#Ignores headers line
 #                try:
+                for i in range(1, 5):
+                    row[i]=row[i].replace(".", "")#Remove thousand separator                        
+                    row[i]=row[i].replace(",", ".")#Change decimal separator to point
                 ohcl=OHCLDaily(
                     self.product, 
                     casts.str2date(row[0], "DD.MM.YYYY"), 
-
-                    casts.str2decimal(row[2], decimal_separator=","), 
-                    casts.str2decimal(row[3], decimal_separator=","), 
-                    casts.str2decimal(row[1], decimal_separator=","), 
-                    casts.str2decimal(row[4], decimal_separator=",")
+                    casts.str2decimal(row[2]), 
+                    casts.str2decimal(row[3]), 
+                    casts.str2decimal(row[1]), 
+                    casts.str2decimal(row[4])
                 )
                 r=r+ohcl.generate_4_quotes()
 #                except:
@@ -236,13 +257,16 @@ class InvestingCom:
             else:
                 if line_count >0:#Ignores headers line
     #                try:
+                    for i in range(1, 5):
+                        row[i]=row[i].replace(".", "")#Remove thousand separator                        
+                        row[i]=row[i].replace(",", ".")#Change decimal separator to point
                     ohcl=OHCLDaily(
                         self.product, 
                         casts.str2date(row[0], "DD.MM.YYYY"), 
-                        casts.str2decimal(row[2], decimal_separator=","), 
-                        casts.str2decimal(row[3], decimal_separator=","), 
-                        casts.str2decimal(row[1], decimal_separator=","), 
-                        casts.str2decimal(row[4], decimal_separator=",")
+                        casts.str2decimal(row[2]), 
+                        casts.str2decimal(row[3]), 
+                        casts.str2decimal(row[1]), 
+                        casts.str2decimal(row[4])
 
                     )
                     r=r+ohcl.generate_4_quotes()
