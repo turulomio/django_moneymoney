@@ -1,7 +1,4 @@
-
 from django.db import connection
-from moneymoney.exceptions import CanImportUnoException
-from unogenerator import can_import_uno
 
 def dictfetchall(cursor):
     """
@@ -18,8 +15,3 @@ def show_queries_function():
         print (f"[{d['time']}] {d['sql']}")
         sum_=sum_+float(d['time'])
     print (f"{len(connection.queries)} db queries took {round(sum_*1000,2)} ms")
-
-
-def can_import_uno_moneymoney():
-        if not can_import_uno(True):
-            raise CanImportUnoException("I couldn't import uno  and run this code")
