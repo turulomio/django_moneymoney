@@ -742,7 +742,7 @@ class Orders(models.Model):
         return False
 
     @staticmethod
-    def post_payload(date_, expiration=None, shares=100,  price=10,  investments="http://testserver/api/investments/1/", executed=None):
+    def post_payload(date_=timezone.now().date(), expiration=None, shares=100,  price=10,  investments="http://testserver/api/investments/1/", executed=None):
         return {
             "date": date_,
             "expiration": expiration, 
