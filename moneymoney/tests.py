@@ -221,14 +221,12 @@ class CtTestCase(APITestCase):
             "investments":[dict_investment_1["url"], dict_investment_2["url"]]
         }, status.HTTP_200_OK)
         assert dict_changed[0]["selling_price"]==1
-#        dict_changed=tests_helpers.client_post(self, self.client_authorized_1, "/investments/changesellingprice/",  {
-#            "selling_price":0, 
-#            "selling_expiration": None, 
-#            "investments":[dict_investment_1["url"], dict_investment_2["url"]]
-#        }, status.HTTP_200_OK)
-#        assert dict_changed[0]["selling_price"]==0
-
-        #UNCOMENT IN REQUEST_CASTING-0.6.0
+        dict_changed=tests_helpers.client_post(self, self.client_authorized_1, "/investments/changesellingprice/",  {
+            "selling_price":0, 
+            "selling_expiration": None, 
+            "investments":[dict_investment_1["url"], dict_investment_2["url"]]
+        }, status.HTTP_200_OK)
+        assert dict_changed[0]["selling_price"]==0
     
     def test_EstimationsDps(self):
         # common _tests
