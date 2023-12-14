@@ -210,7 +210,26 @@ class CtTestCase(APITestCase):
         payload=models.Investments.post_payload(products=dict_product["url"], accounts=dict_account["url"])
         tests_helpers.common_tests_Collaborative(self, "/api/investments/", payload, self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
         
+    @tag("current")
+    def test_InvestmentsChangeSellingPrice(self):
+        dict_investment_1=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
+        dict_investment_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
+        
+        dict_changed=tests_helpers.client_post(self, self.client_authorized_1, "/investments/changesellingprice/",  {
+            "selling_price":1, 
+            "selling_expiration":date.today(), 
+            "investments":[dict_investment_1["url"], dict_investment_2["url"]]
+        }, status.HTTP_200_OK)
+        assert dict_changed[0]["selling_price"]==1
+#        dict_changed=tests_helpers.client_post(self, self.client_authorized_1, "/investments/changesellingprice/",  {
+#            "selling_price":0, 
+#            "selling_expiration": None, 
+#            "investments":[dict_investment_1["url"], dict_investment_2["url"]]
+#        }, status.HTTP_200_OK)
+#        assert dict_changed[0]["selling_price"]==0
 
+        #UNCOMENT IN REQUEST_CASTING-0.6.0
+    
     def test_EstimationsDps(self):
         # common _tests
         tests_helpers.common_tests_Collaborative(self, "/api/estimationsdps/", models.EstimationsDps.post_payload(), self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
@@ -530,7 +549,6 @@ class CtTestCase(APITestCase):
         self.assertEqual(models.Quotes.objects.count(), 76)
         
 
-    @tag("current")
     def test_Orders(self):
         # common _tests y deja creada una activa        
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
@@ -538,6 +556,3 @@ class CtTestCase(APITestCase):
 
         tests_helpers.common_tests_Collaborative(self, "/api/orders/", models.Orders.post_payload(investments=dict_investment["url"]), self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
 
-        #Crea otra orden
-        dict_order=tests_helpers.client_post(self, self.client_authorized_1, "/api/orders/",  models.Orders.post_payload(investments=dict_investment["url"]), status.HTTP_201_CREATED)
-        print(dict_order)
