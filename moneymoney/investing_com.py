@@ -72,6 +72,7 @@ class InvestingCom:
         csv_object=reader(open(filename_in_disk, mode="r", encoding="utf-8"))
         for row in csv_object:
             r.lol.append(row)
+        r.lol.pop(0) #Removes first symbol#market
         return r
 
     @classmethod
