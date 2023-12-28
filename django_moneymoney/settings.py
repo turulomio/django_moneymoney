@@ -94,7 +94,7 @@ TEMPLATES = [
     },
 ]
 
-CORS_ORIGIN_WHITELIST =  "http://localhost:8005", 'http://localhost:8006'
+CORS_ORIGIN_WHITELIST = ['http://127.0.0.1:8006', ]
 
 WSGI_APPLICATION = 'django_moneymoney.wsgi.application'
 
