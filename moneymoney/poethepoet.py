@@ -1,6 +1,6 @@
 from sys import argv
 from moneymoney.reusing.github import download_from_github
-#from moneymoney.reusing.file_functions import replace_in_file
+from os import system
 
 def reusing():
     """
@@ -18,3 +18,9 @@ def reusing():
         download_from_github("turulomio", "reusingcode", "python/github.py", "moneymoney/reusing")
         download_from_github("turulomio", "django_calories_tracker", "calories_tracker/tests_helpers.py", "moneymoney/reusing")
 
+
+def cypress_test_server():
+    print("- Dropping test_xulpymoney database...")
+    system("dropdb -U postgres -h 127.0.0.1 test_xulpymoney")
+    print("- Launching python manage.py test_server with user 'test' and password 'test'")
+    system("python manage.py testserver moneymoney/fixtures/all.json moneymoney/fixtures/test_server.json --addrport 8004")
