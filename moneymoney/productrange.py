@@ -3,7 +3,7 @@ from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
 from moneymoney import models, ios
-from unogenerator.percentage import Percentage
+from pydicts.percentage import Percentage
 
 
 ## INTEGRATE IN PYDICTS

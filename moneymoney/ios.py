@@ -3,7 +3,7 @@ from decimal import Decimal
 from json import dumps
 from logging import debug, error
 from moneymoney import models
-from unogenerator.percentage import Percentage, percentage_between
+from pydicts.percentage import Percentage, percentage_between
 from pydicts.myjsonencoder import MyJSONEncoderDecimalsAsFloat
 from pydicts import lod
 from django.utils.translation import gettext_lazy as _
