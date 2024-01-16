@@ -16,7 +16,7 @@ drf-spectacular = ">=0.26.5"
 pydicts = ">=0.12.0"
 requests = ">=2.31.0"
 request-casting = ">=0.6.0"
-unogenerator = ">=0.38.0"
+unogenerator = ">=0.39.0"
 psycopg = ">=3.1.11"
 
 [tool.poetry.group.dev.dependencies]

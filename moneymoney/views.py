@@ -18,7 +18,7 @@ from math import ceil
 from moneymoney import models, serializers, ios, functions
 from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.reusing.decorators import ptimeit
-from unogenerator.percentage import Percentage,  percentage_between
+from pydicts.percentage import Percentage,  percentage_between
 from request_casting.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestString, RequestInteger, RequestListOfIntegers, RequestListOfUrls, all_args_are_not_none
 from requests import delete, post
 from statistics import median
