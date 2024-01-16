@@ -81,6 +81,21 @@ filecache = ["filelock (>=3.8.0)"]
 redis = ["redis (>=2.10.5)"]
 
 [[package]]
+name = "ccy"
+version = "1.3.1"
+description = "Python currencies"
+optional = false
+python-versions = ">=3.8,<3.12"
+files = [
+    {file = "ccy-1.3.1-py3-none-any.whl", hash = "sha256:361d240d06bfcc5c5e08b75af220fa5a10b8b7c1f5f2886821694bff48815cfe"},
+    {file = "ccy-1.3.1.tar.gz", hash = "sha256:c19462565798a120e5819d704b3ce8df6ac9b0248e0ebb086cbc5d58468f968e"},
+]
+
+[package.dependencies]
+python-dateutil = ">=2.8.2,<3.0.0"
+pytz = ">=2022.5"
+
+[[package]]
 name = "certifi"
 version = "2023.11.17"
 description = "Python package for providing Mozilla's CA Bundle."
@@ -668,6 +683,20 @@ files = [
 ]
 
 [[package]]
+name = "isodate"
+version = "0.6.1"
+description = "An ISO 8601 date/time/duration parser and formatter"
+optional = false
+python-versions = "*"
+files = [
+    {file = "isodate-0.6.1-py2.py3-none-any.whl", hash = "sha256:0751eece944162659049d35f4f549ed815792b38793f07cf73381c1c87cbed96"},
+    {file = "isodate-0.6.1.tar.gz", hash = "sha256:48c5881de7e8b0a0d648cb024c8062dc84e7b840ed81e864c7614fd3c127bde9"},
+]
+
+[package.dependencies]
+six = "*"
+
+[[package]]
 name = "jaraco-classes"
 version = "3.3.0"
 description = "Utility functions for Python class constructs"
@@ -702,13 +731,13 @@ trio = ["async_generator", "trio"]
 
 [[package]]
 name = "jsonschema"
-version = "4.20.0"
+version = "4.21.0"
 description = "An implementation of JSON Schema validation for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "jsonschema-4.20.0-py3-none-any.whl", hash = "sha256:ed6231f0429ecf966f5bc8dfef245998220549cbbcf140f913b7464c52c3b6b3"},
-    {file = "jsonschema-4.20.0.tar.gz", hash = "sha256:4f614fd46d8d61258610998997743ec5492a648b33cf478c1ddc23ed4598a5fa"},
+    {file = "jsonschema-4.21.0-py3-none-any.whl", hash = "sha256:70a09719d375c0a2874571b363c8a24be7df8071b80c9aa76bc4551e7297c63c"},
+    {file = "jsonschema-4.21.0.tar.gz", hash = "sha256:3ba18e27f7491ea4a1b22edce00fb820eec968d397feb3f9cb61d5894bb38167"},
 ]
 
 [package.dependencies]
@@ -1079,16 +1108,18 @@ files = [
 
 [[package]]
 name = "pydicts"
-version = "0.11.0"
+version = "0.12.0"
 description = "Module to use dictionaries in various situations"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.8,<3.12"
 files = [
-    {file = "pydicts-0.11.0-py3-none-any.whl", hash = "sha256:b29272ba6d9d561ff4dde421eaf36fe323f3806c8628ca840a8d5807648c3cdb"},
-    {file = "pydicts-0.11.0.tar.gz", hash = "sha256:80c7808e2016eb87cb316ac0e5213a9018c930ce0bd4cac68a60d7873928febe"},
+    {file = "pydicts-0.12.0-py3-none-any.whl", hash = "sha256:eb6337cf33718c97237176c51e089bae0e6ef89d13c1b253bdb2fdca9b060ab8"},
+    {file = "pydicts-0.12.0.tar.gz", hash = "sha256:63c73bd637e5a6cbd44be76786b1599a12a781721fb11e4b41e1392348c052fc"},
 ]
 
 [package.dependencies]
+ccy = ">=1.3.1,<2.0.0"
+isodate = ">=0.6.1,<0.7.0"
 pylatex = ">=1.4.1"
 tabulate = ">=0.9.0"
 
@@ -1127,6 +1158,20 @@ files = [
 
 [package.dependencies]
 tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
+
+[[package]]
+name = "python-dateutil"
+version = "2.8.2"
+description = "Extensions to the standard Python datetime module"
+optional = false
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
+files = [
+    {file = "python-dateutil-2.8.2.tar.gz", hash = "sha256:0123cacc1627ae19ddf3c27a5de5bd67ee4586fbdd6440d9748f8abb483d3e86"},
+    {file = "python_dateutil-2.8.2-py2.py3-none-any.whl", hash = "sha256:961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9"},
+]
+
+[package.dependencies]
+six = ">=1.5"
 
 [[package]]
 name = "pytz"
@@ -1500,6 +1545,17 @@ files = [
 ]
 
 [[package]]
+name = "six"
+version = "1.16.0"
+description = "Python 2 and 3 compatibility utilities"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
+files = [
+    {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
+    {file = "six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926"},
+]
+
+[[package]]
 name = "sqlparse"
 version = "0.4.4"
 description = "A non-validating SQL parser."
@@ -1771,5 +1827,6 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 
 [metadata]
 lock-version = "2.0"
-python-versions = ">=3.10,<4.0"
-content-hash = "e11fdc35bfa2c2fffb71224aae3a6ea37b493765b57e611b1991c7a03a3b8156"
+python-versions = ">=3.10,<3.12"
+content-hash = "590852084b068135ae53d8a8b39880ebd22b35a0d13a8e85f62655a17995140b"
+

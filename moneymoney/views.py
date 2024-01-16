@@ -718,18 +718,24 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
     queryset = models.Investments.objects.select_related("accounts").all()
     serializer_class = serializers.InvestmentsSerializer
     permission_classes = [permissions.IsAuthenticated]  
-    
-    def list(self, request):
-        """
-            It's better to ovverride list than get_queryset due to active is a class_attribute, and list only is for list and queryset for all methods
-        """
+        
+    def queryset_for_list_methods(self):
         active=RequestBool(self.request, "active")
         bank_id=RequestInteger(self.request,"bank")
         if bank_id is not None:
             self.queryset=self.queryset.filter(accounts__banks__id=bank_id,  active=True)
         elif active is not None:
             self.queryset=self.queryset.filter(active=active)
-        serializer = serializers.InvestmentsSerializer(self.queryset, many=True, context={'request': request})
+
+        return self.queryset
+    
+    
+    def list(self, request):
+        """
+            It's better to ovverride list than get_queryset due to active is a class_attribute, and list only is for list and queryset for all methods
+        """
+
+        serializer = serializers.InvestmentsSerializer(self.queryset_for_list_methods(), many=True, context={'request': request})
         return Response(serializer.data)
             
     
@@ -746,7 +752,6 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 return Percentage(-(selling_price-last_quote), last_quote)
         #######################################      
         active=RequestBool(request, "active")
-        print(active)
         if active is None:        
             return Response({'detail': _('You must set active parameter')}, status=status.HTTP_400_BAD_REQUEST)
 
