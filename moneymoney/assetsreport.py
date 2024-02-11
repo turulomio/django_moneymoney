@@ -185,10 +185,10 @@ def generate_assets_report(request, format):
             Percentage(o["percentage_invested"], 1), 
             Percentage(o["percentage_selling_point"], 1), 
         ))  
-        invested_user=Currency(lod.lod_sum(dict_investmentswithbalance, "invested_user"), c)
-        gains_positives=Currency(lod.lod_sum_positives(dict_investmentswithbalance, "gains_user"), c)
-        gains_negatives=Currency(lod.lod_sum_negatives(dict_investmentswithbalance, "gains_user"), c)
-        gains=gains_positives+gains_negatives
+    invested_user=Currency(lod.lod_sum(dict_investmentswithbalance, "invested_user"), c)
+    gains_positives=Currency(lod.lod_sum_positives(dict_investmentswithbalance, "gains_user"), c)
+    gains_negatives=Currency(lod.lod_sum_negatives(dict_investmentswithbalance, "gains_user"), c)
+    gains=gains_positives+gains_negatives
     investmentswithbalance.append([
         _("Total"), 
         invested_user, 
