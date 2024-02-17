@@ -417,7 +417,15 @@ class Creditcardsoperations(models.Model):
         db_table = 'creditcardsoperations'
         
     @staticmethod
-    def post_payload(creditcards="http://testserver/api/creditcards/1/",  concepts="http://testserver/api/concepts/1/", amount=1000,  comment="Opening account", datetime=timezone.now(), paid=False, paid_datetime=None):
+    def post_payload(
+        creditcards="http://testserver/api/creditcards/1/",  
+        concepts="http://testserver/api/concepts/1/", 
+        amount=1000,  
+        comment="CCO Comment", 
+        datetime=timezone.now(), 
+        paid=False, 
+        paid_datetime=None
+    ):
         return {
             "concepts":concepts, 
             "amount": amount, 
