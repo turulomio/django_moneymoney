@@ -13,10 +13,10 @@ django = ">=5.0"
 django-cors-headers = ">=4.3.0"
 djangorestframework = ">=3.14.0"
 drf-spectacular = ">=0.26.5"
-pydicts = ">=0.12.0"
+pydicts = ">=0.13.0"
 requests = ">=2.31.0"
 request-casting = ">=0.6.0"
-unogenerator = ">=0.39.0"
+unogenerator = ">=0.40.0"
 psycopg = ">=3.1.11"
 
 [tool.poetry.group.dev.dependencies]
