@@ -210,7 +210,6 @@ class CtTestCase(APITestCase):
         payload=models.Investments.post_payload(products=dict_product["url"], accounts=dict_account["url"])
         tests_helpers.common_tests_Collaborative(self, "/api/investments/", payload, self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
         
-    @tag("current")
     def test_InvestmentsChangeSellingPrice(self):
         dict_investment_1=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
         dict_investment_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
@@ -455,6 +454,7 @@ class CtTestCase(APITestCase):
         lod_=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/creditcards/?active=true&accounts=4", status.HTTP_200_OK)
         self.assertEqual(len(lod_), 1)
 
+    @tag("current")
     def test_Creditcards_WithBalance(self):
         # create cc one active and one inactive
         dict_debit=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(deferred=False), status.HTTP_201_CREATED)
@@ -462,7 +462,7 @@ class CtTestCase(APITestCase):
         
         #Creates a cco
         tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"], amount=22.22), status.HTTP_201_CREATED)
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_debit["url"], amount=22.22), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_debit["url"], amount=22.22), status.HTTP_400_BAD_REQUEST)# Debit can't create cco
         
         # Compares balance
         lod_=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/creditcards/withbalance/", status.HTTP_200_OK)
