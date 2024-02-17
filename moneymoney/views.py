@@ -302,14 +302,20 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
         creditcard=self.get_object()
         paid=RequestBool(request, 'paid')
         accountsoperations_id=RequestInteger(request, "accountsoperations_id")
-        balance=0
-        if paid is not None:
-            qs=models.Creditcardsoperations.objects.select_related("creditcards", "concepts", "creditcards__accounts").filter(paid=paid, creditcards=creditcard).order_by("datetime")
-        if accountsoperations_id is not None:
-            qs=models.Creditcardsoperations.objects.select_related("creditcards", "concepts", "creditcards__accounts").filter(accountsoperations__id=accountsoperations_id).order_by("datetime")
 
+        if paid is None and accountsoperations_id is None:
+            return Response(_("Paid or accountsoperations_id can't be None at the same time"), status=status.HTTP_400_BAD_REQUEST)
+            
+        qs=models.Creditcardsoperations.objects.select_related("creditcards", "concepts", "creditcards__accounts").all()
+        if paid is not None:
+            qs=qs.filter(paid=paid, creditcards=creditcard).order_by("datetime")
+        if accountsoperations_id is not None:
+            qs=qs.filter(accountsoperations__id=accountsoperations_id).order_by("datetime")
+
+        balance=0
         r=[]
         for o in qs:
+            
             balance=balance+o.amount
             r.append({
                 "id": o.id,  
@@ -318,7 +324,7 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
                 "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(o.concepts.pk, ))), 
                 "amount": o.amount, 
                 "balance":  balance, 
-                "comment": models.Comment().decode(o.comment), 
+                "comment": o.comment, 
                 "creditcards":request.build_absolute_uri(reverse('creditcards-detail', args=(o.creditcards.pk, ))), 
                 "paid": o.paid, 
                 "paid_datetime": o.paid_datetime, 
