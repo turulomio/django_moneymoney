@@ -72,11 +72,7 @@ def AssetsReport(request):
     """
         Generate user assets report
         Charts are part of the request in dict request.data
-    """
-    
-    
-    print(request.headers)
-    
+    """    
     test=RequestBool(request, "test", False) #Used for testing
     format_=RequestString(request, "format", "pdf")
     if format_=="pdf":

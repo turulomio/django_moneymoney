@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from django.contrib.auth.models import User
 from django.test import tag
@@ -363,6 +363,11 @@ class CtTestCase(APITestCase):
 
     @tag("current")
     def test_AssetsReport(self):
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(datetime=datetime(2023,12,29), amount=1000), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(amount=100), status.HTTP_201_CREATED)
+
+        
+        
         tests_helpers.client_post(self, self.client_authorized_1,"http://testserver/assets/report/",  { 
             "format": "pdf", 
             "chart_assets": js_image_b64, 

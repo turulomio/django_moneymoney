@@ -44,7 +44,6 @@ def generate_assets_report(request, format, test):
         # Use client to call other views 
         client=APIClient()
         client.credentials(HTTP_AUTHORIZATION=request.headers["Authorization"])
-        print(request.headers)
         language_headers={"HTTP_ACCEPT_LANGUAGE": request.headers['Accept-Language']}
         dict_report_annual=client.get(f"/reports/annual/{year}/", **language_headers).json()
 
@@ -54,10 +53,8 @@ def generate_assets_report(request, format, test):
         dict_report_annual_gainsbyproductstypes=client.get(reverse('ReportAnnualGainsByProductstypes', args=(year,  )), **language_headers).json()
         vTotal_gains_net=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "gains_net"), c)
         vTotal_dividends_net=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "dividends_net"), c)
-        vTotal_gains_gross=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "gains_gross"), c)
         vTotal_dividends_gross=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "dividends_gross"), c)
         vTotal_gains_dividends_net=vTotal_gains_net+vTotal_dividends_net
-        vTotal_gains_dividends_gross=vTotal_gains_gross+vTotal_dividends_gross
 
         
         #Personal settings
@@ -69,90 +66,99 @@ def generate_assets_report(request, format, test):
         
         # Assets
         doc.addParagraph(_("Assets"), "Heading 1")
-        doc.addParagraph(_("Total assets of the user are {0}.").format(vTotal),  "MyStandard")
-        if vTotalLastYear.amount>=0:
-            moreorless=_("more")
-            if (vTotal-vTotalLastYear).amount<0:
-                moreorless=_("less")
-            doc.addParagraph(_("At last year end you had {0}, so it's a {1} {2} of the total assets at the end of the last year.").format(vTotalLastYear, Percentage(vTotal-vTotalLastYear, vTotalLastYear), moreorless ), "MyStandard")
+        if (vTotal-vTotalLastYear).amount>=0:
+            doc.addParagraph(_("At the end of last year, you had {0}. Currently, you have {1}, which means you have gained {2}.").format(
+                vTotalLastYear, 
+                vTotal, 
+                Percentage((vTotal-vTotalLastYear).amount, vTotalLastYear.amount), 
+            ), "MyStandard")
+        else:
+            doc.addParagraph(_("At the end of last year, you had {0}. Currently, you have {1}, which means you have lost {2}.").format(
+                vTotalLastYear, 
+                vTotal, 
+                Percentage((vTotal-vTotalLastYear).amount, vTotalLastYear.amount), 
+            ), "MyStandard")
+        
+    
+    
+        # Assets by bank
+        doc.addParagraph(_("Assets by bank"), "Heading 2")
+        dict_bankswithbalance=client.get(reverse('banks-withbalance'), **language_headers).json()        
+        bankswithbalance=[(_("Bank"), _("Accounts balance"), _("Investments balance"), _("Total balance"))]
+        for o in dict_bankswithbalance:
+            if o["active"]==True:
+                bankswithbalance.append((o["name"], Currency(o["balance_accounts"], c), Currency(o["balance_investments"], c), Currency(o["balance_total"], c)))
+        bankswithbalance.append([_("Total"), Currency(lod.lod_sum(dict_bankswithbalance, "balance_accounts"), c), Currency(lod.lod_sum(dict_bankswithbalance, "balance_investments"), c), Currency(lod.lod_sum(dict_bankswithbalance, "balance_total"), c)])
+        doc.addTableParagraph(bankswithbalance, columnssize_percentages=[40, 20, 20, 20],  size=8, style="Table1Total")
+
+        # Assests current year
+        doc.addParagraph(_("Assets current year evolution"), "Heading 2")
+        
+        report_annual=[(_("Month"), _("Accounts balance"), _("Investments balance"), _("Total"),  _("Annual percentage"), _("Month diff"))]
+        for o in dict_report_annual["data"]:
+            report_annual.append([o["month"], Currency(o["account_balance"], c), Currency(o["investment_balance"], c), Currency(o["total"], c), Percentage(o["percentage_year"], 1), Currency(o["diff_lastmonth"], c)])
+        report_annual.append([_("Total"), "", "", "", "", Currency(lod.lod_sum(dict_report_annual["data"], "diff_lastmonth"), c)])
+
+        doc.addTableParagraph(report_annual, columnssize_percentages=[10, 18, 18, 18, 18, 18 ],  size=7, name="TableReportAnnual", style="Table1Total")
+
+        # Assests current year incomes
+        doc.addParagraph(_("Assets current year detail"), "Heading 2")
+        dict_report_annual_income=client.get(reverse('ReportAnnualIncome', args=(year, )), **language_headers).json()    
+        report_annual_income=[(_("Month"), _("Incomes"), _("Expenses"), _("Gains"), _("Dividends"), _("Total"))]
+        for o in dict_report_annual_income:
+            report_annual_income.append((o["month"], Currency(o["incomes"], c), Currency(o["expenses"], c), Currency(o["gains"], c), Currency(o["dividends"], c), Currency(o["total"], c)))
+        report_annual_income.append([
+            _("Total"), 
+            Currency(lod.lod_sum(dict_report_annual_income, "incomes"), c), 
+            Currency(lod.lod_sum(dict_report_annual_income, "expenses"), c), 
+            Currency(lod.lod_sum(dict_report_annual_income, "gains"), c), 
+            Currency(lod.lod_sum(dict_report_annual_income, "dividends"), c), 
+            Currency(lod.lod_sum(dict_report_annual_income, "total"), c), 
+        ])
+
+        doc.addTableParagraph(report_annual_income, columnssize_percentages=[40, 20, 20, 20],  size=8, style="Table1Total")
+                
+        ## Target
+        doc.addParagraph(
+            _("Up to date you have got {0} (net gains + net dividends) what represents a {1} of the total assets at the end of the last year.").format(
+                vTotal_gains_dividends_net, 
+                Percentage(vTotal_gains_dividends_net.amount, vTotalLastYear.amount)
+        ), "MyStandard"
+        )
         
         
+        doc.pageBreak("Landscape")
         
-            # Assets by bank
-            doc.addParagraph(_("Assets by bank"), "Heading 2")
-            dict_bankswithbalance=client.get(reverse('banks-withbalance'), **language_headers).json()        
-            bankswithbalance=[(_("Bank"), _("Accounts balance"), _("Investments balance"), _("Total balance"))]
-            for o in dict_bankswithbalance:
-                if o["active"]==True:
-                    bankswithbalance.append((o["name"], Currency(o["balance_accounts"], c), Currency(o["balance_investments"], c), Currency(o["balance_total"], c)))
-            bankswithbalance.append([_("Total"), Currency(lod.lod_sum(dict_bankswithbalance, "balance_accounts"), c), Currency(lod.lod_sum(dict_bankswithbalance, "balance_investments"), c), Currency(lod.lod_sum(dict_bankswithbalance, "balance_total"), c)])
-            doc.addTableParagraph(bankswithbalance, columnssize_percentages=[40, 20, 20, 20],  size=8, style="Table1Total")
-
-            # Assests current year
-            doc.addParagraph(_("Assets current year evolution"), "Heading 2")
-            
-            report_annual=[(_("Month"), _("Accounts balance"), _("Investments balance"), _("Total"),  _("Annual percentage"), _("Month diff"))]
-            for o in dict_report_annual["data"]:
-                report_annual.append([o["month"], Currency(o["account_balance"], c), Currency(o["investment_balance"], c), Currency(o["total"], c), Percentage(o["percentage_year"], 1), Currency(o["diff_lastmonth"], c)])
-            report_annual.append([_("Total"), "", "", "", "", Currency(lod.lod_sum(dict_report_annual["data"], "diff_lastmonth"), c)])
-
-            doc.addTableParagraph(report_annual, columnssize_percentages=[10, 18, 18, 18, 18, 18 ],  size=7, name="TableReportAnnual", style="Table1Total")
-
-            # Assests current year incomes
-            doc.addParagraph(_("Assets current year detail"), "Heading 2")
-            dict_report_annual_income=client.get(reverse('ReportAnnualIncome', args=(year, )), **language_headers).json()    
-            report_annual_income=[(_("Month"), _("Incomes"), _("Expenses"), _("Gains"), _("Dividends"), _("Total"))]
-            for o in dict_report_annual_income:
-                report_annual_income.append((o["month"], Currency(o["incomes"], c), Currency(o["expenses"], c), Currency(o["gains"], c), Currency(o["dividends"], c), Currency(o["total"], c)))
-            report_annual_income.append([
-                _("Total"), 
-                Currency(lod.lod_sum(dict_report_annual_income, "incomes"), c), 
-                Currency(lod.lod_sum(dict_report_annual_income, "expenses"), c), 
-                Currency(lod.lod_sum(dict_report_annual_income, "gains"), c), 
-                Currency(lod.lod_sum(dict_report_annual_income, "dividends"), c), 
-                Currency(lod.lod_sum(dict_report_annual_income, "total"), c), 
-            ])
-
-            doc.addTableParagraph(report_annual_income, columnssize_percentages=[40, 20, 20, 20],  size=8, style="Table1Total")
-                    
-            ## Target
-            doc.addParagraph(
-                _("Up to date you have got {0} (net gains + net dividends) what represents a {1} of the total assets at the end of the last year.").format(vTotal_gains_dividends_net, Percentage(vTotal_gains_dividends_net, vTotalLastYear)), "MyStandard"
-            )
-            
-            
-            doc.pageBreak("Landscape")
-            
-            ### Assets evolution graphic
-            doc.addParagraph(_("Assets graphical evolution"), "Heading 2")
-            
-            doc.addImageParagraph([image_bytes(request.data["chart_assets"]), ], 26, 14, "Illustration")
-            doc.pageBreak()
-            
-            
-            ### Current year investment gains by product type
-            doc.addParagraph(_("Current year investment gains group by product type"), "Heading 2")
-            report_annual_gainsbyproductstypes=[(_("Name"), _("Gross gains"), _("Gross dividends"), _("Net gains"), _("Net dividends"))]
-            for o in dict_report_annual_gainsbyproductstypes:
-                report_annual_gainsbyproductstypes.append((
-                    o["name"], 
-                    Currency(o["gains_gross"], c), 
-                    Currency(o["dividends_gross"], c), 
-                    Currency(o["gains_net"], c), 
-                    Currency(o["dividends_net"], c), 
-                ))
-            report_annual_gainsbyproductstypes.append([
-                _("Total"), 
-                Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "gains_gross"), c), 
-                Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "dividends_gross"), c), 
-                Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "gains_net"), c), 
-                Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "dividends_net"), c), 
-            ])
-            doc.addTableParagraph(report_annual_gainsbyproductstypes,  size=8, style="Table1Total")
-            
-            doc.addParagraph(_("Gross gains + Gross dividends = {0}.").format(vTotal_dividends_gross),  "MyStandard")
-            doc.addParagraph(_("Net gains + Net dividends = {0}.").format(vTotal_gains_dividends_net),  "MyStandard")
-            doc.pageBreak()
+        ### Assets evolution graphic
+        doc.addParagraph(_("Assets graphical evolution"), "Heading 2")
+        
+        doc.addImageParagraph([image_bytes(request.data["chart_assets"]), ], 26, 14, "Illustration")
+        doc.pageBreak()
+        
+        
+        ### Current year investment gains by product type
+        doc.addParagraph(_("Current year investment gains group by product type"), "Heading 2")
+        report_annual_gainsbyproductstypes=[(_("Name"), _("Gross gains"), _("Gross dividends"), _("Net gains"), _("Net dividends"))]
+        for o in dict_report_annual_gainsbyproductstypes:
+            report_annual_gainsbyproductstypes.append((
+                o["name"], 
+                Currency(o["gains_gross"], c), 
+                Currency(o["dividends_gross"], c), 
+                Currency(o["gains_net"], c), 
+                Currency(o["dividends_net"], c), 
+            ))
+        report_annual_gainsbyproductstypes.append([
+            _("Total"), 
+            Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "gains_gross"), c), 
+            Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "dividends_gross"), c), 
+            Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "gains_net"), c), 
+            Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "dividends_net"), c), 
+        ])
+        doc.addTableParagraph(report_annual_gainsbyproductstypes,  size=8, style="Table1Total")
+        
+        doc.addParagraph(_("Gross gains + Gross dividends = {0}.").format(vTotal_dividends_gross),  "MyStandard")
+        doc.addParagraph(_("Net gains + Net dividends = {0}.").format(vTotal_gains_dividends_net),  "MyStandard")
+        doc.pageBreak()
 
         ## Accounts
         doc.addParagraph(_("Current Accounts"), "Heading 1")
@@ -361,6 +367,3 @@ def generate_assets_report(request, format, test):
             doc.export_docx(filename)
     return filename
 
-
-    #Variable used but not detected due to f(
-    moreorless, vTotal_gains_dividends_net, vTotal_gains_dividends_gross
