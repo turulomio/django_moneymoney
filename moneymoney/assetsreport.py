@@ -44,12 +44,14 @@ def generate_assets_report(request, format, test):
         # Use client to call other views 
         client=APIClient()
         client.credentials(HTTP_AUTHORIZATION=request.headers["Authorization"])
-        dict_report_annual=client.get(f"/reports/annual/{year}/").json()
+        print(request.headers)
+        language_headers={"HTTP_ACCEPT_LANGUAGE": request.headers['Accept-Language']}
+        dict_report_annual=client.get(f"/reports/annual/{year}/", **language_headers).json()
 
         vTotalLastYear=Currency(dict_report_annual["last_year_balance"], c)
         vTotal=Currency(dict_report_annual["data"][11]["total"], c)
             
-        dict_report_annual_gainsbyproductstypes=client.get(reverse('ReportAnnualGainsByProductstypes', args=(year,  ))).json()
+        dict_report_annual_gainsbyproductstypes=client.get(reverse('ReportAnnualGainsByProductstypes', args=(year,  )), **language_headers).json()
         vTotal_gains_net=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "gains_net"), c)
         vTotal_dividends_net=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "dividends_net"), c)
         vTotal_gains_gross=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "gains_gross"), c)
@@ -78,7 +80,7 @@ def generate_assets_report(request, format, test):
         
             # Assets by bank
             doc.addParagraph(_("Assets by bank"), "Heading 2")
-            dict_bankswithbalance=client.get(reverse('banks-withbalance')).json()        
+            dict_bankswithbalance=client.get(reverse('banks-withbalance'), **language_headers).json()        
             bankswithbalance=[(_("Bank"), _("Accounts balance"), _("Investments balance"), _("Total balance"))]
             for o in dict_bankswithbalance:
                 if o["active"]==True:
@@ -98,7 +100,7 @@ def generate_assets_report(request, format, test):
 
             # Assests current year incomes
             doc.addParagraph(_("Assets current year detail"), "Heading 2")
-            dict_report_annual_income=client.get(reverse('ReportAnnualIncome', args=(year, ))).json()    
+            dict_report_annual_income=client.get(reverse('ReportAnnualIncome', args=(year, )), **language_headers).json()    
             report_annual_income=[(_("Month"), _("Incomes"), _("Expenses"), _("Gains"), _("Dividends"), _("Total"))]
             for o in dict_report_annual_income:
                 report_annual_income.append((o["month"], Currency(o["incomes"], c), Currency(o["expenses"], c), Currency(o["gains"], c), Currency(o["dividends"], c), Currency(o["total"], c)))
@@ -154,7 +156,7 @@ def generate_assets_report(request, format, test):
 
         ## Accounts
         doc.addParagraph(_("Current Accounts"), "Heading 1")
-        dict_accountswithbalance=client.get(reverse('accounts-withbalance')).json()
+        dict_accountswithbalance=client.get(reverse('accounts-withbalance'), **language_headers).json()
         accountswithbalance=[(_("Name"), _("Number"), _("Balance account"), _("Balance user currency"))]
         for o in dict_accountswithbalance:
             if o["active"] is True:
@@ -178,7 +180,7 @@ def generate_assets_report(request, format, test):
         
         doc.addParagraph(_("Investments list"), "Heading 2")
         doc.addParagraph(_("Next list is sorted by the distance in percent to the selling point."), "MyStandard")
-        dict_investmentswithbalance=client.get(reverse('investments-withbalance')+"?active=true").json()
+        dict_investmentswithbalance=client.get(reverse('investments-withbalance')+"?active=true", **language_headers).json()
         dict_investmentswithbalance=lod.lod_order_by(dict_investmentswithbalance, "percentage_selling_point")
         investmentswithbalance=[(_("Name"), _("Invested"),  _("Balance"), _("Gains"), _("\\% invested"), _("\\% selling point"))]
         for o in dict_investmentswithbalance:
@@ -212,7 +214,7 @@ def generate_assets_report(request, format, test):
 
         ## Current Investment Operations list
         doc.addParagraph(_("Current investment operations"),"Heading 2")
-        dict_report_current_investmentsoperations=client.get(reverse('ReportCurrentInvestmentsOperations')).json()
+        dict_report_current_investmentsoperations=client.get(reverse('ReportCurrentInvestmentsOperations'), **language_headers).json()
         report_current_investmentsoperations=[(_("Date and time"), _("Name"), _("Operation type"), _("Shares"), _("Price"), _("Invested"), _("Balance"), _("Gross gains"), _("\\% total"))]
         for o in dict_report_current_investmentsoperations:
             report_current_investmentsoperations.append((
@@ -266,7 +268,7 @@ def generate_assets_report(request, format, test):
         
         #Orders report
         doc.addParagraph(_("Investments orders"), "Heading 1")
-        dict_orders_list=client.get(reverse('orders-list')+"?active=true").json()
+        dict_orders_list=client.get(reverse('orders-list')+"?active=true", **language_headers).json()
         dict_orders_list=lod.lod_order_by(dict_orders_list, "percentage_from_price", reverse=True)
         orders_list=[( _("Date"), _("Expiration"), _("Investment"), _("Shares"), _("Price"), _("Amount"), _("\\% from current price"))]
         for o in dict_orders_list:
@@ -285,7 +287,7 @@ def generate_assets_report(request, format, test):
         
         #Dividend report
         doc.addParagraph(_("Dividend estimations report"), "Heading 1")
-        dict_reportdividends=client.get(reverse('ReportDividends')).json()
+        dict_reportdividends=client.get(reverse('ReportDividends'), **language_headers).json()
         reportdividends=[( _("Name"), _("Current price"), _("DPS"), _("Shares"), _("Estimated"), _("\\% Annual"))]
         for o in dict_reportdividends:
             reportdividends.append((
@@ -311,7 +313,7 @@ def generate_assets_report(request, format, test):
         
         # Ranking de investments
         doc.addParagraph(_("Historical investments ranking"), "Heading 1")
-        dict_reportranking=client.get(reverse('ReportRanking')).json()
+        dict_reportranking=client.get(reverse('ReportRanking'), **language_headers).json()
         ios_ranking=ios.IOS(dict_reportranking)
         reportranking=[]
         for products_id in ios_ranking.entries():

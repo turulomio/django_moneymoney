@@ -362,9 +362,8 @@ class CtTestCase(APITestCase):
                 
 
     @tag("current")
-    def test_AssetsReport(self):       
-        language_header = {'HTTP_ACCEPT_LANGUAGE': 'es-es'}
-        self.client_authorized_1.post("http://testserver/assets/report/",  { 
+    def test_AssetsReport(self):
+        tests_helpers.client_post(self, self.client_authorized_1,"http://testserver/assets/report/",  { 
             "format": "pdf", 
             "chart_assets": js_image_b64, 
             "chart_pie_product": js_image_b64, 
@@ -372,9 +371,8 @@ class CtTestCase(APITestCase):
             "chart_pie_pci": js_image_b64, 
             "chart_pie_leverage": js_image_b64, 
             "chart_pie_producttype": js_image_b64, 
-            "test": True, 
-            
-        }, format="json", **language_header)
+            "test": True,             
+        }, status.HTTP_200_OK, language="es-es")
         assert path.exists("TestingAssetsReport.pdf")
         
     
