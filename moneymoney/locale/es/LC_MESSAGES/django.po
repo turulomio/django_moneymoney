@@ -66,18 +66,11 @@ msgid "less"
 msgstr "menos"
 
 #: moneymoney/assetsreport.py:75
-#, fuzzy, python-brace-format
-#| msgid ""
-#| "At last year end you had {vTotalLastYear}, so it's a {Percentage(vTotal-"
-#| "vTotalLastYear, vTotalLastYear)} {moreorless} of the total assets at the "
-#| "end of the last year."
 msgid ""
 "At last year end you had {0}, so it's a {1} {2} of the total assets at the "
 "end of the last year."
 msgstr ""
-"Al final del año pasado tenías {vTotalLastYear}, lo que es un "
-"{Percentage(vTotal-vTotalLastYear, vTotalLastYear)} {moreorless} de lo que "
-"tenías en ese momento"
+"Al final del año pasado tenías {0}, lo que es un {1} {2} de lo que tenías en ese momento"
 
 #: moneymoney/assetsreport.py:80
 msgid "Assets by bank"
@@ -145,19 +138,11 @@ msgid "Dividends"
 msgstr "Dividendos"
 
 #: moneymoney/assetsreport.py:118
-#, fuzzy, python-brace-format
-#| msgid ""
-#| "Up to date you have got {vTotal_gains_dividends_net} (net gains + net "
-#| "dividends) what represents a {Percentage(vTotal_gains_dividends_net, "
-#| "vTotalLastYear)} of the total assets at the end of the last year."
 msgid ""
 "Up to date you have got {0} (net gains + net dividends) what represents a "
 "{1} of the total assets at the end of the last year."
 msgstr ""
-"Hasta la fecha has conseguido {vTotal_gains_dividends_net} (ganancias netas "
-"+ dividendos netos) lo que representa un "
-"{Percentage(vTotal_gains_dividends_net, vTotalLastYear)} del patrimonio "
-"total al final del año pasado."
+"Hasta la fecha has conseguido {0} (ganancias netas + dividendos netos) lo que representa un {1} del patrimonio total que tenías al final del año pasado."
 
 #: moneymoney/assetsreport.py:125
 msgid "Assets graphical evolution"

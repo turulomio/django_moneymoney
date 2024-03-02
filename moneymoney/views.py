@@ -1912,7 +1912,7 @@ def ReportAnnualGainsByProductstypes(request, year):
 
         l.append({
                 "id": pt.id, 
-                "name":pt.name, 
+                "name":_(pt.name), 
                 "gains_gross": gains_gross, 
                 "dividends_gross":dividends_gross, 
                 "gains_net":gains_net, 
