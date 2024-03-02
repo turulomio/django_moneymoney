@@ -50,21 +50,32 @@ def client_response_to_dict(r):
         return {}
     return loads(r.content)
 
-def client_post(apitestclass, client, url, params, response_code):
+def client_post(apitestclass, client, url, params, response_code, language=None):
     """
         Makes a client post and returns dictionary with response.content
         Asserts response_code
+        
+        language can be es-es or None to ignore language header
     """
-    r=client.post(url, params, format="json")
+    language_header = {}
+    if language is not None:
+        language_header['HTTP_ACCEPT_LANGUAGE'] = language
+    
+    r=client.post(url, params, format="json", **language_header)
     apitestclass.assertEqual(r.status_code,response_code,  f"Error in post {url}, {params} with user {client.user}. {r} {r.content}")
     return client_response_to_dict(r)
 
-def client_get(apitestclass, client, url, response_code):
+def client_get(apitestclass, client, url, response_code, language=None):
     """
         Makes a client post and returns dictionary with response.content
         Asserts response_code
+
+        language can be es-es or None to ignore language header
     """
-    r=client.get(url, format="json")
+    language_header = {}
+    if language is not None:
+        language_header['HTTP_ACCEPT_LANGUAGE'] = language
+    r=client.get(url, format="json", **language_header)
     apitestclass.assertEqual( r.status_code, response_code,  f"Error in get {url} with user {client.user}. {r} {r.content}")
     return client_response_to_dict(r)
 
