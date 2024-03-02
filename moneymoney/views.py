@@ -73,6 +73,11 @@ def AssetsReport(request):
         Generate user assets report
         Charts are part of the request in dict request.data
     """
+    
+    
+    print(request.headers)
+    
+    test=RequestBool(request, "test", False) #Used for testing
     format_=RequestString(request, "format", "pdf")
     if format_=="pdf":
         mime="application/pdf"
@@ -84,11 +89,14 @@ def AssetsReport(request):
         return Response({'status': 'Bad Format '}, status=status.HTTP_400_BAD_REQUEST)
 
     from moneymoney.assetsreport import generate_assets_report
-    filename=generate_assets_report(request, format_)
-    with open(filename, "rb") as doc:
-        encoded_string = b64encode(doc.read())
-        r={"filename":path.basename(filename),  "format": format_,  "data":encoded_string.decode("UTF-8"), "mime":mime}
-        return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+    filename=generate_assets_report(request, format_, test)
+    if test is True:# Creates a file in cwd
+        return Response(status=status.HTTP_200_OK)
+    else:
+        with open(filename, "rb") as doc:
+            encoded_string = b64encode(doc.read())
+            r={"filename":path.basename(filename),  "format": format_,  "data":encoded_string.decode("UTF-8"), "mime":mime}
+            return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
 class ConceptsViewSet(viewsets.ModelViewSet):
     queryset = models.Concepts.objects.all()

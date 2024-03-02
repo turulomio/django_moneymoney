@@ -20,7 +20,7 @@ DEBUG = True
 if DEBUG is True:
     print ("You should remove DEBUG=True for production systems")
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1' ]
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver' ]
 
 REST_FRAMEWORK={ 
     'DEFAULT_AUTHENTICATION_CLASSES':[
