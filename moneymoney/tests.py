@@ -143,6 +143,10 @@ class CtTestCase(APITestCase):
         
         print(dict_origin)
         print(dict_destiny)
+        
+        dict_transfer=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountstransfers/",  models.Accountstransfers.post_payload(), status.HTTP_201_CREATED)
+        print(dict_transfer)
+        
 
         
     def test_Investments(self):

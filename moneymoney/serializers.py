@@ -170,7 +170,7 @@ class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
 class AccountstransfersSerializer(serializers.HyperlinkedModelSerializer):    
     
     class Meta:
-        model = models.Accountsoperations
+        model = models.Accountstransfers
         fields = ('id','url', 'datetime', 'origin', 'destiny', 'amount','commission','comment','ao_origin',  'ao_destiny', 'ao_commission')
                 
 class LeveragesSerializer(serializers.HyperlinkedModelSerializer):

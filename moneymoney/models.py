@@ -233,6 +233,7 @@ class Accountsoperations(models.Model):
     comment = models.TextField(blank=True, null=True)
     accounts = models.ForeignKey(Accounts, models.DO_NOTHING)
     datetime = models.DateTimeField(blank=False, null=False)
+    associated_transfer=models.ForeignKey("Accountstransfers", models.CASCADE, blank=True, null=True)
 
     class Meta:
         managed = True
@@ -1145,7 +1146,7 @@ class Accountstransfers(models.Model):
     origin= models.ForeignKey('Accounts', models.CASCADE, blank=False, null=False, related_name="origin")
     destiny= models.ForeignKey('Accounts', models.CASCADE,  blank=False,  null=False, related_name="destiny")
     amount=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False)
-    commision=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False)
+    commission=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False)
     comment = models.TextField(blank=True, null=False)
     ao_origin = models.ForeignKey("Accountsoperations", models.CASCADE,  blank=True,  null=True, related_name="ao_origin")
     ao_destiny = models.ForeignKey("Accountsoperations", models.CASCADE,  blank=True,  null=True, related_name="ao_destiny")
@@ -1158,8 +1159,20 @@ class Accountstransfers(models.Model):
         
     @transaction.atomic
     def save(self, *args, **kwargs):
-        models.Model.save(self, args, kwargs)
-
+        ao_origin=Accountsoperations.objects.create(datetime=self.datetime, accounts=self.origin, concepts=eConcept.TransferOrigin)
+        ao_origin.save()
+        super().save(*args, **kwargs)
+        
+    @staticmethod
+    def post_payload(datetime=timezone.now(),  origin="http://testserver/api/accounts/4/", destiny="http://testserver/api/accounts/6/", amount=1000, commission=10,  comment="Personal transfer" ):
+        return {
+            "datetime":datetime, 
+            "origin": origin, 
+            "destiny":destiny, 
+            "amount":amount, 
+            "commission":commission, 
+            "comment":comment, 
+        }
 
 ## Class who controls all comments from accountsoperations, investmentsoperations ...
 class Comment:
