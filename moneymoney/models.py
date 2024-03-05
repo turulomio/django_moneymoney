@@ -278,6 +278,16 @@ class Accountsoperations(models.Model):
             return False        
         return True
         
+    def nice_comment(self):
+        if self.associated_transfer is not None:
+            if self.concepts.id==eConcept.TransferOrigin:
+                return _("Transfer to {0}. {1}").format(self.associated_transfer.destiny.fullName(), self.comment)
+            if self.concepts.id==eConcept.TransferDestiny:
+                return _("Transfer from {0}. {1}").format(self.associated_transfer.origin.fullName(), self.comment)
+            if self.concepts.id==eConcept.BankCommissions:
+                return _("Transfer of {0} from {1} to {2}. {3}").format(Currency(self.associated_transfer.amount, self.associated_transfer.origin.currency), self.associated_transfer.origin.fullName(), self.associated_transfer.destiny.fullName(), self.comment)
+        return self.comment
+        
 #    def is_creditcardbilling(self):
 #        if self.concepts.id==eConcept.CreditCardBilling:
 #            return True
@@ -1193,7 +1203,7 @@ class Accountstransfers(models.Model):
         self.ao_origin.associated_transfer=self
         self.ao_origin.save()
         self.ao_destiny.associated_transfer=self
-        self.ao_origin.save()
+        self.ao_destiny.save()
         self.ao_commission.associated_transfer=self
         self.ao_commission.save()
         
