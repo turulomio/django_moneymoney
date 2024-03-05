@@ -147,7 +147,9 @@ class CtTestCase(APITestCase):
         dict_transfer=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountstransfers/",  models.Accountstransfers.post_payload(), status.HTTP_201_CREATED)
         print(dict_transfer)
         
-
+        lod_ao=tests_helpers.client_get(self, self.client_authorized_1, "/api/accountsoperations/", status.HTTP_200_OK)
+        from pydicts import lod
+        lod.lod_print(lod_ao)
         
     def test_Investments(self):
         dict_account=tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)

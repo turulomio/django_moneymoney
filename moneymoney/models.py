@@ -1175,7 +1175,7 @@ class Accountstransfers(models.Model):
         self.ao_destiny.datetime=self.datetime
         self.ao_destiny.accounts=self.destiny
         self.ao_destiny.concepts_id=eConcept.TransferDestiny
-        self.ao_destiny.amount=-self.amount
+        self.ao_destiny.amount=self.amount
         self.ao_destiny.comment=self.comment
         self.ao_destiny.save()
         
