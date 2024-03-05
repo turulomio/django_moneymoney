@@ -134,6 +134,17 @@ class CtTestCase(APITestCase):
         r=models.Accounts.accounts_balance(qs_accounts, timezone.now(), 'EUR')
         self.assertEqual(r["balance_user_currency"], 1000)
         
+        
+    @tag("current")
+    def test_Accountstransfers(self):
+        
+        dict_origin=tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
+        dict_destiny=tests_helpers.client_post(self, self.client_authorized_1, "/api/accounts/",  models.Accounts.post_payload(), status.HTTP_201_CREATED)
+        
+        print(dict_origin)
+        print(dict_destiny)
+
+        
     def test_Investments(self):
         dict_account=tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
         dict_product=tests_helpers.client_get(self, self.client_authorized_1, "/api/products/79228/", status.HTTP_200_OK)
@@ -361,7 +372,6 @@ class CtTestCase(APITestCase):
         tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/concepts/1/historical_report_detail/", status.HTTP_400_BAD_REQUEST)
                 
 
-    @tag("current")
     def test_AssetsReport(self):
         tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(datetime=datetime(2023,12,29), amount=1000), status.HTTP_201_CREATED)
         tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(amount=100), status.HTTP_201_CREATED)

@@ -167,7 +167,7 @@ class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
         return models.Comment().decode(obj.comment), 
         
 
-class AccountstransferSerializer(serializers.HyperlinkedModelSerializer):    
+class AccountstransfersSerializer(serializers.HyperlinkedModelSerializer):    
     
     class Meta:
         model = models.Accountsoperations
