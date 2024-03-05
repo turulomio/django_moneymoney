@@ -234,7 +234,7 @@ class Accountsoperations(models.Model):
     comment = models.TextField(blank=True, null=True)
     accounts = models.ForeignKey(Accounts, models.DO_NOTHING)
     datetime = models.DateTimeField(blank=False, null=False)
-    associated_transfer=models.ForeignKey("Accountstransfers", models.CASCADE, blank=True, null=True)
+    associated_transfer=models.ForeignKey("Accountstransfers", models.PROTECT, blank=True, null=True)
 
     class Meta:
         managed = True
@@ -1159,9 +1159,9 @@ class Accountstransfers(models.Model):
     amount=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(0)])
     commission=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(0)])
     comment = models.TextField(blank=True, null=False)
-    ao_origin = models.ForeignKey("Accountsoperations", models.CASCADE,  blank=True,  null=True, related_name="ao_origin")
-    ao_destiny = models.ForeignKey("Accountsoperations", models.CASCADE,  blank=True,  null=True, related_name="ao_destiny")
-    ao_commission = models.ForeignKey("Accountsoperations", models.CASCADE,  blank=True,  null=True, related_name="ao_commission")
+    ao_origin = models.ForeignKey("Accountsoperations", models.PROTECT,  blank=True,  null=True, related_name="ao_origin")
+    ao_destiny = models.ForeignKey("Accountsoperations", models.PROTECT,  blank=True,  null=True, related_name="ao_destiny")
+    ao_commission = models.ForeignKey("Accountsoperations", models.PROTECT,  blank=True,  null=True, related_name="ao_commission")
         
     class Meta:
         managed = True
@@ -1170,19 +1170,18 @@ class Accountstransfers(models.Model):
         
     @transaction.atomic
     def save(self, *args, **kwargs):
-        print(self.datetime, self.amount, self.commission, self.id)
-        
+        super().save(*args, **kwargs)
         if self.id is not None:
             print("Borrando")
             Accountsoperations.objects.filter(associated_transfer=self.id).delete()
-        
-        
+
         self.ao_origin=Accountsoperations()
         self.ao_origin.datetime=self.datetime
         self.ao_origin.accounts=self.origin
         self.ao_origin.concepts_id=eConcept.TransferOrigin
         self.ao_origin.amount=-self.amount
         self.ao_origin.comment=self.comment
+        self.ao_origin.associated_transfer=self
         self.ao_origin.save()
         
         self.ao_destiny=Accountsoperations()
@@ -1191,6 +1190,7 @@ class Accountstransfers(models.Model):
         self.ao_destiny.concepts_id=eConcept.TransferDestiny
         self.ao_destiny.amount=self.amount
         self.ao_destiny.comment=self.comment
+        self.ao_destiny.associated_transfer=self
         self.ao_destiny.save()
         
         if self.commission!=0:
@@ -1200,17 +1200,8 @@ class Accountstransfers(models.Model):
             self.ao_commission.concepts_id=eConcept.BankCommissions
             self.ao_commission.amount=-self.commission
             self.ao_commission.comment=self.comment
+            self.ao_commission.associated_transfer=self
             self.ao_commission.save()
-            print(self.ao_commission.amount)
-
-        super().save(*args, **kwargs)
-        print(self.datetime, self.amount, self.commission, self.id)
-        self.ao_origin.associated_transfer=self
-        self.ao_origin.save()
-        self.ao_destiny.associated_transfer=self
-        self.ao_destiny.save()
-        self.ao_commission.associated_transfer=self
-        self.ao_commission.save()
         
     @staticmethod
     def post_payload(datetime=timezone.now(),  origin="http://testserver/api/accounts/4/", destiny="http://testserver/api/accounts/6/", amount=1000, commission=10,  comment="Personal transfer" ):
