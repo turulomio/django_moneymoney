@@ -1170,9 +1170,14 @@ class Accountstransfers(models.Model):
         
     @transaction.atomic
     def save(self, *args, **kwargs):
+        print(self.datetime, self.amount, self.commission, self.id)
         
-        if self.ao_origin is None:
-            self.ao_origin=Accountsoperations()
+        if self.id is not None:
+            print("Borrando")
+            Accountsoperations.objects.filter(associated_transfer=self.id).delete()
+        
+        
+        self.ao_origin=Accountsoperations()
         self.ao_origin.datetime=self.datetime
         self.ao_origin.accounts=self.origin
         self.ao_origin.concepts_id=eConcept.TransferOrigin
@@ -1180,8 +1185,7 @@ class Accountstransfers(models.Model):
         self.ao_origin.comment=self.comment
         self.ao_origin.save()
         
-        if self.ao_destiny is None:
-            self.ao_destiny=Accountsoperations()
+        self.ao_destiny=Accountsoperations()
         self.ao_destiny.datetime=self.datetime
         self.ao_destiny.accounts=self.destiny
         self.ao_destiny.concepts_id=eConcept.TransferDestiny
@@ -1190,16 +1194,17 @@ class Accountstransfers(models.Model):
         self.ao_destiny.save()
         
         if self.commission!=0:
-            if self.ao_commission is None:
-                self.ao_commission=Accountsoperations()
+            self.ao_commission=Accountsoperations()
             self.ao_commission.datetime=self.datetime
             self.ao_commission.accounts=self.origin
             self.ao_commission.concepts_id=eConcept.BankCommissions
             self.ao_commission.amount=-self.commission
             self.ao_commission.comment=self.comment
             self.ao_commission.save()
+            print(self.ao_commission.amount)
 
         super().save(*args, **kwargs)
+        print(self.datetime, self.amount, self.commission, self.id)
         self.ao_origin.associated_transfer=self
         self.ao_origin.save()
         self.ao_destiny.associated_transfer=self

@@ -144,12 +144,21 @@ class CtTestCase(APITestCase):
         print(dict_origin)
         print(dict_destiny)
         
+        # Create transfer
         dict_transfer=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountstransfers/",  models.Accountstransfers.post_payload(), status.HTTP_201_CREATED)
         print(dict_transfer)
         
         lod_ao=tests_helpers.client_get(self, self.client_authorized_1, "/api/accountsoperations/", status.HTTP_200_OK)
         from pydicts import lod
         lod.lod_print(lod_ao)
+        
+        # Update transfer
+        dict_transfer2=tests_helpers.client_put(self, self.client_authorized_1, dict_transfer["url"],  models.Accountstransfers.post_payload(datetime=timezone.now(), amount=999, commission=9), status.HTTP_200_OK)
+        print(dict_transfer2)
+                
+        lod_ao2=tests_helpers.client_get(self, self.client_authorized_1, "/api/accountsoperations/", status.HTTP_200_OK)
+        from pydicts import lod
+        lod.lod_print(lod_ao2)
         
     def test_Investments(self):
         dict_account=tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
