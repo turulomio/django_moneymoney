@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 from decimal import Decimal
 from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator
 from django.db import models, transaction, connection
 from django.db.models import Case, When, Sum
 from django.urls import reverse
@@ -1145,8 +1146,8 @@ class Accountstransfers(models.Model):
     datetime = models.DateTimeField(blank=False, null=False)
     origin= models.ForeignKey('Accounts', models.CASCADE, blank=False, null=False, related_name="origin")
     destiny= models.ForeignKey('Accounts', models.CASCADE,  blank=False,  null=False, related_name="destiny")
-    amount=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False)
-    commission=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False)
+    amount=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(0)])
+    commission=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(0)])
     comment = models.TextField(blank=True, null=False)
     ao_origin = models.ForeignKey("Accountsoperations", models.CASCADE,  blank=True,  null=True, related_name="ao_origin")
     ao_destiny = models.ForeignKey("Accountsoperations", models.CASCADE,  blank=True,  null=True, related_name="ao_destiny")
@@ -1159,9 +1160,42 @@ class Accountstransfers(models.Model):
         
     @transaction.atomic
     def save(self, *args, **kwargs):
-        ao_origin=Accountsoperations.objects.create(datetime=self.datetime, accounts=self.origin, concepts=eConcept.TransferOrigin)
-        ao_origin.save()
+        
+        if self.ao_origin is None:
+            self.ao_origin=Accountsoperations()
+        self.ao_origin.datetime=self.datetime
+        self.ao_origin.accounts=self.origin
+        self.ao_origin.concepts_id=eConcept.TransferOrigin
+        self.ao_origin.amount=-self.amount
+        self.ao_origin.comment=self.comment
+        self.ao_origin.save()
+        
+        if self.ao_destiny is None:
+            self.ao_destiny=Accountsoperations()
+        self.ao_destiny.datetime=self.datetime
+        self.ao_destiny.accounts=self.destiny
+        self.ao_destiny.concepts_id=eConcept.TransferDestiny
+        self.ao_destiny.amount=-self.amount
+        self.ao_destiny.comment=self.comment
+        self.ao_destiny.save()
+        
+        if self.commission!=0:
+            if self.ao_commission is None:
+                self.ao_commission=Accountsoperations()
+            self.ao_commission.datetime=self.datetime
+            self.ao_commission.accounts=self.origin
+            self.ao_commission.concepts_id=eConcept.BankCommissions
+            self.ao_commission.amount=-self.commission
+            self.ao_commission.comment=self.comment
+            self.ao_commission.save()
+
         super().save(*args, **kwargs)
+        self.ao_origin.associated_transfer=self
+        self.ao_origin.save()
+        self.ao_destiny.associated_transfer=self
+        self.ao_origin.save()
+        self.ao_commission.associated_transfer=self
+        self.ao_commission.save()
         
     @staticmethod
     def post_payload(datetime=timezone.now(),  origin="http://testserver/api/accounts/4/", destiny="http://testserver/api/accounts/6/", amount=1000, commission=10,  comment="Personal transfer" ):
