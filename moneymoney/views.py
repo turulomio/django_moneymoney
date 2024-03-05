@@ -1058,7 +1058,12 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
         models.Creditcardsoperations.objects.filter(accountsoperations_id=ao.id).update(paid_datetime=None,  paid=False, accountsoperations_id=None)
         ao.delete() #Must be at the end due to middle queries
         return JsonResponse( True, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
-            
+
+class AccountstransfersViewSet(viewsets.ModelViewSet):
+    queryset = models.Accountstransfers.objects.all()
+    serializer_class = serializers.AccountstransfersSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
 class BanksViewSet(viewsets.ModelViewSet):
     queryset = models.Banks.objects.all()
     permission_classes = [permissions.IsAuthenticated]  

@@ -165,6 +165,13 @@ class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     @extend_schema_field(OpenApiTypes.STR)
     def get_comment_decoded(self, obj):
         return models.Comment().decode(obj.comment), 
+        
+
+class AccountstransferSerializer(serializers.HyperlinkedModelSerializer):    
+    
+    class Meta:
+        model = models.Accountsoperations
+        fields = ('id','url', 'datetime', 'origin', 'destiny', 'amount','commission','comment','ao_origin',  'ao_destiny', 'ao_commission')
                 
 class LeveragesSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()

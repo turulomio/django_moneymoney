@@ -1130,6 +1130,26 @@ class Strategies(models.Model):
 
 
 
+class Accountstransfers(models.Model):
+    datetime = models.DateTimeField(blank=False, null=False)
+    origin= models.ForeignKey('Accounts', models.CASCADE, blank=False, null=False)
+    destiny= models.ForeignKey('Accounts', models.CASCADE,  blank=False,  null=False)
+    amount=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False)
+    commision=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False)
+    comment = models.TextField(blank=True, null=False)
+    ao_origin = models.ForeignKey("Accountsoperations", models.CASCADE,  blank=True,  null=True)
+    ao_destiny = models.ForeignKey("Accountsoperations", models.CASCADE,  blank=True,  null=True)
+    ao_commission = models.ForeignKey("Accountsoperations", models.CASCADE,  blank=True,  null=True)
+        
+    class Meta:
+        managed = True
+        db_table = 'accountstransfers'
+        
+        
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        models.Model.save(self, args, kwargs)
+
 
 ## Class who controls all comments from accountsoperations, investmentsoperations ...
 class Comment:
