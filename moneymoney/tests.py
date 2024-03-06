@@ -137,34 +137,31 @@ class CtTestCase(APITestCase):
         
     @tag("current")
     def test_Accountstransfers(self):
-        from pydicts import lod
-        
-        dict_origin=tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
+        from pydicts import lod        
+        tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
         dict_destiny=tests_helpers.client_post(self, self.client_authorized_1, "/api/accounts/",  models.Accounts.post_payload(), status.HTTP_201_CREATED)
-        
-        print(dict_origin)
-        print(dict_destiny)
-        
+
         # Create transfer
-        dict_transfer=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountstransfers/",  models.Accountstransfers.post_payload(), status.HTTP_201_CREATED)
+        dict_transfer=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountstransfers/",  models.Accountstransfers.post_payload(destiny=dict_destiny["url"]), status.HTTP_201_CREATED)
         print(dict_transfer)
         
         lod_ao=tests_helpers.client_get(self, self.client_authorized_1, "/api/accountsoperations/", status.HTTP_200_OK)
         lod.lod_print(lod_ao)
-#        
-#        # Delete transfer
-#        print("DETELE TRANSFER")
-#        self.client_authorized_1.delete(dict_transfer["url"])
-#        lod.lod_print(tests_helpers.client_get(self, self.client_authorized_1, "/api/accountstransfers/", status.HTTP_200_OK))
-#        lod.lod_print(tests_helpers.client_get(self, self.client_authorized_1, "/api/accountsoperations/", status.HTTP_200_OK))
         
         # Update transfer
         print("UPDATE TRANSFER")
         dict_transfer2=tests_helpers.client_put(self, self.client_authorized_1, dict_transfer["url"],  models.Accountstransfers.post_payload(datetime=timezone.now(), amount=999, commission=9), status.HTTP_200_OK)
         print("UPDATED", dict_transfer2)
                 
-        print(tests_helpers.client_get(self, self.client_authorized_1, "/api/accountsoperations/", status.HTTP_200_OK))
-        #lod.lod_print(lod_ao2)
+        print(list(tests_helpers.client_get(self, self.client_authorized_1, "/api/accountsoperations/", status.HTTP_200_OK)))
+     
+        # Delete transfer
+        print("DETELE TRANSFER")
+        self.client_authorized_1.delete(dict_transfer["url"])
+        lod.lod_print(tests_helpers.client_get(self, self.client_authorized_1, "/api/accountstransfers/", status.HTTP_200_OK))
+        lod.lod_print(list(tests_helpers.client_get(self, self.client_authorized_1, "/api/accountsoperations/", status.HTTP_200_OK)))
+        self.assertEqual(models.Accountsoperations.objects.filter(associated_transfer__id=dict_transfer["id"]).count(), 0)
+        
         
     def test_Investments(self):
         dict_account=tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)

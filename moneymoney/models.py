@@ -234,7 +234,7 @@ class Accountsoperations(models.Model):
     comment = models.TextField(blank=True, null=True)
     accounts = models.ForeignKey(Accounts, models.DO_NOTHING)
     datetime = models.DateTimeField(blank=False, null=False)
-    associated_transfer=models.ForeignKey("Accountstransfers", models.SET_NULL, blank=True, null=True)
+    associated_transfer=models.ForeignKey("Accountstransfers", models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = True
@@ -1159,9 +1159,9 @@ class Accountstransfers(models.Model):
     amount=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(0)])
     commission=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(0)])
     comment = models.TextField(blank=True, null=False)
-    ao_origin = models.ForeignKey("Accountsoperations", models.SET_NULL,  blank=True,  null=True, related_name="ao_origin")
-    ao_destiny = models.ForeignKey("Accountsoperations", models.SET_NULL,  blank=True,  null=True, related_name="ao_destiny")
-    ao_commission = models.ForeignKey("Accountsoperations", models.SET_NULL,  blank=True,  null=True, related_name="ao_commission")
+    ao_origin = models.ForeignKey("Accountsoperations", models.DO_NOTHING,  blank=True,  null=True, related_name="ao_origin")
+    ao_destiny = models.ForeignKey("Accountsoperations", models.DO_NOTHING,  blank=True,  null=True, related_name="ao_destiny")
+    ao_commission = models.ForeignKey("Accountsoperations", models.DO_NOTHING,  blank=True,  null=True, related_name="ao_commission")
         
     class Meta:
         managed = True
@@ -1171,9 +1171,7 @@ class Accountstransfers(models.Model):
     @transaction.atomic
     def save(self, *args, **kwargs):        
         if self.id is not None:
-            print("Borrando")
             Accountsoperations.objects.filter(associated_transfer=self.id).delete()
-        
         
         self.ao_origin=Accountsoperations()
         self.ao_origin.datetime=self.datetime
@@ -1199,7 +1197,6 @@ class Accountstransfers(models.Model):
             self.ao_commission.amount=-self.commission
             self.ao_commission.comment=self.comment
             self.ao_commission.save()
-            print(self.ao_commission.amount)
 
         super().save(*args, **kwargs)
         self.ao_origin.associated_transfer=self
@@ -1216,16 +1213,9 @@ class Accountstransfers(models.Model):
 
     @transaction.atomic
     def delete(self, *args, **kwargs):
-        functions.print_object(self)
-        print("DELETING",  self.id)
-        self.ao_origin.delete()
-        self.ao_destiny.delete()
-        self.ao_commission.delete()
-        
-        #Accountsoperations.objects.filter(associated_transfer=self.id).delete()
+        Accountsoperations.objects.filter(associated_transfer=self.id).delete()
         r=super().delete(*args, **kwargs)
-        print(r)
-        functions.print_object(self)
+        print("Deleted",  r)
         return r
         
         
