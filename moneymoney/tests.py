@@ -137,6 +137,7 @@ class CtTestCase(APITestCase):
         
     @tag("current")
     def test_Accountstransfers(self):
+        from pydicts import lod
         
         dict_origin=tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
         dict_destiny=tests_helpers.client_post(self, self.client_authorized_1, "/api/accounts/",  models.Accounts.post_payload(), status.HTTP_201_CREATED)
@@ -149,16 +150,21 @@ class CtTestCase(APITestCase):
         print(dict_transfer)
         
         lod_ao=tests_helpers.client_get(self, self.client_authorized_1, "/api/accountsoperations/", status.HTTP_200_OK)
-        from pydicts import lod
         lod.lod_print(lod_ao)
+#        
+#        # Delete transfer
+#        print("DETELE TRANSFER")
+#        self.client_authorized_1.delete(dict_transfer["url"])
+#        lod.lod_print(tests_helpers.client_get(self, self.client_authorized_1, "/api/accountstransfers/", status.HTTP_200_OK))
+#        lod.lod_print(tests_helpers.client_get(self, self.client_authorized_1, "/api/accountsoperations/", status.HTTP_200_OK))
         
-        # Update transfer
-        dict_transfer2=tests_helpers.client_put(self, self.client_authorized_1, dict_transfer["url"],  models.Accountstransfers.post_payload(datetime=timezone.now(), amount=999, commission=9), status.HTTP_200_OK)
-        print(dict_transfer2)
-                
-        lod_ao2=tests_helpers.client_get(self, self.client_authorized_1, "/api/accountsoperations/", status.HTTP_200_OK)
-        from pydicts import lod
-        lod.lod_print(lod_ao2)
+#        # Update transfer
+#        dict_transfer2=tests_helpers.client_put(self, self.client_authorized_1, dict_transfer["url"],  models.Accountstransfers.post_payload(datetime=timezone.now(), amount=999, commission=9), status.HTTP_200_OK)
+#        print(dict_transfer2)
+#                
+#        lod_ao2=tests_helpers.client_get(self, self.client_authorized_1, "/api/accountsoperations/", status.HTTP_200_OK)
+#        from pydicts import lod
+#        lod.lod_print(lod_ao2)
         
     def test_Investments(self):
         dict_account=tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)

@@ -15,3 +15,12 @@ def show_queries_function():
         print (f"[{d['time']}] {d['sql']}")
         sum_=sum_+float(d['time'])
     print (f"{len(connection.queries)} db queries took {round(sum_*1000,2)} ms")
+
+
+
+def print_object(o):
+    print(o.__class__.__name__)
+    # Access the __dict__ attribute to get a dictionary of model fields and values
+    for attribute, value in o.__dict__.items():
+        print(f"  + {attribute}: {value}")
+    print()

@@ -47,7 +47,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         blank=True,
                         null=True,
-                        on_delete=django.db.models.deletion.PROTECT,
+                        on_delete=django.db.models.deletion.SET_NULL,
                         related_name="ao_commission",
                         to="moneymoney.accountsoperations",
                     ),
@@ -57,7 +57,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         blank=True,
                         null=True,
-                        on_delete=django.db.models.deletion.PROTECT,
+                        on_delete=django.db.models.deletion.SET_NULL,
                         related_name="ao_destiny",
                         to="moneymoney.accountsoperations",
                     ),
@@ -67,7 +67,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         blank=True,
                         null=True,
-                        on_delete=django.db.models.deletion.PROTECT,
+                        on_delete=django.db.models.deletion.SET_NULL,
                         related_name="ao_origin",
                         to="moneymoney.accountsoperations",
                     ),
@@ -100,7 +100,7 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(
                 blank=True,
                 null=True,
-                on_delete=django.db.models.deletion.PROTECT,
+                on_delete=django.db.models.deletion.SET_NULL,
                 to="moneymoney.accountstransfers",
             ),
         ),
