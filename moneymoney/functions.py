@@ -22,5 +22,7 @@ def print_object(o):
     print(o.__class__.__name__)
     # Access the __dict__ attribute to get a dictionary of model fields and values
     for attribute, value in o.__dict__.items():
+        if attribute in ["_state"]:
+            continue
         print(f"  + {attribute}: {value}")
     print()

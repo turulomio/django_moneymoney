@@ -1169,9 +1169,7 @@ class Accountstransfers(models.Model):
         
         
     @transaction.atomic
-    def save(self, *args, **kwargs):
-        print(self.datetime, self.amount, self.commission, self.id)
-        
+    def save(self, *args, **kwargs):        
         if self.id is not None:
             print("Borrando")
             Accountsoperations.objects.filter(associated_transfer=self.id).delete()
@@ -1203,8 +1201,7 @@ class Accountstransfers(models.Model):
             self.ao_commission.save()
             print(self.ao_commission.amount)
 
-        r=super().save(*args, **kwargs)
-        print(self.datetime, self.amount, self.commission, self.id)
+        super().save(*args, **kwargs)
         self.ao_origin.associated_transfer=self
         self.ao_origin.save()
         self.ao_destiny.associated_transfer=self
@@ -1216,7 +1213,6 @@ class Accountstransfers(models.Model):
         functions.print_object(self.ao_origin)
         functions.print_object(self.ao_destiny)
         functions.print_object(self.ao_commission)
-        return r
 
     @transaction.atomic
     def delete(self, *args, **kwargs):
