@@ -157,14 +157,13 @@ class CtTestCase(APITestCase):
         self.assertEqual(models.Accountsoperations.objects.get(pk=4).amount, -999)
         self.assertEqual(models.Accountsoperations.objects.get(pk=5).amount, 999)
         self.assertEqual(models.Accountsoperations.objects.get(pk=6).amount, -9)
-     
+    
         # Delete transfer
         self.client_authorized_1.delete(dict_transfer["url"])
         with self.assertRaises(models.Accountstransfers.DoesNotExist):
             models.Accountstransfers.objects.get(id=dict_transfer["id"])
         self.assertEqual(models.Accountsoperations.objects.filter(associated_transfer__id=dict_transfer["id"]).count(), 0)
-        
-        
+
     def test_Investments(self):
         dict_account=tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
         dict_product=tests_helpers.client_get(self, self.client_authorized_1, "/api/products/79228/", status.HTTP_200_OK)
