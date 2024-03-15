@@ -1206,16 +1206,16 @@ class Accountstransfers(models.Model):
         self.ao_commission.associated_transfer=self
         self.ao_commission.save()
         
-        functions.print_object(self)
-        functions.print_object(self.ao_origin)
-        functions.print_object(self.ao_destiny)
-        functions.print_object(self.ao_commission)
+#        functions.print_object(self)
+#        functions.print_object(self.ao_origin)
+#        functions.print_object(self.ao_destiny)
+#        functions.print_object(self.ao_commission)
 
     @transaction.atomic
     def delete(self, *args, **kwargs):
         Accountsoperations.objects.filter(associated_transfer=self.id).delete()
         r=super().delete(*args, **kwargs)
-        print("Deleted",  r)
+#        print("Deleted",  r)
         return r
         
         
