@@ -922,38 +922,6 @@ class AccountsViewSet(viewsets.ModelViewSet):
             })
         return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
-            
-
-    @action(detail=True, methods=["get"], name='List accounts operations with balance calculations of an account', url_path="monthoperations", url_name='monthoperations', permission_classes=[permissions.IsAuthenticated])
-    def monthoperations(self, request, pk=None):
-        account=self.get_object()
-        year=RequestInteger(request, 'year')
-        month=RequestInteger(request, 'month')
-        
-        if all_args_are_not_none( year, month):
-            dt_initial=casts.dtaware_month_start(year, month, request.user.profile.zone)
-            initial_balance=account.balance( dt_initial, request.user.profile.currency)['balance_account_currency']
-            qs=models.Accountsoperations.objects.select_related("accounts","concepts").filter(datetime__year=year, datetime__month=month, accounts=account).order_by("datetime")
-
-            r=[]
-            for o in qs:
-                r.append({
-                    "id": o.id,  
-                    "url": request.build_absolute_uri(reverse('accountsoperations-detail', args=(o.pk, ))), 
-                    "datetime":o.datetime, 
-                    "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(o.concepts.pk, ))), 
-                    "amount": o.amount, 
-                    "balance":  initial_balance + o.amount, 
-                    "comment": o.comment, 
-                    "comment_decoded": models.Comment().decode(o.comment), 
-                    "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.pk, ))), 
-                    "currency": o.accounts.currency, 
-                    "is_editable": o.is_editable(), 
-                })
-                initial_balance=initial_balance + o.amount
-            return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
-        return JsonResponse( "Some parameters are missing", encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
-
 class AccountsoperationsViewSet(viewsets.ModelViewSet):
     queryset = models.Accountsoperations.objects.select_related("accounts").all()
     serializer_class = serializers.AccountsoperationsSerializer
@@ -972,12 +940,22 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
         concept=RequestUrl(self.request, 'concept', models.Concepts)
         year=RequestInteger(self.request, 'year')
         month=RequestInteger(self.request, 'month')
+        account=RequestUrl(self.request, 'account', models.Accounts)
 
         if search is not None:
             self.queryset=self.queryset.filter(comment__icontains=search)
-        if all_args_are_not_none(concept, year, month):
+        elif all_args_are_not_none(account, year, month):
+            dt_initial=casts.dtaware_month_start(year, month, request.user.profile.zone)
+            initial_balance=account.balance( dt_initial, request.user.profile.currency)['balance_account_currency']
+            self.queryset=self.queryset.filter(accounts=account, datetime__year=year, datetime__month=month).order_by("datetime")
+            serializer = serializers.AccountsoperationsSerializer(self.queryset, many=True, context={'request': request})
+            for d in serializer.data:
+                d["balance"]=initial_balance+d["amount"]
+                initial_balance+=d["amount"]
+            return Response(serializer.data)
+        elif all_args_are_not_none(concept, year, month):
             self.queryset=self.queryset.filter(concepts=concept, datetime__year=year, datetime__month=month)
-        if all_args_are_not_none(concept, year):
+        elif all_args_are_not_none(concept, year):
             self.queryset=self.queryset.filter(concepts=concept, datetime__year=year)
         serializer = serializers.AccountsoperationsSerializer(self.queryset, many=True, context={'request': request})
         return Response(serializer.data)

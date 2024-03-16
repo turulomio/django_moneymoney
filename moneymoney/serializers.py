@@ -151,10 +151,11 @@ class OperationstypesSerializer(serializers.HyperlinkedModelSerializer):
 class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     currency = serializers.SerializerMethodField()
     nice_comment = serializers.SerializerMethodField()
+    is_editable= serializers.SerializerMethodField()
     
     class Meta:
         model = models.Accountsoperations
-        fields = ('id','url', 'datetime', 'concepts', 'amount','comment','accounts',  'currency', 'associated_transfer', 'nice_comment')
+        fields = ('id','url', 'datetime', 'concepts', 'amount','comment','accounts',  'currency', 'associated_transfer', 'nice_comment', 'is_editable')
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):
         return obj.accounts.currency
@@ -162,6 +163,10 @@ class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     @extend_schema_field(OpenApiTypes.STR)
     def get_nice_comment(self, obj):
         return  obj.nice_comment()
+
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_is_editable(self, obj):
+        return  obj.is_editable()
         
 
 class AccountstransfersSerializer(serializers.HyperlinkedModelSerializer):    
