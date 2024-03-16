@@ -240,8 +240,15 @@ class Accountsoperations(models.Model):
         managed = True
         db_table = 'accountsoperations'
         
+#    def __str__(self):
+        #return "{} {} {}".format(self.datetime, self.concepts.name, self.amount)
+        
     def __str__(self):
-        return "{} {} {}".format(self.datetime, self.concepts.name, self.amount)
+        return functions.string_oneline_object(self)
+        
+    def __repr__(self):
+        return functions.string_oneline_object(self)
+        
 
 
     @staticmethod
@@ -1167,9 +1174,12 @@ class Accountstransfers(models.Model):
         managed = True
         db_table = 'accountstransfers'
         
+    def __str__(self):
+        return functions.string_oneline_object(self)
+        
         
     @transaction.atomic
-    def save(self, *args, **kwargs):        
+    def save(self, *args, **kwargs):
         if self.id is not None:
             Accountsoperations.objects.filter(associated_transfer=self.id).delete()
         
@@ -1203,8 +1213,9 @@ class Accountstransfers(models.Model):
         self.ao_origin.save()
         self.ao_destiny.associated_transfer=self
         self.ao_destiny.save()
-        self.ao_commission.associated_transfer=self
-        self.ao_commission.save()
+        if self.ao_commission is not None:
+            self.ao_commission.associated_transfer=self
+            self.ao_commission.save()
         
 #        functions.print_object(self)
 #        functions.print_object(self.ao_origin)
