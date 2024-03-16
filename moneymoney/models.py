@@ -278,7 +278,7 @@ class Accountsoperations(models.Model):
                 return _("Transfer from {0}. {1}").format(self.associated_transfer.origin.fullName(), self.comment)
             if self.concepts.id==eConcept.BankCommissions:
                 return _("Transfer of {0} from {1} to {2}. {3}").format(Currency(self.associated_transfer.amount, self.associated_transfer.origin.currency), self.associated_transfer.origin.fullName(), self.associated_transfer.destiny.fullName(), self.comment)
-        return self.comment
+        return Comment().decode(self.comment) + self.comment
 
 class Banks(models.Model):
     name = models.TextField()
