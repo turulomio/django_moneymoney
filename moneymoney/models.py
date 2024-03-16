@@ -240,9 +240,6 @@ class Accountsoperations(models.Model):
         managed = True
         db_table = 'accountsoperations'
         
-#    def __str__(self):
-        #return "{} {} {}".format(self.datetime, self.concepts.name, self.amount)
-        
     def __str__(self):
         return functions.string_oneline_object(self)
         
@@ -261,7 +258,7 @@ class Accountsoperations(models.Model):
             "datetime": datetime, 
         }
 
-    def can_be_updated(self):
+    def is_editable(self):
         if self.concepts is None:
             return False
         if self.concepts.id in (eConcept.BuyShares, eConcept.SellShares, 
@@ -269,20 +266,8 @@ class Accountsoperations(models.Model):
             eConcept.DividendsSaleRights, eConcept.BondsCouponRunPayment, eConcept.BondsCouponRunIncome, 
             eConcept.BondsCoupon, eConcept.RolloverPaid, eConcept.RolloverReceived):
             return False
-        if Comment().getCode(self.comment) in (eComment.AccountTransferOrigin, eComment.AccountTransferDestiny, eComment.AccountTransferOriginCommission):
-            return False        
-        return True
-
-    def is_editable(self):
-        if self.concepts==None:
+        if self.associated_transfer is not None:
             return False
-        if self.concepts.id in (eConcept.BuyShares, eConcept.SellShares, 
-            eConcept.Dividends, eConcept.CreditCardBilling, eConcept.AssistancePremium,
-            eConcept.DividendsSaleRights, eConcept.BondsCouponRunPayment, eConcept.BondsCouponRunIncome, 
-            eConcept.BondsCoupon, eConcept.RolloverPaid, eConcept.RolloverReceived):
-            return False
-        if Comment().getCode(self.comment) in (eComment.AccountTransferOrigin, eComment.AccountTransferDestiny, eComment.AccountTransferOriginCommission):
-            return False        
         return True
         
     def nice_comment(self):
@@ -293,21 +278,7 @@ class Accountsoperations(models.Model):
                 return _("Transfer from {0}. {1}").format(self.associated_transfer.origin.fullName(), self.comment)
             if self.concepts.id==eConcept.BankCommissions:
                 return _("Transfer of {0} from {1} to {2}. {3}").format(Currency(self.associated_transfer.amount, self.associated_transfer.origin.currency), self.associated_transfer.origin.fullName(), self.associated_transfer.destiny.fullName(), self.comment)
-        return self.comment
-        
-#    def is_creditcardbilling(self):
-#        if self.concepts.id==eConcept.CreditCardBilling:
-#            return True
-#        return False
-#    def is_transfer(self):
-#        if Comment().getCode(self.comment) in (eComment.AccountTransferOrigin, eComment.AccountTransferDestiny, eComment.AccountTransferOriginCommission):
-#            return True
-#        return False
-        
-    def is_investmentoperation(self):
-        if Comment().getCode(self.comment) in (eComment.InvestmentOperation, ):
-            return True
-        return False
+        return self.comment if self.is_editable() else Comment().decode(self.comment)
 
 class Banks(models.Model):
     name = models.TextField()
@@ -1286,16 +1257,7 @@ class Comment:
         if ecomment==eComment.InvestmentOperation:
             return "{},{}".format(eComment.InvestmentOperation, args[0].id)
         elif ecomment==eComment.Dividend:
-            return "{},{}".format(eComment.Dividend, args[0].id)        
-        elif ecomment==eComment.AccountTransferOrigin:
-            operaccountorigincommission_id=-1 if args[2]==None else args[2].id
-            return "{},{},{},{}".format(eComment.AccountTransferOrigin, args[0].id, args[1].id, operaccountorigincommission_id)
-        elif ecomment==eComment.AccountTransferOriginCommission:
-            operaccountorigincommission_id=-1 if args[2]==None else args[2].id
-            return "{},{},{},{}".format(eComment.AccountTransferOriginCommission, args[0].id, args[1].id, operaccountorigincommission_id)
-        elif ecomment==eComment.AccountTransferDestiny:
-            operaccountorigincommission_id=-1 if args[2]==None else args[2].id
-            return "{},{},{},{}".format(eComment.AccountTransferDestiny, args[0].id, args[1].id, operaccountorigincommission_id)
+            return "{},{}".format(eComment.Dividend, args[0].id)   
         elif ecomment==eComment.CreditCardBilling:
             return "{},{},{}".format(eComment.CreditCardBilling, args[0].id, args[1].id)      
         elif ecomment==eComment.CreditCardRefund:
@@ -1321,28 +1283,6 @@ class Comment:
                 return _("{}: {} shares. Amount: {}. Comission: {}. Taxes: {}").format(io.investments.name, io.shares, io.shares*io.price,  io.commission, io.taxes)
 #                else:
 #                    return _("{}: {} shares. Amount: {} ({}). Comission: {} ({}). Taxes: {} ({})").format(io.investment.name, io.shares, io.gross(eMoneyCurrency.Product), io.gross(eMoneyCurrency.Account),  io.money_commission(eMoneyCurrency.Product), io.money_commission(eMoneyCurrency.Account),  io.taxes(eMoneyCurrency.Product), io.taxes(eMoneyCurrency.Account))
-
-            elif code==eComment.AccountTransferOrigin:#Operaccount transfer origin
-                if not self.validateLength(3, code, args): return string
-                aod=Accountsoperations.objects.get(pk=args[1])
-                return _("Transfer to {}").format(aod.accounts.name)
-
-            elif code==eComment.AccountTransferDestiny:#Operaccount transfer destiny
-            
-                if not self.validateLength(3, code, args): return string
-                aoo=Accountsoperations.objects.get(pk=args[0])
-                return _("Transfer received from {}").format(aoo.accounts.name)
-
-            elif code==eComment.AccountTransferOriginCommission:#Operaccount transfer origin commission
-                if not self.validateLength(3, code, args): return string
-                
-                try:
-                    aoo=Accountsoperations.objects.get(pk=args[0])
-                    aod=Accountsoperations.objects.get(pk=args[1])
-                    return _("Commission transfering {} from {} to {}").format(Currency(aoo.amount, aoo.accounts.currency), aoo.accounts.name, aod.accounts.name)
-                except:
-                    return _("Commission transfering error")
-
             elif code==eComment.Dividend:#Comentario de cuenta asociada al dividendo
                 dividend=self.decode_objects(string)
                 if dividend is not None:
@@ -1373,16 +1313,6 @@ class Comment:
             if not self.validateLength(1, code, args): return None
             io=Investmentsoperations.objects.select_related("investments").get(pk=args[0])
             return io
-
-        elif code in (eComment.AccountTransferOrigin,  eComment.AccountTransferDestiny, eComment.AccountTransferOriginCommission):
-            if not self.validateLength(3, code, args): return None
-            aoo=Accountsoperations.objects.get(pk=args[0])
-            aod=Accountsoperations.objects.get(pk=args[1])
-            if args[2]==-1:
-                aoc=None
-            else:
-                aoc=Accountsoperations.objects.get(pk=args[2])
-            return {"origin":aoo, "destiny":aod, "commission":aoc }
 
         elif code==eComment.Dividend:#Comentario de cuenta asociada al dividendo
             if not self.validateLength(1, code, args): return None
