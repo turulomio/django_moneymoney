@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 from decimal import Decimal
 from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator
 from django.db import models, transaction, connection
 from django.db.models import Case, When, Sum
 from django.urls import reverse
@@ -46,7 +47,17 @@ class Accounts(models.Model):
         
     def __str__(self):
         return self.fullName()
-        
+                
+    @staticmethod
+    def post_payload(name="New account", banks="http://testserver/api/banks/3/", active=True, number="01234567890123456789", currency="EUR", decimals=2):
+        return {
+            "name": name, 
+            "banks":banks, 
+            "active":active, 
+            "number":number, 
+            "currency":currency, 
+            "decimals": decimals, 
+        }
 
     @staticmethod
     def hurl(request, id):
@@ -223,13 +234,21 @@ class Accountsoperations(models.Model):
     comment = models.TextField(blank=True, null=True)
     accounts = models.ForeignKey(Accounts, models.DO_NOTHING)
     datetime = models.DateTimeField(blank=False, null=False)
+    associated_transfer=models.ForeignKey("Accountstransfers", models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = True
         db_table = 'accountsoperations'
         
+#    def __str__(self):
+        #return "{} {} {}".format(self.datetime, self.concepts.name, self.amount)
+        
     def __str__(self):
-        return "{} {} {}".format(self.datetime, self.concepts.name, self.amount)
+        return functions.string_oneline_object(self)
+        
+    def __repr__(self):
+        return functions.string_oneline_object(self)
+        
 
 
     @staticmethod
@@ -265,6 +284,16 @@ class Accountsoperations(models.Model):
         if Comment().getCode(self.comment) in (eComment.AccountTransferOrigin, eComment.AccountTransferDestiny, eComment.AccountTransferOriginCommission):
             return False        
         return True
+        
+    def nice_comment(self):
+        if self.associated_transfer is not None:
+            if self.concepts.id==eConcept.TransferOrigin:
+                return _("Transfer to {0}. {1}").format(self.associated_transfer.destiny.fullName(), self.comment)
+            if self.concepts.id==eConcept.TransferDestiny:
+                return _("Transfer from {0}. {1}").format(self.associated_transfer.origin.fullName(), self.comment)
+            if self.concepts.id==eConcept.BankCommissions:
+                return _("Transfer of {0} from {1} to {2}. {3}").format(Currency(self.associated_transfer.amount, self.associated_transfer.origin.currency), self.associated_transfer.origin.fullName(), self.associated_transfer.destiny.fullName(), self.comment)
+        return self.comment
         
 #    def is_creditcardbilling(self):
 #        if self.concepts.id==eConcept.CreditCardBilling:
@@ -1130,6 +1159,87 @@ class Strategies(models.Model):
 
 
 
+class Accountstransfers(models.Model):
+    datetime = models.DateTimeField(blank=False, null=False)
+    origin= models.ForeignKey('Accounts', models.CASCADE, blank=False, null=False, related_name="origin")
+    destiny= models.ForeignKey('Accounts', models.CASCADE,  blank=False,  null=False, related_name="destiny")
+    amount=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(0)])
+    commission=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(0)])
+    comment = models.TextField(blank=True, null=False)
+    ao_origin = models.ForeignKey("Accountsoperations", models.DO_NOTHING,  blank=True,  null=True, related_name="ao_origin")
+    ao_destiny = models.ForeignKey("Accountsoperations", models.DO_NOTHING,  blank=True,  null=True, related_name="ao_destiny")
+    ao_commission = models.ForeignKey("Accountsoperations", models.DO_NOTHING,  blank=True,  null=True, related_name="ao_commission")
+        
+    class Meta:
+        managed = True
+        db_table = 'accountstransfers'
+        
+    def __str__(self):
+        return functions.string_oneline_object(self)
+        
+        
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        if self.id is not None:
+            Accountsoperations.objects.filter(associated_transfer=self.id).delete()
+        
+        self.ao_origin=Accountsoperations()
+        self.ao_origin.datetime=self.datetime
+        self.ao_origin.accounts=self.origin
+        self.ao_origin.concepts_id=eConcept.TransferOrigin
+        self.ao_origin.amount=-self.amount
+        self.ao_origin.comment=self.comment
+        self.ao_origin.save()
+        
+        self.ao_destiny=Accountsoperations()
+        self.ao_destiny.datetime=self.datetime
+        self.ao_destiny.accounts=self.destiny
+        self.ao_destiny.concepts_id=eConcept.TransferDestiny
+        self.ao_destiny.amount=self.amount
+        self.ao_destiny.comment=self.comment
+        self.ao_destiny.save()
+        
+        if self.commission!=0:
+            self.ao_commission=Accountsoperations()
+            self.ao_commission.datetime=self.datetime
+            self.ao_commission.accounts=self.origin
+            self.ao_commission.concepts_id=eConcept.BankCommissions
+            self.ao_commission.amount=-self.commission
+            self.ao_commission.comment=self.comment
+            self.ao_commission.save()
+
+        super().save(*args, **kwargs)
+        self.ao_origin.associated_transfer=self
+        self.ao_origin.save()
+        self.ao_destiny.associated_transfer=self
+        self.ao_destiny.save()
+        if self.ao_commission is not None:
+            self.ao_commission.associated_transfer=self
+            self.ao_commission.save()
+        
+#        functions.print_object(self)
+#        functions.print_object(self.ao_origin)
+#        functions.print_object(self.ao_destiny)
+#        functions.print_object(self.ao_commission)
+
+    @transaction.atomic
+    def delete(self, *args, **kwargs):
+        Accountsoperations.objects.filter(associated_transfer=self.id).delete()
+        r=super().delete(*args, **kwargs)
+#        print("Deleted",  r)
+        return r
+        
+        
+    @staticmethod
+    def post_payload(datetime=timezone.now(),  origin="http://testserver/api/accounts/4/", destiny="http://testserver/api/accounts/6/", amount=1000, commission=10,  comment="Personal transfer" ):
+        return {
+            "datetime":datetime, 
+            "origin": origin, 
+            "destiny":destiny, 
+            "amount":amount, 
+            "commission":commission, 
+            "comment":comment, 
+        }
 
 ## Class who controls all comments from accountsoperations, investmentsoperations ...
 class Comment:

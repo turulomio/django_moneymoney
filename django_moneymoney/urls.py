@@ -9,6 +9,7 @@ router = routers.DefaultRouter()
 routers.DefaultRouter
 router.register(r'accounts', money_views.AccountsViewSet)
 router.register(r'accountsoperations', money_views.AccountsoperationsViewSet)
+router.register(r'accountstransfers', money_views.AccountstransfersViewSet)
 router.register(r'banks', money_views.BanksViewSet)
 router.register(r'concepts', money_views.ConceptsViewSet)
 router.register(r'creditcards', money_views.CreditcardsViewSet)

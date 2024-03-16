@@ -155,16 +155,27 @@ class OperationstypesSerializer(serializers.HyperlinkedModelSerializer):
 class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     currency = serializers.SerializerMethodField()
     comment_decoded = serializers.SerializerMethodField()
+    nice_comment = serializers.SerializerMethodField()
     
     class Meta:
         model = models.Accountsoperations
-        fields = ('id','url', 'datetime', 'concepts', 'amount','comment','accounts',  'currency', 'comment_decoded')
+        fields = ('id','url', 'datetime', 'concepts', 'amount','comment','accounts',  'currency', 'comment_decoded', 'associated_transfer', 'nice_comment')
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):
         return obj.accounts.currency
     @extend_schema_field(OpenApiTypes.STR)
     def get_comment_decoded(self, obj):
-        return models.Comment().decode(obj.comment), 
+        return models.Comment().decode(obj.comment)
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_nice_comment(self, obj):
+        return  obj.nice_comment()
+        
+
+class AccountstransfersSerializer(serializers.HyperlinkedModelSerializer):    
+    
+    class Meta:
+        model = models.Accountstransfers
+        fields = ('id','url', 'datetime', 'origin', 'destiny', 'amount','commission','comment','ao_origin',  'ao_destiny', 'ao_commission')
                 
 class LeveragesSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()
