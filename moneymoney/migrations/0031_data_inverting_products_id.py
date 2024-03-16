@@ -3,7 +3,6 @@
 
 
 from django.db import migrations
-from tqdm import tqdm
 
 def inverting_products_id(apps, schema_editor):
     Products=apps.get_model('moneymoney', 'Products')
@@ -16,7 +15,7 @@ def inverting_products_id(apps, schema_editor):
     Splits=apps.get_model('moneymoney', 'Splits')
     
     #Iterate all products
-    for p in tqdm(Products.objects.all()):
+    for p in Products.objects.all():
         oldid=p.id
         #Create new product
         new_p=p
