@@ -235,6 +235,8 @@ class Accountsoperations(models.Model):
     accounts = models.ForeignKey(Accounts, models.DO_NOTHING)
     datetime = models.DateTimeField(blank=False, null=False)
     associated_transfer=models.ForeignKey("Accountstransfers", models.DO_NOTHING, blank=True, null=True)
+    associated_io=models.ForeignKey("Investmentsoperations", models.DO_NOTHING, blank=True, null=True)
+    associated_cc=models.ForeignKey("Creditcards", models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = True
@@ -278,6 +280,22 @@ class Accountsoperations(models.Model):
                 return _("Transfer from {0}. {1}").format(self.associated_transfer.origin.fullName(), self.comment)
             if self.concepts.id==eConcept.BankCommissions:
                 return _("Transfer of {0} from {1} to {2}. {3}").format(Currency(self.associated_transfer.amount, self.associated_transfer.origin.currency), self.associated_transfer.origin.fullName(), self.associated_transfer.destiny.fullName(), self.comment)
+        
+        elif self.concepts.id==eConcept.CreditCardBilling:
+            qs=self.paid_accountsoperations.all().select_related("creditcards")
+            if len(qs)>0:
+                cc_name=qs[0].creditcards.name
+            else:
+                cc_name=""
+            return  _("Billing {} movements of {}").format(len(qs), cc_name)
+            
+        elif hasattr(self, "dividends"):
+            return _( "From {}. Gross {}. Net {}.".format(
+                self.dividends.investments.name, 
+                Currency(self.dividends.gross,  self.dividends.investments.accounts.currency), 
+                Currency(self.dividends.net, self.dividends.investments.accounts.currency))
+            )
+
         return self.comment if self.is_editable() else Comment().decode(self.comment)
 
 class Banks(models.Model):
@@ -444,7 +462,7 @@ class Dividends(models.Model):
     net = models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True)
     dps = models.DecimalField(max_digits=100, decimal_places=6, blank=True, null=True)
     datetime = models.DateTimeField(blank=True, null=True)
-    accountsoperations = models.ForeignKey(Accountsoperations, models.DO_NOTHING, null=True)
+    accountsoperations = models.OneToOneField("Accountsoperations", models.DO_NOTHING, null=True)
     commission = models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True)
     concepts = models.ForeignKey(Concepts, models.DO_NOTHING)
     currency_conversion = models.DecimalField(max_digits=10, decimal_places=6)
@@ -1283,18 +1301,6 @@ class Comment:
                 return _("{}: {} shares. Amount: {}. Comission: {}. Taxes: {}").format(io.investments.name, io.shares, io.shares*io.price,  io.commission, io.taxes)
 #                else:
 #                    return _("{}: {} shares. Amount: {} ({}). Comission: {} ({}). Taxes: {} ({})").format(io.investment.name, io.shares, io.gross(eMoneyCurrency.Product), io.gross(eMoneyCurrency.Account),  io.money_commission(eMoneyCurrency.Product), io.money_commission(eMoneyCurrency.Account),  io.taxes(eMoneyCurrency.Product), io.taxes(eMoneyCurrency.Account))
-            elif code==eComment.Dividend:#Comentario de cuenta asociada al dividendo
-                dividend=self.decode_objects(string)
-                if dividend is not None:
-                    return _( "From {}. Gross {}. Net {}.".format(dividend.investments.name, Currency(dividend.gross,  dividend.investments.accounts.currency), Currency(dividend.net, dividend.investments.accounts.currency)))
-                return _("Error decoding dividend comment")
-
-            elif code==eComment.CreditCardBilling:#Facturaci´on de tarjeta diferida
-                d=self.decode_objects(string)
-                if d["creditcard"] is not None:
-                    number=Creditcardsoperations.objects.filter(accountsoperations__id=d["operaccount"].id).count()
-                    return _("Billing {} movements of {}").format(number, d["creditcard"].name)
-                return _("Error decoding credit card billing comment")
 
             elif code==eComment.CreditCardRefund:#Devolución de tarjeta
                 if not self.validateLength(1, code, args): return string

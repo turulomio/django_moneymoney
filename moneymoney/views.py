@@ -923,7 +923,13 @@ class AccountsViewSet(viewsets.ModelViewSet):
         return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
 class AccountsoperationsViewSet(viewsets.ModelViewSet):
-    queryset = models.Accountsoperations.objects.select_related("accounts").all()
+    queryset = models.Accountsoperations.objects.select_related(
+        "accounts",
+        "concepts", 
+        "associated_transfer__origin__banks", 
+        "associated_transfer__destiny__banks", 
+        "dividends__investments__accounts", 
+    ).all()
     serializer_class = serializers.AccountsoperationsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
@@ -952,6 +958,7 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
             for d in serializer.data:
                 d["balance"]=initial_balance+d["amount"]
                 initial_balance+=d["amount"]
+            functions.show_queries_function()
             return Response(serializer.data)
         elif all_args_are_not_none(concept, year, month):
             self.queryset=self.queryset.filter(concepts=concept, datetime__year=year, datetime__month=month)

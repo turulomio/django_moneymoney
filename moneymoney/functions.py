@@ -28,11 +28,11 @@ def print_object(o):
     print()
 
 def string_oneline_object(o):
-    r=o.__class__.__name__ + " #" + o.id + " ["
+    r=f"{o.__class__.__name__} #{o.id} ["
     # Access the __dict__ attribute to get a dictionary of model fields and values
     for attribute, value in o.__dict__.items():
         if attribute in ["_state",  "id"]:
             continue
-        r+=value+", "
+        r+=str(value)+", "
     return r[:-2]+ "]"
     
