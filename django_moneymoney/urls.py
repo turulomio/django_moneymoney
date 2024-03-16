@@ -36,7 +36,6 @@ urlpatterns=[
     path('alerts/', money_views.Alerts.as_view(), name='Alerts'),
     path('login/', money_views_login.login, name="login"), 
     path('logout/', money_views_login.logout, name="logout"), 
-    path('accounts/transfer/', money_views.AccountTransfer, name='AccountTransfer'),
     path('assets/report/', money_views.AssetsReport, name='AssetsReport'),
     path('catalog_manager/', money_views.CatalogManager, name='CatalogManager'),
     path('currencies/', money_views.Currencies, name='Currencies'),

@@ -20,7 +20,6 @@ from moneymoney.types import eComment, eConcept, eProductType, eOperationType
 from moneymoney.reusing.decorators import ptimeit
 from pydicts.percentage import Percentage,  percentage_between
 from request_casting.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestString, RequestInteger, RequestListOfIntegers, RequestListOfUrls, all_args_are_not_none
-from requests import delete, post
 from statistics import median
 from subprocess import run
 from os import path
@@ -868,73 +867,6 @@ class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
         self.perform_destroy(instance)
         instance.investments.set_attributes_after_investmentsoperations_crud()
         return Response(status=status.HTTP_204_NO_CONTENT)    
-
-@api_view(['POST', 'PUT', 'DELETE' ])    
-@permission_classes([permissions.IsAuthenticated, ])
-@transaction.atomic
-def AccountTransfer(request): 
-    account_origin=RequestUrl(request, 'account_origin', models.Accounts)#Returns an account object
-    account_destiny=RequestUrl(request, 'account_destiny', models.Accounts)
-    datetime=RequestDtaware(request, 'datetime', request.user.profile.zone)
-    amount=RequestDecimal(request, 'amount')
-    commission=RequestDecimal(request, 'commission',  0)
-    ao_origin=RequestUrl(request, 'ao_origin', models.Accountsoperations)
-    ao_destiny=RequestUrl(request, 'ao_destiny', models.Accountsoperations)
-    ao_commission=RequestUrl(request, 'ao_commission', models.Accountsoperations)
-    if request.method=="POST":
-        if ( account_destiny is not None and account_origin is not None and datetime is not None and amount is not None and amount >=0 and commission is not None and commission >=0 and account_destiny!=account_origin):
-            if commission >0:
-                ao_commission=models.Accountsoperations()
-                ao_commission.datetime=datetime
-                concept_commision=models.Concepts.objects.get(pk=eConcept.BankCommissions)
-                ao_commission.concepts=concept_commision
-                ao_commission.amount=-commission
-                ao_commission.accounts=account_origin
-                ao_commission.save()
-
-            #Origin
-            ao_origin=models.Accountsoperations()
-            ao_origin.datetime=datetime
-            concept_transfer_origin=models.Concepts.objects.get(pk=eConcept.TransferOrigin)
-            ao_origin.concepts=concept_transfer_origin
-            ao_origin.amount=-amount
-            ao_origin.accounts=account_origin
-            ao_origin.save()
-
-            #Destiny
-            ao_destiny=models.Accountsoperations()
-            ao_destiny.datetime=datetime
-            concept_transfer_destiny=models.Concepts.objects.get(pk=eConcept.TransferDestiny)
-            ao_destiny.concepts=concept_transfer_destiny
-            ao_destiny.amount=amount
-            ao_destiny.accounts=account_destiny
-            ao_destiny.save()
-
-            #Encoding comments
-            ao_origin.comment=models.Comment().encode(eComment.AccountTransferOrigin, ao_origin, ao_destiny, ao_commission)
-            ao_origin.save()
-            ao_destiny.comment=models.Comment().encode(eComment.AccountTransferDestiny, ao_origin, ao_destiny, ao_commission)
-            ao_destiny.save()
-            if ao_commission is not None:
-                ao_commission.comment=models.Comment().encode(eComment.AccountTransferOriginCommission, ao_origin, ao_destiny, ao_commission)
-                ao_commission.save()
-            return JsonResponse( True,  encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
-        else:
-            return Response({'status': 'Something wrong adding an account transfer'}, status=status.HTTP_400_BAD_REQUEST)    
-    if request.method=="PUT": #Update
-        ## I use the same code deleting y posting. To avoid errors or accounts operations zombies.
-        delete(request.build_absolute_uri(), headers = {"Authorization": request.headers["Authorization"], },  data=request.data, verify=False)
-        post(request.build_absolute_uri(), headers = {"Authorization": request.headers["Authorization"], },  data=request.data, verify=False)
-        print("This should check cert or try with drf internals")
-        return JsonResponse( True,  encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
-    if request.method=="DELETE":
-        if ao_destiny is not None and ao_origin is not None:
-            if ao_commission is not None:
-                ao_commission.delete()
-            ao_destiny.delete()
-            ao_origin.delete()
-            return Response({'status': 'details'}, status=status.HTTP_200_OK)
-        return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)  
 
 class AccountsViewSet(viewsets.ModelViewSet):
     queryset = models.Accounts.objects.select_related("banks").all()
