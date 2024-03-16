@@ -2,7 +2,6 @@
 # Converts old transfer. Accountsoperations with comments 10002,origin,destiny,commission ...
 
 from django.db import migrations
-from tqdm import tqdm
 from moneymoney.types import eConcept
 
 def overrided_Accountstransfers_save(at, apps):    
@@ -50,7 +49,8 @@ def convert_old_transfers(apps, schema_editor):
     Accountsoperations=apps.get_model('moneymoney', 'Accountsoperations')
     Accountstransfers=apps.get_model('moneymoney', 'Accountstransfers')
 
-    for old_transfer in tqdm(Accountsoperations.objects.filter(comment__startswith="10002,")):
+
+    for old_transfer in Accountsoperations.objects.filter(comment__startswith="10002,"):
         comment_id, old_ao_origin_id, old_ao_destiny_id, old_ao_commission_id=old_transfer.comment.split(",")
         
         #Checks all old_ao exists
