@@ -470,7 +470,9 @@ class CtTestCase(APITestCase):
         
         #Creates a cco
         tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"], amount=22.22), status.HTTP_201_CREATED)
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_debit["url"], amount=22.22), status.HTTP_201_CREATED)
+        
+        # Can't  create a cco with a debit cc
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_debit["url"], amount=22.22), status.HTTP_400_BAD_REQUEST)
         
         # Compares balance
         lod_=tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/creditcards/withbalance/", status.HTTP_200_OK)
