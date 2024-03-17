@@ -684,9 +684,6 @@ class Investmentsoperations(models.Model):
 
     @transaction.atomic
     def update_associated_account_operation(self,  request):
-#        concepts=Concepts.objects.filter(pk__in=(eConcept.BuyShares, eConcept.SellShares, eConcept.BankCommissions))
-#        qs_ao=Accountsoperations.objects.filter(concepts__in=concepts, comment=f'{eComment.InvestmentOperation},{self.id}')
-#        qs_ao.delete()
         if self.associated_ao is not None:
             self.associated_ao.delete()
         plio=ios.IOS.from_ids(timezone.now(), request.user.profile.currency, [self.investments.id, ], 1)
