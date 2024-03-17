@@ -136,7 +136,6 @@ class CtTestCase(APITestCase):
         self.assertEqual(r["balance_user_currency"], 1000)
         
         
-    @tag("current")
     def test_Accountstransfers(self):
         tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
         dict_destiny=tests_helpers.client_post(self, self.client_authorized_1, "/api/accounts/",  models.Accounts.post_payload(), status.HTTP_201_CREATED)
@@ -279,16 +278,42 @@ class CtTestCase(APITestCase):
         dict_ios_ids_simulation=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_merging_pp, status.HTTP_200_OK)
         self.assertEqual(dict_ios_ids_simulation["79329"]["total_io_current"]["balance_user"], 19980)
         
+    @tag("current")
+    def test_Investmentsoperations(self):        
+        # Create an investment operation
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
+        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
+        dict_io=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+       
+        # Checks exists associated_ao
+        self.assertEqual(models.Accountsoperations.objects.get(pk=id_from_url(dict_io["associated_ao"])).investmentsoperations.id, dict_io["id"])#Comprueba que existe ao
+        
+        # Update io        
+        dict_io_updated=tests_helpers.client_put(self, self.client_authorized_1, dict_io["url"], models.Investmentsoperations.post_payload(dict_investment["url"], shares=10000), status.HTTP_200_OK)
+        
+        # Checks dict_io associated_ao doesn't exist and dict_io_updated associated_ao doesn
+        with self.assertRaises(models.Accountsoperations.DoesNotExist):
+            models.Accountsoperations.objects.get(pk=id_from_url(dict_io["associated_ao"]))
+        models.Accountsoperations.objects.get(pk=id_from_url(dict_io_updated["associated_ao"]))
+        
+        # Delete io
+        self.client_authorized_1.delete(dict_io_updated["url"])
+
+        # Checks associated_ao doesn't exist and io doesn't exist
+        with self.assertRaises(models.Accountsoperations.DoesNotExist):
+            models.Accountsoperations.objects.get(pk=id_from_url(dict_io_updated["associated_ao"]))
+            
+        with self.assertRaises(models.Investmentsoperations.DoesNotExist):
+            models.Investmentsoperations.objects.get(pk=dict_io_updated["id"])
 
     def test_IOS(self):
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
         dict_io_1=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
-        self.assertTrue(models.Accountsoperations.objects.filter(comment=f"10000,{dict_io_1['id']}").exists())#Comprueba que existe ao
+        print(dict_io_1)
         ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals)
         self.assertEqual(ios_.d_total_io_current(dict_investment["id"])["balance_user"], 10000)
-        dict_io_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"], shares=-1, price=20), status.HTTP_201_CREATED) #Removes one share
-        self.assertTrue(models.Accountsoperations.objects.filter(comment=f"10000,{dict_io_2['id']}").exists())#Comprueba que existe ao
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"], shares=-1, price=20), status.HTTP_201_CREATED) #Removes one share
         ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals) #Recaulculates IOS
         self.assertEqual(ios_.d_total_io_current(dict_investment["id"])["balance_user"], 9990)
         

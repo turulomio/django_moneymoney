@@ -54,15 +54,15 @@ class eTickerPosition(IntEnum):
     def length():
         return 5
 
-
-class eComment:
-    InvestmentOperation=10000
-    Dividend=10004
-    AccountTransferOrigin=10001
-    AccountTransferDestiny=10002
-    AccountTransferOriginCommission=10003
-    CreditCardBilling=10005
-    CreditCardRefund=10006
+#
+#class eComment:
+#    InvestmentOperation=10000
+#    Dividend=10004
+#    AccountTransferOrigin=10001
+#    AccountTransferDestiny=10002
+#    AccountTransferOriginCommission=10003
+#    CreditCardBilling=10005
+#    CreditCardRefund=10006
 
 ## System concepts tipified
 class eConcept:

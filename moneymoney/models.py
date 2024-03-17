@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
 from moneymoney import ios, functions
-from moneymoney.types import eComment, eConcept, eProductType, eOperationType
+from moneymoney.types import eConcept, eProductType, eOperationType
 from pydicts import lod_ymv, casts
 from pydicts.currency import Currency
 from requests import get
@@ -235,7 +235,6 @@ class Accountsoperations(models.Model):
     accounts = models.ForeignKey(Accounts, models.DO_NOTHING)
     datetime = models.DateTimeField(blank=False, null=False)
     associated_transfer=models.ForeignKey("Accountstransfers", models.DO_NOTHING, blank=True, null=True)
-    associated_io=models.ForeignKey("Investmentsoperations", models.DO_NOTHING, blank=True, null=True)
     associated_cc=models.ForeignKey("Creditcards", models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
@@ -295,8 +294,17 @@ class Accountsoperations(models.Model):
                 Currency(self.dividends.gross,  self.dividends.investments.accounts.currency), 
                 Currency(self.dividends.net, self.dividends.investments.accounts.currency))
             )
+        
+        elif hasattr(self,  "investmentsoperations"):
+            return _("{}: {} shares. Amount: {}. Comission: {}. Taxes: {}").format(
+                self.investmentsoperations.investments.name, 
+                self.investmentsoperations.shares, 
+                self.investmentsoperations.shares*self.investmentsoperations.price,  
+                self.investmentsoperations.commission, 
+                self.investmentsoperations.taxes
+            )
 
-        return self.comment if self.is_editable() else Comment().decode(self.comment)
+        return self.comment
 
 class Banks(models.Model):
     name = models.TextField()
@@ -527,7 +535,7 @@ class Dividends(models.Model):
             c.concepts=self.concepts
             c.amount=self.net
             #c.comment="Transaction not finished"
-            c.comment=Comment().encode(eComment.Dividend, self)
+            c.comment=""
             c.accounts=self.investments.accounts
             c.save()
             self.accountsoperations=c
@@ -535,7 +543,7 @@ class Dividends(models.Model):
             self.accountsoperations.datetime=self.datetime
             self.accountsoperations.concepts=self.concepts
             self.accountsoperations.amount=self.net
-            self.accountsoperations.comment=Comment().encode(eComment.Dividend, self)
+            self.accountsoperations.comment=""
             self.accountsoperations.accounts=self.investments.accounts
             self.accountsoperations.save()
         models.Model.save(self)
@@ -653,6 +661,7 @@ class Investmentsoperations(models.Model):
     datetime = models.DateTimeField(blank=False, null=False)
     comment = models.TextField(blank=True, null=True)
     currency_conversion = models.DecimalField(max_digits=30, decimal_places=10, blank=False, null=False)
+    associated_ao=models.OneToOneField("Accountsoperations", models.DO_NOTHING, blank=True, null=True)
 
     class Meta:
         managed = True
@@ -678,19 +687,14 @@ class Investmentsoperations(models.Model):
 
     @transaction.atomic
     def delete(self):
-        concepts=Concepts.objects.filter(pk__in=(eConcept.BuyShares, eConcept.SellShares, eConcept.BankCommissions))
-        qs_ao=Accountsoperations.objects.filter(concepts__in=concepts, comment=f'{eComment.InvestmentOperation},{self.id}')
-        qs_ao.delete()
+        if self.associated_ao is not None:
+            self.associated_ao.delete()
         models.Model.delete(self)
 
-    ## Esta función actualiza la tabla investmentsaccountsoperations que es una tabla donde 
-    ## se almacenan las accountsoperations automaticas por las operaciones con investments. Es una tabla 
-    ## que se puede actualizar en cualquier momento con esta función
     @transaction.atomic
     def update_associated_account_operation(self,  request):
-        concepts=Concepts.objects.filter(pk__in=(eConcept.BuyShares, eConcept.SellShares, eConcept.BankCommissions))
-        qs_ao=Accountsoperations.objects.filter(concepts__in=concepts, comment=f'{eComment.InvestmentOperation},{self.id}')
-        qs_ao.delete()
+        if self.associated_ao is not None:
+            self.associated_ao.delete()
         plio=ios.IOS.from_ids(timezone.now(), request.user.profile.currency, [self.investments.id, ], 1)
         #Searches io investments operations of the comment
         io=None
@@ -701,32 +705,38 @@ class Investmentsoperations(models.Model):
         if self.investments.daily_adjustment is True: #Because it uses adjustment information
             return
         
-        comment=Comment().encode(eComment.InvestmentOperation, self)
         if self.operationstypes.id==eOperationType.SharesPurchase:#Compra Acciones
             c=Accountsoperations()
             c.datetime=self.datetime
             c.concepts=Concepts.objects.get(pk=eConcept.BuyShares)
             c.amount=-io['net_account']
-            c.comment=comment
+            c.comment=self.comment
             c.accounts=self.investments.accounts
             c.save()
+            self.associated_ao=c
+            self.save()
         elif self.operationstypes.id==eOperationType.SharesSale:#// Venta Acciones
             c=Accountsoperations()
             c.datetime=self.datetime
             c.concepts=Concepts.objects.get(pk=eConcept.SellShares)
             c.amount=io['net_account']
-            c.comment=comment
+            c.comment=self.comment
             c.accounts=self.investments.accounts
             c.save()
+            self.associated_ao=c
+            self.save()
         elif self.operationstypes.id==eOperationType.SharesAdd:#Added
             if(self.commission!=0):
                 c=Accountsoperations()
                 c.datetime=self.datetime
                 c.concepts=Concepts.objects.get(pk=eConcept.BankCommissions)
                 c.amount=-io['taxes_account']-io['commission_account']
-                c.comment=comment
+                c.comment=self.comment
                 c.accounts=self.investments.accounts
                 c.save()
+                self.associated_ao=c
+                self.save()
+        
 
     
 class Leverages(models.Model):
@@ -1229,115 +1239,115 @@ class Accountstransfers(models.Model):
             "commission":commission, 
             "comment":comment, 
         }
-
-## Class who controls all comments from accountsoperations, investmentsoperations ...
-class Comment:
-    def __init__(self):
-        pass
-
-    ##Obtiene el codigo de un comment
-    def getCode(self, string):
-        (code, args)=self.get(string)
-        return code        
-
-    def getArgs(self, string):
-        """
-            Obtiene los argumentos enteros de un comment
-        """
-        (code, args)=self.get(string)
-        return args
-
-    def get(self, string):
-        """Returns (code,args)"""
-        string=string
-        try:
-            number=eval(f"[{string}]")#old string2list_of integers
-            if len(number)==1:
-                code=number[0]
-                args=[]
-            else:
-                code=number[0]
-                args=number[1:]
-            return(code, args)
-        except:
-            return(None, None)
-            
-    ## Function to generate a encoded comment using distinct parameters
-    ## Encode parameters can be:
-    ## - eComment.DerivativeManagement, hlcontract
-    ## - eComment.Dividend, dividend
-    ## - eComment.AccountTransferOrigin operaccountorigin, operaccountdestiny, operaccountorigincommission
-    ## - eComment.AccountTransferOriginCommission operaccountorigin, operaccountdestiny, operaccountorigincommission
-    ## - eComment.AccountTransferDestiny operaccountorigin, operaccountdestiny, operaccountorigincommission
-    ## - eComment.CreditCardBilling creditcard, operaccount
-    ## - eComment.CreditCardRefund opercreditcardtorefund
-    def encode(self, ecomment, *args):
-        if ecomment==eComment.InvestmentOperation:
-            return "{},{}".format(eComment.InvestmentOperation, args[0].id)
-        elif ecomment==eComment.Dividend:
-            return "{},{}".format(eComment.Dividend, args[0].id)   
-        elif ecomment==eComment.CreditCardBilling:
-            return "{},{},{}".format(eComment.CreditCardBilling, args[0].id, args[1].id)      
-        elif ecomment==eComment.CreditCardRefund:
-            return "{},{}".format(eComment.CreditCardRefund, args[0].id)        
-    
-    def validateLength(self, number, code, args):
-        if number!=len(args):
-            print("Comment {} has not enough parameters".format(code))
-            return False
-        return True
-
-    def decode(self, string):
-            if string=="":
-                return ""
+#
+### Class who controls all comments from accountsoperations, investmentsoperations ...
+#class Comment:
+#    def __init__(self):
+#        pass
+#
+#    ##Obtiene el codigo de un comment
+#    def getCode(self, string):
+#        (code, args)=self.get(string)
+#        return code        
+#
+#    def getArgs(self, string):
+#        """
+#            Obtiene los argumentos enteros de un comment
+#        """
+#        (code, args)=self.get(string)
+#        return args
+#
+#    def get(self, string):
+#        """Returns (code,args)"""
+#        string=string
 #        try:
-            (code, args)=self.get(string)
-            if code==None:
-                return string
-
-            if code==eComment.InvestmentOperation:
-                io=self.decode_objects(string)
-#                if io.investments.hasSameAccountCurrency():
-                return _("{}: {} shares. Amount: {}. Comission: {}. Taxes: {}").format(io.investments.name, io.shares, io.shares*io.price,  io.commission, io.taxes)
-#                else:
-#                    return _("{}: {} shares. Amount: {} ({}). Comission: {} ({}). Taxes: {} ({})").format(io.investment.name, io.shares, io.gross(eMoneyCurrency.Product), io.gross(eMoneyCurrency.Account),  io.money_commission(eMoneyCurrency.Product), io.money_commission(eMoneyCurrency.Account),  io.taxes(eMoneyCurrency.Product), io.taxes(eMoneyCurrency.Account))
-
-            elif code==eComment.CreditCardRefund:#Devolución de tarjeta
-                if not self.validateLength(1, code, args): return string
-                cco=Creditcardsoperations.objects.get(pk=args[0])
-                money=Currency(cco.amount, cco.creditcards.accounts.currency)
-                return _("Refund of {} payment of which had an amount of {}").format(casts.dtaware2str(cco.datetime), money)
+#            number=eval(f"[{string}]")#old string2list_of integers
+#            if len(number)==1:
+#                code=number[0]
+#                args=[]
+#            else:
+#                code=number[0]
+#                args=number[1:]
+#            return(code, args)
 #        except:
-#            return _("Error decoding comment {}").format(string)
-
-    def decode_objects(self, string):
-        (code, args)=self.get(string)
-        if code==None:
-            return None
-
-        if code==eComment.InvestmentOperation:
-            if not self.validateLength(1, code, args): return None
-            io=Investmentsoperations.objects.select_related("investments").get(pk=args[0])
-            return io
-
-        elif code==eComment.Dividend:#Comentario de cuenta asociada al dividendo
-            if not self.validateLength(1, code, args): return None
-            try:
-                return Dividends.objects.get(pk=args[0])
-            except:
-                return None
-
-        elif code==eComment.CreditCardBilling:#Facturaci´on de tarjeta diferida
-            if not self.validateLength(2, code, args): return string
-            creditcard=Creditcards.objects.get(pk=args[0])
-            operaccount=Accountsoperations.objects.get(pk=args[1])
-            return {"creditcard":creditcard, "operaccount":operaccount}
-
-        elif code==eComment.CreditCardRefund:#Devolución de tarjeta
-            if not self.validateLength(1, code, args): return string
-            cco=Creditcardsoperations.objects.get(pk=args[0])
-            money=Currency(cco.amount, cco.creditcards.accounts.currency)
-            return _("Refund of {} payment of which had an amount of {}").format(casts.dtaware2str(cco.datetime), money)
+#            return(None, None)
+#            
+#    ## Function to generate a encoded comment using distinct parameters
+#    ## Encode parameters can be:
+#    ## - eComment.InvestmentOperation, hlcontract
+#    ## - eComment.Dividend, dividend
+#    ## - eComment.AccountTransferOrigin operaccountorigin, operaccountdestiny, operaccountorigincommission
+#    ## - eComment.AccountTransferOriginCommission operaccountorigin, operaccountdestiny, operaccountorigincommission
+#    ## - eComment.AccountTransferDestiny operaccountorigin, operaccountdestiny, operaccountorigincommission
+#    ## - eComment.CreditCardBilling creditcard, operaccount
+#    ## - eComment.CreditCardRefund opercreditcardtorefund
+#    def encode(self, ecomment, *args):
+#        if ecomment==eComment.InvestmentOperation:
+#            return "{},{}".format(eComment.InvestmentOperation, args[0].id)
+#        elif ecomment==eComment.Dividend:
+#            return "{},{}".format(eComment.Dividend, args[0].id)   
+#        elif ecomment==eComment.CreditCardBilling:
+#            return "{},{},{}".format(eComment.CreditCardBilling, args[0].id, args[1].id)      
+#        elif ecomment==eComment.CreditCardRefund:
+#            return "{},{}".format(eComment.CreditCardRefund, args[0].id)        
+#    
+#    def validateLength(self, number, code, args):
+#        if number!=len(args):
+#            print("Comment {} has not enough parameters".format(code))
+#            return False
+#        return True
+#
+#    def decode(self, string):
+#            if string=="":
+#                return ""
+##        try:
+#            (code, args)=self.get(string)
+#            if code==None:
+#                return string
+#
+#            if code==eComment.InvestmentOperation:
+#                io=self.decode_objects(string)
+##                if io.investments.hasSameAccountCurrency():
+#                return _("{}: {} shares. Amount: {}. Comission: {}. Taxes: {}").format(io.investments.name, io.shares, io.shares*io.price,  io.commission, io.taxes)
+##                else:
+##                    return _("{}: {} shares. Amount: {} ({}). Comission: {} ({}). Taxes: {} ({})").format(io.investment.name, io.shares, io.gross(eMoneyCurrency.Product), io.gross(eMoneyCurrency.Account),  io.money_commission(eMoneyCurrency.Product), io.money_commission(eMoneyCurrency.Account),  io.taxes(eMoneyCurrency.Product), io.taxes(eMoneyCurrency.Account))
+#
+#            elif code==eComment.CreditCardRefund:#Devolución de tarjeta
+#                if not self.validateLength(1, code, args): return string
+#                cco=Creditcardsoperations.objects.get(pk=args[0])
+#                money=Currency(cco.amount, cco.creditcards.accounts.currency)
+#                return _("Refund of {} payment of which had an amount of {}").format(casts.dtaware2str(cco.datetime), money)
+##        except:
+##            return _("Error decoding comment {}").format(string)
+#
+#    def decode_objects(self, string):
+#        (code, args)=self.get(string)
+#        if code==None:
+#            return None
+#
+#        if code==eComment.InvestmentOperation:
+#            if not self.validateLength(1, code, args): return None
+#            io=Investmentsoperations.objects.select_related("investments").get(pk=args[0])
+#            return io
+#
+#        elif code==eComment.Dividend:#Comentario de cuenta asociada al dividendo
+#            if not self.validateLength(1, code, args): return None
+#            try:
+#                return Dividends.objects.get(pk=args[0])
+#            except:
+#                return None
+#
+#        elif code==eComment.CreditCardBilling:#Facturaci´on de tarjeta diferida
+#            if not self.validateLength(2, code, args): return string
+#            creditcard=Creditcards.objects.get(pk=args[0])
+#            operaccount=Accountsoperations.objects.get(pk=args[1])
+#            return {"creditcard":creditcard, "operaccount":operaccount}
+#
+#        elif code==eComment.CreditCardRefund:#Devolución de tarjeta
+#            if not self.validateLength(1, code, args): return string
+#            cco=Creditcardsoperations.objects.get(pk=args[0])
+#            money=Currency(cco.amount, cco.creditcards.accounts.currency)
+#            return _("Refund of {} payment of which had an amount of {}").format(casts.dtaware2str(cco.datetime), money)
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)

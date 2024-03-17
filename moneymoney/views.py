@@ -16,7 +16,7 @@ from drf_spectacular.types import OpenApiTypes
 from itertools import permutations
 from math import ceil
 from moneymoney import models, serializers, ios, functions
-from moneymoney.types import eComment, eConcept, eProductType, eOperationType
+from moneymoney.types import eConcept, eProductType, eOperationType
 from moneymoney.reusing.decorators import ptimeit
 from pydicts.percentage import Percentage,  percentage_between
 from request_casting.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestString, RequestInteger, RequestListOfIntegers, RequestListOfUrls, all_args_are_not_none
@@ -283,10 +283,10 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
             c.concepts=models.Concepts.objects.get(pk=eConcept.CreditCardBilling)
             c.amount=sumamount
             c.accounts=creditcard.accounts
-            c.comment="Transaction in progress"
+            c.comment=""
             c.save()
-            c.comment=models.Comment().encode(eComment.CreditCardBilling, creditcard, c)
-            c.save()
+#            c.comment=models.Comment().encode(eComment.CreditCardBilling, creditcard, c)
+#            c.save()
 
             #Modifica el registro y lo pone como paid y la datetime de pago y añade la opercuenta
             for o in qs_cco:
@@ -929,6 +929,7 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
         "associated_transfer__origin__banks", 
         "associated_transfer__destiny__banks", 
         "dividends__investments__accounts", 
+        "investmentsoperations__investments", 
     ).all()
     serializer_class = serializers.AccountsoperationsSerializer
     permission_classes = [permissions.IsAuthenticated]  
@@ -1748,7 +1749,7 @@ def ReportAnnualIncomeDetails(request, year, month):
                             "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(op["concepts_id"], ))), 
                             "amount":op['amount'], 
                             "balance": balance,
-                            "comment_decoded":models.Comment().decode(op["comment"]), 
+                            "comment_decoded": "MISSING COMMENT",#models.Comment().decode(op["comment"]), 
                             "currency": currency, 
                             "accounts": request.build_absolute_uri(reverse('accounts-detail', args=(op["accounts_id"], ))), 
                         })
