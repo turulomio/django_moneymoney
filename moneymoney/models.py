@@ -1027,7 +1027,9 @@ class Quotes(models.Model):
 
 
     @staticmethod
-    def post_payload(products="http://testserver/api/products/79329/", datetime=timezone.now(), quote=10):
+    def post_payload(products="http://testserver/api/products/79329/", datetime=None, quote=10):
+        if datetime is None:
+            datetime=timezone.now()
         return {
             "datetime": datetime, 
             "products": products, 

@@ -1575,8 +1575,10 @@ api/quotes/?product=url&month=1&year=2021 Showss all quotes of a product in a mo
 
         if all_args_are_not_none(product, year, month):
             self.queryset=self.queryset.filter(products=product, datetime__year=year, datetime__month=month).order_by("datetime")
+            
         if product is not None:
             self.queryset=self.queryset.filter(products=product).order_by("datetime")
+        
         serializer = serializers.QuotesSerializer(self.queryset, many=True, context={'request': request})
         return Response(serializer.data)
 

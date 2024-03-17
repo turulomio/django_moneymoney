@@ -122,12 +122,11 @@ class CtTestCase(APITestCase):
         self.user_authorized_1.profile.save()
         self.assertEqual(self.user_authorized_1.profile.favorites.count(), 1)        
 
-    @tag("current")
     def test_ReportAnnualIncomeDetails(self):
         # Empty
         tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/details/{today_year}/{today_month}/", status.HTTP_200_OK)
         
-        
+        # TODO All kind of queries to feed report
 
     def test_Accounts(self):
         
@@ -311,6 +310,25 @@ class CtTestCase(APITestCase):
             
         with self.assertRaises(models.Investmentsoperations.DoesNotExist):
             models.Investmentsoperations.objects.get(pk=dict_io_updated["id"])
+
+    @tag("current")
+    def test_Quotes(self):
+        # common _tests
+        #tests_helpers.common_tests_Collaborative(self, "/api/quotes/", models.Quotes.post_payload(), self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
+
+        
+        # Add two quotes
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(quote=11), status.HTTP_201_CREATED)
+                
+        # Get all quotes
+        dict_all_quotes=tests_helpers.client_get(self, self.client_authorized_1, "/api/quotes/",  status.HTTP_200_OK)
+        self.assertEqual(len(dict_all_quotes), 2 )
+        
+        dict_last_quotes=tests_helpers.client_get(self, self.client_authorized_1, "/api/quotes/?last=true",  status.HTTP_200_OK)
+        lod.lod_print(dict_last_quotes)
+        
+
 
     def test_IOS(self):
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
