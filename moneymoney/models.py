@@ -294,6 +294,15 @@ class Accountsoperations(models.Model):
                 Currency(self.dividends.gross,  self.dividends.investments.accounts.currency), 
                 Currency(self.dividends.net, self.dividends.investments.accounts.currency))
             )
+        
+        elif hasattr(self,  "investmentsoperations"):
+            return _("{}: {} shares. Amount: {}. Comission: {}. Taxes: {}").format(
+                self.investmentsoperations.investments.name, 
+                self.investmentsoperations.shares, 
+                self.investmentsoperations.shares*self.investmentsoperations.price,  
+                self.investmentsoperations.commission, 
+                self.investmentsoperations.taxes
+            )
 
         return self.comment
 

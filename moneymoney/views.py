@@ -929,6 +929,7 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
         "associated_transfer__origin__banks", 
         "associated_transfer__destiny__banks", 
         "dividends__investments__accounts", 
+        "investmentsoperations__investments", 
     ).all()
     serializer_class = serializers.AccountsoperationsSerializer
     permission_classes = [permissions.IsAuthenticated]  
