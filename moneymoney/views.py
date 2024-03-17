@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from django.conf import settings
 from django.core.management import call_command
-from django.db import transaction, connection
+from django.db import transaction, connection, reset_queries
 from django.db.models import prefetch_related_objects, Count, Sum, Q, Max, Subquery
 from django.db.models.functions.datetime import ExtractMonth, ExtractYear
 from django.urls import reverse
@@ -32,6 +32,7 @@ from zoneinfo import available_timezones
 from tempfile import TemporaryDirectory
 
 ptimeit
+reset_queries
 
 
 class GroupCatalogManager(permissions.BasePermission):
@@ -1699,66 +1700,50 @@ def ReportAnnualIncome(request, year):
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportAnnualIncomeDetails(request, year, month):
     def listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, operationstypes_id, local_currency, local_zone):
-        # Expenses
         r=[]
-        balance=0
-        for currency in models.Accounts.currencies():
+        i=0
+        for currency in models.Accounts.currencies(): #Iterate over currencies
+            qs_ao=models.Accountsoperations.objects.filter(concepts__operationstypes__id=operationstypes_id, datetime__year=year, datetime__month=month,  accounts__currency=currency).values(
+                "datetime", 
+                "concepts", 
+                "amount", 
+                "comment", 
+                "accounts", 
+            )
+            for o in qs_ao:
+                i-=1
+                r.append({
+                    "id":i, 
+                    "datetime": o["datetime"], 
+                    "concepts": models.Concepts.hurl(request, o["concepts"]), 
+                    "amount":o["amount"]* models.Quotes.currency_factor(o["datetime"], currency, local_currency ), 
+                    "nice_comment":f"[AO] {o['comment']}", 
+                    "currency": currency, 
+                    "accounts": models.Accounts.hurl(request, o["accounts"]), 
+                })
             
-            with connection.cursor() as c:
-                c.execute("""
-                select 
-                    datetime,
-                    concepts_id, 
-                    amount, 
-                    comment, 
-                    accounts.id as accounts_id
-                from 
-                    accountsoperations,
-                    accounts,
-                    concepts
-                where 
-                    concepts.operationstypes_id=%s and 
-                    date_part('year',datetime)=%s and
-                    date_part('month',datetime)=%s and
-                    accounts.currency=%s and
-                    accounts.id=accountsoperations.accounts_id and
-                    accountsoperations.concepts_id=concepts.id
-            union all 
-                select datetime,concepts_id, amount, comment, accounts.id as accounts_id
-                from 
-                    creditcardsoperations ,
-                    creditcards,
-                    accounts,
-                    concepts
-                where 
-                    concepts.operationstypes_id=%s and 
-                    date_part('year',datetime)=%s and
-                    date_part('month',datetime)=%s and
-                    accounts.currency=%s and
-                    accounts.id=creditcards.accounts_id and
-                    creditcards.id=creditcardsoperations.creditcards_id and
-                    creditcardsoperations.concepts_id=concepts.id
-                """, (operationstypes_id, year, month,  currency, operationstypes_id, year, month,  currency))
-                    
-                for i,  op in enumerate(functions.dictfetchall(c)):
-                    if local_currency==currency:
-                        balance=balance+op["amount"]
-                        r.append({
-                            "id":-i, 
-                            "datetime": op['datetime'], 
-                            "concepts":request.build_absolute_uri(reverse('concepts-detail', args=(op["concepts_id"], ))), 
-                            "amount":op['amount'], 
-                            "balance": balance,
-                            "comment_decoded": "MISSING COMMENT",#models.Comment().decode(op["comment"]), 
-                            "currency": currency, 
-                            "accounts": request.build_absolute_uri(reverse('accounts-detail', args=(op["accounts_id"], ))), 
-                        })
-                    else:
-                        print("TODO")
+            qs_cco=models.Creditcardsoperations.objects.filter(concepts__operationstypes__id=operationstypes_id, datetime__year=year, datetime__month=month,  creditcards__accounts__currency=currency).values(
+                "datetime", 
+                "concepts", 
+                "amount", 
+                "comment", 
+                "creditcards__accounts", 
+            )
+            
+            for o in qs_cco:
+                i-=1
+                r.append({
+                    "id":i, 
+                    "datetime": o["datetime"], 
+                    "concepts": models.Concepts.hurl(request, o["concepts"]), 
+                    "amount":o["amount"]* models.Quotes.currency_factor(o["datetime"], currency, local_currency ), 
+                    "nice_comment":f"[CCO] {o['comment']}", 
+                    "currency": currency, 
+                    "accounts": models.Accounts.hurl(request, o["creditcards__accounts"]), 
+                })
                 
-            r= sorted(r,  key=lambda item: item['datetime'])
-    #            r=r+money_convert(dtaware_month_end(year, month, local_zone), balance, currency, local_currency)
-        return r
+        return lod.lod_order_by(r, "datetime")        
+        
     def dividends():
         #TODO: Should use all currencies
         qs=models.Dividends.objects.filter(datetime__year=year, datetime__month=month).order_by('datetime').select_related("investments").select_related("investments__accounts")
@@ -1787,6 +1772,7 @@ def ReportAnnualIncomeDetails(request, year, month):
     r["dividends"]=dividends()
     r["fast_operations"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, eOperationType.FastOperations,  request.user.profile.currency, request.user.profile.zone)
     r["gains"]=listdict_investmentsoperationshistorical(request, year, month, request.user.profile.currency, request.user.profile.zone)
+    
     return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
     
 
