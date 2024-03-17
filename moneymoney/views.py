@@ -1555,23 +1555,33 @@ api/quotes/?product=url&month=1&year=2021 Showss all quotes of a product in a mo
                 
         ## Search last quote of al linvestments
         if last is True:
-            self.queryset=models.Quotes.objects.raw("""
-                select 
-                    id, 
-                    quotes.products_id, 
-                    quotes.datetime, 
-                    quote 
-                from 
-                    quotes, 
-                    (select max(datetime) as datetime, products_id from quotes group by products_id) as maxdt 
-                where 
-                    quotes.products_id=maxdt.products_id and 
-                    quotes.datetime=maxdt.datetime 
-                order by 
-                    quotes.datetime desc
-            """)
-            #Querysets with raw sql can use select_related, but with one more query you can use this
-            prefetch_related_objects(self.queryset, 'products')
+#            self.queryset=models.Quotes.objects.raw("""
+#                select 
+#                    id, 
+#                    quotes.products_id, 
+#                    quotes.datetime, 
+#                    quote 
+#                from 
+#                    quotes, 
+#                    (select max(datetime) as datetime, products_id from quotes group by products_id) as maxdt 
+#                where 
+#                    quotes.products_id=maxdt.products_id and 
+#                    quotes.datetime=maxdt.datetime 
+#                order by 
+#                    quotes.datetime desc
+#            """)
+#            #Querysets with raw sql can use select_related, but with one more query you can use this
+#            prefetch_related_objects(self.queryset, 'products')
+
+            #MULTIPLE QUERIES METHOD
+            from django.db.models import Max,  Q
+            qs_max_datetime=models.Quotes.objects.values("products_id").annotate(max_datetime=Max("datetime"))
+            query= Q()
+            for d in qs_max_datetime:
+                query |= Q(datetime=d["max_datetime"], products_id=d["products_id"])
+            self.queryset=self.queryset.filter(query)
+
+
 
         if all_args_are_not_none(product, year, month):
             self.queryset=self.queryset.filter(products=product, datetime__year=year, datetime__month=month).order_by("datetime")
@@ -1579,8 +1589,9 @@ api/quotes/?product=url&month=1&year=2021 Showss all quotes of a product in a mo
         if product is not None:
             self.queryset=self.queryset.filter(products=product).order_by("datetime")
         
-        serializer = serializers.QuotesSerializer(self.queryset, many=True, context={'request': request})
-        return Response(serializer.data)
+        r= Response(serializers.QuotesSerializer(self.queryset, many=True, context={'request': request}).data)
+        functions.show_queries_function()
+        return r
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])

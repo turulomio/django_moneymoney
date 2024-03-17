@@ -327,7 +327,20 @@ class CtTestCase(APITestCase):
         
         dict_last_quotes=tests_helpers.client_get(self, self.client_authorized_1, "/api/quotes/?last=true",  status.HTTP_200_OK)
         lod.lod_print(dict_last_quotes)
-        
+#                        select 
+#                    id, 
+#                    quotes.products_id, 
+#                    quotes.datetime, 
+#                    quote 
+#                from 
+#                    quotes, 
+#                    (select max(datetime) as datetime, products_id from quotes group by products_id) as maxdt 
+#                where 
+#                    quotes.products_id=maxdt.products_id and 
+#                    quotes.datetime=maxdt.datetime 
+#                order by 
+#                    quotes.datetime desc
+
 
 
     def test_IOS(self):
