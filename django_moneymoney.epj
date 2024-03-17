@@ -2,7 +2,7 @@
   "header": {
     "comment": "eric project file for project django_moneymoney",
     "copyright": "Copyright (C) 2024 , ",
-    "saved": "2024-03-17, 01:27:01"
+    "saved": "2024-03-17, 02:38:56"
   },
   "project": {
     "AUTHOR": "",
@@ -273,7 +273,6 @@
       "moneymoney/migrations/0043_accountstransfers_and_more.py",
       "moneymoney/migrations/0044_convert_old_transfers.py",
       "moneymoney/migrations/0045_accountsoperations_associated_cc_and_more.py",
-      "moneymoney/migrations/0046_convert_old_io_accountsoperations.py",
       "moneymoney/migrations/0046_remove_accountsoperations_associated_io_and_more.py",
       "moneymoney/migrations/0047_convert_old_io_associated_ao.py",
       "moneymoney/migrations/__init__.py",
