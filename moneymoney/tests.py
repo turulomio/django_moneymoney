@@ -17,6 +17,9 @@ tag
 
 js_image_b64="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAIAQMAAAD+wSzIAAAABlBMVEX///+/v7+jQ3Y5AAAADklEQVQI12P4AIX8EAgALgAD/aNpbtEAAAAASUVORK5CYII="
 
+today=date.today()
+today_year=today.year
+today_month=today.month
 
 class CtTestCase(APITestCase):
     fixtures=["all.json"] #Para cargar datos por defecto
@@ -119,6 +122,12 @@ class CtTestCase(APITestCase):
         self.user_authorized_1.profile.save()
         self.assertEqual(self.user_authorized_1.profile.favorites.count(), 1)        
 
+    @tag("current")
+    def test_ReportAnnualIncomeDetails(self):
+        # Empty
+        tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/details/{today_year}/{today_month}/", status.HTTP_200_OK)
+        
+        
 
     def test_Accounts(self):
         
@@ -275,8 +284,7 @@ class CtTestCase(APITestCase):
         dict_ios_ids_merging_pp["simulation"]=simulation
         dict_ios_ids_simulation=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_merging_pp, status.HTTP_200_OK)
         self.assertEqual(dict_ios_ids_simulation["79329"]["total_io_current"]["balance_user"], 19980)
-        
-    @tag("current")
+
     def test_Investmentsoperations(self):        
         # Create an investment operation
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
