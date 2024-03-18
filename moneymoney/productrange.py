@@ -155,10 +155,10 @@ class ProductRangeManager:
         #Calculate max_ price and min_price. last price and orders is valorated too 
         max_=self.plio.io_current_highest_price()
         min_=self.plio.io_current_lowest_price()
-        if product.quote_last().quote> max_:
-            max_=product.quote_last().quote
-        if product.quote_last().quote< min_:
-            min_=product.quote_last().quote
+        if product.basic_results()["last"]> max_:
+            max_=product.basic_results()["last"]
+        if product.basic_results()["last"]< min_:
+            min_=product.basic_results()["last"]
         for o in self.orders:
             if o.investments.products.id==self.product.id:
                 if o.price>max_:
@@ -171,7 +171,7 @@ class ProductRangeManager:
             top_index= self.getTmpIndexOfValue(max_)-additional_ranges-1
             bottom_index= self.getTmpIndexOfValue(min_)+additional_ranges+1
         else: # No investment jet and shows ranges from product current price
-            current_index=self.getTmpIndexOfValue(self.product.quote_last().quote)
+            current_index=self.getTmpIndexOfValue(self.product.basic_results()["last"])
             top_index=current_index-additional_ranges-1
             bottom_index=current_index+additional_ranges+1
         self.arr=self.tmp[top_index:bottom_index]
@@ -373,14 +373,14 @@ class ProductRangeManager:
                 "recomendation_invest": o.recomendation_invest, 
                 "investments_inside": o.getInvestmentsOperationsInsideJson(self.plio), 
                 "orders_inside": o.getOrdersInsideJson(self.orders), 
-                "current_in_range": o.isInside(self.product.quote_last().quote), 
+                "current_in_range": o.isInside(self.product.basic_results()["last"]), 
                 "limits": str(o)
             })
             
         r["pr"]=d
         r["product"]={
             "name": o.product.fullName(), 
-            "last": o.product.quote_last().quote, 
+            "last": o.product.basic_results()["last"], 
             "currency": o.product.currency, 
         }
         r["ohcl"]=ohcl

@@ -466,9 +466,9 @@ class OrdersViewSet(viewsets.ModelViewSet):
                 "shares": o.shares, 
                 "price": o.price, 
                 "amount": o.shares*o.price*o.investments.products.real_leveraged_multiplier(), 
-                "percentage_from_price": percentage_between(o.investments.products.quote_last().quote, o.price),
+                "percentage_from_price": percentage_between(o.investments.products.basic_results()["last"], o.price),
                 "executed": o.executed,  
-                "current_price": o.investments.products.quote_last().quote, 
+                "current_price": o.investments.products.basic_results()["last"], 
             })
         return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
@@ -689,6 +689,7 @@ class Alerts(APIView):
             )
         }, 
     )
+    @ptimeit
     def get(self, request, *args, **kwargs):
         r={}
         r["server_time"]=timezone.now()
@@ -713,6 +714,7 @@ class Alerts(APIView):
             plio=plio_inactive.d(id)
             if plio["total_io_current"]["balance_investment"]!=0:
                 r["investments_inactive_with_balance"].append(plio)
+        functions.show_queries_function()
         return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
 
 class Timezones(APIView):
@@ -771,10 +773,9 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
         for o in qs_investments:
             percentage_invested=None if plio.d_total_io_current(o.id)["invested_user"]==0 else  plio.d_total_io_current(o.id)["gains_gross_user"]/plio.d_total_io_current(o.id)["invested_user"]
             try:                
-                last_day_diff= (o.products.quote_last().quote-o.products.quote_penultimate().quote)*plio.d_total_io_current(o.id)["shares"]*o.products.real_leveraged_multiplier()
+                last_day_diff= (plio.d_basic_results(o.id)["last"]-plio.d_basic_results(o.id)["penultimate"])*plio.d_total_io_current(o.id)["shares"]*o.products.real_leveraged_multiplier()
             except:
                 last_day_diff=0
-                
 
             r.append({
                 "id": o.id,  
@@ -784,17 +785,17 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "url":request.build_absolute_uri(reverse('investments-detail', args=(o.pk, ))), 
                 "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.id, ))), 
                 "products":request.build_absolute_uri(reverse('products-detail', args=(o.products.id, ))), 
-                "last_datetime": None if o.products.quote_last() is None else o.products.quote_last().datetime, 
-                "last": None if o.products.quote_last() is None else o.products.quote_last().quote, 
+                "last_datetime": None if plio.d_basic_results(o.id)["last"] is None else plio.d_basic_results(o.id)["last_datetime"], 
+                "last": plio.d_basic_results(o.id)["last"], 
                 "daily_difference": last_day_diff, 
-                "daily_percentage": None if o.products.quote_penultimate() is None or o.products.quote_last() is None else percentage_between(o.products.quote_penultimate().quote, o.products.quote_last().quote), 
+                "daily_percentage": None if plio.d_basic_results(o.id)["penultimate"] is None or plio.d_basic_results(o.id)["last"] is None else percentage_between(plio.d_basic_results(o.id)["penultimate"], plio.d_basic_results(o.id)["last"]), 
                 "invested_user": plio.d_total_io_current(o.id)["invested_user"], 
                 "gains_user": plio.d_total_io_current(o.id)["gains_gross_user"], 
                 "balance_user": plio.d_total_io_current(o.id)["balance_user"], 
                 "currency": o.products.currency, 
                 "currency_account": o.accounts.currency, 
                 "percentage_invested": percentage_invested, 
-                "percentage_selling_point": None if o.products.quote_last() is None else percentage_to_selling_point(plio.d_total_io_current(o.id)["shares"], o.selling_price, o.products.quote_last().quote), 
+                "percentage_selling_point": None if plio.d_basic_results(o.id)["last"] is None else percentage_to_selling_point(plio.d_total_io_current(o.id)["shares"], o.selling_price, plio.d_basic_results(o.id)["last"]), 
                 "selling_expiration": o.selling_expiration, 
                 "shares":plio.d_total_io_current(o.id)["shares"], 
                 "balance_percentage": o.balance_percentage, 
@@ -805,6 +806,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "gains_at_selling_point_investment": o.selling_price*o.products.real_leveraged_multiplier()*plio.d_total_io_current(o.id)["shares"]-plio.d_total_io_current(o.id)["invested_investment"], 
                 "decimals": o.decimals, 
             })
+        functions.show_queries_function()
         return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
 
 
@@ -1076,6 +1078,7 @@ class IOS(APIView):
             if all_args_are_not_none( ids, dt, mode, simulation):
                 ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.filter(id__in=ids),   mode, simulation)
                 return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+
         return Response({'status': "classmethod_str wasn't found'"}, status=status.HTTP_400_BAD_REQUEST)
 
 @transaction.atomic
@@ -1204,8 +1207,8 @@ def ProductsPairs(request):
     
     
     r={}
-    r["product_a"]={"name":product_better.fullName(), "currency": product_better.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_better.id, ))), "current_price": product_better.quote_last().quote}
-    r["product_b"]={"name":product_worse.fullName(), "currency": product_worse.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_worse.id, ))), "current_price": product_worse.quote_last().quote}
+    r["product_a"]={"name":product_better.fullName(), "currency": product_better.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_better.id, ))), "current_price": product_better.basic_results()["last"]}
+    r["product_b"]={"name":product_worse.fullName(), "currency": product_worse.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_worse.id, ))), "current_price": product_worse.basic_results()["last"]}
     r["data"]=[]
     if len(common_quotes)>0:
         first_pr=common_quotes[0]["quote_b"]/common_quotes[0]["quote_a"]
@@ -1360,12 +1363,12 @@ class ProductsViewSet(viewsets.ModelViewSet):
                 row={}
                 row['id']=p.id
                 row["product"]=p.hurl(request, p.id)
-                row["last_datetime"]=None if p.quote_last() is None else p.quote_last().datetime
-                row["last"]=None if p.quote_last() is None else p.quote_last().quote
-                row["penultimate_datetime"]=None if p.quote_penultimate() is None else p.quote_penultimate().datetime
-                row["penultimate"]=None if p.quote_penultimate() is None else p.quote_penultimate().quote
-                row["lastyear_datetime"]=None if p.quote_lastyear() is None else p.quote_lastyear().datetime
-                row["lastyear"]=None if p.quote_lastyear() is None else p.quote_lastyear().quote
+                row["last_datetime"]=None if p.quote_last() is None else p.basic_results()["last_datetime"]
+                row["last"]=None if p.quote_last() is None else p.basic_results()["last"]
+                row["penultimate_datetime"]=None if p.quote_penultimate() is None else p.basic_results()["penultimate_datetime"]
+                row["penultimate"]=None if p.quote_penultimate() is None else p.basic_results()["penultimate"]
+                row["lastyear_datetime"]=None if p.quote_lastyear() is None else p.basic_results()["lastyear_datetime"]
+                row["lastyear"]=None if p.quote_lastyear() is None else p.basic_results()["lastyear"]
                 row["percentage_last_year"]=None if row["lastyear"] is None else Percentage(row["last"]-row["lastyear"], row["lastyear"])
                 rows.append(row)
             return JsonResponse( rows,  encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
@@ -1716,7 +1719,7 @@ def ReportAnnualIncomeDetails(request, year, month):
                     "id":i, 
                     "datetime": o["datetime"], 
                     "concepts": models.Concepts.hurl(request, o["concepts"]), 
-                    "amount":o["amount"]* models.Quotes.currency_factor(o["datetime"], currency, local_currency ), 
+                    "amount":o["amount"]* models.Quotes.get_currency_factor(o["datetime"], currency, local_currency , None), 
                     "nice_comment":f"[AO] {o['comment']}", 
                     "currency": currency, 
                     "accounts": models.Accounts.hurl(request, o["accounts"]), 
@@ -1736,7 +1739,7 @@ def ReportAnnualIncomeDetails(request, year, month):
                     "id":i, 
                     "datetime": o["datetime"], 
                     "concepts": models.Concepts.hurl(request, o["concepts"]), 
-                    "amount":o["amount"]* models.Quotes.currency_factor(o["datetime"], currency, local_currency ), 
+                    "amount":o["amount"]* models.Quotes.get_currency_factor(o["datetime"], currency, local_currency, None ), 
                     "nice_comment":f"[CCO] {o['comment']}", 
                     "currency": currency, 
                     "accounts": models.Accounts.hurl(request, o["creditcards__accounts"]), 
@@ -1903,14 +1906,14 @@ def ReportDividends(request):
         else:
             dps=estimation.estimation
             date_estimation=estimation.date_estimation
-            percentage=Percentage(dps, inv.products.quote_last().quote)
+            percentage=Percentage(dps, inv.products.basic_results()["last"])
             estimated=shares*dps*inv.products.real_leveraged_multiplier()
             
         
         d={
             "product": inv.products.hurl(request, inv.products.id), 
             "name":  inv.fullName(), 
-            "current_price": inv.products.quote_last().quote, 
+            "current_price": inv.products.basic_results()["last"], 
             "dps": dps, 
             "shares": shares, 
             "date_estimation": date_estimation, 

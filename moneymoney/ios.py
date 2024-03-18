@@ -252,7 +252,9 @@ class IOS:
         lod_=list(lod_)+simulation
         
         t=IOS.__calculate_ios_lazy(dt, lod_investments,  lod_,  local_currency)
-        t["lazy_quotes"], t["lazy_factors"]=IOS.__get_quotes_and_factors(t["lazy_quotes"], t["lazy_factors"])
+        
+        t["r_lazy_quotes"]=IOS.__get_all_quotes(t)
+        
         t=IOS.__calculate_ios_finish(t, mode)
         t["type"]=IOSTypes.from_qs
 
@@ -260,7 +262,7 @@ class IOS:
         if mode in [IOSModes.ios_totals_sumtotals, IOSModes.totals_sumtotals]:
             for investment in qs_investments:
                 t[str(investment.id)]["data"]["name"]=investment.fullName()
-        debug("IOS FROM QS", datetime.now()-s)
+        print("IOS FROM QS", datetime.now()-s)
         return cls(t)
 
     @classmethod
@@ -294,28 +296,28 @@ class IOS:
                 "variable_percentage": i.products.percentage, 
             })
         return r
-        
-    @staticmethod
-    def __qs_investments_to_lod_ios(qs):
-        """
-            Converts a list of unsaved investmentsoperations to a lod_ios used in moneymoney_pl
-        """
-        r=[]
-        ids=tuple(qs.values_list('pk',flat=True))
-        for i, io in enumerate(models.Investmentsoperations.objects.filter(investments_id__in=ids).order_by("datetime")):
-            r.append({
-                "id":-i, 
-                "operationstypes_id": io.operationstypes.id, 
-                "investments_id": str(io.investments.id), 
-                "shares": io.shares, 
-                "taxes": io.taxes, 
-                "commission": io.commission, 
-                "price": io.price, 
-                "datetime": io.datetime, 
-                "comment": io.comment, 
-                "currency_conversion":io.currency_conversion
-            })
-        return r
+#        
+#    @staticmethod
+#    def __qs_investments_to_lod_ios(qs):
+#        """
+#            Converts a list of unsaved investmentsoperations to a lod_ios used in moneymoney_pl
+#        """
+#        r=[]
+#        ids=tuple(qs.values_list('pk',flat=True))
+#        for i, io in enumerate(models.Investmentsoperations.objects.filter(investments_id__in=ids).order_by("datetime")):
+#            r.append({
+#                "id":-i, 
+#                "operationstypes_id": io.operationstypes.id, 
+#                "investments_id": str(io.investments.id), 
+#                "shares": io.shares, 
+#                "taxes": io.taxes, 
+#                "commission": io.commission, 
+#                "price": io.price, 
+#                "datetime": io.datetime, 
+#                "comment": io.comment, 
+#                "currency_conversion":io.currency_conversion
+#            })
+#        return r
 
     @classmethod
     def from_qs_merging_io_current(cls, dt,  local_currency,  qs_investments, mode, simulation=[]):
@@ -392,16 +394,19 @@ class IOS:
                 old_ioh["investments_id"]=products_id
                 t[str(products_id)]["io_historical"].append(old_ioh)
                 ##Añado factors y quotes
-                t["lazy_quotes"][(products_id, old_ioh["dt_start"])]=None
-                t["lazy_quotes"][(products_id, old_ioh["dt_end"])]=None
-                t["lazy_factors"][(old_ioh["currency_product"], old_ioh["currency_account"], old_ioh["dt_start"])]=None
-                t["lazy_factors"][(old_ioh["currency_account"], old_ioh["currency_user"], old_ioh["dt_start"])]=None
-                t["lazy_factors"][(old_ioh["currency_product"], old_ioh["currency_account"], old_ioh["dt_end"])]=None
-                t["lazy_factors"][(old_ioh["currency_account"], old_ioh["currency_user"], old_ioh["dt_end"])]=None
+                t["lod_lazy_quotes"].append({"products_id":products_id, "datetime": old_ioh["dt_start"]})
+                t["lod_lazy_quotes"].append({"products_id":products_id, "datetime": old_ioh["dt_end"]})
+                if old_ioh["currency_product"]!=old_ioh["currency_account"]:
+                    t["lod_lazy_quotes"].append(models.Quotes.get_quote_dictionary_for_currency_factor(old_ioh["dt_start"], old_ioh["currency_product"], old_ioh["currency_account"]))
+                    t["lod_lazy_quotes"].append(models.Quotes.get_quote_dictionary_for_currency_factor(old_ioh["dt_end"], old_ioh["currency_product"], old_ioh["currency_account"]))
+                if old_ioh["currency_account"]!=old_ioh["currency_user"]:
+                    t["lod_lazy_quotes"].append(models.Quotes.get_quote_dictionary_for_currency_factor(old_ioh["dt_start"], old_ioh["currency_account"], old_ioh["currency_user"]))
+                    t["lod_lazy_quotes"].append(models.Quotes.get_quote_dictionary_for_currency_factor(old_ioh["dt_end"], old_ioh["currency_account"], old_ioh["currency_user"]))
             t[str(products_id)]["io_historical"]=lod.lod_order_by(t[str(products_id)]["io_historical"], "dt_end")
             
         # I make ios_finish after to get old io_historical too in results
-        t["lazy_quotes"], t["lazy_factors"]=IOS.__get_quotes_and_factors(t["lazy_quotes"], t["lazy_factors"])
+        t["r_lazy_quotes"]=IOS.__get_all_quotes(t)
+        
         t=IOS.__calculate_ios_finish(t, mode)
         
         
@@ -420,14 +425,14 @@ class IOS:
     ## lazy_quotes product, timestamp
     @staticmethod
     def __calculate_io_lazy( dt, data,  io_rows, currency_user):
-        lazy_quotes={}
-        lazy_factors={}
+        lod_lazy_quotes=[]
         data["currency_user"]=currency_user
         data["dt"]=dt
         data['real_leverages']= IOS.__realmultiplier(data)
         
-        lazy_quotes[(data['products_id'], dt)]=None
-        lazy_factors[(data["currency_product"], data["currency_account"], dt)]=None
+        lod_lazy_quotes.append({"datetime":dt, "products_id":data["products_id"]})
+        if data["currency_product"]!=data["currency_account"]:
+            lod_lazy_quotes.append(models.Quotes.get_quote_dictionary_for_currency_factor(dt, data["currency_product"], data["currency_account"]))
 
         ioh_id=0
         io=[]
@@ -438,7 +443,8 @@ class IOS:
             row["currency_account"]=data["currency_account"]
             row["currency_product"]=data["currency_product"]
             row["currency_user"]=data["currency_user"]
-            lazy_factors[(data["currency_account"], data["currency_user"],row['datetime'])]=None
+            if data["currency_account"]!=data["currency_user"]:
+                lod_lazy_quotes.append(models.Quotes.get_quote_dictionary_for_currency_factor(row['datetime'], data["currency_account"], data["currency_user"]))
             io.append(row)
             if len(cur)==0 or IOS.__have_same_sign(cur[0]["shares"], row["shares"]) is True:
                 cur.append({
@@ -550,34 +556,10 @@ class IOS:
             
             
                         
-        return { "io": io, "io_current": cur,"io_historical":hist, "data":data, "lazy_quotes":lazy_quotes, "lazy_factors": lazy_factors}
-            
-    @staticmethod
-    def __get_quotes_and_factors(lazy_quotes, lazy_factors):
-        for lz in lazy_quotes.keys():
-            products_id, datetime_=lz
-            r=models.Quotes.get_quote(products_id, datetime_)
-            if r is None:
-                lazy_quotes[lz]=None
-            else:
-                lazy_quotes[lz]=r.quote
-        for lf in lazy_factors.keys():
-            from_, to_, datetime_=lf
-            lazy_factors[lf]=models.Quotes.currency_factor(datetime_, from_,  to_)
-        return lazy_quotes, lazy_factors
+        return { "io": io, "io_current": cur,"io_historical":hist, "data":data, "lod_lazy_quotes": lod_lazy_quotes}
 
     @staticmethod
-    def __set_basic_quotes_in_entries_data(t):
-        #Gets basics result from database
-        basic_results={}
-        for entry in t["entries"]:
-            products_id=t[entry]["data"]["products_id"]
-            if not products_id in basic_results:
-                basic_results[products_id]=models.Products.basic_results_from_products_id(products_id)
-            t[entry]["data"]["basic_results"]=basic_results[products_id]
-
-    @staticmethod
-    def __calculate_io_finish(d, dict_with_lf_and_lq):
+    def __calculate_io_finish(d, r_lazy_quotes):
         """
             d es el resultado de __calculate_io_lazy
             dict_with_lf_and_lq puede ser en d o en t segun sea io o ios
@@ -585,13 +567,13 @@ class IOS:
         def lf(from_, to_, dt):
             #Parece que el error es por mal from_, to_
 #            try:
-                return dict_with_lf_and_lq["lazy_factors"][(from_, to_, dt)]
+                return models.Quotes.get_currency_factor(dt,  from_, to_, r_lazy_quotes)
 #            except:
 #                print(dict_with_lf_and_lq["lazy_factors"])
 #                print("No encontrado", (from_,  to_,  dt),  dt.__class__)
             
         def lq(products_id, dt):
-            return dict_with_lf_and_lq["lazy_quotes"][(products_id, dt)]
+            return r_lazy_quotes[products_id][dt]["quote"]
             
         data=d["data"]
         
@@ -745,6 +727,20 @@ class IOS:
     def __operationstypes(shares):
         return 4 if shares>=0 else 5
 
+    @staticmethod
+    def __get_all_quotes( t):       
+        """
+            Makes Three queries 2 for basic_results 1 for the rest. I thin It's not necesary to join in 2. They are different
+        """
+        products_ids=set()
+        for entry in t["entries"]:
+            products_ids.add(t[str(entry)]["data"]["products_id"])
+        products_ids=list(products_ids)
+        r_basic_results=models.Products.basic_results_from_list_of_products_id(products_ids)
+        for entry in t["entries"]:
+            t[entry]["data"]["basic_results"]=r_basic_results[int(t[entry]["data"]["products_id"])]
+            
+        return models.Quotes.get_quotes(t["lod_lazy_quotes"])
 
     ## lod_investments query ivestments
     ## lod_ios query investmentsoperations of investments
@@ -761,21 +757,16 @@ class IOS:
 
         ## Total calculated ios
         t={}
-        t["lazy_quotes"]={}
-        t["lazy_factors"]={}
+        t["lod_lazy_quotes"]=[]
         t["entries"]=[] #All ids to enter in ios_id
 
         for investments_id, investment in investments.items():
             t["entries"].append(investments_id)
             d=IOS.__calculate_io_lazy(datetime, investment, ios[investments_id], currency_user)
-            t["lazy_quotes"].update(d["lazy_quotes"])
-            t["lazy_factors"].update(d["lazy_factors"])
-            del d["lazy_quotes"]
-            del d["lazy_factors"]
+            t["lod_lazy_quotes"]+=d["lod_lazy_quotes"]
+            del d["lod_lazy_quotes"]
             t[str(investments_id)]=d
         
-        #Sets basics_results in data
-        IOS.__set_basic_quotes_in_entries_data(t)
         return t
 
 
@@ -795,7 +786,7 @@ class IOS:
         t["sum_total_io_historical"]["gains_net_user"]=0
 
         for investments_id in t["entries"]:
-            t[investments_id]=IOS.__calculate_io_finish(t[investments_id], t)
+            t[investments_id]=IOS.__calculate_io_finish(t[investments_id], t["r_lazy_quotes"])
 
             t["sum_total_io_current"]["balance_user"]=t["sum_total_io_current"]["balance_user"]+t[investments_id]["total_io_current"]['balance_user']
             t["sum_total_io_current"]["balance_futures_user"]=t["sum_total_io_current"]["balance_futures_user"]+t[investments_id]["total_io_current"]['balance_futures_user']
@@ -813,8 +804,8 @@ class IOS:
         if mode==IOSModes.sumtotals:
             return {"sum_total_io_current": t["sum_total_io_current"], "sum_total_io_historical": t["sum_total_io_historical"], "mode":t["mode"]}
 
-        del t["lazy_factors"]
-        del t["lazy_quotes"]
+        del t["lod_lazy_quotes"]
+        del t["r_lazy_quotes"]
         return t
         
     def distinct_products_id(self):
