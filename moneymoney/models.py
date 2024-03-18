@@ -896,6 +896,11 @@ class Products(models.Model):
         """
             Sometimes I only hava an id. PL Investments OPerations
         """
+#        #Makes a lod for Quotes.get_quotes
+#        lod_=[]
+#        lod
+        
+        
         dt= timezone.now()
         r={
             "id":products_id, 
@@ -920,6 +925,46 @@ class Products(models.Model):
                 if quote_lastyear is not None:
                     r["lastyear_datetime"]=quote_lastyear.datetime
                     r["lastyear"]=quote_lastyear.quote
+        return r
+        
+        
+    @staticmethod
+    def basic_results_from_list_of_products_id(list_products_id):
+        """
+            This is made in two massive steps. One for last  and other for penultimate and lastyear
+            Returns a dictionary that can be queried d[product_id][last|last_datetime|penultimate|penultimate_datetime|lastyear|lastyear_datetime]
+        """
+        def dt_needed_penultimate(products_id):
+            return casts.dtaware_day_end_from_date(r_lasts[products_id][now]["datetime"].date()-timedelta(days=1), 'UTC')#Better utc to assure
+        def dt_needed_lastyear(products_id):
+            return casts.dtaware_year_end(r_lasts[products_id][now]["datetime"].year-1, 'UTC')
+        #####
+        
+        r ={}
+        now=timezone.now()
+        lod_lasts=[]
+        for products_id in list_products_id:
+            #Initialize dictionary
+            r[products_id]={}
+            #Create lod for last
+            lod_lasts.append({"datetime": now, "products_id":products_id})
+        
+        r_lasts=Quotes.get_quotes(lod_lasts)
+        
+        lod_ply=[]#penultimate and last year
+        for products_id in list_products_id:
+            lod_ply.append({"datetime": dt_needed_penultimate(products_id), "products_id":products_id})
+            lod_ply.append({"datetime": dt_needed_lastyear(products_id), "products_id":products_id})
+        r_ply=Quotes.get_quotes(lod_ply)
+        
+        #Generate answer
+        for products_id in list_products_id:
+            r[products_id]["last"]=r_lasts[products_id][now]["quote"]
+            r[products_id]["last_datetime"]=r_lasts[products_id][now]["datetime"]
+            r[products_id]["penultimate"]=r_ply[products_id][dt_needed_penultimate(products_id)]["quote"]
+            r[products_id]["penultimate_datetime"]=r_ply[products_id][dt_needed_penultimate(products_id)]["datetime"]
+            r[products_id]["lastyear"]=r_ply[products_id][dt_needed_lastyear(products_id)]["quote"]
+            r[products_id]["lastyear_datetime"]=r_ply[products_id][dt_needed_lastyear(products_id)]["datetime"]
         return r
         
     ## IBEXA es x2 pero esta en el pricio
@@ -1073,7 +1118,7 @@ class Quotes(models.Model):
             Parameters:
                 - lod_= [{"products_id": 79234, "datetime": ...}, ]
                 -output ="dicitionary" or "lod"
-                    -Dicitionario r[products_id"[needed_datetime]   (Integer and datetime, not strings)
+                    -Dicitionario r[products_id][needed_datetime]   (Integer and datetime, not strings)
             
             Returns a dictionary {(products_id,datetime): quote, ....} or a lod
             
@@ -1114,22 +1159,20 @@ class Quotes(models.Model):
     
     
     @staticmethod
-    def get_currency_factor(datetime_, from_, to_ ):
+    def get_currency_factor(datetime_, from_, to_ ,  get_quotes_result):
         """
             Gets the factor to pass a currency to other in a datetime
+            Params:
+                - get_quotes_result: Dictionary result of Quotes.get_quotes
             Returns and object or None
         """
         if from_==to_:
             return 1
             
         if from_== 'EUR' and to_== 'USD':
-            q=Quotes.get_quote(74747, datetime_)
-            if q is None:
-                return None
-            else:
-                return q.quote    
-        if from_== 'USD' and to_== 'EUR':
-            q=Quotes.get_quote(74747, datetime_)
+            return get_quotes_result[74747][datetime_]["quote"]
+        elif from_== 'USD' and to_== 'EUR':
+            q=get_quotes_result[74747][datetime_]["quote"]
             if q is None:
                 return None
             else:
@@ -1139,52 +1182,45 @@ class Quotes(models.Model):
                     return 1/q.quote
         print("NOT FOUND")
         return None
+        
+    
 
     
     @staticmethod
-    def get_currencies_factors(lod_):
+    def get_quote_dictionary_for_currency_factor(datetime_,  from_,  to_):
         """
-            Gets a massive quote query
-            
-            Parameters:
-                - lod_= [{"from": "EUR", "to":"USD", "datetime": ...}, ]
-            
-            Returns a dictionary [from][to][datetime]=factor
-        """
-        if len (lod_)==0:
-            return {}
-        
-        lod_quotes=[]
-        for needed_factor in lod_:
-            if (needed_factor["from_"]== 'EUR' and  needed_factor["to_"]== 'USD') or  (needed_factor["from_"]=="USD" and  needed_factor["to_"]=="EUR"):
-                lod_quotes.append({"products_id":74747,  "datetime":needed_factor["datetime"]})
-    
-        r_quotes=Quotes.get_quotes(lod_quotes)
-        
-        r_factors={}
-        for needed_factor in lod_:
-            #Initialize dictionary
-            if not needed_factor["from_"] in r_factors:
-                r_factors[needed_factor["from_"]]={}
-                if not needed_factor["to_"] in r_factors[needed_factor["from_"]]:
-                    r_factors[needed_factor["from_"]][needed_factor["to_"]]={}
-                
-            # Assign values
-            if (needed_factor["from_"]== needed_factor["to_"]):
-                r_factors[needed_factor["from_"]][needed_factor["to_"]][needed_factor["datetime"]]=1
-                
-            elif (needed_factor["from_"]== 'EUR' and  needed_factor["to_"]== 'USD'):
-                r_factors["EUR"]["USD"][needed_factor["datetime"]]=r_quotes[74747][needed_factor["datetime"]]["quote"]
-                
-            elif (needed_factor["from_"]== 'USD' and  needed_factor["to_"]== 'EUR'):
-                if r_quotes[74747][needed_factor["datetime"]]["quote"] is None:
-                    r_factors["USD"]["EUR"][needed_factor["datetime"]]=None
-                else:
-                    r_factors["USD"]["EUR"][needed_factor["datetime"]]=1/r_quotes[74747][needed_factor["datetime"]]["quote"]
-            
-            else:
-                print("MASSIVE FACTOR NOT FOUND",  needed_factor)
-        return r_factors
+            Returns a dictionary to be used to create the lod of get_quotes
+    """
+        if (from_== 'EUR' and  to_=='USD') or  (from_=="USD" and  to_=="EUR"):
+            return {"products_id":74747,  "datetime":datetime_}
+        print("CANT CONVERT TO GET_QUOTE DICTIONARY",  datetime_,  from_,  to_) 
+#    
+#        r_quotes=Quotes.get_quotes(lod_quotes)
+#        
+#        r_factors={}
+#        for needed_factor in lod_:
+#            #Initialize dictionary
+#            if not needed_factor["from_"] in r_factors:
+#                r_factors[needed_factor["from_"]]={}
+#                if not needed_factor["to_"] in r_factors[needed_factor["from_"]]:
+#                    r_factors[needed_factor["from_"]][needed_factor["to_"]]={}
+#                
+#            # Assign values
+#            if (needed_factor["from_"]== needed_factor["to_"]):
+#                r_factors[needed_factor["from_"]][needed_factor["to_"]][needed_factor["datetime"]]=1
+#                
+#            elif (needed_factor["from_"]== 'EUR' and  needed_factor["to_"]== 'USD'):
+#                r_factors["EUR"]["USD"][needed_factor["datetime"]]=r_quotes[74747][needed_factor["datetime"]]["quote"]
+#                
+#            elif (needed_factor["from_"]== 'USD' and  needed_factor["to_"]== 'EUR'):
+#                if r_quotes[74747][needed_factor["datetime"]]["quote"] is None:
+#                    r_factors["USD"]["EUR"][needed_factor["datetime"]]=None
+#                else:
+#                    r_factors["USD"]["EUR"][needed_factor["datetime"]]=1/r_quotes[74747][needed_factor["datetime"]]["quote"]
+#            
+#            else:
+#                print("MASSIVE FACTOR NOT FOUND",  needed_factor)
+#        return r_factors
 
 class Splits(models.Model):
     datetime = models.DateTimeField()
