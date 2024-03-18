@@ -1774,54 +1774,37 @@ def ReportAnnualIncomeDetails(request, year, month):
     r["gains"]=listdict_investmentsoperationshistorical(request, year, month, request.user.profile.currency, request.user.profile.zone)
     
     return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
-    
-
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-
 def ReportAnnualGainsByProductstypes(request, year):
     dt_from=casts.dtaware_year_start(year, request.user.profile.zone)
     dt_to=casts.dtaware_year_end(year, request.user.profile.zone)
 
-    plio=ios.IOS.from_all( dt_to, request.user.profile.currency, ios.IOSModes.ios_totals_sumtotals)
     
-    #This inner joins its made to see all productstypes_id even if they are Null.
-    # Subquery for dividends is used due to if I make a where from dividends table I didn't get null productstypes_id
-    with connection.cursor() as c:
-        c.execute("""
-            select  
-                productstypes_id, 
-                sum(dividends.gross) as gross,
-                sum(dividends.net) as net
-            from 
-                products
-                left join investments on products.id=investments.products_id
-                left join (select * from dividends where extract('year' from datetime)=%s) dividends on investments.id=dividends.investments_id
-            group by productstypes_id""", (year, ))
-        dividends=functions.dictfetchall(c)
-    dividends_dict=lod.lod2dod(dividends, "productstypes_id")
+    # Initializate dict_dividends_by_producttype
+    dict_dividends_by_producttype={}
+    productstypes=models.Productstypes.objects.all()
+    for pt in productstypes:
+        dict_dividends_by_producttype[pt.id]={"net":0, "gross":0}
+    
+    # Load dividends net and gross
+    for dividend in models.Dividends.objects.filter(datetime__year=year).select_related("investments__products__productstypes"):
+        dict_dividends_by_producttype[dividend.investments.products.productstypes.id]["gross"]+=dividend.gross
+        dict_dividends_by_producttype[dividend.investments.products.productstypes.id]["net"]+=dividend.net
+
+    plio=ios.IOS.from_all( dt_to, request.user.profile.currency, ios.IOSModes.ios_totals_sumtotals)
     l=[]
-    for pt in models.Productstypes.objects.all():
+    for pt in productstypes:
         gains_net=plio.io_historical_sum_between_dt(dt_from, dt_to, "gains_net_user", pt.id)
         gains_gross=plio.io_historical_sum_between_dt(dt_from, dt_to, "gains_gross_user", pt.id)
-        dividends_gross, dividends_net=0, 0
-        try:
-            dividends_gross=dividends_dict[pt.id]["gross"]
-        except:
-            dividends_gross=0
-        try:
-            dividends_net=dividends_dict[pt.id]["net"]
-        except:
-            dividends_net=0
-
         l.append({
                 "id": pt.id, 
                 "name":_(pt.name), 
                 "gains_gross": gains_gross, 
-                "dividends_gross":dividends_gross, 
+                "dividends_gross": dict_dividends_by_producttype[pt.id]["gross"], 
                 "gains_net":gains_net, 
-                "dividends_net": dividends_net, 
+                "dividends_net": dict_dividends_by_producttype[pt.id]["net"], 
         })      
         
     d_fast_operations=models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.FastOperations, year=year)
@@ -1834,9 +1817,7 @@ def ReportAnnualGainsByProductstypes(request, year):
             "gains_net": d_fast_operations[0]["total"] if len(d_fast_operations)>0 else 0, 
             "dividends_net": 0, 
     })
-    return JsonResponse( l, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
-
-
+    return JsonResponse( l, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
