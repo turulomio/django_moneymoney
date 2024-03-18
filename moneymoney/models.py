@@ -87,7 +87,7 @@ class Accounts(models.Model):
             r["balance_account_currency"]=Decimal('0')
         else:
             r["balance_account_currency"]=b
-        factor=Quotes.get_currency_factor(dt, self.currency, currency_user)
+        factor=Quotes.get_currency_factor(dt, self.currency, currency_user, None)
         r["balance_user_currency"]=r["balance_account_currency"]*factor
         return r
 
@@ -105,14 +105,14 @@ class Accounts(models.Model):
                 r["balance_account_currency"]=Decimal('0')
             else:
                 r["balance_account_currency"]=b
-            factor=Quotes.get_currency_factor(dt, currencies_in_qs[0], currency_user)
+            factor=Quotes.get_currency_factor(dt, currencies_in_qs[0], currency_user, None)
             r["balance_user_currency"]=r["balance_account_currency"]*factor
         else:
             r["balance_account_currency"]=None
             r["balance_user_currency"]=Decimal("0")
             for currency in currencies_in_qs:
                 b=Accountsoperations.objects.filter(accounts__in=qs, datetime__lte=dt, accounts__currency=currency).select_related("accounts").aggregate(Sum("amount"))["amount__sum"]
-                factor=Quotes.get_currency_factor(dt, currency, currency_user)
+                factor=Quotes.get_currency_factor(dt, currency, currency_user, None)
                 r["balance_user_currency"]=r["balance_user_currency"]+b*factor
         return r
 
@@ -1613,7 +1613,7 @@ class Assets:
         """
             Makes a money conversion from a currency to other in a moment
         """
-        factor=Quotes.get_currency_factor(dt, from_, to_)
+        factor=Quotes.get_currency_factor(dt, from_, to_, None)
         if factor is None:
             return None
         else:

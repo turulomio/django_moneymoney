@@ -255,7 +255,6 @@ class IOS:
         
         t["r_lazy_quotes"]=models.Quotes.get_quotes(t["lod_lazy_quotes"])
         IOS.__set_basic_results(t)
-        print(t["r_lazy_quotes"])
         
         t=IOS.__calculate_ios_finish(t, mode)
         t["type"]=IOSTypes.from_qs
