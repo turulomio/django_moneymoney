@@ -87,7 +87,7 @@ class Accounts(models.Model):
             r["balance_account_currency"]=Decimal('0')
         else:
             r["balance_account_currency"]=b
-        factor=Quotes.currency_factor(dt, self.currency, currency_user)
+        factor=Quotes.get_currency_factor(dt, self.currency, currency_user)
         r["balance_user_currency"]=r["balance_account_currency"]*factor
         return r
 
@@ -105,14 +105,14 @@ class Accounts(models.Model):
                 r["balance_account_currency"]=Decimal('0')
             else:
                 r["balance_account_currency"]=b
-            factor=Quotes.currency_factor(dt, currencies_in_qs[0], currency_user)
+            factor=Quotes.get_currency_factor(dt, currencies_in_qs[0], currency_user)
             r["balance_user_currency"]=r["balance_account_currency"]*factor
         else:
             r["balance_account_currency"]=None
             r["balance_user_currency"]=Decimal("0")
             for currency in currencies_in_qs:
                 b=Accountsoperations.objects.filter(accounts__in=qs, datetime__lte=dt, accounts__currency=currency).select_related("accounts").aggregate(Sum("amount"))["amount__sum"]
-                factor=Quotes.currency_factor(dt, currency, currency_user)
+                factor=Quotes.get_currency_factor(dt, currency, currency_user)
                 r["balance_user_currency"]=r["balance_user_currency"]+b*factor
         return r
 
@@ -1114,7 +1114,7 @@ class Quotes(models.Model):
     
     
     @staticmethod
-    def currency_factor(datetime_, from_, to_ ):
+    def get_currency_factor(datetime_, from_, to_ ):
         """
             Gets the factor to pass a currency to other in a datetime
             Returns and object or None
@@ -1140,6 +1140,51 @@ class Quotes(models.Model):
         print("NOT FOUND")
         return None
 
+    
+    @staticmethod
+    def get_currencies_factors(lod_):
+        """
+            Gets a massive quote query
+            
+            Parameters:
+                - lod_= [{"from": "EUR", "to":"USD", "datetime": ...}, ]
+            
+            Returns a dictionary [from][to][datetime]=factor
+        """
+        if len (lod_)==0:
+            return {}
+        
+        lod_quotes=[]
+        for needed_factor in lod_:
+            if (needed_factor["from_"]== 'EUR' and  needed_factor["to_"]== 'USD') or  (needed_factor["from_"]=="USD" and  needed_factor["to_"]=="EUR"):
+                lod_quotes.append({"products_id":74747,  "datetime":needed_factor["datetime"]})
+    
+        r_quotes=Quotes.get_quotes(lod_quotes)
+        
+        r_factors={}
+        for needed_factor in lod_:
+            #Initialize dictionary
+            if not needed_factor["from_"] in r_factors:
+                r_factors[needed_factor["from_"]]={}
+                if not needed_factor["to_"] in r_factors[needed_factor["from_"]]:
+                    r_factors[needed_factor["from_"]][needed_factor["to_"]]={}
+                
+            # Assign values
+            if (needed_factor["from_"]== needed_factor["to_"]):
+                r_factors[needed_factor["from_"]][needed_factor["to_"]][needed_factor["datetime"]]=1
+                
+            elif (needed_factor["from_"]== 'EUR' and  needed_factor["to_"]== 'USD'):
+                r_factors["EUR"]["USD"][needed_factor["datetime"]]=r_quotes[74747][needed_factor["datetime"]]["quote"]
+                
+            elif (needed_factor["from_"]== 'USD' and  needed_factor["to_"]== 'EUR'):
+                if r_quotes[74747][needed_factor["datetime"]]["quote"] is None:
+                    r_factors["USD"]["EUR"][needed_factor["datetime"]]=None
+                else:
+                    r_factors["USD"]["EUR"][needed_factor["datetime"]]=1/r_quotes[74747][needed_factor["datetime"]]["quote"]
+            
+            else:
+                print("MASSIVE FACTOR NOT FOUND",  needed_factor)
+        return r_factors
 
 class Splits(models.Model):
     datetime = models.DateTimeField()
@@ -1521,7 +1566,7 @@ class Assets:
         """
             Makes a money conversion from a currency to other in a moment
         """
-        factor=Quotes.currency_factor(dt, from_, to_)
+        factor=Quotes.get_currency_factor(dt, from_, to_)
         if factor is None:
             return None
         else:

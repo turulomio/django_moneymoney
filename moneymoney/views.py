@@ -771,7 +771,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
         for o in qs_investments:
             percentage_invested=None if plio.d_total_io_current(o.id)["invested_user"]==0 else  plio.d_total_io_current(o.id)["gains_gross_user"]/plio.d_total_io_current(o.id)["invested_user"]
             try:                
-                last_day_diff= (o.products.quote_last().quote-o.products.quote_penultimate().quote)*plio.d_total_io_current(o.id)["shares"]*o.products.real_leveraged_multiplier()
+                last_day_diff= (plio.d_basic_results(o.id)["last"]-plio.d_basic_results(o.id)["penultimate"])*plio.d_total_io_current(o.id)["shares"]*o.products.real_leveraged_multiplier()
             except:
                 last_day_diff=0
                 
@@ -784,17 +784,17 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "url":request.build_absolute_uri(reverse('investments-detail', args=(o.pk, ))), 
                 "accounts":request.build_absolute_uri(reverse('accounts-detail', args=(o.accounts.id, ))), 
                 "products":request.build_absolute_uri(reverse('products-detail', args=(o.products.id, ))), 
-                "last_datetime": None if o.products.quote_last() is None else o.products.quote_last().datetime, 
-                "last": None if o.products.quote_last() is None else o.products.quote_last().quote, 
+                "last_datetime": None if plio.d_basic_results(o.id)["last"] is None else plio.d_basic_results(o.id)["last_datetime"], 
+                "last": plio.d_basic_results(o.id)["last"], 
                 "daily_difference": last_day_diff, 
-                "daily_percentage": None if o.products.quote_penultimate() is None or o.products.quote_last() is None else percentage_between(o.products.quote_penultimate().quote, o.products.quote_last().quote), 
+                "daily_percentage": None if plio.d_basic_results(o.id)["penultimate"] is None or plio.d_basic_results(o.id)["last"] is None else percentage_between(plio.d_basic_results(o.id)["penultimate"], plio.d_basic_results(o.id)["last"]), 
                 "invested_user": plio.d_total_io_current(o.id)["invested_user"], 
                 "gains_user": plio.d_total_io_current(o.id)["gains_gross_user"], 
                 "balance_user": plio.d_total_io_current(o.id)["balance_user"], 
                 "currency": o.products.currency, 
                 "currency_account": o.accounts.currency, 
                 "percentage_invested": percentage_invested, 
-                "percentage_selling_point": None if o.products.quote_last() is None else percentage_to_selling_point(plio.d_total_io_current(o.id)["shares"], o.selling_price, o.products.quote_last().quote), 
+                "percentage_selling_point": None if o.products.quote_last() is None else percentage_to_selling_point(plio.d_total_io_current(o.id)["shares"], o.selling_price, plio.d_basic_results(o.id)["last"]), 
                 "selling_expiration": o.selling_expiration, 
                 "shares":plio.d_total_io_current(o.id)["shares"], 
                 "balance_percentage": o.balance_percentage, 
@@ -805,6 +805,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "gains_at_selling_point_investment": o.selling_price*o.products.real_leveraged_multiplier()*plio.d_total_io_current(o.id)["shares"]-plio.d_total_io_current(o.id)["invested_investment"], 
                 "decimals": o.decimals, 
             })
+        functions.show_queries_function()
         return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
 
 
@@ -1076,6 +1077,7 @@ class IOS(APIView):
             if all_args_are_not_none( ids, dt, mode, simulation):
                 ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.filter(id__in=ids),   mode, simulation)
                 return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+
         return Response({'status': "classmethod_str wasn't found'"}, status=status.HTTP_400_BAD_REQUEST)
 
 @transaction.atomic
@@ -1716,7 +1718,7 @@ def ReportAnnualIncomeDetails(request, year, month):
                     "id":i, 
                     "datetime": o["datetime"], 
                     "concepts": models.Concepts.hurl(request, o["concepts"]), 
-                    "amount":o["amount"]* models.Quotes.currency_factor(o["datetime"], currency, local_currency ), 
+                    "amount":o["amount"]* models.Quotes.get_currency_factor(o["datetime"], currency, local_currency ), 
                     "nice_comment":f"[AO] {o['comment']}", 
                     "currency": currency, 
                     "accounts": models.Accounts.hurl(request, o["accounts"]), 
@@ -1736,7 +1738,7 @@ def ReportAnnualIncomeDetails(request, year, month):
                     "id":i, 
                     "datetime": o["datetime"], 
                     "concepts": models.Concepts.hurl(request, o["concepts"]), 
-                    "amount":o["amount"]* models.Quotes.currency_factor(o["datetime"], currency, local_currency ), 
+                    "amount":o["amount"]* models.Quotes.get_currency_factor(o["datetime"], currency, local_currency ), 
                     "nice_comment":f"[CCO] {o['comment']}", 
                     "currency": currency, 
                     "accounts": models.Accounts.hurl(request, o["creditcards__accounts"]), 
