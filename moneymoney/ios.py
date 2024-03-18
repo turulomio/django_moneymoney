@@ -255,7 +255,6 @@ class IOS:
         
         t["r_lazy_quotes"]=models.Quotes.get_quotes(t["lod_lazy_quotes"])
         IOS.__set_basic_results(t)
-        lod.lod_print(t["lod_lazy_quotes"])
         print(t["r_lazy_quotes"])
         
         t=IOS.__calculate_ios_finish(t, mode)
@@ -737,11 +736,8 @@ class IOS:
         for entry in t["entries"]:
             products_ids.add(t[str(entry)]["data"]["products_id"])
         products_ids=list(products_ids)
-        print("products_id", products_ids)
         r_basic_results=models.Products.basic_results_from_list_of_products_id(products_ids)
         for entry in t["entries"]:
-            print(entry, entry.__class__)
-            print(r_basic_results)
             t[entry]["data"]["basic_results"]=r_basic_results[int(t[entry]["data"]["products_id"])]
 
     ## lod_investments query ivestments
@@ -765,7 +761,6 @@ class IOS:
         for investments_id, investment in investments.items():
             t["entries"].append(investments_id)
             d=IOS.__calculate_io_lazy(datetime, investment, ios[investments_id], currency_user)
-            print(d["lod_lazy_quotes"])
             t["lod_lazy_quotes"]+=d["lod_lazy_quotes"]
             del d["lod_lazy_quotes"]
             t[str(investments_id)]=d

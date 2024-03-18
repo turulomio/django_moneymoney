@@ -1163,23 +1163,34 @@ class Quotes(models.Model):
         """
             Gets the factor to pass a currency to other in a datetime
             Params:
-                - get_quotes_result: Dictionary result of Quotes.get_quotes
+                - get_quotes_result: Dictionary result of Quotes.get_quotes. Poner None para que se calcule3
             Returns and object or None
         """
+        def get_quote(products_id,  datetime_):
+            if get_quotes_result is None:
+                q=Quotes.get_quote(products_id, datetime_)
+                if q is None:
+                    return None
+                else:
+                    return q.quote
+            else:
+                return get_quotes_result[products_id][datetime_]["quote"]
+        
+        
         if from_==to_:
             return 1
             
         if from_== 'EUR' and to_== 'USD':
-            return get_quotes_result[74747][datetime_]["quote"]
+            return get_quote(74747, datetime_)
         elif from_== 'USD' and to_== 'EUR':
-            q=get_quotes_result[74747][datetime_]["quote"]
+            q=get_quote(74747, datetime_)
             if q is None:
                 return None
             else:
-                if q.quote==0:
+                if q==0:
                     return None
                 else:
-                    return 1/q.quote
+                    return 1/q
         print("NOT FOUND")
         return None
         
