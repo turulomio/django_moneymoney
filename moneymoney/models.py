@@ -1027,7 +1027,9 @@ class Quotes(models.Model):
 
 
     @staticmethod
-    def post_payload(products="http://testserver/api/products/79329/", datetime=timezone.now(), quote=10):
+    def post_payload(products="http://testserver/api/products/79329/", datetime=None, quote=10):
+        if datetime is None:
+            datetime = timezone.now()
         return {
             "datetime": datetime, 
             "products": products, 
@@ -1062,6 +1064,61 @@ class Quotes(models.Model):
             return r
         except:
             return None
+            
+    @staticmethod
+    def get_quotes(dict_tupled):
+        """
+            Gets a massive quote query
+            
+            Parameters:
+                - dict_tupled= {(products_id, datetime):None, ....}
+            
+            Returns the same dict_tupled but with a dict with the results instead of None
+        """
+#        
+#        
+#        To make a union of several querysets, each limited to 1 row, you can achieve this by chaining queryset methods in Django ORM. Here's how you can do it:
+#
+#python
+#
+#from itertools import chain
+#from django.db.models import F
+#
+## Assuming qs1, qs2, qs3 are your querysets, each limited to 1 row
+#qs1 = Model1.objects.filter(...).order_by('some_column')[:1]
+#qs2 = Model2.objects.filter(...).order_by('some_column')[:1]
+#qs3 = Model3.objects.filter(...).order_by('some_column')[:1]
+#
+## Combine the querysets
+#combined_queryset = list(chain(qs1, qs2, qs3))
+#
+## If you want to extract the values
+#results = combined_queryset.values('column1', 'column2')
+#
+#In this code:
+#
+#    qs1, qs2, and qs3 are assumed to be your querysets, each limited to 1 row using slicing ([:1]).
+#    order_by('some_column') is used to specify the ordering criteria if needed.
+#    list(chain(qs1, qs2, qs3)) combines the querysets into one list.
+#    values('column1', 'column2') retrieves the values of column1 and column2 from the combined queryset.
+        if len (dict_tupled)==0:
+            return dict_tupled
+        
+        list_of_qs=[]
+        for products_id,  datetime_ in dict_tupled.keys():
+            list_of_qs.append(Quotes.objects.filter(products__id=products_id, datetime__lte=datetime_).order_by("-datetime")[0])
+        
+        
+        combined_qs=list_of_qs[0]
+        for i in range(1, len(list_of_qs)):
+            combined_qs=combined_qs.union(list_of_qs[i])
+        
+        
+        for quote in combined_qs:
+            print(quote)
+        print(combined_qs.query)
+        return dict_tupled
+
     
     
     @staticmethod

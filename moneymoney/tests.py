@@ -7,7 +7,7 @@ from json import loads
 from moneymoney import models, ios, investing_com
 from moneymoney.reusing import tests_helpers
 from os import path
-from pydicts import lod
+from pydicts import lod, casts
 from request_casting.request_casting import id_from_url
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
@@ -125,11 +125,30 @@ class CtTestCase(APITestCase):
     def test_ReportAnnualIncomeDetails(self):
         tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/details/{today_year}/{today_month}/", status.HTTP_200_OK)
 
-    @tag("current")
     def test_ReportAnnualGainsByProductstypes(self):
         tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/gainsbyproductstypes/{today_year}/", status.HTTP_200_OK)
         #lod.lod_print(dict_)
         #TODO All kind of values
+
+
+    @tag("current")
+    def test_Quotes_get_quotes(self):
+        quotes=[]
+        for i in range(5):
+            quotes.append(tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(quote=i+1), status.HTTP_201_CREATED))
+        lod.lod_print(quotes)
+        
+        #Creates a dict_tupled to query massive quotes
+        d={}
+        for quote in quotes:
+            d[(79329, casts.str2dtaware(quote["datetime"]))]=None
+            
+        print (d)
+        
+        r=models.Quotes.get_quotes(d)
+        print(r)
+        
+
 
     def test_Accounts(self):
         #accounts_balance with empty database
