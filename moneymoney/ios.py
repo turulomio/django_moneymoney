@@ -553,7 +553,9 @@ class IOS:
         return { "io": io, "io_current": cur,"io_historical":hist, "data":data, "lazy_quotes":lazy_quotes, "lazy_factors": lazy_factors}
             
     @staticmethod
-    def __get_quotes_and_factors(lazy_quotes, lazy_factors):
+    def __get_quotes_and_factors_old(lazy_quotes, lazy_factors):
+        start=datetime.now()
+        print(lazy_quotes)
         for lz in lazy_quotes.keys():
             products_id, datetime_=lz
             r=models.Quotes.get_quote(products_id, datetime_)
@@ -564,7 +566,30 @@ class IOS:
         for lf in lazy_factors.keys():
             from_, to_, datetime_=lf
             lazy_factors[lf]=models.Quotes.currency_factor(datetime_, from_,  to_)
+        print(f"Factors {len(lazy_factors)}. Quotes {len (lazy_quotes)} took {datetime.now()-start}")
         return lazy_quotes, lazy_factors
+
+
+    @staticmethod
+    def __get_quotes_and_factors(lazy_quotes, lazy_factors):
+        start=datetime.now()
+        #Create lod_
+        lod_=[]        
+        
+        for lz in lazy_quotes.keys():
+            products_id, datetime_=lz
+            lod_.append({"products_id":products_id, "datetime":datetime_})
+            
+        d_quotes=models.Quotes.get_quotes(lod_)
+        for lz in lazy_quotes.keys():
+                products_id, datetime_=lz
+                lazy_quotes[lz]=d_quotes[products_id][datetime_]["quote"]
+        for lf in lazy_factors.keys():
+            from_, to_, datetime_=lf
+            lazy_factors[lf]=models.Quotes.currency_factor(datetime_, from_,  to_)
+        print(f"Factors {len(lazy_factors)}. Quotes {len (lazy_quotes)} took {datetime.now()-start}")
+        return lazy_quotes, lazy_factors
+
 
     @staticmethod
     def __set_basic_quotes_in_entries_data(t):

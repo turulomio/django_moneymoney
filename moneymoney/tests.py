@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from django.contrib.auth.models import User
 from django.test import tag
@@ -131,23 +131,29 @@ class CtTestCase(APITestCase):
         #TODO All kind of values
 
 
-    @tag("current")
     def test_Quotes_get_quotes(self):
         quotes=[]
         for i in range(5):
             quotes.append(tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(quote=i+1), status.HTTP_201_CREATED))
-        lod.lod_print(quotes)
+        #lod.lod_print(quotes)
         
         #Creates a dict_tupled to query massive quotes
         lod_=[]
+        fivedays=casts.dtaware_now()-timedelta(days=5)
         for quote in quotes:
             lod_.append({"products_id": 79329,  "datetime": casts.str2dtaware(quote["datetime"])})
+        lod_.append({"products_id":79329,  "datetime": fivedays})#Doesn't exist
+        #lod.lod_print(lod_)
         
         # Gets quotes and checks them with quotes list
         r=models.Quotes.get_quotes(lod_)
         for i in range(5):
             quotes_datetime=casts.str2dtaware(quotes[i]["datetime"])
             self.assertEqual(quotes[i]["quote"], r[79329][quotes_datetime]["quote"]   )
+            
+        self.assertEqual(r[79329][fivedays]["quote"], None)
+            
+            
             
         
 
@@ -333,7 +339,8 @@ class CtTestCase(APITestCase):
             
         with self.assertRaises(models.Investmentsoperations.DoesNotExist):
             models.Investmentsoperations.objects.get(pk=dict_io_updated["id"])
-
+            
+    @tag("current")
     def test_IOS(self):
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)

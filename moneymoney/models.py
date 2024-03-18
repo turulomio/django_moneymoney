@@ -1098,6 +1098,15 @@ class Quotes(models.Model):
                 if not d["needed_products_id"] in r:
                     r[d["needed_products_id"]]={}
                 r[d["needed_products_id"]][d["needed_datetime"]]=d
+            
+            #Sets missing queries to None
+            for needed_quote in lod_:
+                try:
+                    r[needed_quote["products_id"]][needed_quote["datetime"]]
+                except:
+                    if not needed_quote["products_id"] in r:
+                        r[needed_quote["products_id"]]={}
+                    r[needed_quote["products_id"]][needed_quote["datetime"]]={"datetime":None, "id":None, "quote":None, "needed_datetime":needed_quote["datetime"], "needed_products_id":needed_quote["products_id"]}
             return r
         else:
             return combined_qs.values()
