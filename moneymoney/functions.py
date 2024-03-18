@@ -1,4 +1,5 @@
 from django.db import connection
+from django.conf import settings
 
 def dictfetchall(cursor):
     """
@@ -9,12 +10,14 @@ def dictfetchall(cursor):
     return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
 ##  This method can be used as a function when decorators are not allowed (DRF actions)
-def show_queries_function():
+def show_queries_function(only_numbers=True):
     sum_=0
     for d in connection.queries:
-        print (f"[{d['time']}] {d['sql']}")
+        if settings.DEBUG is True and only_numbers is False:
+            print (f"[{d['time']}] {d['sql']}")
         sum_=sum_+float(d['time'])
-    print (f"{len(connection.queries)} db queries took {round(sum_*1000,2)} ms")
+    if settings.DEBUG is True:
+        print (f"{len(connection.queries)} db queries took {round(sum_*1000,2)} ms")
 
 
 
@@ -36,3 +39,14 @@ def string_oneline_object(o):
         r+=str(value)+", "
     return r[:-2]+ "]"
     
+def lod_remove_duplicates(lod_):
+    seen = set()
+    unique_dicts = []
+    for d in lod_:
+        # Convert dictionary to a tuple of its items for hashability
+        t = tuple(d.items())
+        if t not in seen:
+            seen.add(t)
+            unique_dicts.append(d)
+    print("Original",  len(lod_),  "Final",  len(unique_dicts))
+    return unique_dicts

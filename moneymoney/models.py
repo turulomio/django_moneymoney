@@ -8,12 +8,14 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
 from moneymoney import ios, functions
+from moneymoney.reusing.decorators import ptimeit
 from moneymoney.types import eConcept, eProductType, eOperationType
 from pydicts import lod_ymv, casts
 from pydicts.currency import Currency
 from requests import get
 
 Decimal
+ptimeit
 
 RANGE_RECOMENDATION_CHOICES =( 
     (1, "All"), 
@@ -1111,21 +1113,22 @@ class Quotes(models.Model):
             return None
             
     @staticmethod
-    def get_quotes(lod_,  output="dictionary"):
+    @ptimeit
+    def get_quotes(lod_):
         """
             Gets a massive quote query
             
             Parameters:
                 - lod_= [{"products_id": 79234, "datetime": ...}, ]
-                -output ="dicitionary" or "lod"
-                    -Dicitionario r[products_id][needed_datetime]   (Integer and datetime, not strings)
             
             Returns a dictionary {(products_id,datetime): quote, ....} or a lod
             
         """
         if len (lod_)==0:
             return {}
-        
+            
+        lod_=functions.lod_remove_duplicates(lod_)
+            
         list_of_qs=[]
         for needed_quote in lod_:
             list_of_qs.append(Quotes.objects.filter(products__id=needed_quote["products_id"], datetime__lte=needed_quote["datetime"]).annotate(
@@ -1137,24 +1140,20 @@ class Quotes(models.Model):
         for i in range(1, len(list_of_qs)):
             combined_qs=combined_qs.union(list_of_qs[i])
             
-        if output=="dictionary":
-            r={}
-            for d in combined_qs.values():    
-                if not d["needed_products_id"] in r:
-                    r[d["needed_products_id"]]={}
-                r[d["needed_products_id"]][d["needed_datetime"]]=d
-            
-            #Sets missing queries to None
-            for needed_quote in lod_:
-                try:
-                    r[needed_quote["products_id"]][needed_quote["datetime"]]
-                except:
-                    if not needed_quote["products_id"] in r:
-                        r[needed_quote["products_id"]]={}
-                    r[needed_quote["products_id"]][needed_quote["datetime"]]={"datetime":None, "id":None, "quote":None, "needed_datetime":needed_quote["datetime"], "needed_products_id":needed_quote["products_id"]}
-            return r
-        else:
-            return combined_qs.values()
+        r={}
+        for d in combined_qs.values():    
+            if not d["needed_products_id"] in r:
+                r[d["needed_products_id"]]={}
+            r[d["needed_products_id"]][d["needed_datetime"]]=d
+        
+        #Sets missing queries to None
+        for needed_quote in lod_:
+            if not needed_quote["products_id"] in r:
+                r[needed_quote["products_id"]]={}
+            if not needed_quote["datetime"] in r[needed_quote["products_id"]]:
+                r[needed_quote["products_id"]][needed_quote["datetime"]]={"datetime":None, "id":None, "quote":None, "needed_datetime":needed_quote["datetime"], "needed_products_id":needed_quote["products_id"]}
+                
+        return r
 
     
     

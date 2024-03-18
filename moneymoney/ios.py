@@ -263,7 +263,7 @@ class IOS:
         if mode in [IOSModes.ios_totals_sumtotals, IOSModes.totals_sumtotals]:
             for investment in qs_investments:
                 t[str(investment.id)]["data"]["name"]=investment.fullName()
-        debug("IOS FROM QS", datetime.now()-s)
+        print("IOS FROM QS", datetime.now()-s)
         return cls(t)
 
     @classmethod
@@ -297,28 +297,28 @@ class IOS:
                 "variable_percentage": i.products.percentage, 
             })
         return r
-        
-    @staticmethod
-    def __qs_investments_to_lod_ios(qs):
-        """
-            Converts a list of unsaved investmentsoperations to a lod_ios used in moneymoney_pl
-        """
-        r=[]
-        ids=tuple(qs.values_list('pk',flat=True))
-        for i, io in enumerate(models.Investmentsoperations.objects.filter(investments_id__in=ids).order_by("datetime")):
-            r.append({
-                "id":-i, 
-                "operationstypes_id": io.operationstypes.id, 
-                "investments_id": str(io.investments.id), 
-                "shares": io.shares, 
-                "taxes": io.taxes, 
-                "commission": io.commission, 
-                "price": io.price, 
-                "datetime": io.datetime, 
-                "comment": io.comment, 
-                "currency_conversion":io.currency_conversion
-            })
-        return r
+#        
+#    @staticmethod
+#    def __qs_investments_to_lod_ios(qs):
+#        """
+#            Converts a list of unsaved investmentsoperations to a lod_ios used in moneymoney_pl
+#        """
+#        r=[]
+#        ids=tuple(qs.values_list('pk',flat=True))
+#        for i, io in enumerate(models.Investmentsoperations.objects.filter(investments_id__in=ids).order_by("datetime")):
+#            r.append({
+#                "id":-i, 
+#                "operationstypes_id": io.operationstypes.id, 
+#                "investments_id": str(io.investments.id), 
+#                "shares": io.shares, 
+#                "taxes": io.taxes, 
+#                "commission": io.commission, 
+#                "price": io.price, 
+#                "datetime": io.datetime, 
+#                "comment": io.comment, 
+#                "currency_conversion":io.currency_conversion
+#            })
+#        return r
 
     @classmethod
     def from_qs_merging_io_current(cls, dt,  local_currency,  qs_investments, mode, simulation=[]):

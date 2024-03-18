@@ -689,6 +689,7 @@ class Alerts(APIView):
             )
         }, 
     )
+    @ptimeit
     def get(self, request, *args, **kwargs):
         r={}
         r["server_time"]=timezone.now()
@@ -713,6 +714,7 @@ class Alerts(APIView):
             plio=plio_inactive.d(id)
             if plio["total_io_current"]["balance_investment"]!=0:
                 r["investments_inactive_with_balance"].append(plio)
+        functions.show_queries_function()
         return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
 
 class Timezones(APIView):
@@ -774,7 +776,6 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 last_day_diff= (plio.d_basic_results(o.id)["last"]-plio.d_basic_results(o.id)["penultimate"])*plio.d_total_io_current(o.id)["shares"]*o.products.real_leveraged_multiplier()
             except:
                 last_day_diff=0
-                
 
             r.append({
                 "id": o.id,  
