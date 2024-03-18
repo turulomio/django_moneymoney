@@ -1781,19 +1781,19 @@ def ReportAnnualGainsByProductstypes(request, year):
     dt_from=casts.dtaware_year_start(year, request.user.profile.zone)
     dt_to=casts.dtaware_year_end(year, request.user.profile.zone)
 
-    plio=ios.IOS.from_all( dt_to, request.user.profile.currency, ios.IOSModes.ios_totals_sumtotals)
     
     # Initializate dict_dividends_by_producttype
     dict_dividends_by_producttype={}
-    productstypes=models.Productstypes.all()
+    productstypes=models.Productstypes.objects.all()
     for pt in productstypes:
         dict_dividends_by_producttype[pt.id]={"net":0, "gross":0}
     
     # Load dividends net and gross
-    for dividend in models.Dividends.objects.filter(datetime__year=year).select_related("investments__products__producttypes"):
+    for dividend in models.Dividends.objects.filter(datetime__year=year).select_related("investments__products__productstypes"):
         dict_dividends_by_producttype[dividend.investments.products.productstypes.id]["gross"]+=dividend.gross
         dict_dividends_by_producttype[dividend.investments.products.productstypes.id]["net"]+=dividend.net
 
+    plio=ios.IOS.from_all( dt_to, request.user.profile.currency, ios.IOSModes.ios_totals_sumtotals)
     l=[]
     for pt in productstypes:
         gains_net=plio.io_historical_sum_between_dt(dt_from, dt_to, "gains_net_user", pt.id)

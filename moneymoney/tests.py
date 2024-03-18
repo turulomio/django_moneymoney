@@ -122,15 +122,16 @@ class CtTestCase(APITestCase):
         self.user_authorized_1.profile.save()
         self.assertEqual(self.user_authorized_1.profile.favorites.count(), 1)        
 
-    @tag("current")
     def test_ReportAnnualIncomeDetails(self):
-        # Empty
         tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/details/{today_year}/{today_month}/", status.HTTP_200_OK)
-        
-        
+
+    @tag("current")
+    def test_ReportAnnualGainsByProductstypes(self):
+        tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/gainsbyproductstypes/{today_year}/", status.HTTP_200_OK)
+        #lod.lod_print(dict_)
+        #TODO All kind of values
 
     def test_Accounts(self):
-        
         #accounts_balance with empty database
         qs_accounts=models.Accounts.objects.filter(active=True)
         r=models.Accounts.accounts_balance(qs_accounts, timezone.now(), 'EUR')
