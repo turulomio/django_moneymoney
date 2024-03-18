@@ -253,8 +253,7 @@ class IOS:
         
         t=IOS.__calculate_ios_lazy(dt, lod_investments,  lod_,  local_currency)
         
-        t["r_lazy_quotes"]=models.Quotes.get_quotes(t["lod_lazy_quotes"])
-        IOS.__set_basic_results(t)
+        t["r_lazy_quotes"]=IOS.__get_all_quotes(t)
         
         t=IOS.__calculate_ios_finish(t, mode)
         t["type"]=IOSTypes.from_qs
@@ -406,8 +405,7 @@ class IOS:
             t[str(products_id)]["io_historical"]=lod.lod_order_by(t[str(products_id)]["io_historical"], "dt_end")
             
         # I make ios_finish after to get old io_historical too in results
-        t["r_lazy_quotes"]=models.Quotes.get_quotes(t["lod_lazy_quotes"])
-        IOS.__set_basic_results(t)
+        t["r_lazy_quotes"]=IOS.__get_all_quotes(t)
         
         t=IOS.__calculate_ios_finish(t, mode)
         
@@ -730,7 +728,10 @@ class IOS:
         return 4 if shares>=0 else 5
 
     @staticmethod
-    def __set_basic_results( t):
+    def __get_all_quotes( t):       
+        """
+            Makes Three queries 2 for basic_results 1 for the rest. I thin It's not necesary to join in 2. They are different
+        """
         products_ids=set()
         for entry in t["entries"]:
             products_ids.add(t[str(entry)]["data"]["products_id"])
@@ -738,6 +739,8 @@ class IOS:
         r_basic_results=models.Products.basic_results_from_list_of_products_id(products_ids)
         for entry in t["entries"]:
             t[entry]["data"]["basic_results"]=r_basic_results[int(t[entry]["data"]["products_id"])]
+            
+        return models.Quotes.get_quotes(t["lod_lazy_quotes"])
 
     ## lod_investments query ivestments
     ## lod_ios query investmentsoperations of investments

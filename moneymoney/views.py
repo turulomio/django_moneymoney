@@ -466,9 +466,9 @@ class OrdersViewSet(viewsets.ModelViewSet):
                 "shares": o.shares, 
                 "price": o.price, 
                 "amount": o.shares*o.price*o.investments.products.real_leveraged_multiplier(), 
-                "percentage_from_price": percentage_between(o.investments.products.quote_last().quote, o.price),
+                "percentage_from_price": percentage_between(o.investments.products.basic_results()["last"], o.price),
                 "executed": o.executed,  
-                "current_price": o.investments.products.quote_last().quote, 
+                "current_price": o.investments.products.basic_results()["last"], 
             })
         return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
@@ -1207,8 +1207,8 @@ def ProductsPairs(request):
     
     
     r={}
-    r["product_a"]={"name":product_better.fullName(), "currency": product_better.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_better.id, ))), "current_price": product_better.quote_last().quote}
-    r["product_b"]={"name":product_worse.fullName(), "currency": product_worse.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_worse.id, ))), "current_price": product_worse.quote_last().quote}
+    r["product_a"]={"name":product_better.fullName(), "currency": product_better.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_better.id, ))), "current_price": product_better.basic_results()["last"]}
+    r["product_b"]={"name":product_worse.fullName(), "currency": product_worse.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_worse.id, ))), "current_price": product_worse.basic_results()["last"]}
     r["data"]=[]
     if len(common_quotes)>0:
         first_pr=common_quotes[0]["quote_b"]/common_quotes[0]["quote_a"]
@@ -1363,12 +1363,12 @@ class ProductsViewSet(viewsets.ModelViewSet):
                 row={}
                 row['id']=p.id
                 row["product"]=p.hurl(request, p.id)
-                row["last_datetime"]=None if p.quote_last() is None else p.quote_last().datetime
-                row["last"]=None if p.quote_last() is None else p.quote_last().quote
-                row["penultimate_datetime"]=None if p.quote_penultimate() is None else p.quote_penultimate().datetime
-                row["penultimate"]=None if p.quote_penultimate() is None else p.quote_penultimate().quote
-                row["lastyear_datetime"]=None if p.quote_lastyear() is None else p.quote_lastyear().datetime
-                row["lastyear"]=None if p.quote_lastyear() is None else p.quote_lastyear().quote
+                row["last_datetime"]=None if p.quote_last() is None else p.basic_results()["last_datetime"]
+                row["last"]=None if p.quote_last() is None else p.basic_results()["last"]
+                row["penultimate_datetime"]=None if p.quote_penultimate() is None else p.basic_results()["penultimate_datetime"]
+                row["penultimate"]=None if p.quote_penultimate() is None else p.basic_results()["penultimate"]
+                row["lastyear_datetime"]=None if p.quote_lastyear() is None else p.basic_results()["lastyear_datetime"]
+                row["lastyear"]=None if p.quote_lastyear() is None else p.basic_results()["lastyear"]
                 row["percentage_last_year"]=None if row["lastyear"] is None else Percentage(row["last"]-row["lastyear"], row["lastyear"])
                 rows.append(row)
             return JsonResponse( rows,  encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
@@ -1906,14 +1906,14 @@ def ReportDividends(request):
         else:
             dps=estimation.estimation
             date_estimation=estimation.date_estimation
-            percentage=Percentage(dps, inv.products.quote_last().quote)
+            percentage=Percentage(dps, inv.products.basic_results()["last"])
             estimated=shares*dps*inv.products.real_leveraged_multiplier()
             
         
         d={
             "product": inv.products.hurl(request, inv.products.id), 
             "name":  inv.fullName(), 
-            "current_price": inv.products.quote_last().quote, 
+            "current_price": inv.products.basic_results()["last"], 
             "dps": dps, 
             "shares": shares, 
             "date_estimation": date_estimation, 

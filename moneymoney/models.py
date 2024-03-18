@@ -773,9 +773,9 @@ class Orders(models.Model):
             
         
     def needs_stop_loss_warning(self):
-        if self.shares>0 and self.price>self.investments.products.quote_last().quote:
+        if self.shares>0 and self.price>self.investments.products.basic_results()["last"]:
             return True
-        elif  self.shares<0 and self.price<self.investments.products.quote_last().quote:
+        elif  self.shares<0 and self.price<self.investments.products.basic_results()["last"]:
             return True
         return False
 
@@ -837,99 +837,15 @@ class Products(models.Model):
 
     def fullName(self):
         return "{} ({})".format(self.name, _(self.stockmarkets.name))
-        
-        
-    def quote_last(self):
-        """
-            Returns an object
-        """
-        if hasattr(self, "_quote_last") is False:
-            self._quote_last=Quotes.get_quote(self.id, timezone.now())
-        return self._quote_last
-        
-    def quote_penultimate(self):
-        """
-            Returns an object
-        """
-        if self.quote_last() is None:
-            return None
-        if hasattr(self, "_quote_penultimate") is False:
-            dt_penultimate=casts.dtaware_day_end_from_date(self.quote_last().datetime.date()-timedelta(days=1), 'UTC')#Better utc to assure
-            self._quote_penultimate=Quotes.get_quote(self.id, dt_penultimate)
-        return self._quote_penultimate
-        
-
-    def quote_lastyear(self):
-        """
-            Returns an object
-        """
-        if self.quote_last() is None:
-            return None
-        if hasattr(self, "_quote_lastyear") is False:
-            dt_lastyear=casts.dtaware_year_end(self.quote_last().datetime.year-1, 'UTC')
-            self._quote_lastyear=Quotes.get_quote(self.id, dt_lastyear)
-        return self._quote_lastyear
-        
 
     def basic_results(self):
-        r={
-            "id":self.id, 
-            "last_datetime":None, 
-            "last": None, 
-            "penultimate_datetime": None, 
-            "penultimate": None, 
-            "lastyear_datetime": None, 
-            "lastyear": None, 
-        }
-        if self.quote_last() is not None:
-            r["last_datetime"]=self.quote_last().datetime
-            r["last"]=self.quote_last().quote
-            if self.quote_penultimate() is not None:
-                r["penultimate_datetime"]=self.quote_penultimate().datetime
-                r["penultimate"]=self.quote_penultimate().quote
-                if self.quote_lastyear() is not None:
-                    r["lastyear_datetime"]=self.quote_lastyear().datetime
-                    r["lastyear"]=self.quote_lastyear().quote
-        return r
-        
-        
-    @staticmethod
-    def basic_results_from_products_id(products_id):
         """
-            Sometimes I only hava an id. PL Investments OPerations
+            Returns a dictionary as defined in basic_results_from_list_of_products_id
         """
-#        #Makes a lod for Quotes.get_quotes
-#        lod_=[]
-#        lod
-        
-        
-        dt= timezone.now()
-        r={
-            "id":products_id, 
-            "last_datetime":None, 
-            "last": None, 
-            "penultimate_datetime": None, 
-            "penultimate": None, 
-            "lastyear_datetime": None, 
-            "lastyear": None, 
-        }
-        quote_last=Quotes.get_quote(products_id, dt)
-        if quote_last is not None:
-            r["last_datetime"]=quote_last.datetime
-            r["last"]=quote_last.quote
-            dt_penultimate=casts.dtaware_day_end_from_date(quote_last.datetime.date()-timedelta(days=1), 'UTC')#Better utc to assure
-            quote_penultimate=Quotes.get_quote(products_id, dt_penultimate)
-            if quote_penultimate is not None:
-                r["penultimate_datetime"]=quote_penultimate.datetime
-                r["penultimate"]=quote_penultimate.quote
-                dt_lastyear=casts.dtaware_year_end(dt.year-1, 'UTC')
-                quote_lastyear=Quotes.get_quote(products_id, dt_lastyear)
-                if quote_lastyear is not None:
-                    r["lastyear_datetime"]=quote_lastyear.datetime
-                    r["lastyear"]=quote_lastyear.quote
-        return r
-        
-        
+        if hasattr(self, "_basic_results") is False:
+            self._basic_results=Quotes.basic_results_from_list_of_products_id([self.id, ])
+        return self._basic_results
+
     @staticmethod
     def basic_results_from_list_of_products_id(list_products_id):
         """
@@ -1033,10 +949,6 @@ class Products(models.Model):
     def next_system_products_id():
         return Products.objects.filter(id__lt=10000000).order_by("-id")[0].id+1
 
-        
-    def next_personal_products_id(self):
-        return
-
 class Productspairs(models.Model):
     name = models.CharField(max_length=200, blank=False, null=False)
     a = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='products')
@@ -1136,7 +1048,7 @@ class Quotes(models.Model):
             needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
             ).order_by("-datetime")[:1])
             
-        ## Multiples queries
+        ## Multiples queries  FASTER
         combined_qs=[]
         for qs in list_of_qs:
             tmplod=qs.values()
@@ -1144,7 +1056,6 @@ class Quotes(models.Model):
                 combined_qs.append(tmplod[0])
         r={}
         for d in combined_qs:    
-            print(d)
             if not d["needed_products_id"] in r:
                 r[d["needed_products_id"]]={}
             r[d["needed_products_id"]][d["needed_datetime"]]=d
