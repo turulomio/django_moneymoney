@@ -139,14 +139,16 @@ class CtTestCase(APITestCase):
         lod.lod_print(quotes)
         
         #Creates a dict_tupled to query massive quotes
-        d={}
+        lod_=[]
         for quote in quotes:
-            d[(79329, casts.str2dtaware(quote["datetime"]))]=None
-            
-        print (d)
+            lod_.append({"products_id": 79329,  "datetime": casts.str2dtaware(quote["datetime"])})
         
-        r=models.Quotes.get_quotes(d)
-        print(r)
+        # Gets quotes and checks them with quotes list
+        r=models.Quotes.get_quotes(lod_)
+        for i in range(5):
+            quotes_datetime=casts.str2dtaware(quotes[i]["datetime"])
+            self.assertEqual(quotes[i]["quote"], r[79329][quotes_datetime]["quote"]   )
+            
         
 
 
