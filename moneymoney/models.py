@@ -844,13 +844,7 @@ class Products(models.Model):
         """
         if hasattr(self, "_basic_results") is False:
             br=Products.basic_results_from_list_of_products_id([self.id, ])
-            self._basic_results={}
-            self._basic_results["last"]=br[self.id]["last"]
-            self._basic_results["last_datetime"]=br[self.id]["last_datetime"]
-            self._basic_results["penultimate"]=br[self.id]["penultimate"]
-            self._basic_results["penultimate_datetime"]=br[self.id]["penultimate_datetime"]
-            self._basic_results["lastyear"]=br[self.id]["lastyear"]
-            self._basic_results["lastyear_datetime"]=br[self.id]["lastyear_datetime"]
+            self._basic_results=br[self.id]
         return self._basic_results
 
     @staticmethod
