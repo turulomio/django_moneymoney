@@ -1135,16 +1135,32 @@ class Quotes(models.Model):
             needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()), 
             needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
             ).order_by("-datetime")[:1])
-        
-        combined_qs=list_of_qs[0]
-        for i in range(1, len(list_of_qs)):
-            combined_qs=combined_qs.union(list_of_qs[i])
             
+        ## Multiples queries
+        combined_qs=[]
+        for qs in list_of_qs:
+            tmplod=qs.values()
+            if len(tmplod)>0:
+                combined_qs.append(tmplod[0])
         r={}
-        for d in combined_qs.values():    
+        for d in combined_qs:    
+            print(d)
             if not d["needed_products_id"] in r:
                 r[d["needed_products_id"]]={}
             r[d["needed_products_id"]][d["needed_datetime"]]=d
+            
+
+        ## Union Queries SLOWER
+#        
+#        combined_qs=Quotes.objects.none()
+#        for i in range(len(list_of_qs)):
+#            combined_qs=combined_qs.union(list_of_qs[i])
+#            
+#        r={}
+#        for d in combined_qs.values():    
+#            if not d["needed_products_id"] in r:
+#                r[d["needed_products_id"]]={}
+#            r[d["needed_products_id"]][d["needed_datetime"]]=d
         
         #Sets missing queries to None
         for needed_quote in lod_:
