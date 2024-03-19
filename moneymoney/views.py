@@ -497,7 +497,7 @@ class StrategiesViewSet(viewsets.ModelViewSet):
         serializer = serializers.StrategiesSerializer(self.queryset, many=True, context={'request': request})
         return Response(serializer.data)
 
-    @action(detail=False, methods=["get"], name='List investments with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
+    @action(detail=False, methods=["get"], name='List strategies with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
     def withbalance(self, request): 
         active=RequestBool(request, 'active')
         if active is None:
@@ -510,7 +510,6 @@ class StrategiesViewSet(viewsets.ModelViewSet):
 
         r=[]
         for strategy in qs:
-            dividends_net_user=0
             plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.investments_queryset(), 1)
 
             gains_current_net_user=plio.sum_total_io_current()["gains_net_user"]
@@ -526,7 +525,7 @@ class StrategiesViewSet(viewsets.ModelViewSet):
                 "gains_current_net_user":  gains_current_net_user,  
                 "gains_historical_net_user": gains_historical_net_user, 
                 "dividends_net_user": lod.lod_sum(lod_dividends_net_user, "total"), 
-                "total_net_user":gains_current_net_user + gains_historical_net_user + dividends_net_user, 
+                "total_net_user":gains_current_net_user + gains_historical_net_user + lod.lod_sum(lod_dividends_net_user, "total"), 
                 "investments":strategy.investments_ids(), 
                 "type": strategy.type, 
                 "comment": strategy.comment, 
@@ -541,7 +540,7 @@ class StrategiesViewSet(viewsets.ModelViewSet):
                 "additional9": strategy.additional9, 
                 "additional10": strategy.additional10, 
             })
-        return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+        return Response(r)
         
     @action(detail=True, methods=["get"], name='Gets a plio_id from strategy investments', url_path="plio_id", url_name='plio_id', permission_classes=[permissions.IsAuthenticated])
     def plio_id(self, request, pk=None): 
