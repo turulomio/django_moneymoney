@@ -1026,7 +1026,7 @@ class Quotes(models.Model):
             return None
             
     @staticmethod
-    @ptimeit
+#    @ptimeit
     def get_quotes(lod_):
         """
             Gets a massive quote query
