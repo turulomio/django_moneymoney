@@ -1,5 +1,7 @@
 from django.db import connection
 from django.conf import settings
+from rest_framework.test import APIRequestFactory
+from rest_framework.request import Request
 
 def dictfetchall(cursor):
     """
@@ -50,3 +52,33 @@ def lod_remove_duplicates(lod_):
             unique_dicts.append(d)
 #    print("Original",  len(lod_),  "Final",  len(unique_dicts))
     return unique_dicts
+
+
+def internal_modelviewset_request(modelviewset, method, params):
+    """
+        Used to create requests to call views from other views
+    """
+    if method=="list":
+        factory=APIRequestFactory()
+        request=factory.get('/fakepath/')
+        params=request.GET.copy()
+        for k, v in params.items():
+            params[k]=v
+        request.GET=params
+        drf_request=Request(request) #Convert to a drf request
+        
+        viewset=modelviewset() #Instanciated
+        viewset.request=drf_request
+        viewset.format_kwarg=None
+        viewset.action=method
+        r=viewset.list(drf_request)
+#        print(r, r.__class__)
+#        from json import dumps
+#        return dumps(r.content)
+
+#        if r.__class__=
+        from json import loads
+        return loads(r.content.decode("utf-8"))
+        
+        
+        

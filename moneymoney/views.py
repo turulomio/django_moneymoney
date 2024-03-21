@@ -695,24 +695,27 @@ class Alerts(APIView):
         
         #Expired orders calling other viewset from this viewsets
         r["expired_days"]=7
-        r["orders_expired"]=models.requests_get(request.build_absolute_uri(reverse('orders-list'))+f"?expired_days={r['expired_days']}", request).json()
         
+        r["orders_expired"]=functions.internal_modelviewset_request(OrdersViewSet, "list", {"expired_days":r["expired_days"]})
+#        r["orders_expired"]=models.requests_get(request.build_absolute_uri(reverse('orders-list'))+f"?expired_days={r['expired_days']}", request).json()
         
-        # Get all inactive accounts status
-        r["accounts_inactive_with_balance"]=[]
-        lod_accounts=models.requests_get(request.build_absolute_uri(reverse('accounts-list'))+"withbalance/?active=false", request).json()
-        for d in lod_accounts:
-            if d["balance_account"]!=0:
-                r["accounts_inactive_with_balance"].append(d)
-
-        # Get all investments status
-        r["investments_inactive_with_balance"]=[]
-        qs=models.Investments.objects.filter(active=False)
-        plio_inactive=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, qs,  2)
-        for id in plio_inactive.entries():
-            plio=plio_inactive.d(id)
-            if plio["total_io_current"]["balance_investment"]!=0:
-                r["investments_inactive_with_balance"].append(plio)
+#        
+#        # Get all inactive accounts status
+#        r["accounts_inactive_with_balance"]=[]
+##        lod_accounts=models.requests_get(request.build_absolute_uri(reverse('accounts-list'))+"withbalance/?active=false", request).json()
+#        lod_accounts=functions.internal_modelviewset_request(AccountsViewSet, "withbalance", {"active":False})
+#        for d in lod_accounts:
+#            if d["balance_account"]!=0:
+#                r["accounts_inactive_with_balance"].append(d)
+#
+#        # Get all investments status
+#        r["investments_inactive_with_balance"]=[]
+#        qs=models.Investments.objects.filter(active=False)
+#        plio_inactive=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, qs,  2)
+#        for id in plio_inactive.entries():
+#            plio=plio_inactive.d(id)
+#            if plio["total_io_current"]["balance_investment"]!=0:
+#                r["investments_inactive_with_balance"].append(plio)
         functions.show_queries_function()
         return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
 

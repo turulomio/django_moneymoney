@@ -339,8 +339,7 @@ class CtTestCase(APITestCase):
             
         with self.assertRaises(models.Investmentsoperations.DoesNotExist):
             models.Investmentsoperations.objects.get(pk=dict_io_updated["id"])
-            
-    @tag("current")
+
     def test_IOS(self):
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
@@ -370,9 +369,6 @@ class CtTestCase(APITestCase):
         ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals, simulation) #Makes simulation
 #        ios_.print_d(1)
 
-        
-        
-        
         #IOS.from_merging_io_current
         ## Adding a new investment and new investmentsoperations with same product
         dict_investment_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
@@ -450,7 +446,19 @@ class CtTestCase(APITestCase):
         self.assertEqual(len(dict_historical_report_empty["cco"]), 0)
         # Bad request
         tests_helpers.client_get(self, self.client_authorized_1, "http://testserver/api/concepts/1/historical_report_detail/", status.HTTP_400_BAD_REQUEST)
-                
+    
+    @tag("current")
+    def test_Alerts(self):
+        #Create an expired order
+        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(products=dict_investment["products"]), status.HTTP_201_CREATED)
+        tests_helpers.common_tests_Collaborative(self, "/api/orders/", models.Orders.post_payload(investments=dict_investment["url"], expiration=today), self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
+
+        
+        lod_alerts=tests_helpers.client_get(self, self.client_authorized_1, "/alerts/",  status.HTTP_200_OK)
+        print(lod_alerts)
+
+        
 
     def test_AssetsReport(self):
         tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(datetime=datetime(2023,12,29), amount=1000), status.HTTP_201_CREATED)
