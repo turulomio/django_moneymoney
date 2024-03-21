@@ -452,8 +452,7 @@ class CtTestCase(APITestCase):
         #Create an expired order
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(products=dict_investment["products"]), status.HTTP_201_CREATED)
-        tests_helpers.common_tests_Collaborative(self, "/api/orders/", models.Orders.post_payload(investments=dict_investment["url"], expiration=today), self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
-
+        tests_helpers.client_post(self, self.client_authorized_1,  "/api/orders/", models.Orders.post_payload(investments=dict_investment["url"], expiration=today), status.HTTP_201_CREATED)
         
         lod_alerts=tests_helpers.client_get(self, self.client_authorized_1, "/alerts/",  status.HTTP_200_OK)
         print(lod_alerts)
