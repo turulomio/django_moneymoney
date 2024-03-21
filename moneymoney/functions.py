@@ -1,5 +1,10 @@
 from django.db import connection
 from django.conf import settings
+from django.http.response import JsonResponse
+from json import loads
+from rest_framework.response import Response
+from rest_framework.test import APIRequestFactory
+from rest_framework.request import Request
 
 def dictfetchall(cursor):
     """
@@ -50,3 +55,52 @@ def lod_remove_duplicates(lod_):
             unique_dicts.append(d)
 #    print("Original",  len(lod_),  "Final",  len(unique_dicts))
     return unique_dicts
+
+
+def internal_modelviewset_request(modelviewset, method, params,  params_method, user=None):
+    """
+        Used to create requests to call views from other views
+        Parameters:
+            modelviewset: ModelViewSEt Class
+            method: String with the method list, ....
+            params: dictionary with params key: value
+            params_method: Where params should go, GET, data ....
+            user: User for authenticated methods
+        
+    """
+    factory=APIRequestFactory()
+    request=factory.get('/fakepath/')
+    if params_method=="GET":
+        new_params=request.GET.copy()
+        for k, v in params.items():
+            new_params[k]=v
+        request.GET=new_params
+    
+    #Convert to a drf request
+    drf_request=Request(request) #Convert to a drf request
+    
+    #Set user authentication
+    if user is not None:
+        request.user=user
+        drf_request.user=user
+    
+    #Call viewset
+    viewset=modelviewset() #Instanciated
+    viewset.request=drf_request
+    viewset.format_kwarg=None
+    viewset.action=method
+    
+    #Call method by name
+    r=getattr(viewset, method)(drf_request)
+    #r=viewset.list(drf_request)
+#    print(r, r.__class__)
+
+    if r.__class__==JsonResponse:
+        return loads(r.content.decode("utf-8"))
+    elif r.__class__==Response:
+        return r.json()
+    else:
+        raise Exception("Error returning in internal_modelviewset_request")
+        
+        
+        
