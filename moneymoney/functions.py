@@ -54,31 +54,38 @@ def lod_remove_duplicates(lod_):
     return unique_dicts
 
 
-def internal_modelviewset_request(modelviewset, method, params):
+def internal_modelviewset_request(modelviewset, method, params,  params_method):
     """
         Used to create requests to call views from other views
-    """
-    if method=="list":
-        factory=APIRequestFactory()
-        request=factory.get('/fakepath/')
-        params=request.GET.copy()
-        for k, v in params.items():
-            params[k]=v
-        request.GET=params
-        drf_request=Request(request) #Convert to a drf request
+        Parameters:
+            modelviewset: ModelViewSEt Class
+            method: String with the method list, ....
+            params: dictionary with params key: value
+            params_method: Where params should go, GET, data ....
         
-        viewset=modelviewset() #Instanciated
-        viewset.request=drf_request
-        viewset.format_kwarg=None
-        viewset.action=method
-        r=viewset.list(drf_request)
+    """
+    factory=APIRequestFactory()
+    request=factory.get('/fakepath/')
+    if params_method=="GET":
+        new_params=request.GET.copy()
+        for k, v in params.items():
+            new_params[k]=v
+        print("Internal·",  new_params)
+        request.GET=new_params
+    drf_request=Request(request) #Convert to a drf request
+    
+    viewset=modelviewset() #Instanciated
+    viewset.request=drf_request
+    viewset.format_kwarg=None
+    viewset.action=method
+    r=viewset.list(drf_request)
 #        print(r, r.__class__)
 #        from json import dumps
 #        return dumps(r.content)
 
 #        if r.__class__=
-        from json import loads
-        return loads(r.content.decode("utf-8"))
+    from json import loads
+    return loads(r.content.decode("utf-8"))
         
         
         

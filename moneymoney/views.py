@@ -431,6 +431,7 @@ class OrdersViewSet(viewsets.ModelViewSet):
 ],
     )
     def list(self, request):  
+        print(request.GET)
         active=RequestBool(self.request, 'active')
         expired=RequestBool(self.request, 'expired')
         expired_days=RequestInteger(self.request, 'expired_days')
@@ -696,7 +697,7 @@ class Alerts(APIView):
         #Expired orders calling other viewset from this viewsets
         r["expired_days"]=7
         
-        r["orders_expired"]=functions.internal_modelviewset_request(OrdersViewSet, "list", {"expired_days":r["expired_days"]})
+        r["orders_expired"]=functions.internal_modelviewset_request(OrdersViewSet, "list", {"expired_days":r["expired_days"]}, params_method="GET")
 #        r["orders_expired"]=models.requests_get(request.build_absolute_uri(reverse('orders-list'))+f"?expired_days={r['expired_days']}", request).json()
         
 #        
