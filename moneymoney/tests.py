@@ -1,6 +1,7 @@
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.test import tag
 from django.utils import timezone
 from json import loads
@@ -171,10 +172,7 @@ class CtTestCase(APITestCase):
         qs_accounts=models.Accounts.objects.filter(active=True)
         r=models.Accounts.accounts_balance(qs_accounts, timezone.now(), 'EUR')
         self.assertEqual(r["balance_user_currency"], 1000)
-        
-        
 
-    @tag("current")
     def test_Accountsoperations_associated_fields(self):
         #Add a investment operation to check associated_io
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
@@ -188,8 +186,8 @@ class CtTestCase(APITestCase):
         dict_associated_ao_with_associated_dividend=tests_helpers.client_get(self, self.client_authorized_1, dict_dividend["accountsoperations"],  status.HTTP_200_OK)
         self.assertEqual(dict_associated_ao_with_associated_dividend["associated_dividend"], dict_dividend["url"])
 
-        
-    def test_Accountstransfers(self):
+    @tag("current")
+    def test_Accountstransfers(self):        
         tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
         dict_destiny=tests_helpers.client_post(self, self.client_authorized_1, "/api/accounts/",  models.Accounts.post_payload(), status.HTTP_201_CREATED)
 
@@ -216,6 +214,16 @@ class CtTestCase(APITestCase):
         with self.assertRaises(models.Accountstransfers.DoesNotExist):
             models.Accountstransfers.objects.get(id=dict_transfer["id"])
         self.assertEqual(models.Accountsoperations.objects.filter(associated_transfer__id=dict_transfer["id"]).count(), 0)
+        
+        #Check minvaluevalidator works with full_clean in save()
+        t=models.Accountstransfers()
+        t.datetime=timezone.now()
+        t.origin_id=4
+        t.destiny_id=dict_destiny["id"]
+        t.amount=-1000
+        t.commission=-3
+        with self.assertRaises(ValidationError):
+            t.save()
 
     def test_Investments(self):
         dict_account=tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)

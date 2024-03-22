@@ -1254,6 +1254,7 @@ class Accountstransfers(models.Model):
         
     @transaction.atomic
     def save(self, *args, **kwargs):
+        self.full_clean() #Used to apply validations
         if self.id is not None:
             Accountsoperations.objects.filter(associated_transfer=self.id).delete()
         
@@ -1281,7 +1282,7 @@ class Accountstransfers(models.Model):
             self.ao_commission.amount=-self.commission
             self.ao_commission.comment=self.comment
             self.ao_commission.save()
-
+        
         super().save(*args, **kwargs)
         self.ao_origin.associated_transfer=self
         self.ao_origin.save()
