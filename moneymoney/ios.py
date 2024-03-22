@@ -243,7 +243,7 @@ class IOS:
             
                 {'id': 3, 'operationstypes_id': 4, 'investments_id': 2, 'shares': Decimal('1000.000000'), 'taxes': Decimal('0.00'), 'commission': Decimal('0.00'), 'price': Decimal('10.000000'), 'datetime': datetime.datetime(2023, 7, 23, 6, 4, 4, 934773, tzinfo=datetime.timezone.utc), 'comment': '', 'currency_conversion': Decimal('1.0000000000')}
         """
-        s=datetime.now()
+#        s=datetime.now()
         qs_investments=qs_investments.select_related("products", "products__leverages", "products__productstypes", "accounts")
         lod_investments=IOS.__qs_investments_to_lod(qs_investments, local_currency)
         lod_=models.Investmentsoperations.objects.filter(investments__in=qs_investments, datetime__lte=dt).order_by("datetime").values()
@@ -262,7 +262,7 @@ class IOS:
         if mode in [IOSModes.ios_totals_sumtotals, IOSModes.totals_sumtotals]:
             for investment in qs_investments:
                 t[str(investment.id)]["data"]["name"]=investment.fullName()
-        print("IOS FROM QS", datetime.now()-s)
+#        print("IOS FROM QS", datetime.now()-s)
         return cls(t)
 
     @classmethod
