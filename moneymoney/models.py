@@ -497,6 +497,10 @@ class Dividends(models.Model):
             "currency_conversion":currency_conversion, 
         }
 
+    @staticmethod
+    def hurl(request, id):
+        return request.build_absolute_uri(reverse('dividends-detail', args=(id, )))
+        
     @transaction.atomic
     def delete(self):
         self.accountsoperations.delete()
@@ -672,6 +676,9 @@ class Investmentsoperations(models.Model):
     def __str__(self):
         return "InvestmentOperation"
 
+    @staticmethod
+    def hurl(request, id):
+        return request.build_absolute_uri(reverse('investmentsoperations-detail', args=(id, )))
 
     @staticmethod
     def post_payload(investments="http://testserver/api/investments/1/", datetime=timezone.now(), shares=1000, price=10,  taxes=0, commission=0,  operationstypes="http://testserver/api/operationstypes/4/", currency_conversion=1):
