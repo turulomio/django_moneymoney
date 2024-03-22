@@ -176,7 +176,6 @@ class CtTestCase(APITestCase):
 
     @tag("current")
     def test_Accountsoperations_associated_fields(self):
-        
         #Add a investment operation to check associated_io
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)        
@@ -185,6 +184,10 @@ class CtTestCase(APITestCase):
         self.assertEqual(dict_associated_ao_with_associated_io["associated_io"], dict_io["url"])
         
         #Add a dividend to check associated_dividend
+        dict_dividend=tests_helpers.client_post(self, self.client_authorized_1, "/api/dividends/",  models.Dividends.post_payload(investments=dict_investment["url"]), status.HTTP_201_CREATED)
+        dict_associated_ao_with_associated_dividend=tests_helpers.client_get(self, self.client_authorized_1, dict_dividend["accountsoperations"],  status.HTTP_200_OK)
+        self.assertEqual(dict_associated_ao_with_associated_dividend["associated_dividend"], dict_dividend["url"])
+
         
     def test_Accountstransfers(self):
         tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)

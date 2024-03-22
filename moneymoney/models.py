@@ -497,6 +497,10 @@ class Dividends(models.Model):
             "currency_conversion":currency_conversion, 
         }
 
+    @staticmethod
+    def hurl(request, id):
+        return request.build_absolute_uri(reverse('dividends-detail', args=(id, )))
+        
     @transaction.atomic
     def delete(self):
         self.accountsoperations.delete()
