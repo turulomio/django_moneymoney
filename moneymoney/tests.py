@@ -123,9 +123,20 @@ class CtTestCase(APITestCase):
         self.user_authorized_1.profile.save()
         self.assertEqual(self.user_authorized_1.profile.favorites.count(), 1)        
 
+    @tag("current")
+    def test_ReportAnnual(self):
+        report=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/{today_year}/", status.HTTP_200_OK)
+        lod.lod_print(report ["data"])
+
+    @tag("current")
+    def test_ReportAnnualIncome(self):
+        report=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/{today_year}/", status.HTTP_200_OK)
+        lod.lod_print(report )
+    
     def test_ReportAnnualIncomeDetails(self):
         tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/details/{today_year}/{today_month}/", status.HTTP_200_OK)
 
+    @tag("current")
     def test_ReportAnnualGainsByProductstypes(self):
         tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/gainsbyproductstypes/{today_year}/", status.HTTP_200_OK)
         #lod.lod_print(dict_)
@@ -186,7 +197,6 @@ class CtTestCase(APITestCase):
         dict_associated_ao_with_associated_dividend=tests_helpers.client_get(self, self.client_authorized_1, dict_dividend["accountsoperations"],  status.HTTP_200_OK)
         self.assertEqual(dict_associated_ao_with_associated_dividend["associated_dividend"], dict_dividend["url"])
 
-    @tag("current")
     def test_Accountstransfers(self):        
         tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
         dict_destiny=tests_helpers.client_post(self, self.client_authorized_1, "/api/accounts/",  models.Accounts.post_payload(), status.HTTP_201_CREATED)

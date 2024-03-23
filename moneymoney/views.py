@@ -1598,9 +1598,8 @@ def RecomendationMethods(request):
 @permission_classes([permissions.IsAuthenticated, ])
 
 def ReportAnnual(request, year):
-    def month_results(month_end, month_name, local_currency):
-        return month_end, month_name, models.Assets.pl_total_balance(month_end, local_currency)
-        
+    def month_results(month, month_name, local_currency):
+        return month, month_name, models.Assets.pl_total_balance(casts.dtaware_month_end(year, month, request.user.profile.zone), local_currency)
     #####################
     
     dtaware_last_year=casts.dtaware_year_end(year-1, request.user.profile.zone)
@@ -1623,16 +1622,16 @@ def ReportAnnual(request, year):
         (_("November"), 11), 
         (_("December"), 12), 
     ):
-        month_end=casts.dtaware_month_end(year, month, request.user.profile.zone)
-        future= month_results(month_end,  month_name, request.user.profile.currency)
+        if year==date.today().year and month>date.today().month:
+            continue
+        future= month_results(month,  month_name, request.user.profile.currency)
         futures.append(future)
-
-    futures= sorted(futures, key=lambda future: future[0])#month_end
+        
     last_month=last_year['total_user']
     for future in futures:
-        month_end, month_name,  total = future
+        month, month_name,  total = future
         list_.append({
-            "month_number":month_end, 
+            "month_number":month, 
             "month": month_name,
             "account_balance":total['accounts_user'], 
             "investment_balance":total['investments_user'], 
@@ -1644,13 +1643,9 @@ def ReportAnnual(request, year):
         
     r={"last_year_balance": last_year['total_user'],  "dtaware_last_year": dtaware_last_year,  "data": list_}
     return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
- 
- 
-
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
-
 def ReportAnnualIncome(request, year):
     list_=[]
     dt_year_from=casts.dtaware_year_start(year, request.user.profile.zone)
@@ -1676,6 +1671,8 @@ def ReportAnnualIncome(request, year):
         (_("November"), 11), 
         (_("December"), 12), 
     ):
+        if year==date.today().year and month>date.today().month:
+            continue
         dividends= d_dividends[year][f"m{month}"]  if year in d_dividends else 0
         incomes=d_incomes[year][f"m{month}"] if year in d_incomes else 0 -dividends
         expenses=d_expenses[year][f"m{month}"] if year in d_expenses else 0
