@@ -837,6 +837,104 @@ class Products(models.Model):
 
     def __str__(self):
         return self.fullName()
+                        
+    @staticmethod
+    def post_system_payload(
+        id, 
+        name="New system product", 
+        isin="ES000000000",  
+        currency="EUR", 
+        productstypes="http://testserver/api/productstypes/2/", 
+        agrupations="", 
+        web="www.gentoo.org", 
+        address="My street", 
+        phone="9898989898", 
+        mail="mailme@mail.com",
+        percentage=100, 
+        pci="C", 
+        leverages="http://testserver/api/leverages/2/", 
+        stockmarkets="http://testserver/api/stockmarkets/2/", 
+        comment="System product comment", 
+        obsolete=False, 
+        ticker_google="", 
+        ticker_yahoo="", 
+        ticker_morningstar="", 
+        ticker_quefondos="", 
+        ticker_investingcomn="", 
+        decimals=2
+        ):
+        return {
+            "id": id, 
+            "name": name, 
+            "isin":isin, 
+            "currency":currency, 
+            "productstypes":productstypes, 
+            "agrupations":agrupations, 
+            "web":web, 
+            "address":address, 
+            "phone":phone, 
+            "mail":mail, 
+            "percentage":percentage, 
+            "pci":pci, 
+            "leverages":leverages, 
+            "stockmarkets":stockmarkets, 
+            "comment":comment, 
+            "obsolete":obsolete, 
+            "ticker_google":ticker_google, 
+            "ticker_yahoo":ticker_yahoo, 
+            "ticker_morningstar":ticker_morningstar, 
+            "ticker_quefondos":ticker_quefondos, 
+            "ticker_investingcomn":ticker_investingcomn, 
+            "decimals": decimals, 
+        }    
+        
+    @staticmethod
+    def post_personal_payload(
+        name="New personal product", 
+        isin="ES000000000",  
+        currency="EUR", 
+        productstypes="http://testserver/api/productstypes/2/", 
+        agrupations="", 
+        web="www.gentoo.org", 
+        address="My street", 
+        phone="9898989898", 
+        mail="mailme@mail.com",
+        percentage=100, 
+        pci="c", 
+        leverages="http://testserver/api/leverages/2/", 
+        stockmarkets="http://testserver/api/stockmarkets/2/", 
+        comment="Personal product comment", 
+        obsolete=False, 
+        ticker_google="", 
+        ticker_yahoo="", 
+        ticker_morningstar="", 
+        ticker_quefondos="", 
+        ticker_investingcomn="", 
+        decimals=2
+        ):
+        return {
+            "name": name, 
+            "isin":isin, 
+            "currency":currency, 
+            "productstypes":productstypes, 
+            "agrupations":agrupations, 
+            "web":web, 
+            "address":address, 
+            "phone":phone, 
+            "mail":mail, 
+            "percentage":percentage, 
+            "pci":pci, 
+            "leverages":leverages, 
+            "stockmarkets":stockmarkets, 
+            "comment":comment, 
+            "obsolete":obsolete, 
+            "ticker_google":ticker_google, 
+            "ticker_yahoo":ticker_yahoo, 
+            "ticker_morningstar":ticker_morningstar, 
+            "ticker_quefondos":ticker_quefondos, 
+            "ticker_investingcomn":ticker_investingcomn, 
+            "decimals": decimals, 
+        }
         
     @staticmethod
     def hurl(request, id):
