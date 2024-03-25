@@ -840,7 +840,6 @@ class Products(models.Model):
                         
     @staticmethod
     def post_system_payload(
-        id, 
         name="New system product", 
         isin="ES000000000",  
         currency="EUR", 
@@ -851,7 +850,7 @@ class Products(models.Model):
         phone="9898989898", 
         mail="mailme@mail.com",
         percentage=100, 
-        pci="C", 
+        pci="c", 
         leverages="http://testserver/api/leverages/2/", 
         stockmarkets="http://testserver/api/stockmarkets/2/", 
         comment="System product comment", 
@@ -864,7 +863,6 @@ class Products(models.Model):
         decimals=2
         ):
         return {
-            "id": id, 
             "name": name, 
             "isin":isin, 
             "currency":currency, 
@@ -886,6 +884,7 @@ class Products(models.Model):
             "ticker_quefondos":ticker_quefondos, 
             "ticker_investingcomn":ticker_investingcomn, 
             "decimals": decimals, 
+            "system": True
         }    
         
     @staticmethod
@@ -910,7 +909,7 @@ class Products(models.Model):
         ticker_morningstar="", 
         ticker_quefondos="", 
         ticker_investingcomn="", 
-        decimals=2
+        decimals=2, 
         ):
         return {
             "name": name, 
@@ -934,6 +933,7 @@ class Products(models.Model):
             "ticker_quefondos":ticker_quefondos, 
             "ticker_investingcomn":ticker_investingcomn, 
             "decimals": decimals, 
+            "system": False # To diff from system
         }
         
     @staticmethod

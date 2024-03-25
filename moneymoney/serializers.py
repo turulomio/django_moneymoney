@@ -219,6 +219,8 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
     
     def create(self, validated_data):
         request=self.context.get("request")
+        if not "system" in request.data:
+            raise ValidationError(_("You must set system parameter to set a system product (True) or a personal product (False)"))
         if request.data["system"] is True :
             validated_data["id"]=models.Products.next_system_products_id()
         else:
@@ -240,10 +242,17 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
         
     def update(self, instance, validated_data):
         request=self.context.get("request")       
-        if  request.user.groups.filter(name="CatalogManager").exists() is False and id_from_url(request.data["url"])<100000000:
-            raise ValidationError(_("You can't edit a system product if you're not a Catalog Manager (only developers)"))
-        updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
-        return updated
+        print(request.data)
+        if not "system" in request.data:
+            raise ValidationError(_("You must set system parameter to set a system product (True) or a personal product (False)"))
+        if request.data["system"] is True:
+            if  request.user.groups.filter(name="CatalogManager").exists() is False and id_from_url(request.data["url"])<100000000:
+                raise ValidationError(_("You can't edit a system product if you're not a Catalog Manager (only developers)"))
+            updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
+            return updated
+        else:
+            updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
+            return updated
         
     @extend_schema_field(OpenApiTypes.INT)
     def get_real_leveraged_multiplier(self, obj):

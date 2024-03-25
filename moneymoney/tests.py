@@ -646,8 +646,21 @@ class CtTestCase(APITestCase):
 
     @tag("current")
     def test_Products(self):
-#        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
-#        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(products=dict_investment["products"]), status.HTTP_201_CREATED)
-
-        #personal products
-        tests_helpers.common_tests_Collaborative(self, "/api/products/", models.Products.post_personal_payload(), self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
+        # Personal products CRUD
+        dict_pp=tests_helpers.client_post(self, self.client_authorized_1, "/api/products/", models.Products.post_personal_payload(), status.HTTP_201_CREATED)
+        dict_pp_update=dict_pp.copy()
+        dict_pp_update["comment"]="Updated"
+        dict_pp_update["system"]=False
+        dict_pp_update=tests_helpers.client_put(self, self.client_authorized_1, dict_pp["url"], dict_pp_update, status.HTTP_200_OK)
+        tests_helpers.client_delete(self, self.client_authorized_1, dict_pp["url"], dict_pp_update, status.HTTP_204_NO_CONTENT)
+        
+        # System products CRUD
+        dict_sp=tests_helpers.client_post(self, self.client_authorized_1, "/api/products/", models.Products.post_system_payload(), status.HTTP_400_BAD_REQUEST)
+        dict_sp=tests_helpers.client_post(self, self.client_catalog_manager, "/api/products/", models.Products.post_system_payload(), status.HTTP_201_CREATED)
+        dict_sp_update=dict_sp.copy()
+        dict_sp_update["comment"]="Updated"
+        dict_sp_update["system"]=True
+        dict_sp_update=tests_helpers.client_put(self, self.client_authorized_1, dict_sp["url"], dict_sp_update, status.HTTP_400_BAD_REQUEST)
+        dict_sp_update=tests_helpers.client_put(self, self.client_catalog_manager, dict_sp["url"], dict_sp_update, status.HTTP_200_OK)
+        tests_helpers.client_delete(self, self.client_authorized_1, dict_sp["url"], dict_sp_update, status.HTTP_400_BAD_REQUEST)
+        tests_helpers.client_delete(self, self.client_catalog_manager, dict_sp["url"], dict_sp_update, status.HTTP_204_NO_CONTENT)

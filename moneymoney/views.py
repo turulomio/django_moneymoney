@@ -1307,14 +1307,14 @@ class ProductsViewSet(viewsets.ModelViewSet):
             return JsonResponse( "Error deleting system product", encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
     
         self.perform_destroy(instance)
-        return JsonResponse( True, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['POST'], name='Delete last quote of the product', url_path="delete_last_quote", url_name='delete_last_quote', permission_classes=[permissions.IsAuthenticated])
     def delete_last_quote(self, request, pk=None):
         product = self.get_object()
         instance = models.Quotes.objects.filter(products=product).order_by("-datetime")[0]
         self.perform_destroy(instance)
-        return JsonResponse( True, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
+        return Response(status=status.HTTP_204_NO_CONTENT)
         
 
     @action(detail=False, methods=["GET"], url_path='search_with_quotes', url_name='search_with_quotes')
