@@ -241,8 +241,7 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
         return created
         
     def update(self, instance, validated_data):
-        request=self.context.get("request")       
-        print(request.data)
+        request=self.context.get("request")  
         if not "system" in request.data:
             raise ValidationError(_("You must set system parameter to set a system product (True) or a personal product (False)"))
         if request.data["system"] is True:

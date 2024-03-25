@@ -125,11 +125,9 @@ class CtTestCase(APITestCase):
 
     def test_ReportAnnual(self):
         report=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/{today_year}/", status.HTTP_200_OK)
-        lod.lod_print(report ["data"])
 
     def test_ReportAnnualIncome(self):
         report=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/{today_year}/", status.HTTP_200_OK)
-        lod.lod_print(report )
     
     def test_ReportAnnualIncomeDetails(self):
         tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/details/{today_year}/{today_month}/", status.HTTP_200_OK)
