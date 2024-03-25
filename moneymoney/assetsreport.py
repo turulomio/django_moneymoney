@@ -48,7 +48,7 @@ def generate_assets_report(request, format, test):
         dict_report_annual=client.get(f"/reports/annual/{year}/", **language_headers).json()
 
         vTotalLastYear=Currency(dict_report_annual["last_year_balance"], c)
-        vTotal=Currency(dict_report_annual["data"][11]["total"], c)
+        vTotal=Currency(dict_report_annual["data"][len(dict_report_annual["data"])-1]["total"], c)
             
         dict_report_annual_gainsbyproductstypes=client.get(reverse('ReportAnnualGainsByProductstypes', args=(year,  )), **language_headers).json()
         vTotal_gains_net=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "gains_net"), c)

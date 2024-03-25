@@ -655,12 +655,12 @@ class CtTestCase(APITestCase):
         tests_helpers.client_delete(self, self.client_authorized_1, dict_pp["url"], dict_pp_update, status.HTTP_204_NO_CONTENT)
         
         # System products CRUD
-        dict_sp=tests_helpers.client_post(self, self.client_authorized_1, "/api/products/", models.Products.post_system_payload(), status.HTTP_400_BAD_REQUEST)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/products/", models.Products.post_system_payload(), status.HTTP_400_BAD_REQUEST)
         dict_sp=tests_helpers.client_post(self, self.client_catalog_manager, "/api/products/", models.Products.post_system_payload(), status.HTTP_201_CREATED)
         dict_sp_update=dict_sp.copy()
         dict_sp_update["comment"]="Updated"
         dict_sp_update["system"]=True
-        dict_sp_update=tests_helpers.client_put(self, self.client_authorized_1, dict_sp["url"], dict_sp_update, status.HTTP_400_BAD_REQUEST)
+        tests_helpers.client_put(self, self.client_authorized_1, dict_sp["url"], dict_sp_update, status.HTTP_400_BAD_REQUEST)
         dict_sp_update=tests_helpers.client_put(self, self.client_catalog_manager, dict_sp["url"], dict_sp_update, status.HTTP_200_OK)
         tests_helpers.client_delete(self, self.client_authorized_1, dict_sp["url"], dict_sp_update, status.HTTP_400_BAD_REQUEST)
         tests_helpers.client_delete(self, self.client_catalog_manager, dict_sp["url"], dict_sp_update, status.HTTP_204_NO_CONTENT)

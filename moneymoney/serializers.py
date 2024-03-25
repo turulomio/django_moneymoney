@@ -246,7 +246,7 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
         if not "system" in request.data:
             raise ValidationError(_("You must set system parameter to set a system product (True) or a personal product (False)"))
         if request.data["system"] is True:
-            if  request.user.groups.filter(name="CatalogManager").exists() is False and id_from_url(request.data["url"])<100000000:
+            if  request.user.groups.filter(name="CatalogManager").exists() is False and id_from_url(request.data["url"])<10000000:
                 raise ValidationError(_("You can't edit a system product if you're not a Catalog Manager (only developers)"))
             updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
             return updated
