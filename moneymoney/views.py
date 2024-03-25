@@ -25,6 +25,7 @@ from subprocess import run
 from os import path
 from pydicts import lod, lod_ymv, casts, myjsonencoder
 from rest_framework.decorators import api_view, permission_classes, action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework import viewsets, permissions, status, serializers as drf_serializers
 from rest_framework.views import APIView
@@ -1303,18 +1304,18 @@ class ProductsViewSet(viewsets.ModelViewSet):
     
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        if  request.user.groups.filter(name="CatalogManager").exists() and instance.id>0:
-            return JsonResponse( "Error deleting system product", encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
-    
+        if  instance.id<10000000:#System product
+            if  not request.user.groups.filter(name="CatalogManager").exists():
+                raise ValidationError(_("You can't delete a system product if you're not a Catalog Manager (only developers)"))    
         self.perform_destroy(instance)
-        return JsonResponse( True, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['POST'], name='Delete last quote of the product', url_path="delete_last_quote", url_name='delete_last_quote', permission_classes=[permissions.IsAuthenticated])
     def delete_last_quote(self, request, pk=None):
         product = self.get_object()
         instance = models.Quotes.objects.filter(products=product).order_by("-datetime")[0]
         self.perform_destroy(instance)
-        return JsonResponse( True, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
+        return Response(status=status.HTTP_204_NO_CONTENT)
         
 
     @action(detail=False, methods=["GET"], url_path='search_with_quotes', url_name='search_with_quotes')

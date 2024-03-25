@@ -88,6 +88,17 @@ def client_put(apitestclass, client, url, params, response_code):
     apitestclass.assertEqual( r.status_code, response_code,  f"Error in put {url} with user {client.user}. {r} {r.content}")
     return client_response_to_dict(r)
 
+def client_delete(apitestclass, client, url, params, response_code):
+    """
+        Makes a client delete and returns content if exists
+        Asserts response_code
+    """
+    r=client.delete(url, params, format="json")
+    apitestclass.assertEqual( r.status_code, response_code,  f"Error in delete {url} with user {client.user}. {r} {r.content}")
+    if r.content is None:
+        return None
+    return client_response_to_dict(r)
+
 
 #Hyperlinkurl
 def hlu(url, id):

@@ -123,20 +123,15 @@ class CtTestCase(APITestCase):
         self.user_authorized_1.profile.save()
         self.assertEqual(self.user_authorized_1.profile.favorites.count(), 1)        
 
-    @tag("current")
     def test_ReportAnnual(self):
         report=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/{today_year}/", status.HTTP_200_OK)
-        lod.lod_print(report ["data"])
 
-    @tag("current")
     def test_ReportAnnualIncome(self):
         report=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/{today_year}/", status.HTTP_200_OK)
-        lod.lod_print(report )
     
     def test_ReportAnnualIncomeDetails(self):
         tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/details/{today_year}/{today_month}/", status.HTTP_200_OK)
 
-    @tag("current")
     def test_ReportAnnualGainsByProductstypes(self):
         tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/gainsbyproductstypes/{today_year}/", status.HTTP_200_OK)
         #lod.lod_print(dict_)
@@ -164,11 +159,6 @@ class CtTestCase(APITestCase):
             self.assertEqual(quotes[i]["quote"], r[79329][quotes_datetime]["quote"]   )
             
         self.assertEqual(r[79329][fivedays]["quote"], None)
-            
-            
-            
-        
-
 
     def test_Accounts(self):
         #accounts_balance with empty database
@@ -652,3 +642,23 @@ class CtTestCase(APITestCase):
 
         tests_helpers.common_tests_Collaborative(self, "/api/orders/", models.Orders.post_payload(investments=dict_investment["url"]), self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
 
+    @tag("current")
+    def test_Products(self):
+        # Personal products CRUD
+        dict_pp=tests_helpers.client_post(self, self.client_authorized_1, "/api/products/", models.Products.post_personal_payload(), status.HTTP_201_CREATED)
+        dict_pp_update=dict_pp.copy()
+        dict_pp_update["comment"]="Updated"
+        dict_pp_update["system"]=False
+        dict_pp_update=tests_helpers.client_put(self, self.client_authorized_1, dict_pp["url"], dict_pp_update, status.HTTP_200_OK)
+        tests_helpers.client_delete(self, self.client_authorized_1, dict_pp["url"], dict_pp_update, status.HTTP_204_NO_CONTENT)
+        
+        # System products CRUD
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/products/", models.Products.post_system_payload(), status.HTTP_400_BAD_REQUEST)
+        dict_sp=tests_helpers.client_post(self, self.client_catalog_manager, "/api/products/", models.Products.post_system_payload(), status.HTTP_201_CREATED)
+        dict_sp_update=dict_sp.copy()
+        dict_sp_update["comment"]="Updated"
+        dict_sp_update["system"]=True
+        tests_helpers.client_put(self, self.client_authorized_1, dict_sp["url"], dict_sp_update, status.HTTP_400_BAD_REQUEST)
+        dict_sp_update=tests_helpers.client_put(self, self.client_catalog_manager, dict_sp["url"], dict_sp_update, status.HTTP_200_OK)
+        tests_helpers.client_delete(self, self.client_authorized_1, dict_sp["url"], dict_sp_update, status.HTTP_400_BAD_REQUEST)
+        tests_helpers.client_delete(self, self.client_catalog_manager, dict_sp["url"], dict_sp_update, status.HTTP_204_NO_CONTENT)

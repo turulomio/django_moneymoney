@@ -9,20 +9,20 @@ readme = "README.md"
 [tool.poetry.dependencies]
 
 python = ">=3.10,<4.0"
-django = ">=5.0"
-django-cors-headers = ">=4.3.0"
-djangorestframework = ">=3.14.0"
-drf-spectacular = ">=0.26.5"
-pydicts = ">=0.13.0"
+django = ">=5.0.3"
+django-cors-headers = ">=4.3.1"
+djangorestframework = ">=3.15.0"
+drf-spectacular = ">=0.27.1"
+pydicts = ">=0.15.0"
 requests = ">=2.31.0"
 request-casting = ">=0.6.0"
 unogenerator = ">=0.40.0"
-psycopg = ">=3.1.11"
+psycopg = ">=3.1.18"
 
 [tool.poetry.group.dev.dependencies]
-poetry = ">=1.7.0"
-poethepoet = ">=0.24.1"
-coverage = ">=7.3.2"
+poetry = ">=1.8.2"
+poethepoet = ">=0.25.0"
+coverage = ">=7.4.4"
 
 [build-system]
 requires = ["poetry-core"]
