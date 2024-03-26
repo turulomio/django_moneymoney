@@ -8,13 +8,13 @@ from json import loads
 from moneymoney import models, ios, investing_com
 from moneymoney.reusing import tests_helpers
 from os import path
-from pydicts import lod, casts
+from pydicts import lod, casts, dod
 from request_casting.request_casting import id_from_url
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 from django.contrib.auth.models import Group
 
-tag
+tag,  dod
 
 js_image_b64="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAIAQMAAAD+wSzIAAAABlBMVEX///+/v7+jQ3Y5AAAADklEQVQI12P4AIX8EAgALgAD/aNpbtEAAAAASUVORK5CYII="
 
@@ -124,10 +124,10 @@ class CtTestCase(APITestCase):
         self.assertEqual(self.user_authorized_1.profile.favorites.count(), 1)        
 
     def test_ReportAnnual(self):
-        report=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/{today_year}/", status.HTTP_200_OK)
+        tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/{today_year}/", status.HTTP_200_OK)
 
     def test_ReportAnnualIncome(self):
-        report=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/{today_year}/", status.HTTP_200_OK)
+        tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/{today_year}/", status.HTTP_200_OK)
     
     def test_ReportAnnualIncomeDetails(self):
         tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/details/{today_year}/{today_month}/", status.HTTP_200_OK)
@@ -138,11 +138,11 @@ class CtTestCase(APITestCase):
         #TODO All kind of values
 
 
+    @tag("current")
     def test_Quotes_get_quotes(self):
         quotes=[]
         for i in range(5):
             quotes.append(tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(quote=i+1), status.HTTP_201_CREATED))
-        #lod.lod_print(quotes)
         
         #Creates a dict_tupled to query massive quotes
         lod_=[]
@@ -150,8 +150,7 @@ class CtTestCase(APITestCase):
         for quote in quotes:
             lod_.append({"products_id": 79329,  "datetime": casts.str2dtaware(quote["datetime"])})
         lod_.append({"products_id":79329,  "datetime": fivedays})#Doesn't exist
-        #lod.lod_print(lod_)
-        
+       
         # Gets quotes and checks them with quotes list
         r=models.Quotes.get_quotes(lod_)
         for i in range(5):
@@ -159,6 +158,17 @@ class CtTestCase(APITestCase):
             self.assertEqual(quotes[i]["quote"], r[79329][quotes_datetime]["quote"]   )
             
         self.assertEqual(r[79329][fivedays]["quote"], None)
+
+        # Products basic_results empty
+        p=models.Products.objects.get(pk=79330)
+        assert p.basic_results()["lastyear"]==None
+
+
+        # Products without quotes
+        now=timezone.now()
+        lod_=[{"products_id": 79330,  "datetime": now}, ]
+        r=models.Quotes.get_quotes(lod_)
+        assert r[79330][now]["quote"]==None
 
     def test_Accounts(self):
         #accounts_balance with empty database
@@ -642,7 +652,6 @@ class CtTestCase(APITestCase):
 
         tests_helpers.common_tests_Collaborative(self, "/api/orders/", models.Orders.post_payload(investments=dict_investment["url"]), self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
 
-    @tag("current")
     def test_Products(self):
         # Personal products CRUD
         dict_pp=tests_helpers.client_post(self, self.client_authorized_1, "/api/products/", models.Products.post_personal_payload(), status.HTTP_201_CREATED)

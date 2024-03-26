@@ -1362,12 +1362,12 @@ class ProductsViewSet(viewsets.ModelViewSet):
                 row={}
                 row['id']=p.id
                 row["product"]=p.hurl(request, p.id)
-                row["last_datetime"]=None if p.quote_last() is None else p.basic_results()["last_datetime"]
-                row["last"]=None if p.quote_last() is None else p.basic_results()["last"]
-                row["penultimate_datetime"]=None if p.quote_penultimate() is None else p.basic_results()["penultimate_datetime"]
-                row["penultimate"]=None if p.quote_penultimate() is None else p.basic_results()["penultimate"]
-                row["lastyear_datetime"]=None if p.quote_lastyear() is None else p.basic_results()["lastyear_datetime"]
-                row["lastyear"]=None if p.quote_lastyear() is None else p.basic_results()["lastyear"]
+                row["last_datetime"]=None if p.basic_results()["last"] is None else p.basic_results()["last_datetime"]
+                row["last"]=None if  p.basic_results()["last"] is None else p.basic_results()["last"]
+                row["penultimate_datetime"]=None if  p.basic_results()["penultimate"]  is None else p.basic_results()["penultimate_datetime"]
+                row["penultimate"]=None if  p.basic_results()["penultimate"] is None else p.basic_results()["penultimate"]
+                row["lastyear_datetime"]=None if  p.basic_results()["lastyear"]  is None else p.basic_results()["lastyear_datetime"]
+                row["lastyear"]=None if  p.basic_results()["lastyear"]  is None else p.basic_results()["lastyear"]
                 row["percentage_last_year"]=None if row["lastyear"] is None else Percentage(row["last"]-row["lastyear"], row["lastyear"])
                 rows.append(row)
             return JsonResponse( rows,  encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)

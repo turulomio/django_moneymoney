@@ -977,18 +977,26 @@ class Products(models.Model):
         
         lod_ply=[]#penultimate and last year
         for products_id in list_products_id:
-            lod_ply.append({"datetime": dt_needed_penultimate(products_id), "products_id":products_id})
-            lod_ply.append({"datetime": dt_needed_lastyear(products_id), "products_id":products_id})
+            if r_lasts[products_id][now]["datetime"] is not None:
+                lod_ply.append({"datetime": dt_needed_penultimate(products_id), "products_id":products_id})
+                lod_ply.append({"datetime": dt_needed_lastyear(products_id), "products_id":products_id})
         r_ply=Quotes.get_quotes(lod_ply)
         
         #Generate answer
         for products_id in list_products_id:
             r[products_id]["last"]=r_lasts[products_id][now]["quote"]
             r[products_id]["last_datetime"]=r_lasts[products_id][now]["datetime"]
-            r[products_id]["penultimate"]=r_ply[products_id][dt_needed_penultimate(products_id)]["quote"]
-            r[products_id]["penultimate_datetime"]=r_ply[products_id][dt_needed_penultimate(products_id)]["datetime"]
-            r[products_id]["lastyear"]=r_ply[products_id][dt_needed_lastyear(products_id)]["quote"]
-            r[products_id]["lastyear_datetime"]=r_ply[products_id][dt_needed_lastyear(products_id)]["datetime"]
+
+            if r[products_id]["last_datetime"] is None:
+                r[products_id]["penultimate"]=None 
+                r[products_id]["penultimate_datetime"]=None
+                r[products_id]["lastyear"]=None
+                r[products_id]["lastyear_datetime"]=None
+            else:
+                r[products_id]["penultimate"]=r_ply[products_id][dt_needed_penultimate(products_id)]["quote"]
+                r[products_id]["penultimate_datetime"]=r_ply[products_id][dt_needed_penultimate(products_id)]["datetime"]
+                r[products_id]["lastyear"]=r_ply[products_id][dt_needed_lastyear(products_id)]["quote"]
+                r[products_id]["lastyear_datetime"]=r_ply[products_id][dt_needed_lastyear(products_id)]["datetime"]
         return r
         
     ## IBEXA es x2 pero esta en el pricio
