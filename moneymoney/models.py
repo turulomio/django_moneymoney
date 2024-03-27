@@ -1313,6 +1313,45 @@ class Strategies(models.Model):
         db_table = 'strategies'
         ordering = ['name']
         
+                
+    @staticmethod
+    def post_payload(
+        name="New strategy", 
+        investments=str([1, ]), 
+        dt_from=None, 
+        dt_to=None, 
+        type=2, 
+        comment="Strategy comment", 
+        additional1=79329, 
+        additional2=79329, 
+        additional3=79329, 
+        additional4=79329, 
+        additional5=79329, 
+        additional6=79329, 
+        additional7=79329, 
+        additional8=79329, 
+        additional9=79329, 
+        additional10=79329
+    ):
+        return {
+            "name": name, 
+            "investments": investments, 
+            "dt_from": timezone.now() if dt_from is None else dt_from, 
+            "dt_to": dt_to, 
+            "type":type, 
+            "comment":comment, 
+            "additional1":additional1, 
+            "additional2":additional1, 
+            "additional3":additional1, 
+            "additional4":additional1, 
+            "additional5":additional1, 
+            "additional6":additional1, 
+            "additional7":additional1, 
+            "additional8":additional1, 
+            "additional9":additional1, 
+            "additional10":additional1, 
+        }
+        
     ## Returns a list with investments ids, due to self.investments is a text string
     def investments_ids(self):
         s=f"[{self.investments}]"#old string2list of integers
