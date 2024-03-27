@@ -682,6 +682,13 @@ class CtTestCase(APITestCase):
         # Creates a strategy for this investment
         dict_strategy=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies/",  models.Strategies.post_payload(), status.HTTP_201_CREATED)
         print(dict_strategy)
+        
+        # Gets strategy plio_id
+        print(f"{dict_strategy['url']}plio_id/")
+        dict_strategy_plio=tests_helpers.client_get(self, self.client_authorized_1, f"{dict_strategy['url']}plio_id/",  status.HTTP_200_OK)
+        dod.dod_print(dict_strategy_plio)
+
+        
 
 
         
