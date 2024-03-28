@@ -31,13 +31,21 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install PL/Python in the PostgreSQL container
+
+    - name: Install PL/Python in the PostgreSQL container (Old migrations)
       run: |
         docker exec ${{ job.services.postgres.id }} bash -c "apt-get update && apt-get install -y postgresql-plpython3-13"
+
+
+    - name: Create PL/Python Extension
+      run: |
+        PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE EXTENSION plpython3u;" postgres
+
 
     - name: Wait for PostgreSQL
       run: |
@@ -45,15 +53,11 @@ jobs:
           echo "Waiting for PostgreSQL to become ready..."
           sleep 2
         done
-        
-        
-    - name: Install postgresql with plpython3u (old migrations)
-      run: |
-        sudo apt-get update
-        sudo apt-get install postgresql-plpython3
+
     - name: Install python dependencies ${{ matrix.python-version }}
       run: |
         pip install .
+
     - name: Run Tests
       run: |
         #sudo apt-get --fix-broken
