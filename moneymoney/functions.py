@@ -23,8 +23,23 @@ def show_queries_function(only_numbers=True):
         sum_=sum_+float(d['time'])
     if settings.DEBUG is True:
         print (f"{len(connection.queries)} db queries took {round(sum_*1000,2)} ms")
-
-
+        
+        
+def qs_to_ids(qs):
+    """
+        Returns a list of ids from a qs
+    """
+    return list(qs.values_list('id', flat=True))
+    
+def qs_to_urls(request, qs):
+    """
+        Returns a list of hurls
+        Needs to have hurl defined in url
+    """
+    r=[]
+    for o in qs:
+        r.append(o.hurl(request, o.id))
+    return r
 
 def print_object(o):
     print(o.__class__.__name__)

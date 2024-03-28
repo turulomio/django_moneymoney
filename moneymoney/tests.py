@@ -686,3 +686,7 @@ class CtTestCase(APITestCase):
         # Gets strategy plio_id
         dict_strategy_plio=tests_helpers.client_get(self, self.client_authorized_1, f"{dict_strategy['url']}ios/",  status.HTTP_200_OK)
         self.assertEqual(dict_strategy_plio["entries"], ["79329"])
+        
+        # Gets strategies with balance
+        lod_strategy_withbalance=tests_helpers.client_get(self, self.client_authorized_1, "/api/strategies/withbalance/",  status.HTTP_200_OK)
+        self.assertEqual(len(lod_strategy_withbalance), 1)

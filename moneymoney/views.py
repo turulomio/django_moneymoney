@@ -511,11 +511,11 @@ class StrategiesViewSet(viewsets.ModelViewSet):
 
         r=[]
         for strategy in qs:
-            plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.investments_queryset(), 1)
+            plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.investments.all(), 1)
 
             gains_current_net_user=plio.sum_total_io_current()["gains_net_user"]
             gains_historical_net_user=plio.io_historical_sum_between_dt(strategy.dt_from, strategy.dt_to_for_comparations(),  "gains_net_user")
-            lod_dividends_net_user=models.Dividends.lod_ym_netgains_dividends(request, ids=strategy.investments_ids(), dt_from=strategy.dt_from, dt_to=strategy.dt_to_for_comparations())
+            lod_dividends_net_user=models.Dividends.lod_ym_netgains_dividends(request, ids=functions.qs_to_ids(strategy.investments.all()),  dt_from=strategy.dt_from, dt_to=strategy.dt_to_for_comparations())
             r.append({
                 "id": strategy.id,  
                 "url": request.build_absolute_uri(reverse('strategies-detail', args=(strategy.pk, ))), 
@@ -527,7 +527,7 @@ class StrategiesViewSet(viewsets.ModelViewSet):
                 "gains_historical_net_user": gains_historical_net_user, 
                 "dividends_net_user": lod.lod_sum(lod_dividends_net_user, "total"), 
                 "total_net_user":gains_current_net_user + gains_historical_net_user + lod.lod_sum(lod_dividends_net_user, "total"), 
-                "investments":strategy.investments_ids(), 
+                "investments":functions.qs_to_urls(request, strategy.investments.all()), 
                 "type": strategy.type, 
                 "comment": strategy.comment, 
                 "additional1": strategy.additional1, 
