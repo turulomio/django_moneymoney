@@ -690,3 +690,7 @@ class CtTestCase(APITestCase):
         # Gets strategies with balance
         lod_strategy_withbalance=tests_helpers.client_get(self, self.client_authorized_1, "/api/strategies/withbalance/",  status.HTTP_200_OK)
         self.assertEqual(len(lod_strategy_withbalance), 1)
+
+        # Gests strategies by invesment
+        lod_strategy_by_investment=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/?investment={dict_investment['url']}&active=true&type=2",  status.HTTP_200_OK)
+        self.assertEqual(len(lod_strategy_by_investment), 1)

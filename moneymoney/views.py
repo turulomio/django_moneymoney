@@ -494,7 +494,7 @@ class StrategiesViewSet(viewsets.ModelViewSet):
         investment=RequestUrl(request, "investment", models.Investments)
         type=RequestInteger(request, "type")
         if all_args_are_not_none(active, investment, type):
-            self.queryset=self.queryset.filter(dt_to__isnull=active,  investments__contains=investment.id, type=type)
+            self.queryset=self.queryset.filter(dt_to__isnull=active,  investments=investment, type=type)
         serializer = serializers.StrategiesSerializer(self.queryset, many=True, context={'request': request})
         return Response(serializer.data)
 
