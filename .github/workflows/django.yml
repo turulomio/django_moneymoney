@@ -39,7 +39,7 @@ jobs:
 
     - name: Install PL/Python in the PostgreSQL container (Old migrations)
       run: |
-        docker exec ${{ job.services.postgres.id }} bash -c "apt-get update && apt-get install -y postgresql-plpython3-13"
+        docker exec ${{ job.services.postgres.id }} bash -c "apt-get update && apt-get install -y postgresql-plpython3"
 
 
     - name: Create PL/Python Extension
