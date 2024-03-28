@@ -547,8 +547,8 @@ class StrategiesViewSet(viewsets.ModelViewSet):
     def ios(self, request, pk=None): 
         strategy=self.get_object()
         if strategy is not None:
-            s=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments_queryset(), ios.IOSModes.ios_totals_sumtotals)
-            return JsonResponse( s, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
+            ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals)
+            return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
         return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
 
 

@@ -2,7 +2,7 @@
   "header": {
     "comment": "eric project file for project django_moneymoney",
     "copyright": "Copyright (C) 2024 , ",
-    "saved": "2024-03-28, 07:40:56"
+    "saved": "2024-03-28, 07:52:33"
   },
   "project": {
     "AUTHOR": "",
@@ -275,11 +275,9 @@
       "moneymoney/migrations/0045_accountsoperations_associated_cc_and_more.py",
       "moneymoney/migrations/0046_remove_accountsoperations_associated_io_and_more.py",
       "moneymoney/migrations/0047_convert_old_io_associated_ao.py",
-      "moneymoney/migrations/0048_remove_strategies_investments.py",
       "moneymoney/migrations/0048_strategies_old_investments_and_more.py",
-      "moneymoney/migrations/0049_strategies_investments.py",
       "moneymoney/migrations/0049_strategies_investments_migration.py",
-      "moneymoney/migrations/0050_strategies_investments_migration.py",
+      "moneymoney/migrations/0050_remove_strategies_old_investments.py",
       "moneymoney/migrations/__init__.py",
       "moneymoney/models.py",
       "moneymoney/paginators.py",
