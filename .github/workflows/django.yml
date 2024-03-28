@@ -54,12 +54,19 @@ jobs:
           sleep 2
         done
 
+    - name: Install libreoffice 
+      run: |
+        sudo apt-get install libreoffice python3-uno
+        sudo unogenerator_start
+
     - name: Install python dependencies ${{ matrix.python-version }}
       run: |
-        pip install .
+        sudo pip install .
+        
+    - name: Launch Unogenerator
+      run: |
+        sudo unogenerator_start
 
     - name: Run Tests
       run: |
-        #sudo apt-get --fix-broken
-        #sudo apt-get --ignore-missing install postgresql-plpython3
-        python manage.py test
+        sudo python manage.py test
