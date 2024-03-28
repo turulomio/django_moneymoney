@@ -1292,7 +1292,8 @@ class StrategiesTypes(models.IntegerChoices):
 
 class Strategies(models.Model):
     name = models.TextField()
-    investments = models.TextField(blank=False, null=False)
+    old_investments = models.TextField(blank=False, null=False) # Set to Obsolete
+    investments = models.ManyToManyField("Investments", blank=False)
     dt_from = models.DateTimeField(blank=True, null=True)
     dt_to = models.DateTimeField(blank=True, null=True)
     type = models.IntegerField(choices=StrategiesTypes.choices)
@@ -1317,7 +1318,7 @@ class Strategies(models.Model):
     @staticmethod
     def post_payload(
         name="New strategy", 
-        investments="1,", 
+        investments="1", 
         dt_from=None, 
         dt_to=None, 
         type=2, 
@@ -1351,25 +1352,6 @@ class Strategies(models.Model):
             "additional9":additional1, 
             "additional10":additional1, 
         }
-        
-    ## Returns a list with investments ids, due to self.investments is a text string
-    def investments_ids(self):
-        s=f"[{self.investments}]"#old string2list of integers
-        print(s, eval(s))
-        return eval(s)
-        
-    ## Returns a queryset with the investments of the strategy, due to self.investments is a text strings
-    def investments_queryset(self):
-        if hasattr(self, "_investments_queryset") is False:
-            self._investments_queryset=Investments.objects.filter(id__in=self.investments_ids()).select_related("products")
-        return self._investments_queryset
-        
-    def investments_urls(self, request):
-        r=[]
-        for id in self.investments_ids():
-            r.append(request.build_absolute_uri(reverse('strategies-detail', args=(id, ))))
-        return r
-
 
     ## Replaces None for dt_to and sets a very big datetine
     def dt_to_for_comparations(self):
