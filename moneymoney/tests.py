@@ -684,8 +684,7 @@ class CtTestCase(APITestCase):
         print(dict_strategy)
         
         # Gets strategy plio_id
-        print(f"{dict_strategy['url']}plio_id/")
-        dict_strategy_plio=tests_helpers.client_get(self, self.client_authorized_1, f"{dict_strategy['url']}plio_id/",  status.HTTP_200_OK)
+        dict_strategy_plio=tests_helpers.client_get(self, self.client_authorized_1, f"{dict_strategy['url']}ios/",  status.HTTP_200_OK)
         dod.dod_print(dict_strategy_plio)
 
         

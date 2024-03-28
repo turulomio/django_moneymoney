@@ -543,11 +543,11 @@ class StrategiesViewSet(viewsets.ModelViewSet):
             })
         return Response(r)
         
-    @action(detail=True, methods=["get"], name='Gets a plio_id from strategy investments', url_path="plio_id", url_name='plio_id', permission_classes=[permissions.IsAuthenticated])
-    def plio_id(self, request, pk=None): 
+    @action(detail=True, methods=["get"], name='Gets a IOS from a strategy', url_path="ios", url_name='ios', permission_classes=[permissions.IsAuthenticated])
+    def ios(self, request, pk=None): 
         strategy=self.get_object()
         if strategy is not None:
-            s=ios.IOS.plio_id_from_strategy(timezone.now(), request.user.profile.currency, strategy)
+            s=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments_queryset(), ios.IOSModes.ios_totals_sumtotals)
             return JsonResponse( s, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
         return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
 

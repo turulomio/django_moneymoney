@@ -1317,7 +1317,7 @@ class Strategies(models.Model):
     @staticmethod
     def post_payload(
         name="New strategy", 
-        investments=str([1, ]), 
+        investments="1,", 
         dt_from=None, 
         dt_to=None, 
         type=2, 
@@ -1355,6 +1355,7 @@ class Strategies(models.Model):
     ## Returns a list with investments ids, due to self.investments is a text string
     def investments_ids(self):
         s=f"[{self.investments}]"#old string2list of integers
+        print(s, eval(s))
         return eval(s)
         
     ## Returns a queryset with the investments of the strategy, due to self.investments is a text strings
