@@ -44,7 +44,7 @@ jobs:
 
     - name: Create PL/Python Extension
       run: |
-        docker exec ${{ job.services.postgres.id }} bash -c "PGPASSWORD=postgres psql -h localhost -U postgres -c 'CREATE EXTENSION plpython3u;'
+        docker exec ${{ job.services.postgres.id }} bash -c "PGPASSWORD=postgres psql -h localhost -U postgres -c 'CREATE EXTENSION plpython3u;'"
         docker exec ${{ job.services.postgres.id }} bash -c "PGPASSWORD=postgres createdb -h localhost -U postgres xulpymoney"
 
 
