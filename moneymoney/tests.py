@@ -138,7 +138,6 @@ class CtTestCase(APITestCase):
         #TODO All kind of values
 
 
-    @tag("current")
     def test_Quotes_get_quotes(self):
         quotes=[]
         for i in range(5):
@@ -671,3 +670,23 @@ class CtTestCase(APITestCase):
         dict_sp_update=tests_helpers.client_put(self, self.client_catalog_manager, dict_sp["url"], dict_sp_update, status.HTTP_200_OK)
         tests_helpers.client_delete(self, self.client_authorized_1, dict_sp["url"], dict_sp_update, status.HTTP_400_BAD_REQUEST)
         tests_helpers.client_delete(self, self.client_catalog_manager, dict_sp["url"], dict_sp_update, status.HTTP_204_NO_CONTENT)
+        
+        
+
+    @tag("current")
+    def test_Strategies(self):
+        # Creates an investment with a quote and an io
+        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(products=dict_investment["products"]), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_201_CREATED)
+
+        # Creates a strategy for this investment
+        dict_strategy=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies/",  models.Strategies.post_payload(investments=[dict_investment['url'], ]), status.HTTP_201_CREATED)
+        
+        # Gets strategy plio_id
+        dict_strategy_plio=tests_helpers.client_get(self, self.client_authorized_1, f"{dict_strategy['url']}ios/",  status.HTTP_200_OK)
+        self.assertEqual(dict_strategy_plio["entries"], ["79329"])
+        
+        # Gets strategies with balance
+        lod_strategy_withbalance=tests_helpers.client_get(self, self.client_authorized_1, "/api/strategies/withbalance/",  status.HTTP_200_OK)
+        self.assertEqual(len(lod_strategy_withbalance), 1)
