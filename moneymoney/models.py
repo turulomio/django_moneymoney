@@ -1292,7 +1292,6 @@ class StrategiesTypes(models.IntegerChoices):
 
 class Strategies(models.Model):
     name = models.TextField()
-    old_investments = models.TextField(blank=False, null=False) # Set to Obsolete
     investments = models.ManyToManyField("Investments", blank=False)
     dt_from = models.DateTimeField(blank=True, null=True)
     dt_to = models.DateTimeField(blank=True, null=True)
@@ -1318,7 +1317,7 @@ class Strategies(models.Model):
     @staticmethod
     def post_payload(
         name="New strategy", 
-        investments="1", 
+        investments=[1], 
         dt_from=None, 
         dt_to=None, 
         type=2, 
