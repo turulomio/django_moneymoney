@@ -39,6 +39,7 @@ jobs:
 
     - name: Install PL/Python in the PostgreSQL container (Old migrations)
       run: |
+        # Version can change see in docker page wich is postgres:latest
         docker exec ${{ job.services.postgres.id }} bash -c "apt-get update && apt-get install -y postgresql-plpython3-16"
 
 
