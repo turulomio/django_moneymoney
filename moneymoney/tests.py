@@ -675,19 +675,14 @@ class CtTestCase(APITestCase):
 
     @tag("current")
     def test_Strategies(self):
-        # Creates an investment with a quote 
+        # Creates an investment with a quote and an io
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(products=dict_investment["products"]), status.HTTP_201_CREATED)
-        
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_201_CREATED)
+
         # Creates a strategy for this investment
-        dict_strategy=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies/",  models.Strategies.post_payload(), status.HTTP_201_CREATED)
-        print(dict_strategy)
+        dict_strategy=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies/",  models.Strategies.post_payload(investments=[dict_investment['url'], ]), status.HTTP_201_CREATED)
         
         # Gets strategy plio_id
         dict_strategy_plio=tests_helpers.client_get(self, self.client_authorized_1, f"{dict_strategy['url']}ios/",  status.HTTP_200_OK)
-        dod.dod_print(dict_strategy_plio)
-
-        
-
-
-        
+        self.assertEqual(dict_strategy_plio["entries"], ["79329"])

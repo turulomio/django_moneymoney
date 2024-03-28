@@ -1316,8 +1316,8 @@ class Strategies(models.Model):
                 
     @staticmethod
     def post_payload(
+        investments, #It's a list of urls of investments 
         name="New strategy", 
-        investments=["http://testserver/api/investments/1/", ], 
         dt_from=None, 
         dt_to=None, 
         type=2, 
