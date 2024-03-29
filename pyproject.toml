@@ -31,6 +31,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.poe.tasks]
 reusing = { script = "moneymoney.poethepoet:reusing" }
 cypress_test_server = { script = "moneymoney.poethepoet:cypress_test_server" }
+cypress_test_server_for_github_actions = { script = "moneymoney.poethepoet:cypress_test_server_for_github_actions" }
 
 [project.urls]
 homepage = "https://github.com/turulomio/django_moneymoney/"
