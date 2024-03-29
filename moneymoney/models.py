@@ -12,10 +12,16 @@ from moneymoney.reusing.decorators import ptimeit
 from moneymoney.types import eConcept, eProductType, eOperationType
 from pydicts import lod_ymv, casts
 from pydicts.currency import Currency
-from requests import get
 
 Decimal
 ptimeit
+
+        
+PCI_CHOICES =( 
+    ('c', _("Call")), 
+    ('p', _("Put")), 
+    ('i', _("Inline")), 
+)
 
 RANGE_RECOMENDATION_CHOICES =( 
     (1, "All"), 
@@ -28,11 +34,12 @@ RANGE_RECOMENDATION_CHOICES =(
     (8, "SMA 10"), 
     (9, "SMA 5"), 
 )
-PCI_CHOICES =( 
-    ('c', _("Call")), 
-    ('p', _("Put")), 
-    ('i', _("Inline")), 
-)
+
+
+class OldStrategiesTypes(models.IntegerChoices):
+    PairsInSameAccount = 1, _('Pairs in same account') #additional {"worse":_, "better":_ "account" }
+    Ranges = 2,  _('Product ranges')
+    Generic = 3, _('Generic') #additional { }
 
 class Accounts(models.Model):
     name = models.TextField(blank=True, null=True)
@@ -819,6 +826,7 @@ class Products(models.Model):
     mail = models.TextField(blank=True, null=True)
     percentage = models.IntegerField(blank=False, null=False)
     pci = models.CharField(choices=PCI_CHOICES, max_length=1)
+    strategy=models.ForeignKey("ProductsStrategies", models.DO_NOTHING, blank=False, null=False)
     leverages = models.ForeignKey(Leverages, models.DO_NOTHING)
     stockmarkets = models.ForeignKey(Stockmarkets, models.DO_NOTHING)
     comment = models.TextField(blank=True, null=True)
@@ -851,6 +859,7 @@ class Products(models.Model):
         mail="mailme@mail.com",
         percentage=100, 
         pci="c", 
+        strategy="http://testserver/api/productsstrategies/1/",
         leverages="http://testserver/api/leverages/2/", 
         stockmarkets="http://testserver/api/stockmarkets/2/", 
         comment="System product comment", 
@@ -874,6 +883,7 @@ class Products(models.Model):
             "mail":mail, 
             "percentage":percentage, 
             "pci":pci, 
+            "strategy":strategy, 
             "leverages":leverages, 
             "stockmarkets":stockmarkets, 
             "comment":comment, 
@@ -900,6 +910,7 @@ class Products(models.Model):
         mail="mailme@mail.com",
         percentage=100, 
         pci="c", 
+        strategy="http://testserver/api/productsstrategies/1/",
         leverages="http://testserver/api/leverages/2/", 
         stockmarkets="http://testserver/api/stockmarkets/2/", 
         comment="Personal product comment", 
@@ -1285,17 +1296,14 @@ class Splits(models.Model):
         db_table = 'splits'
 
 
-class StrategiesTypes(models.IntegerChoices):
-    PairsInSameAccount = 1, _('Pairs in same account') #additional {"worse":_, "better":_ "account" }
-    Ranges = 2,  _('Product ranges')
-    Generic = 3, _('Generic') #additional { }
-
 class Strategies(models.Model):
     name = models.TextField()
     investments = models.ManyToManyField("Investments", blank=False)
     dt_from = models.DateTimeField(blank=True, null=True)
     dt_to = models.DateTimeField(blank=True, null=True)
-    type = models.IntegerField(choices=StrategiesTypes.choices)
+    oldtype = models.IntegerField(choices=OldStrategiesTypes.choices)
+    type=models.ForeignKey("StrategiesTypes", models.DO_NOTHING, blank=False, null=False)
+    recomendation_method = models.ForeignKey("InvestmentsRecomendationMethods", models.DO_NOTHING, blank=False, null=False)
     comment = models.TextField(blank=True, null=True)
     additional1 = models.IntegerField(blank=True, null=True)   
     additional2 = models.IntegerField(blank=True, null=True)   
@@ -1713,16 +1721,26 @@ class FastOperationsCoverage(models.Model):
 
     class Meta:
         managed = True
-        
-def requests_get(url, request):
-    from django.utils.translation import get_language_from_request
-    language = get_language_from_request(request)
-    headers={
-        'Authorization': f"Token {request.user.auth_token.key}",
-        'Accept-Language': f"{language}-{language}",
-        'Content-Type':'application/json'
-    }
+
+
+class ProductsStrategies(models.Model):
+    name = models.CharField(max_length=10,  blank=False, null=False)
     
+    class Meta:
+        managed = True
+
+class StrategiesTypes(models.Model):
+    name = models.CharField(max_length=100,  blank=False, null=False)
     
-    return get(url, headers=headers, verify=False)
+    class Meta:
+        managed = True
+    
+
+class InvestmentsRecomendationMethods(models.Model):
+    name = models.CharField(max_length=40,  blank=False, null=False)
+    
+    class Meta:
+        managed = True
+    
+
 

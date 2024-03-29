@@ -207,6 +207,8 @@ class OrdersSerializer(serializers.HyperlinkedModelSerializer):
         model = models.Orders
         fields = ('url', 'id', 'date', 'expiration',  'shares', 'price','investments','executed')
         
+        
+        
 class ProductsSerializer(serializers.HyperlinkedModelSerializer):
     real_leveraged_multiplier = serializers.SerializerMethodField()
     flag=serializers.SerializerMethodField()
@@ -215,7 +217,7 @@ class ProductsSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = models.Products
-        fields = ('url', 'id', 'name',  'isin', 'currency','productstypes','agrupations', 'web', 'address', 'phone', 'mail', 'percentage', 'pci', 'leverages', 'stockmarkets', 'comment',  'obsolete', 'ticker_yahoo', 'ticker_morningstar','ticker_google','ticker_quefondos','ticker_investingcom', 'decimals', 'real_leveraged_multiplier', 'fullname', 'uses', 'flag')
+        fields = ('url', 'id', 'name',  'isin', 'currency','productstypes','agrupations', 'web', 'address', 'phone', 'mail', 'percentage', 'pci', 'strategy','leverages', 'stockmarkets', 'comment',  'obsolete', 'ticker_yahoo', 'ticker_morningstar','ticker_google','ticker_quefondos','ticker_investingcom', 'decimals', 'real_leveraged_multiplier', 'fullname', 'uses', 'flag')
     
     def create(self, validated_data):
         request=self.context.get("request")
@@ -360,3 +362,31 @@ class IOSRequestSerializer(serializers.Serializer):
     mode= serializers.IntegerField()
     simulation=InvestmentsoperationsSerializer(many=True)
     investments = serializers.ListField(child = serializers.IntegerField())
+
+
+class ProductsStrategiesSerializer(serializers.HyperlinkedModelSerializer):
+    localname = serializers.SerializerMethodField()
+    class Meta:
+        model = models.ProductsStrategies
+        fields = ('url', 'id', 'name', 'localname')
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_localname(self, obj):
+        return  _(obj.name)
+
+class StrategiesTypesSerializer(serializers.HyperlinkedModelSerializer):
+    localname = serializers.SerializerMethodField()
+    class Meta:
+        model = models.StrategiesTypes
+        fields = ('url', 'id', 'name', 'localname')
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_localname(self, obj):
+        return  _(obj.name)
+
+class InvestmentsRecomendationMethodsSerializer(serializers.HyperlinkedModelSerializer):
+    localname = serializers.SerializerMethodField()
+    class Meta:
+        model = models.Operationstypes
+        fields = ('url', 'id', 'name', 'localname')
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_localname(self, obj):
+        return  _(obj.name)
