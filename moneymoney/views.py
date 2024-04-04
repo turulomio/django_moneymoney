@@ -1275,7 +1275,7 @@ def ProductsRanges(request):
     amount_to_invest=RequestInteger(request, "amount_to_invest")
     recomendation_methods=RequestInteger(request, "recomendation_methods")
     investments=RequestListOfUrls(request,"investments[]", models.Investments) 
-    if len(investments)>0:
+    if investments is not None and all_args_are_not_none(investments):
         qs_investments=models.Investments.objects.filter(id__in=[investment.id for investment in investments])
     else:
         qs_investments=models.Investments.objects.none()
