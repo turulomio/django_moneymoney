@@ -52,9 +52,11 @@ def generate_assets_report(request, format, test):
             
         dict_report_annual_gainsbyproductstypes=client.get(reverse('ReportAnnualGainsByProductstypes', args=(year,  )), **language_headers).json()
         vTotal_gains_net=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "gains_net"), c)
+        vTotal_gains_gross=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "gains_gross"), c)
         vTotal_dividends_net=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "dividends_net"), c)
         vTotal_dividends_gross=Currency(lod.lod_sum(dict_report_annual_gainsbyproductstypes, "dividends_gross"), c)
         vTotal_gains_dividends_net=vTotal_gains_net+vTotal_dividends_net
+        vTotal_gains_dividends_gross=vTotal_gains_gross+vTotal_dividends_gross
 
         
         #Personal settings
@@ -156,7 +158,7 @@ def generate_assets_report(request, format, test):
         ])
         doc.addTableParagraph(report_annual_gainsbyproductstypes,  size=8, style="Table1Total")
         
-        doc.addParagraph(_("Gross gains + Gross dividends = {0}.").format(vTotal_dividends_gross),  "MyStandard")
+        doc.addParagraph(_("Gross gains + Gross dividends = {0}.").format(vTotal_gains_dividends_gross),  "MyStandard")
         doc.addParagraph(_("Net gains + Net dividends = {0}.").format(vTotal_gains_dividends_net),  "MyStandard")
         doc.pageBreak()
 
