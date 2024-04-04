@@ -637,8 +637,11 @@ class Investments(models.Model):
         return queryset
         
     def shares_from_db_investmentsoperations(self):        
-        return Investmentsoperations.objects.filter(investments=self).aggregate(Sum("shares"))["shares__sum"]
-        
+        r=Investmentsoperations.objects.filter(investments=self).aggregate(Sum("shares"))["shares__sum"]
+        if r is None:
+            r=Decimal(0)
+        return r
+
     def set_attributes_after_investmentsoperations_crud(self):      
 #        print("setting investment attributes")
         # Always activeive after investmentsoperations CRUD

@@ -1274,11 +1274,14 @@ def ProductsRanges(request):
         percentage_gains=percentage_gains/1000
     amount_to_invest=RequestInteger(request, "amount_to_invest")
     recomendation_methods=RequestInteger(request, "recomendation_methods")
-    investments_ids=RequestListOfIntegers(request,"investments[]", []) 
-    if len(investments_ids)>0:
-        qs_investments=models.Investments.objects.filter(id__in=investments_ids)
-    else:
+    investments=RequestListOfUrls(request,"investments[]", models.Investments) 
+    if investments is None:
         qs_investments=models.Investments.objects.none()
+    else:
+        if all_args_are_not_none(*investments):
+            qs_investments=models.Investments.objects.filter(id__in=[investment.id for investment in investments])
+        else: 
+            qs_investments=models.Investments.objects.none()
     additional_ranges=RequestInteger(request, "additional_ranges", 3)
 
     if not models.Quotes.objects.filter(products=product).exists():    
