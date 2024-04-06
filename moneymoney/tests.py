@@ -59,7 +59,6 @@ class Models(APITestCase):
         o=models.Operationstypes.objects.get(pk=1)
         str(o)    
     
-    @tag("current")
     def test_Stockmarkets(self):
         o=models.Stockmarkets.objects.get(pk=1)
         str(o)
@@ -72,6 +71,17 @@ class Models(APITestCase):
         o.estimated_datetime_for_daily_quote()
         o.estimated_datetime_for_intraday_quote()
         o.estimated_datetime_for_intraday_quote(delay=True)
+        
+    @tag("current")
+    def test_Accountsoperations(self):
+        o=models.Accountsoperations()
+        o.accounts_id=4
+        o.amount=1000
+        o.datetime=timezone.now()
+        o.concepts_id=1
+        o.save()
+        str(o)
+        repr(o)
 
 class API(APITestCase):
     fixtures=["all.json"] #Para cargar datos por defecto
