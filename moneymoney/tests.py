@@ -82,6 +82,11 @@ class Models(APITestCase):
         str(o)
         repr(o)
 
+    @tag("current")
+    def test_Banks(self):
+        o=models.Banks.objects.get(pk=3)
+        str(o)
+
 class API(APITestCase):
     fixtures=["all.json"] #Para cargar datos por defecto
 
@@ -637,7 +642,6 @@ class API(APITestCase):
         self.assertEqual(lod_[0]["balance"], 0)#not deferred (debit)
         self.assertEqual(lod_[1]["balance"], 22.22)
 
-    @tag("current")
     def test_Creditcards_Payments(self):        
         # We create a credit card and a creditcard operation and make a payment
         dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(), status.HTTP_201_CREATED)
