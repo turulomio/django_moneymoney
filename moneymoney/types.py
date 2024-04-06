@@ -91,6 +91,20 @@ class eConcept:
     FastInvestmentOperations=74
     RolloverPaid=75
     RolloverReceived=76
+    
+    @staticmethod
+    def dividends():
+        """
+            Return a list of integers (types) with all Concepts used in Investiments dividends
+        """
+        return [
+            eConcept.Dividends, 
+            eConcept.AssistancePremium, 
+            eConcept.DividendsSaleRights, 
+            eConcept.BondsCoupon, 
+            eConcept.BondsCouponRunIncome, 
+            eConcept.BondsCouponRunPayment, 
+        ]
 
 ## Sets if a Historical Chart must adjust splits or dividends with splits or do nothing
 class eHistoricalChartAdjusts:

@@ -20,7 +20,11 @@ js_image_b64="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAIAQMAAAD+wSzI
 
 today=date.today()
 today_year=today.year
-today_month=today.month
+today_month=today.month        
+# Defines report moment for static reports to avoid problems with asserts
+static_year=2024
+static_month=1
+timezone_madrid="Europe/Madrid"
 
 class CtTestCase(APITestCase):
     fixtures=["all.json"] #Para cargar datos por defecto
@@ -126,8 +130,14 @@ class CtTestCase(APITestCase):
     def test_ReportAnnual(self):
         tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/{today_year}/", status.HTTP_200_OK)
 
-    def test_ReportAnnualIncome(self):
-        tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/{today_year}/", status.HTTP_200_OK)
+    @tag("current")
+    def test_ReportAnnualIncome(self):        
+        # Adds a dividend to control it only appears in dividends not in dividends+incomes        
+        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)        
+        dict_dividend=tests_helpers.client_post(self, self.client_authorized_1, "/api/dividends/",  models.Dividends.post_payload(datetime=casts.dtaware_month_end(static_year, static_month, timezone_madrid), investments=dict_investment["url"]), status.HTTP_201_CREATED)
+        lod_=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/{static_year}/", status.HTTP_200_OK)
+        self.assertEqual(lod_[0]["total"],  dict_dividend["net"])
+        
     
     def test_ReportAnnualIncomeDetails(self):
         tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/details/{today_year}/{today_month}/", status.HTTP_200_OK)
@@ -673,7 +683,6 @@ class CtTestCase(APITestCase):
         
         
 
-    @tag("current")
     def test_Strategies(self):
         # Creates an investment with a quote and an io
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)

@@ -483,7 +483,19 @@ class Dividends(models.Model):
 
 
     @staticmethod
-    def post_payload(investments="http://testserver/api/investments/1/", gross=1000, taxes=210, net=790, dps=0.1, datetime=timezone.now(), accountsoperations=None, commission=10, concepts="http://testserver/api/concepts/1/", currency_conversion=1):
+    def post_payload( investments="http://testserver/api/investments/1/", 
+                                    gross=1000, 
+                                    taxes=210, 
+                                    net=790, 
+                                    dps=0.1, 
+                                    datetime=None, 
+                                    accountsoperations=None, 
+                                    commission=10, 
+                                    concepts="http://testserver/api/concepts/39/", 
+                                    currency_conversion=1
+    ):
+        if datetime is None:
+            datetime=timezone.now()
         return {
             "investments": investments,
             "gross": gross, 
@@ -1621,15 +1633,23 @@ class Assets:
 
     ## This method should take care of diffrent currenciesç
     ## @param month can be None to calculate all year
-    def lod_ym_balance_user_by_operationstypes(request, operationstypes_id, year=None):
+    def lod_ym_balance_user_by_operationstypes(request, operationstypes_id, year=None,  exclude_dividends=True):
         """
             Returns a list of rows with a structure as in lod_ymv.lod_ymv_transposition
             if year only shows this year, else all database registers
+            
+            Parameters:
+                - request
+                - Operationstypes_id,
+                - year,
+                - exclude_dividends. Boolean. If true excludes in Accountsoperations eConcept.dividends to avoid count them twice in Reports that use Dividends separated
         """
             
         ld=[]
         for currency in Accounts.currencies():
             ao=Accountsoperations.objects.filter(concepts__operationstypes__id=operationstypes_id, accounts__currency=currency)
+            if exclude_dividends is True:
+                ao=ao.exclude(concepts__id__in=eConcept.dividends())
             
             if year is not None:
                 ao=ao.filter(datetime__year=year)

@@ -1657,9 +1657,9 @@ def ReportAnnualIncome(request, year):
     
     plio=ios.IOS.from_all( dt_year_to, request.user.profile.currency, 1)
     d_dividends=lod.lod2dod(models.Dividends.lod_ym_netgains_dividends(request, dt_from=dt_year_from, dt_to=dt_year_to), "year")
-    d_incomes=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Income, year=year), "year")
-    d_expenses=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Expense, year=year), "year")
-    d_fast_operations=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.FastOperations, year=year), "year")
+    d_incomes=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Income, year=year, exclude_dividends=True), "year")
+    d_expenses=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Expense, year=year, exclude_dividends=True), "year")
+    d_fast_operations=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.FastOperations, year=year, exclude_dividends=True), "year")
 
     for month_name, month in (
         (_("January"), 1), 
@@ -1678,7 +1678,7 @@ def ReportAnnualIncome(request, year):
         if year==date.today().year and month>date.today().month:
             continue
         dividends= d_dividends[year][f"m{month}"]  if year in d_dividends else 0
-        incomes=d_incomes[year][f"m{month}"] if year in d_incomes else 0 -dividends
+        incomes=d_incomes[year][f"m{month}"] if year in d_incomes else 0
         expenses=d_expenses[year][f"m{month}"] if year in d_expenses else 0
         fast_operations=d_fast_operations[year][f"m{month}"] if year in d_fast_operations else 0
         dt_from=casts.dtaware_month_start(year, month,  request.user.profile.zone)
@@ -1701,7 +1701,7 @@ def ReportAnnualIncome(request, year):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportAnnualIncomeDetails(request, year, month):
-    def listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, operationstypes_id, local_currency, local_zone):
+    def listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, operationstypes_id, local_currency, local_zone, exclude_dividends):
         r=[]
         i=0
         for currency in models.Accounts.currencies(): #Iterate over currencies
@@ -1712,6 +1712,9 @@ def ReportAnnualIncomeDetails(request, year, month):
                 "comment", 
                 "accounts", 
             )
+            # Excludes dividends from Accountsoperations to avoid count the in incomes and in dividend
+            qs_ao=qs_ao.exclude(concepts__id__in=eConcept.dividends())
+            
             for o in qs_ao:
                 i-=1
                 r.append({
@@ -1933,10 +1936,10 @@ def ReportEvolutionAssets(request, from_year):
     for year in range(from_year-1, date.today().year+1):
         tb[year]=models.Assets.pl_total_balance(casts.dtaware_month_end(year, 12, request.user.profile.zone), request.user.profile.currency)
         
-    d_incomes=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Income), "year")
-    d_expenses=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Expense), "year")
+    d_incomes=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Income, exclude_dividends=True), "year")
+    d_expenses=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Expense, exclude_dividends=True), "year")
     d_dividends=lod.lod2dod(models.Dividends.lod_ym_netgains_dividends(request), "year")
-    d_fast_operations=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.FastOperations), "year")
+    d_fast_operations=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.FastOperations, exclude_dividends=True), "year")
 
     # Dictionary can have missing years if there isn't data in database, so I must fill them
     for year in range(from_year, date.today().year+1):
