@@ -1701,7 +1701,7 @@ def ReportAnnualIncome(request, year):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportAnnualIncomeDetails(request, year, month):
-    def listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, operationstypes_id, local_currency, local_zone, exclude_dividends):
+    def listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, operationstypes_id, local_currency, local_zone):
         r=[]
         i=0
         for currency in models.Accounts.currencies(): #Iterate over currencies
@@ -1772,7 +1772,7 @@ def ReportAnnualIncomeDetails(request, year, month):
         return list_ioh
     ####
     r={}
-    r["expenses"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, eOperationType.Expense,  request.user.profile.currency, request.user.profile.zone)
+    r["expenses"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, eOperationType.Expense,  request.user.profile.currency, request.user.profile.zone, )
     r["incomes"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, eOperationType.Income,  request.user.profile.currency, request.user.profile.zone)
     r["dividends"]=dividends()
     r["fast_operations"]=listdict_accountsoperations_creditcardsoperations_by_operationstypes_and_month(year, month, eOperationType.FastOperations,  request.user.profile.currency, request.user.profile.zone)
