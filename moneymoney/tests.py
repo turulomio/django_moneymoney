@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.test import tag
 from django.utils import timezone
 from json import loads
-from moneymoney import models, ios, investing_com
+from moneymoney import models, ios, investing_com, functions
 from moneymoney.reusing import tests_helpers
 from os import path
 from pydicts import lod, casts, dod
@@ -26,7 +26,68 @@ static_year=2024
 static_month=1
 timezone_madrid="Europe/Madrid"
 
-class CtTestCase(APITestCase):
+class Functions(APITestCase):
+    @functions.suppress_stdout
+    def test_print_object(self):
+        b=models.Banks()
+        b.name="Newbank"
+        b.save()
+        functions.print_object(b)
+        
+    
+    def test_string_oneline_object(self):
+        b=models.Banks()
+        b.name="Newbank"
+        b.save()
+        assert len(functions.string_oneline_object(b))>0
+        
+        
+
+class Models(APITestCase):
+    fixtures=["all.json"] #Para cargar datos por defecto
+    
+    def test_Accounts(self):
+        a=models.Accounts()
+        a.name="New account"
+        a.banks_id=3
+        a.active=True
+        a.decimals=2
+        a.save()
+        str(a)
+
+    def test_Operationstypes(self):
+        o=models.Operationstypes.objects.get(pk=1)
+        str(o)    
+    
+    def test_Stockmarkets(self):
+        o=models.Stockmarkets.objects.get(pk=1)
+        str(o)
+        o.dtaware_closes(today)
+        o.dtaware_closes_futures(today)
+        o.dtaware_today_closes()
+        o.dtaware_today_closes_futures()
+        o.dtaware_starts(today)
+        o.dtaware_today_starts()
+        o.estimated_datetime_for_daily_quote()
+        o.estimated_datetime_for_intraday_quote()
+        o.estimated_datetime_for_intraday_quote(delay=True)
+        
+    def test_Accountsoperations(self):
+        o=models.Accountsoperations()
+        o.accounts_id=4
+        o.amount=1000
+        o.datetime=timezone.now()
+        o.concepts_id=1
+        o.save()
+        str(o)
+        repr(o)
+
+    @tag("current")
+    def test_Banks(self):
+        o=models.Banks.objects.get(pk=3)
+        str(o)
+
+class API(APITestCase):
     fixtures=["all.json"] #Para cargar datos por defecto
 
     @classmethod
@@ -137,7 +198,6 @@ class CtTestCase(APITestCase):
         lod_=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/{static_year}/", status.HTTP_200_OK)
         self.assertEqual(lod_[0]["total"],  dict_dividend["net"])
 
-    @tag("current")
     def test_ReportAnnualIncomeDetails(self):       
         # Adds a dividend to control it only appears in dividends not in dividends+incomes        
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)        
@@ -595,6 +655,7 @@ class CtTestCase(APITestCase):
         dict_payments=tests_helpers.client_get(self, self.client_authorized_1, f"{dict_cc['url']}payments/", status.HTTP_200_OK)
         self.assertTrue(dict_payments[0]["count"], 1)
         self.assertTrue(dict_payments[1]["count"], 2)
+        
         
 
     def test_CatalogManager(self):
