@@ -72,7 +72,6 @@ class Models(APITestCase):
         o.estimated_datetime_for_intraday_quote()
         o.estimated_datetime_for_intraday_quote(delay=True)
         
-    @tag("current")
     def test_Accountsoperations(self):
         o=models.Accountsoperations()
         o.accounts_id=4
@@ -638,6 +637,7 @@ class API(APITestCase):
         self.assertEqual(lod_[0]["balance"], 0)#not deferred (debit)
         self.assertEqual(lod_[1]["balance"], 22.22)
 
+    @tag("current")
     def test_Creditcards_Payments(self):        
         # We create a credit card and a creditcard operation and make a payment
         dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(), status.HTTP_201_CREATED)
@@ -651,6 +651,7 @@ class API(APITestCase):
         dict_payments=tests_helpers.client_get(self, self.client_authorized_1, f"{dict_cc['url']}payments/", status.HTTP_200_OK)
         self.assertTrue(dict_payments[0]["count"], 1)
         self.assertTrue(dict_payments[1]["count"], 2)
+        
         
 
     def test_CatalogManager(self):

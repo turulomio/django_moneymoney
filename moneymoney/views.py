@@ -287,8 +287,6 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
             c.accounts=creditcard.accounts
             c.comment=""
             c.save()
-#            c.comment=models.Comment().encode(eComment.CreditCardBilling, creditcard, c)
-#            c.save()
 
             #Modifica el registro y lo pone como paid y la datetime de pago y añade la opercuenta
             for o in qs_cco:
@@ -296,7 +294,8 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
                 o.paid=True
                 o.accountsoperations_id=c.id
                 o.save()
-            return Response(status=status.HTTP_200_OK)
+            serializer = serializers.AccountsoperationsSerializer(c, many=False, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
 
