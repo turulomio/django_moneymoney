@@ -1,7 +1,9 @@
 from django.db import connection
 from django.conf import settings
 from django.http.response import JsonResponse
-from json import loads
+from io import StringIO
+from json import loads        
+from functools import wraps
 from rest_framework.response import Response
 from rest_framework.test import APIRequestFactory
 from rest_framework.request import Request
@@ -58,19 +60,6 @@ def string_oneline_object(o):
             continue
         r+=str(value)+", "
     return r[:-2]+ "]"
-    
-def lod_remove_duplicates(lod_):
-    seen = set()
-    unique_dicts = []
-    for d in lod_:
-        # Convert dictionary to a tuple of its items for hashability
-        t = tuple(d.items())
-        if t not in seen:
-            seen.add(t)
-            unique_dicts.append(d)
-#    print("Original",  len(lod_),  "Final",  len(unique_dicts))
-    return unique_dicts
-
 
 def internal_modelviewset_request(modelviewset, method, params,  params_method, user=None):
     """
@@ -116,6 +105,20 @@ def internal_modelviewset_request(modelviewset, method, params,  params_method, 
         return r.json()
     else:
         raise Exception("Error returning in internal_modelviewset_request")
-        
-        
-        
+
+
+def suppress_stdout(func):
+    """Decorator to suppress print statements in the function being decorated."""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        import sys
+        # Redirect stdout to nowhere
+        original_stdout = sys.stdout
+        sys.stdout = StringIO()
+        try:
+            return func(*args, **kwargs)
+        finally:
+            # Restore original stdout
+            sys.stdout = original_stdout
+    return wrapper
+

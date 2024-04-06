@@ -10,7 +10,7 @@ from django.utils import timezone
 from moneymoney import ios, functions
 from moneymoney.reusing.decorators import ptimeit
 from moneymoney.types import eConcept, eProductType, eOperationType
-from pydicts import lod_ymv, casts
+from pydicts import lod_ymv, casts, lod
 from pydicts.currency import Currency
 from requests import get
 
@@ -1168,7 +1168,7 @@ class Quotes(models.Model):
         if len (lod_)==0:
             return {}
             
-        lod_=functions.lod_remove_duplicates(lod_)
+        lod_=lod.lod_remove_duplicates(lod_)
             
         list_of_qs=[]
         for needed_quote in lod_:

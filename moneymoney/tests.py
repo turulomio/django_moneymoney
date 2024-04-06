@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.test import tag
 from django.utils import timezone
 from json import loads
-from moneymoney import models, ios, investing_com
+from moneymoney import models, ios, investing_com, functions
 from moneymoney.reusing import tests_helpers
 from os import path
 from pydicts import lod, casts, dod
@@ -26,7 +26,25 @@ static_year=2024
 static_month=1
 timezone_madrid="Europe/Madrid"
 
-class CtTestCase(APITestCase):
+class FunctionsTestCase(APITestCase):
+    @functions.suppress_stdout
+    def test_print_object(self):
+        b=models.Banks()
+        b.name="Newbank"
+        b.save()
+        functions.print_object(b)
+        
+    
+    @tag("current")
+    def test_string_oneline_object(self):
+        b=models.Banks()
+        b.name="Newbank"
+        b.save()
+        assert len(functions.string_oneline_object(b))>0
+        
+        
+
+class APITestCase(APITestCase):
     fixtures=["all.json"] #Para cargar datos por defecto
 
     @classmethod
@@ -137,7 +155,6 @@ class CtTestCase(APITestCase):
         lod_=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/{static_year}/", status.HTTP_200_OK)
         self.assertEqual(lod_[0]["total"],  dict_dividend["net"])
 
-    @tag("current")
     def test_ReportAnnualIncomeDetails(self):       
         # Adds a dividend to control it only appears in dividends not in dividends+incomes        
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)        
