@@ -99,7 +99,7 @@ class Accounts(models.Model):
             qs. Queryset Accounts
             balance_account_currency can be calculated if all accounts in qs has the same currency
         """
-        currencies_in_qs=list(qs.order_by().values_list("currency",flat=True).distinct())
+        currencies_in_qs=Accounts.currencies(qs)
         r={}
         if len(currencies_in_qs)==1: #One currency only
             b=Accountsoperations.objects.filter(accounts__in=qs, datetime__lte=dt).select_related("accounts").aggregate(Sum("amount"))["amount__sum"]
@@ -195,9 +195,9 @@ class Stockmarkets(models.Model):
     ## @return Datetime aware, always. It can't be None
     def estimated_datetime_for_intraday_quote(self, delay=True):
         if delay==True:
-            now=self.zone.now()-timedelta(minutes=15)
+            now=casts.dtaware_now(self.zone)-timedelta(minutes=15)
         else:
-            now=self.zone.now()
+            now=casts.dtaware_now(self.zone)
         if now.weekday()<5:#Weekday
             if now>self.dtaware_today_closes():
                 return self.dtaware_today_closes()
@@ -218,7 +218,7 @@ class Stockmarkets(models.Model):
     ## - If it's not weekend and returns yesterday close time except if it's monday that returns last friday at close time
     ## @return Datetime aware, always. It can't be None
     def estimated_datetime_for_daily_quote(self):
-        now=self.zone.now()
+        now=casts.dtaware_now(self.zone)
         if now.weekday()<5:#Weekday
             if now.weekday()>0:#Tuesday to Friday
                 return casts.dtaware(date.today()-timedelta(days=1), self.closes, self.zone)

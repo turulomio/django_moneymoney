@@ -26,7 +26,7 @@ static_year=2024
 static_month=1
 timezone_madrid="Europe/Madrid"
 
-class FunctionsTestCase(APITestCase):
+class Functions(APITestCase):
     @functions.suppress_stdout
     def test_print_object(self):
         b=models.Banks()
@@ -35,7 +35,6 @@ class FunctionsTestCase(APITestCase):
         functions.print_object(b)
         
     
-    @tag("current")
     def test_string_oneline_object(self):
         b=models.Banks()
         b.name="Newbank"
@@ -44,7 +43,37 @@ class FunctionsTestCase(APITestCase):
         
         
 
-class APITestCase(APITestCase):
+class Models(APITestCase):
+    fixtures=["all.json"] #Para cargar datos por defecto
+    
+    def test_Accounts(self):
+        a=models.Accounts()
+        a.name="New account"
+        a.banks_id=3
+        a.active=True
+        a.decimals=2
+        a.save()
+        str(a)
+
+    def test_Operationstypes(self):
+        o=models.Operationstypes.objects.get(pk=1)
+        str(o)    
+    
+    @tag("current")
+    def test_Stockmarkets(self):
+        o=models.Stockmarkets.objects.get(pk=1)
+        str(o)
+        o.dtaware_closes(today)
+        o.dtaware_closes_futures(today)
+        o.dtaware_today_closes()
+        o.dtaware_today_closes_futures()
+        o.dtaware_starts(today)
+        o.dtaware_today_starts()
+        o.estimated_datetime_for_daily_quote()
+        o.estimated_datetime_for_intraday_quote()
+        o.estimated_datetime_for_intraday_quote(delay=True)
+
+class API(APITestCase):
     fixtures=["all.json"] #Para cargar datos por defecto
 
     @classmethod
