@@ -3,6 +3,17 @@ from getpass import getuser
 from moneymoney import __version__
 from os import path, makedirs, environ
 from shutil import rmtree
+from sys import argv
+
+
+
+if "test" in argv or "coverage" in argv:
+    TESTING=True
+else:
+    TESTING=False
+    
+print("TESTING",  TESTING)
+
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
