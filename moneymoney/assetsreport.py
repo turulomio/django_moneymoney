@@ -40,7 +40,7 @@ def generate_assets_report(request, format, test):
         doc.find_and_delete_until_the_end_of_document('Styles to remove')
 
         # Use client to call other views 
-        dict_report_annual=functions.requests_get(reverse('ReportAnnual', args=(year,  )), request).json()
+        dict_report_annual=functions.requests_get(request.build_absolute_uri(reverse('ReportAnnual', args=(year,  ))), request).json()
 
         vTotalLastYear=Currency(dict_report_annual["last_year_balance"], c)
         vTotal=Currency(dict_report_annual["data"][len(dict_report_annual["data"])-1]["total"], c)

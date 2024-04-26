@@ -126,6 +126,9 @@ def suppress_stdout(func):
 
 
 def requests_get(url, request):
+    """
+        url must be an absolute_uri
+    """
 
     if settings.TESTING:
         client=APIClient()
@@ -139,9 +142,6 @@ def requests_get(url, request):
             'Authorization': f"Token {request.user.auth_token.key}",
             'Accept-Language': f"{language}-{language}",
             'Content-Type':'application/json'
-        }
-        url=f"http://testserver{url}"
-        print(url)
-    
+        }    
         return get(url, headers=headers, verify=False)
 
