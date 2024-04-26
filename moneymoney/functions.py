@@ -6,8 +6,9 @@ from json import loads
 from functools import wraps
 from requests import get
 from rest_framework.response import Response
-from rest_framework.test import APIRequestFactory
+from rest_framework.test import APIRequestFactory, APIClient
 from rest_framework.request import Request
+
 
 def dictfetchall(cursor):
     """
@@ -125,14 +126,22 @@ def suppress_stdout(func):
 
 
 def requests_get(url, request):
-    from django.utils.translation import get_language_from_request
-    language = get_language_from_request(request)
-    headers={
-        'Authorization': f"Token {request.user.auth_token.key}",
-        'Accept-Language': f"{language}-{language}",
-        'Content-Type':'application/json'
-    }
+
+    if settings.TESTING:
+        client=APIClient()
+        client.credentials(HTTP_AUTHORIZATION=request.headers["Authorization"])
+        language_headers={"HTTP_ACCEPT_LANGUAGE": request.headers['Accept-Language']}
+        return client.get(url, **language_headers)
+    else:   
+        from django.utils.translation import get_language_from_request
+        language = get_language_from_request(request)
+        headers={
+            'Authorization': f"Token {request.user.auth_token.key}",
+            'Accept-Language': f"{language}-{language}",
+            'Content-Type':'application/json'
+        }
+        url=f"http://testserver{url}"
+        print(url)
     
-    
-    return get(url, headers=headers, verify=False)
+        return get(url, headers=headers, verify=False)
 

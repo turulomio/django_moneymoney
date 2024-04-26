@@ -82,7 +82,6 @@ class Models(APITestCase):
         str(o)
         repr(o)
 
-    @tag("current")
     def test_Banks(self):
         o=models.Banks.objects.get(pk=3)
         str(o)
@@ -575,8 +574,8 @@ class API(APITestCase):
         self.assertEqual(len(lod_alerts["accounts_inactive_with_balance"]), 1 )
         self.assertEqual(len(lod_alerts["investments_inactive_with_balance"]), 1 )
 
-        
 
+    @tag("current")
     def test_AssetsReport(self):
         tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(datetime=datetime(2023,12,29), amount=1000), status.HTTP_201_CREATED)
         tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(amount=100), status.HTTP_201_CREATED)
