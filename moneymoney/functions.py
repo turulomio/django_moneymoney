@@ -4,6 +4,7 @@ from django.http.response import JsonResponse
 from io import StringIO
 from json import loads        
 from functools import wraps
+from requests import get
 from rest_framework.response import Response
 from rest_framework.test import APIRequestFactory
 from rest_framework.request import Request
@@ -121,4 +122,17 @@ def suppress_stdout(func):
             # Restore original stdout
             sys.stdout = original_stdout
     return wrapper
+
+
+def requests_get(url, request):
+    from django.utils.translation import get_language_from_request
+    language = get_language_from_request(request)
+    headers={
+        'Authorization': f"Token {request.user.auth_token.key}",
+        'Accept-Language': f"{language}-{language}",
+        'Content-Type':'application/json'
+    }
+    
+    
+    return get(url, headers=headers, verify=False)
 

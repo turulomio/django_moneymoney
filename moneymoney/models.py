@@ -12,7 +12,6 @@ from moneymoney.reusing.decorators import ptimeit
 from moneymoney.types import eConcept, eProductType, eOperationType
 from pydicts import lod_ymv, casts, lod
 from pydicts.currency import Currency
-from requests import get
 
 Decimal
 ptimeit
@@ -1737,15 +1736,3 @@ class FastOperationsCoverage(models.Model):
     class Meta:
         managed = True
         
-def requests_get(url, request):
-    from django.utils.translation import get_language_from_request
-    language = get_language_from_request(request)
-    headers={
-        'Authorization': f"Token {request.user.auth_token.key}",
-        'Accept-Language': f"{language}-{language}",
-        'Content-Type':'application/json'
-    }
-    
-    
-    return get(url, headers=headers, verify=False)
-
