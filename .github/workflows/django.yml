@@ -59,6 +59,7 @@ jobs:
 
     - name: Install python dependencies ${{ matrix.python-version }}
       run: |
+        sudo python3 --version
         sudo pip install .
         
     - name: Launch Unogenerator
