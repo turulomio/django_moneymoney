@@ -2,15 +2,13 @@ name: Django CI
 
 on:
   push:
-    branches: [ "main", "104-fix-github-actions" ]
+    branches: [ "main", "116-actions-doesnt-work" ]
   pull_request:
     branches: [ "main" ]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
 
     services:
       postgres:
@@ -24,18 +22,13 @@ jobs:
         # needed because the postgres container does not provide a healthcheck
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
 
-    strategy:
-      max-parallel: 4
-      matrix:
-        python-version: ["3.11"]
-
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v3
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: 3.11
 
     - name: Install PL/Python in the PostgreSQL container (Old migrations)
       run: |
@@ -58,16 +51,18 @@ jobs:
 
     - name: Install libreoffice 
       run: |
+        sudo apt-get install python3.11 python3.11-venv
         sudo apt-get install libreoffice python3-uno
 
     - name: Install python dependencies ${{ matrix.python-version }}
       run: |
-        sudo pip install .
+        sudo python3.11 -m venv .python3.11 --system-site-packages
+        sudo .python3.11/bin/pip install .
         
     - name: Launch Unogenerator
       run: |
-        sudo unogenerator_start
+        sudo .python3.11/bin/unogenerator_start
 
     - name: Run Tests
       run: |
-        sudo python manage.py test
+        sudo .python3.11/bin/python manage.py coverage
