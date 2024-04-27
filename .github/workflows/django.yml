@@ -61,7 +61,7 @@ jobs:
         
     - name: Launch Unogenerator
       run: |
-        sudo unogenerator_start
+        sudo .python3.11/bin/unogenerator_start
 
     - name: Run Tests
       run: |
