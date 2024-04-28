@@ -2200,3 +2200,8 @@ class FastOperationsCoverageViewSet(viewsets.ModelViewSet):
             self.queryset= self.queryset.filter(datetime__year=year, datetime__month=month)
         serializer = serializers.FastOperationsCoverageSerializer(self.queryset, many=True, context={'request': request})
         return Response(serializer.data)
+
+
+class ProductsStrategiesViewSet(CatalogModelViewSet):
+    queryset = models.ProductsStrategies.objects.all()
+    serializer_class = serializers.ProductsStrategiesSerializer
