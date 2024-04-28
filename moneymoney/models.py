@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.db import models, transaction, connection
-from django.db.models import Case, When, Sum, Value
+from django.db.models import Case, When, Sum, Value, Subquery
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
@@ -953,6 +953,15 @@ class Products(models.Model):
     @staticmethod
     def hurl(request, id):
         return request.build_absolute_uri(reverse('products-detail', args=(id, )))
+        
+    @staticmethod
+    def qs_distinct_with_investments():
+        """
+            Get queryset with all distinct products that have investments
+        """
+        qs_investments=Investments.objects.all()
+        # Query to get quotes with that datetimes
+        return Products.objects.filter(investments__id__in=Subquery(qs_investments.values("id")))
 
     def fullName(self):
         return "{} ({})".format(self.name, _(self.stockmarkets.name))
