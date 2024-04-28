@@ -811,6 +811,11 @@ class Orders(models.Model):
             "executed":executed, 
         }
 
+class ProductsStrategies(models.Model):
+    name = models.CharField(max_length=10,  blank=False, null=False)
+
+    class Meta:
+        managed = True
 
 class Products(models.Model):
     """

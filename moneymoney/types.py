@@ -137,21 +137,7 @@ class eMoneyCurrency:
     Account=2
     User=3
 
-## Type definition to refer to long /short invesment type positions
-class eInvestmentTypePosition:
-    Long=1
-    Short=2
-            
-    ## Return True if it's short. Due to postgres database has this definition
-    @classmethod
-    def to_boolean(self, einvestmenttypeposition):
-        if einvestmenttypeposition==1:
-            return False
-        return True
-
-    ## Returns Short if boolean is true
-    @classmethod
-    def to_eInvestmentTypePosition(self, boolean):
-        if boolean==True:
-            return eInvestmentTypePosition.Short
-        return eInvestmentTypePosition.Long
+class eProductStrategy:
+    Call=1
+    Put=2
+    Inline=3

@@ -59,6 +59,7 @@ class Command(BaseCommand):
             "moneymoney.leverages", 
             "moneymoney.operationstypes", 
             "moneymoney.productstypes", 
+            "moneymoney.productsstrategies", 
             "--indent",  "4", 
             "-o", "moneymoney/fixtures/other.json"
         )
