@@ -838,6 +838,7 @@ class Products(models.Model):
     mail = models.TextField(blank=True, null=True)
     percentage = models.IntegerField(blank=False, null=False)
     pci = models.CharField(choices=PCI_CHOICES, max_length=1)
+    productsstrategies=models.ForeignKey('Productsstrategies', models.DO_NOTHING, blank=False, null=False)
     leverages = models.ForeignKey(Leverages, models.DO_NOTHING)
     stockmarkets = models.ForeignKey(Stockmarkets, models.DO_NOTHING)
     comment = models.TextField(blank=True, null=True)
