@@ -58,7 +58,6 @@ jobs:
       run: |
         sudo python3.11 -m venv .python3.11 --system-site-packages
         sudo .python3.11/bin/pip install .
-        sudo .python3.11/bin/pip install coverage
 
     - name: Launch Unogenerator
       run: |
@@ -66,4 +65,4 @@ jobs:
 
     - name: Run Tests
       run: |
-        sudo .python3.11/bin/python manage.py coverage
+        sudo .python3.11/bin/python manage.py test
