@@ -2181,6 +2181,7 @@ class EstimationsDpsViewSet(viewsets.ModelViewSet):
 class StockmarketsViewSet(CatalogModelViewSet):
     queryset = models.Stockmarkets.objects.all()
     serializer_class = serializers.StockmarketsSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
 class FastOperationsCoverageViewSet(viewsets.ModelViewSet):
     queryset = models.FastOperationsCoverage.objects.all().select_related("investments__products")
@@ -2205,3 +2206,4 @@ class FastOperationsCoverageViewSet(viewsets.ModelViewSet):
 class ProductsStrategiesViewSet(CatalogModelViewSet):
     queryset = models.ProductsStrategies.objects.all()
     serializer_class = serializers.ProductsStrategiesSerializer
+    permission_classes = [permissions.IsAuthenticated]
