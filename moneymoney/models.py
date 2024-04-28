@@ -27,11 +27,6 @@ RANGE_RECOMENDATION_CHOICES =(
     (8, "SMA 10"), 
     (9, "SMA 5"), 
 )
-PCI_CHOICES =( 
-    ('c', _("Call")), 
-    ('p', _("Put")), 
-    ('i', _("Inline")), 
-)
 
 class Accounts(models.Model):
     name = models.TextField(blank=True, null=True)
@@ -837,7 +832,6 @@ class Products(models.Model):
     phone = models.TextField(blank=True, null=True)
     mail = models.TextField(blank=True, null=True)
     percentage = models.IntegerField(blank=False, null=False)
-    pci = models.CharField(choices=PCI_CHOICES, max_length=1)
     productsstrategies=models.ForeignKey('Productsstrategies', models.DO_NOTHING, blank=False, null=False)
     leverages = models.ForeignKey(Leverages, models.DO_NOTHING)
     stockmarkets = models.ForeignKey(Stockmarkets, models.DO_NOTHING)
