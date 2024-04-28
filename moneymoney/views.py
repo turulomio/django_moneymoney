@@ -16,7 +16,7 @@ from drf_spectacular.types import OpenApiTypes
 from itertools import permutations
 from math import ceil
 from moneymoney import models, serializers, ios, functions
-from moneymoney.types import eConcept, eProductType, eOperationType
+from moneymoney.types import eConcept, eProductType, eOperationType, eProductStrategy
 from moneymoney.reusing.decorators import ptimeit
 from pydicts.percentage import Percentage,  percentage_between
 from request_casting.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestString, RequestInteger, RequestListOfIntegers, RequestListOfUrls, all_args_are_not_none
@@ -558,20 +558,17 @@ class InvestmentsClasses(APIView):
         request=None, 
         responses=OpenApiTypes.OBJECT
     )
-    
-    
-        
 
     def get(self, request, *args, **kwargs):
         def json_classes_by_pci():
             ld=[]
-            for mode, name in (('p', 'Put'), ('c', 'Call'), ('i', 'Inline')):
-                d={"name": name, "balance": 0,  "invested": 0}
+            for product_strategy in models.ProductsStrategies().all():
+                d={"name": product_strategy.name, "balance": 0,  "invested": 0}
                 for investment in qs_investments_active:
-                    if investment.products.pci==mode:
+                    if investment.products.productsstrategies.id==product_strategy.id:
                         d["balance"]=d["balance"]+plio.d_total_io_current(investment.id)["balance_user"]
                         d["invested"]=d["invested"]+plio.d_total_io_current(investment.id)["invested_user"]
-                if mode=="c":
+                if product_strategy.id==eProductStrategy.Call:
                     d["balance"]=d["balance"]+accounts_balance
                     d["invested"]=d["invested"]+accounts_balance
                 ld.append(d)
@@ -2184,6 +2181,7 @@ class EstimationsDpsViewSet(viewsets.ModelViewSet):
 class StockmarketsViewSet(CatalogModelViewSet):
     queryset = models.Stockmarkets.objects.all()
     serializer_class = serializers.StockmarketsSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
 class FastOperationsCoverageViewSet(viewsets.ModelViewSet):
     queryset = models.FastOperationsCoverage.objects.all().select_related("investments__products")
@@ -2203,3 +2201,9 @@ class FastOperationsCoverageViewSet(viewsets.ModelViewSet):
             self.queryset= self.queryset.filter(datetime__year=year, datetime__month=month)
         serializer = serializers.FastOperationsCoverageSerializer(self.queryset, many=True, context={'request': request})
         return Response(serializer.data)
+
+
+class ProductsStrategiesViewSet(CatalogModelViewSet):
+    queryset = models.ProductsStrategies.objects.all()
+    serializer_class = serializers.ProductsStrategiesSerializer
+    permission_classes = [permissions.IsAuthenticated]
