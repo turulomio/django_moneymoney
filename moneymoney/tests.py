@@ -85,6 +85,25 @@ class Models(APITestCase):
     def test_Banks(self):
         o=models.Banks.objects.get(pk=3)
         str(o)
+    
+    def test_Products(self):    
+        # qs_distinct_with_investments empty
+        qs=models.Products.qs_distinct_with_investments()
+        self.assertEqual(qs.count(), 0)
+        
+        # qs_distinct_with_investments not empty
+        inv=models.Investments()
+        inv.name="Investment name"
+        inv.active=True
+        inv.accounts_id=4
+        inv.products_id=79329
+        inv.selling_price=0
+        inv.daily_adjustment=False
+        inv.balance_percentage=100
+        inv.save()
+        qs=models.Products.qs_distinct_with_investments()
+        self.assertEqual(qs.count(), 1)
+        self.assertEqual(qs[0].id, 79329)
 
 class API(APITestCase):
     fixtures=["all.json"] #Para cargar datos por defecto
@@ -312,7 +331,21 @@ class API(APITestCase):
         dict_product=tests_helpers.client_get(self, self.client_authorized_1, "/api/products/79228/", status.HTTP_200_OK)
         payload=models.Investments.post_payload(products=dict_product["url"], accounts=dict_account["url"])
         tests_helpers.common_tests_Collaborative(self, "/api/investments/", payload, self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
+
+    @tag("current")
+    def test_InvestmentsClasses(self):
+        #Empty
+        dict_classes=tests_helpers.client_get(self, self.client_authorized_1, "/investments/classes/", status.HTTP_200_OK)
+        self.assertEqual(lod.lod_sum(dict_classes["by_producttype"], "balance"),  0)
         
+        # With one investmentoperation and one account operation        
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(amount=10000), status.HTTP_201_CREATED)
+        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(products=dict_investment["products"]), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(investments=dict_investment["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+        dict_classes=tests_helpers.client_get(self, self.client_authorized_1, "/investments/classes/", status.HTTP_200_OK)
+        self.assertEqual(lod.lod_sum(dict_classes["by_producttype"], "balance"), 10000)
+
     def test_InvestmentsChangeSellingPrice(self):
         dict_investment_1=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
         dict_investment_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
@@ -574,8 +607,6 @@ class API(APITestCase):
         self.assertEqual(len(lod_alerts["accounts_inactive_with_balance"]), 1 )
         self.assertEqual(len(lod_alerts["investments_inactive_with_balance"]), 1 )
 
-
-    @tag("current")
     def test_AssetsReport(self):
         tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(datetime=datetime(2023,12,29), amount=1000), status.HTTP_201_CREATED)
         tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(amount=100), status.HTTP_201_CREATED)
@@ -744,6 +775,8 @@ class API(APITestCase):
         dict_sp_update=tests_helpers.client_put(self, self.client_catalog_manager, dict_sp["url"], dict_sp_update, status.HTTP_200_OK)
         tests_helpers.client_delete(self, self.client_authorized_1, dict_sp["url"], dict_sp_update, status.HTTP_400_BAD_REQUEST)
         tests_helpers.client_delete(self, self.client_catalog_manager, dict_sp["url"], dict_sp_update, status.HTTP_204_NO_CONTENT)
+        
+        
         
         
 

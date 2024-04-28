@@ -562,7 +562,7 @@ class InvestmentsClasses(APIView):
     def get(self, request, *args, **kwargs):
         def json_classes_by_pci():
             ld=[]
-            for product_strategy in models.ProductsStrategies().all():
+            for product_strategy in models.ProductsStrategies.objects.all():
                 d={"name": product_strategy.name, "balance": 0,  "invested": 0}
                 for investment in qs_investments_active:
                     if investment.products.productsstrategies.id==product_strategy.id:
@@ -572,14 +572,11 @@ class InvestmentsClasses(APIView):
                     d["balance"]=d["balance"]+accounts_balance
                     d["invested"]=d["invested"]+accounts_balance
                 ld.append(d)
-            
             return ld
-
-
 
         def json_classes_by_product():
             ld=[]
-            for product in models.Products.objects.order_by().distinct("investments__products").select_related("stockmarkets"):
+            for product in models.Products.qs_distinct_with_investments():
                 d={"name": product.fullName(), "balance": 0,  "invested": 0}
                 for investment in qs_investments_active:
                     if investment.products==product:
