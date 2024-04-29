@@ -4,6 +4,15 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def add_productsstrategies_values(apps, schema_editor):
+    ProductsStrategies=apps.get_model('moneymoney', 'ProductsStrategies')
+    
+    list_=[]
+    list_.append(ProductsStrategies(name="Call"))
+    list_.append(ProductsStrategies(name="Put"))
+    list_.append(ProductsStrategies(name="Inline"))
+    ProductsStrategies.objects.bulk_create(list_)
+    
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -11,6 +20,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(add_productsstrategies_values), 
         migrations.AddField(
             model_name="products",
             name="productsstrategies",
