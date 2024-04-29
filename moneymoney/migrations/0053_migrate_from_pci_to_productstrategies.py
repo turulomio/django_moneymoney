@@ -4,6 +4,13 @@ from django.db import migrations
 
 def convert_pci_to_productsstrategies(apps, schema_editor):
     Products=apps.get_model('moneymoney', 'Products')
+    ProductsStrategies=apps.get_model('moneymoney', 'ProductsStrategies')
+    
+    list_=[]
+    list_.append(ProductsStrategies(name="Call"))
+    list_.append(ProductsStrategies(name="Put"))
+    list_.append(ProductsStrategies(name="Inline"))
+    ProductsStrategies.objects.bulk_create(list_)
 
     Products.objects.filter(pci="c").update(productsstrategies_id=1)
     Products.objects.filter(pci="p").update(productsstrategies_id=2)

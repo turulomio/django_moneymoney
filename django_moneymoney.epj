@@ -2,7 +2,7 @@
   "header": {
     "comment": "eric project file for project django_moneymoney",
     "copyright": "Copyright (C) 2024 , ",
-    "saved": "2024-04-28, 08:25:22"
+    "saved": "2024-04-28, 10:33:24"
   },
   "project": {
     "AUTHOR": "",
@@ -281,6 +281,7 @@
       "moneymoney/migrations/0051_productsstrategies.py",
       "moneymoney/migrations/0052_products_productsstrategies.py",
       "moneymoney/migrations/0053_migrate_from_pci_to_productstrategies.py",
+      "moneymoney/migrations/0054_remove_products_pci.py",
       "moneymoney/migrations/__init__.py",
       "moneymoney/models.py",
       "moneymoney/paginators.py",
