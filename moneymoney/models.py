@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 from decimal import Decimal
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.db import models, transaction, connection
@@ -28,12 +29,14 @@ RANGE_RECOMENDATION_CHOICES =(
     (9, "SMA 5"), 
 )
 
+
+
 class Accounts(models.Model):
     name = models.TextField(blank=True, null=True)
     banks = models.ForeignKey('Banks',  models.DO_NOTHING, related_name="accounts", blank=False, null=False)
     active = models.BooleanField(blank=False, null=False)
     number = models.CharField(max_length=24, blank=True, null=True)
-    currency = models.TextField()
+    currency = models.TextField(blank=False,  null=False, choices=settings.CURRENCIES_CHOICES)
     decimals=models.IntegerField(blank=False, null=False)
 
     class Meta:
@@ -824,7 +827,7 @@ class Products(models.Model):
     """
     name = models.TextField(blank=True, null=True)
     isin = models.TextField(blank=True, null=True)
-    currency = models.TextField(blank=True, null=True)
+    currency = models.TextField(blank=False,  null=False, choices=settings.CURRENCIES_CHOICES)
     productstypes = models.ForeignKey('Productstypes', models.DO_NOTHING, blank=True, null=True)
     agrupations = models.TextField(blank=True, null=True)
     web = models.TextField(blank=True, null=True)
@@ -1578,7 +1581,7 @@ class Accountstransfers(models.Model):
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     favorites= models.ManyToManyField(Products)
-    currency=models.CharField(max_length=4, blank=False, null=False, default="EUR")
+    currency = models.CharField(max_length=4,  blank=False,  null=False, choices=settings.CURRENCIES_CHOICES, default="EUR")
     zone=models.CharField(max_length=50, blank=False, null=False, default="Europe/Madrid")
     investing_com_url=models.TextField(blank=True, null=True)
     investing_com_cookie=models.TextField(blank=True, null=True)

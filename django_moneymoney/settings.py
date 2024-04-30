@@ -2,6 +2,7 @@ from django.urls import reverse_lazy
 from getpass import getuser
 from moneymoney import __version__
 from os import path, makedirs, environ
+from pydicts.currency import currencies_odod
 from shutil import rmtree
 from sys import argv
 
@@ -182,3 +183,10 @@ STATIC_ROOT = BASE_DIR+ "/moneymoney/static/"
 TMPDIR=f"/tmp/django_moneymoney-{getuser()}"
 rmtree(TMPDIR, ignore_errors=True)
 makedirs(TMPDIR, exist_ok=True)
+
+## Currencies dictionary to be loaded once
+CURRENCIES=currencies_odod()
+CURRENCIES_CHOICES=[]
+for k,  v in CURRENCIES.items():
+    CURRENCIES_CHOICES.append((k, v["name"]))
+
