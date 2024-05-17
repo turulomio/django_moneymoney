@@ -53,6 +53,7 @@ urlpatterns=[
     path('quotes/massive_update/', money_views.QuotesMassiveUpdate.as_view(), name='QuotesMassiveUpdate'),
     path('recomendationmethods/', money_views.RecomendationMethods, name='RecomendationMethods'),
     path('reports/annual/<int:year>/', money_views.ReportAnnual, name='ReportAnnual'),
+    path('reports/annual/revaluation/', money_views.ReportAnnualRevaluation, name='ReportAnnualRevaluation'),
     path('reports/annual/income/<int:year>/', money_views.ReportAnnualIncome, name='ReportAnnualIncome'),
     path('reports/concepts/', money_views.ReportConcepts, name='ReportConcepts'),
     path('reports/annual/income/details/<int:year>/<int:month>/', money_views.ReportAnnualIncomeDetails, name='ReportAnnualIncomeDetails'),

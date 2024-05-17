@@ -1036,6 +1036,7 @@ class IOS(APIView):
             This view interacts with IOS module
         """
         classmethod_str=RequestString(request, "classmethod_str")
+        addition_current_year_gains=RequestBool(request, "addition_current_year_gains", False)
         if classmethod_str is None:
             return Response({'status': "classmethod_str can't be null"}, status=status.HTTP_400_BAD_REQUEST)
         dt=RequestDtaware(request, "datetime", request.user.profile.zone, timezone.now())
@@ -1057,18 +1058,26 @@ class IOS(APIView):
         if classmethod_str=="from_ids":
             ids=RequestListOfIntegers(request, "investments")
             if all_args_are_not_none( ids, dt, mode, simulation):
-                ios_=ios.IOS.from_ids( dt,  request.user.profile.currency,  ids,  mode, simulation) 
+                ios_=ios.IOS.from_ids( dt,  request.user.profile.currency,  ids,  mode, simulation)
+                if addition_current_year_gains:
+                    ios_.io_current_addition_current_year_gains()
                 return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
         elif classmethod_str=="from_all":
                 ios_=ios.IOS.from_all( dt,  request.user.profile.currency,  mode, simulation)
+                if addition_current_year_gains:
+                    ios_.io_current_addition_current_year_gains()
                 return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
         elif classmethod_str=="from_all_merging_io_current":
                 ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.all(),   mode, simulation)
+                if addition_current_year_gains:
+                    ios_.io_current_addition_current_year_gains()
                 return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
         elif classmethod_str=="from_ids_merging_io_current":
             ids=RequestListOfIntegers(request, "investments")
             if all_args_are_not_none( ids, dt, mode, simulation):
                 ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.filter(id__in=ids),   mode, simulation)
+                if addition_current_year_gains:
+                    ios_.io_current_addition_current_year_gains()
                 return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
         return Response({'status': "classmethod_str wasn't found'"}, status=status.HTTP_400_BAD_REQUEST)
@@ -1590,6 +1599,28 @@ def RecomendationMethods(request):
         })
     return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
+
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
+def ReportAnnualRevaluation(request ):
+    only_zero=RequestBool(request, "only_zero", False)
+    ld=[]
+    investments=models.Investments.objects.filter(active=True).select_related("accounts","products")
+    if only_zero is True:
+        investments=investments.filter(products__percentage=0)
+    ios_=ios.IOS.from_qs( timezone.now(), request.user.profile.currency, investments, 1)
+    ios_.io_current_addition_current_year_gains()
+    for inv in ios_.qs_investments():
+        for o in ios_.d_io_current(inv.id):
+            o["name"]=inv.fullName()
+            if o["datetime"]<=casts.dtaware_year_end(date.today().year-1, request.user.profile.zone):
+                o["balance_last_year_or_invested"]=o["shares"]*ios_.d_basic_results(inv.id)["lastyear"]*o["investment2account"]*o["account2user"]
+            else:
+                o["balance_last_year_or_invested"]=o["invested_user"]
+            ld.append(o)
+    ld=lod.lod_order_by(ld, "datetime")
+    
+    return JsonResponse( ld, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])

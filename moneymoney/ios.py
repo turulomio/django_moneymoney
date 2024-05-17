@@ -122,22 +122,31 @@ class IOS:
         
     def d_data(self, id_):
         return self._t[str(id_)]["data"]
+
     def d_basic_results(self, id_):
         return self._t[str(id_)]["data"]["basic_results"]
+
     def d_io(self, id_):
         return self._t[str(id_)]["io"]
+
     def d_io_current(self, id_):
         return self._t[str(id_)]["io_current"]
+
     def d_io_historical(self, id_):
         return self._t[str(id_)]["io_historical"]
+
     def d_total_io(self, id_):
         return self._t[str(id_)]["total_io"]
+
     def d_total_io_current(self, id_):
         return self._t[str(id_)]["total_io_current"]
+
     def d_total_io_historical(self, id_):
         return self._t[str(id_)]["total_io_historical"]
+
     def sum_total_io_current(self):
         return self._t["sum_total_io_current"]
+
     def sum_total_io_historical(self):
         return self._t["sum_total_io_historical"]
 
@@ -203,10 +212,46 @@ class IOS:
                 if dt_from<=o["datetime"] and o["datetime"]<=dt_to:
                     r=r - o[key]
         return r
+        
+    def io_current_addition_current_year_gains(self):
+        """
+            Calculates current_year_gains of all entries and adds them to d_io_current
+            Returns a Decimal with the gains of this investment operation
+                - If io is newer than last year datetime. Returns gains from bought datetime
+                - If not returns gains from last year datetime
+            
+        """
+        sum_total_investment=Decimal(0)
+        sum_total_account=Decimal(0)
+        sum_total_user=Decimal(0)
+        for entry in self.entries():
+            for o in self.d_io_current(entry):
+                o["current_year_gains_investment"]=Decimal(0)#Without lastyear_datetime return 0
+                if self.d_basic_results(entry)["lastyear_datetime"] is not None:
+                    if o["datetime"]<=self.d_basic_results(entry)["lastyear_datetime"]: #Bought before lastyear
+                        o["current_year_gains_investment"]=o["shares"]*(self.d_basic_results(entry)["last"]-self.d_basic_results(entry)["lastyear"])
+                    else:
+                        o["current_year_gains_investment"]=o["shares"]*(self.d_basic_results(entry)["last"]-o["price_investment"])
+                o["current_year_gains_account"]=o["current_year_gains_investment"]*o["investment2account"]
+                o["current_year_gains_user"]=o["current_year_gains_account"]*o["account2user"]
+        
+            self.d_total_io_current(entry)["current_year_gains_investment"]=lod.lod_sum(self.d_io_current(entry), "current_year_gains_investment")
+            self.d_total_io_current(entry)["current_year_gains_account"]=lod.lod_sum(self.d_io_current(entry), "current_year_gains_account")
+            self.d_total_io_current(entry)["current_year_gains_user"]=lod.lod_sum(self.d_io_current(entry), "current_year_gains_user")
+            
+            sum_total_investment+=self.d_total_io_current(entry)["current_year_gains_investment"]
+            sum_total_account+=self.d_total_io_current(entry)["current_year_gains_account"]
+            sum_total_user+=self.d_total_io_current(entry)["current_year_gains_user"]
+        
+        self.sum_total_io_current()["current_year_gains_investment"]=sum_total_investment
+        self.sum_total_io_current()["current_year_gains_account"]=sum_total_account
+        self.sum_total_io_current()["current_year_gains_user"]=sum_total_user
+            
+                
 
     def io_current_highest_price(self):
         """
-        Public method Returns highest io operation price of all io operations
+            Returns highest io operation price of all io operations
         """
         
         r=0
@@ -217,7 +262,7 @@ class IOS:
         return r
     def io_current_lowest_price(self):
         """
-        Public method Returns highest io operation price of all io operations
+            Returns highest io operation price of all io operations
         """
         
         r=10000000
