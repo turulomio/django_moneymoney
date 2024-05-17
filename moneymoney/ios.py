@@ -226,10 +226,12 @@ class IOS:
         sum_total_user=Decimal(0)
         for entry in self.entries():
             for o in self.d_io_current(entry):
-                if o["datetime"]<=self.d_basic_results(entry)["lastyear_datetime"]: #Bought before lastyear
-                    o["current_year_gains_investment"]=o["shares"]*(self.d_basic_results(entry)["last"]-self.d_basic_results(entry)["lastyear"])
-                else:
-                    o["current_year_gains_investment"]=o["shares"]*(self.d_basic_results(entry)["last"]-o["price_investment"])
+                o["current_year_gains_investment"]=Decimal(0)#Without lastyear_datetime return 0
+                if self.d_basic_results(entry)["lastyear_datetime"] is not None:
+                    if o["datetime"]<=self.d_basic_results(entry)["lastyear_datetime"]: #Bought before lastyear
+                        o["current_year_gains_investment"]=o["shares"]*(self.d_basic_results(entry)["last"]-self.d_basic_results(entry)["lastyear"])
+                    else:
+                        o["current_year_gains_investment"]=o["shares"]*(self.d_basic_results(entry)["last"]-o["price_investment"])
                 o["current_year_gains_account"]=o["current_year_gains_investment"]*o["investment2account"]
                 o["current_year_gains_user"]=o["current_year_gains_account"]*o["account2user"]
         

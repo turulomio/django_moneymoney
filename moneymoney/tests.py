@@ -217,6 +217,16 @@ class API(APITestCase):
 
     def test_ReportAnnual(self):
         tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/{today_year}/", status.HTTP_200_OK)
+        
+    @tag("current")
+    def test_ReportAnnualRevaluation(self):
+        
+        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(investments=dict_investment["url"]), status.HTTP_201_CREATED)
+        
+        #Without lastyear quote
+        tests_helpers.client_get(self, self.client_authorized_1, "/reports/annual/revaluation/", status.HTTP_200_OK)
 
     def test_ReportAnnualIncome(self):        
         # Adds a dividend to control it only appears in dividends not in dividends+incomes        
@@ -487,7 +497,6 @@ class API(APITestCase):
         with self.assertRaises(models.Investmentsoperations.DoesNotExist):
             models.Investmentsoperations.objects.get(pk=dict_io_updated["id"])
 
-    @tag("current")
     def test_IOS(self):
         """
             31/12           1000 shares         9€          9000€

@@ -1602,6 +1602,21 @@ def RecomendationMethods(request):
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
+def ReportAnnualRevaluation(request ):
+    ld=[]
+    investments=models.Investments.objects.filter(active=True).select_related("accounts","products")
+    ios_=ios.IOS.from_qs( timezone.now(), request.user.profile.currency, investments, 1)
+    ios_.io_current_addition_current_year_gains()
+    for inv in ios_.qs_investments():
+        for o in ios_.d_io_current(inv.id):
+            o["name"]=inv.fullName()
+            ld.append(o)
+    ld=lod.lod_order_by(ld, "datetime")
+    
+    return JsonResponse( ld, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+
+@api_view(['GET', ])    
+@permission_classes([permissions.IsAuthenticated, ])
 
 def ReportAnnual(request, year):
     def month_results(month, month_name, local_currency):
