@@ -227,6 +227,9 @@ class API(APITestCase):
         
         #Without lastyear quote
         tests_helpers.client_get(self, self.client_authorized_1, "/reports/annual/revaluation/", status.HTTP_200_OK)
+        
+        #Only Zero
+        tests_helpers.client_get(self, self.client_authorized_1, "/reports/annual/revaluation/?only_zero=true", status.HTTP_200_OK)
 
     def test_ReportAnnualIncome(self):        
         # Adds a dividend to control it only appears in dividends not in dividends+incomes        

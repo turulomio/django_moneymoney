@@ -1603,8 +1603,11 @@ def RecomendationMethods(request):
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportAnnualRevaluation(request ):
+    only_zero=RequestBool(request, "only_zero", False)
     ld=[]
     investments=models.Investments.objects.filter(active=True).select_related("accounts","products")
+    if only_zero is True:
+        investments=investments.filter(products__percentage=0)
     ios_=ios.IOS.from_qs( timezone.now(), request.user.profile.currency, investments, 1)
     ios_.io_current_addition_current_year_gains()
     for inv in ios_.qs_investments():
