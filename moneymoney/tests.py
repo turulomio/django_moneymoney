@@ -18,13 +18,22 @@ tag,  dod
 
 js_image_b64="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAIAQMAAAD+wSzIAAAABlBMVEX///+/v7+jQ3Y5AAAADklEQVQI12P4AIX8EAgALgAD/aNpbtEAAAAASUVORK5CYII="
 
+timezone_madrid="Europe/Madrid"
 today=date.today()
 today_year=today.year
 today_month=today.month        
+
+yesterday=date.today()-timedelta(days=1)
+yesterday_year=yesterday.year
+yesterday_month=yesterday.month
+
+dtaware_last_year=casts.dtaware_year_end(today_year-1, timezone_madrid)
+dtaware_now=casts.dtaware_now()
+dtaware_yesterday=dtaware_now-timedelta(days=1)
+
 # Defines report moment for static reports to avoid problems with asserts
 static_year=2024
 static_month=1
-timezone_madrid="Europe/Madrid"
 
 class Functions(APITestCase):
     @functions.suppress_stdout
@@ -332,7 +341,6 @@ class API(APITestCase):
         payload=models.Investments.post_payload(products=dict_product["url"], accounts=dict_account["url"])
         tests_helpers.common_tests_Collaborative(self, "/api/investments/", payload, self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
 
-    @tag("current")
     def test_InvestmentsClasses(self):
         #Empty
         dict_classes=tests_helpers.client_get(self, self.client_authorized_1, "/investments/classes/", status.HTTP_200_OK)
@@ -479,16 +487,51 @@ class API(APITestCase):
         with self.assertRaises(models.Investmentsoperations.DoesNotExist):
             models.Investmentsoperations.objects.get(pk=dict_io_updated["id"])
 
+    @tag("current")
     def test_IOS(self):
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
+        """
+            31/12           1000 shares         9€          9000€
+            yesterday    1000 shares        10€         10000€ 
+            
+            Balance 10€ is 20000€
+            
+            today           -1 shares               11€     
+            
+            Balance a 11€ =22000€-11=21.989€
+            
+            Gains current year [0] = 999*11 - 999*9=1998
+            Gains current year [1] = 1000*10 - 1000*9=1000
+            
+            Sum gains current year= 2998
+            
+            
+        
+        """
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+        
+        #Bought last year
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(datetime=dtaware_last_year, quote=9), status.HTTP_201_CREATED)#Last year quote
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(datetime=dtaware_last_year, investments=dict_investment["url"], price=9), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+
+        #Bouth yesterday
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(datetime=dtaware_yesterday, quote=10), status.HTTP_201_CREATED)#Quote at buy moment
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(datetime=dtaware_yesterday, investments=dict_investment["url"], price=10), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
 
         ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals)
-        self.assertEqual(ios_.d_total_io_current(dict_investment["id"])["balance_user"], 10000)
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"], shares=-1, price=20), status.HTTP_201_CREATED) #Removes one share
+        self.assertEqual(ios_.d_total_io_current(dict_investment["id"])["balance_user"], 20000)
+        
+        #Sell today
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"], shares=-1, price=11), status.HTTP_201_CREATED) #Removes one share
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(quote=11), status.HTTP_201_CREATED)#Sets quote to price to get currrent_year_gains
         ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals) #Recaulculates IOS
-        self.assertEqual(ios_.d_total_io_current(dict_investment["id"])["balance_user"], 9990)
+        self.assertEqual(ios_.d_total_io_current(dict_investment["id"])["balance_user"], 21989)
+        
+        #Get zerorisk balance
+        ios_.sum_total_io_current_zerorisk_user()
+        
+        # Current year gains addition
+        ios_.io_current_addition_current_year_gains()
+        self.assertEqual(ios_.sum_total_io_current()["current_year_gains_user"], 2998)
         
         #IOS.simulation
         simulation=[
@@ -506,7 +549,6 @@ class API(APITestCase):
             }, 
         ]
         ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals, simulation) #Makes simulation
-#        ios_.print_d(1)
 
         #IOS.from_merging_io_current
         ## Adding a new investment and new investmentsoperations with same product
@@ -515,9 +557,7 @@ class API(APITestCase):
         ios_merged=ios.IOS.from_qs_merging_io_current(timezone.now(), 'EUR', models.Investments.objects.all(), ios.IOSModes.ios_totals_sumtotals)
         self.assertEqual(ios_merged.entries(),  ['79329'])
         
-        #Get zerorisk balance
-        ios_.sum_total_io_current_zerorisk_user()
-        
+
         
     def test_ConceptsReport(self):
         #test empty
