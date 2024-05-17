@@ -1610,6 +1610,10 @@ def ReportAnnualRevaluation(request ):
     for inv in ios_.qs_investments():
         for o in ios_.d_io_current(inv.id):
             o["name"]=inv.fullName()
+            if o["datetime"]<=casts.dtaware_year_end(date.today().year-1, request.user.profile.zone):
+                o["balance_last_year_or_invested"]=o["shares"]*ios_.d_basic_results(inv.id)["lastyear"]*o["investment2account"]*o["account2user"]
+            else:
+                o["balance_last_year_or_invested"]=o["invested_user"]
             ld.append(o)
     ld=lod.lod_order_by(ld, "datetime")
     
