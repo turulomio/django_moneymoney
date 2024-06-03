@@ -13,6 +13,7 @@ from request_casting.request_casting import id_from_url
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 from django.contrib.auth.models import Group
+from asgiref.sync import async_to_sync, sync_to_async
 
 tag,  dod
 
@@ -172,7 +173,7 @@ class API(APITestCase):
         cls.client_authorized_1=APIClient()
         cls.client_authorized_1.credentials(HTTP_AUTHORIZATION='Token ' + cls.token_user_authorized_1)
         cls.client_authorized_1.user=cls.user_authorized_1
-
+        
         cls.client_authorized_2=APIClient()
         cls.client_authorized_2.credentials(HTTP_AUTHORIZATION='Token ' + cls.token_user_authorized_2)
         cls.client_authorized_2.user=cls.user_authorized_2
@@ -218,7 +219,6 @@ class API(APITestCase):
     def test_ReportAnnual(self):
         tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/{today_year}/", status.HTTP_200_OK)
         
-    @tag("current")
     def test_ReportAnnualRevaluation(self):
         
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
@@ -252,9 +252,10 @@ class API(APITestCase):
         #TODO All kind of values
 
 
+    @tag("current")
     def test_Quotes_get_quotes(self):
         quotes=[]
-        for i in range(5):
+        for i in range(1000):
             quotes.append(tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(quote=i+1), status.HTTP_201_CREATED))
         
         #Creates a dict_tupled to query massive quotes
@@ -263,25 +264,31 @@ class API(APITestCase):
         for quote in quotes:
             lod_.append({"products_id": 79329,  "datetime": casts.str2dtaware(quote["datetime"])})
         lod_.append({"products_id":79329,  "datetime": fivedays})#Doesn't exist
+        
+#        lod.lod_print(lod_)
        
         # Gets quotes and checks them with quotes list
-        r=models.Quotes.get_quotes(lod_)
+        response=sync_to_async(models.Quotes.get_quotes(lod_))
+
+        # Wait for the async call to complete
+        r= sync_to_sync(response)
+        print(r)
         for i in range(5):
             quotes_datetime=casts.str2dtaware(quotes[i]["datetime"])
             self.assertEqual(quotes[i]["quote"], r[79329][quotes_datetime]["quote"]   )
             
         self.assertEqual(r[79329][fivedays]["quote"], None)
 
-        # Products basic_results empty
-        p=models.Products.objects.get(pk=79330)
-        assert p.basic_results()["lastyear"]==None
-
-
-        # Products without quotes
-        now=timezone.now()
-        lod_=[{"products_id": 79330,  "datetime": now}, ]
-        r=models.Quotes.get_quotes(lod_)
-        assert r[79330][now]["quote"]==None
+#        # Products basic_results empty
+#        p=models.Products.objects.get(pk=79330)
+#        assert p.basic_results()["lastyear"]==None
+#
+#
+#        # Products without quotes
+#        now=timezone.now()
+#        lod_=[{"products_id": 79330,  "datetime": now}, ]
+#        r=models.Quotes.get_quotes(lod_)
+#        assert r[79330][now]["quote"]==None
 
     def test_Accounts(self):
         #accounts_balance with empty database

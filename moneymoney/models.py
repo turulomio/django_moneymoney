@@ -13,6 +13,7 @@ from moneymoney.reusing.decorators import ptimeit
 from moneymoney.types import eConcept, eProductType, eOperationType
 from pydicts import lod_ymv, casts, lod
 from pydicts.currency import Currency
+from asgiref.sync import sync_to_async
 
 Decimal
 ptimeit
@@ -1163,63 +1164,77 @@ class Quotes(models.Model):
             return r
         except:
             return None
-            
+
     @staticmethod
-#    @ptimeit
-    def get_quotes(lod_):
+    @ptimeit
+    async def get_quotes(lod_):
         """
             Gets a massive quote query
             
             Parameters:
                 - lod_= [{"products_id": 79234, "datetime": ...}, ]
             
-            Returns a dictionary {(products_id,datetime): quote, ....} or a lod
+            r[products_id][needed_datetime]={"datetime":None, "id":None, "quote":None, "needed_datetime":None, "needed_products_id":None}
             
+            If not found datetime, id, quote is None
         """
         if len (lod_)==0:
             return {}
             
         lod_=lod.lod_remove_duplicates(lod_)
-            
-        list_of_qs=[]
-        for needed_quote in lod_:
-            list_of_qs.append(Quotes.objects.filter(products__id=needed_quote["products_id"], datetime__lte=needed_quote["datetime"]).annotate(
-            needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()), 
-            needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
-            ).order_by("-datetime")[:1])
-            
-        ## Multiples queries  FASTER
-        combined_qs=[]
-        for qs in list_of_qs:
-            tmplod=qs.values()
-            if len(tmplod)>0:
-                combined_qs.append(tmplod[0])
-        r={}
-        for d in combined_qs:    
-            if not d["needed_products_id"] in r:
-                r[d["needed_products_id"]]={}
-            r[d["needed_products_id"]][d["needed_datetime"]]=d
-            
-
-        ## Union Queries SLOWER
-#        
-#        combined_qs=Quotes.objects.none()
-#        for i in range(len(list_of_qs)):
-#            combined_qs=combined_qs.union(list_of_qs[i])
 #            
+#        list_of_qs=[]
+#        for needed_quote in lod_:
+#            list_of_qs.append(Quotes.objects.filter(products__id=needed_quote["products_id"], datetime__lte=needed_quote["datetime"]).annotate(
+#            needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()), 
+#            needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
+#            ).order_by("-datetime")[:1])
+#            
+                
+        tasks = [
+            Quotes.objects.filter(
+                products__id=needed_quote["products_id"],
+                datetime__lte=needed_quote["datetime"]
+            ).annotate(
+                needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()),
+                needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
+            ).order_by("-datetime").afirst()
+            for needed_quote in lod_
+        ]
+
+        # Execute all tasks concurrently
+        from asyncio import gather
+        results = await gather(*tasks)
+            
+        # Initialize result
+        r={}
+        for d in lod_:
+            r[d["products_id"]][d["datetime"]]={"datetime":None, "id":None, "quote":None, "needed_datetime":d["datetime"], "needed_products_id":d["products_id"]}
+            
+            
+        for result in results:
+            print(result)
+            r[result["needed_products_id"]][result["needed_datetime"]]
+            
+#        ## Multiples queries  FASTER
+#        combined_qs=[]
+#        for qs in list_of_qs:
+#            tmplod=qs.values()
+#            if len(tmplod)>0:
+#                combined_qs.append(tmplod[0])
 #        r={}
-#        for d in combined_qs.values():    
+#        for d in combined_qs:    
 #            if not d["needed_products_id"] in r:
 #                r[d["needed_products_id"]]={}
 #            r[d["needed_products_id"]][d["needed_datetime"]]=d
-        
-        #Sets missing queries to None
-        for needed_quote in lod_:
-            if not needed_quote["products_id"] in r:
-                r[needed_quote["products_id"]]={}
-            if not needed_quote["datetime"] in r[needed_quote["products_id"]]:
-                r[needed_quote["products_id"]][needed_quote["datetime"]]={"datetime":None, "id":None, "quote":None, "needed_datetime":needed_quote["datetime"], "needed_products_id":needed_quote["products_id"]}
-                
+#        
+#        #Sets missing queries to None
+#        for needed_quote in lod_:
+#            if not needed_quote["products_id"] in r:
+#                r[needed_quote["products_id"]]={}
+#            if not needed_quote["datetime"] in r[needed_quote["products_id"]]:
+#                r[needed_quote["products_id"]][needed_quote["datetime"]]={"datetime":None, "id":None, "quote":None, "needed_datetime":needed_quote["datetime"], "needed_products_id":needed_quote["products_id"]}
+#                
         return r
 
     

@@ -18,6 +18,7 @@ requests = ">=2.32.3"
 request-casting = ">=0.7.0"
 unogenerator = ">=0.40.0"
 psycopg = ">=3.1.19"
+asgiref = "^3.8.1"
 
 [tool.poetry.group.dev.dependencies]
 poetry = ">=1.8.3"
