@@ -757,9 +757,9 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
         #######################################      
         active=RequestBool(request, "active")
         if active is None:        
-            return Response({'detail': _('You must set active parameter')}, status=status.HTTP_400_BAD_REQUEST)
-
-        qs_investments=models.Investments.objects.filter(active=active).select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages")
+            return Response(_('You must set active parameter'), status=status.HTTP_400_BAD_REQUEST)
+            
+        qs_investments=self.queryset_for_list_methods().select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages")
         plio=ios.IOS.from_qs(timezone.now(), 'EUR', qs_investments,  mode=2)
         r=[]
         for o in qs_investments:
@@ -798,7 +798,6 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "gains_at_selling_point_investment": o.selling_price*o.products.real_leveraged_multiplier()*plio.d_total_io_current(o.id)["shares"]-plio.d_total_io_current(o.id)["invested_investment"], 
                 "decimals": o.decimals, 
             })
-        functions.show_queries_function()
         return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
 
 
