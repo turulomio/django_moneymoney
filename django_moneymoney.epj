@@ -2,7 +2,7 @@
   "header": {
     "comment": "eric project file for project django_moneymoney",
     "copyright": "Copyright (C) 2024 , ",
-    "saved": "2024-04-28, 10:33:24"
+    "saved": "2024-07-18, 08:33:08"
   },
   "project": {
     "AUTHOR": "",
@@ -228,6 +228,7 @@
       "moneymoney/management/commands/loaddata_catalogs.py",
       "moneymoney/management/commands/makedbmessages.py",
       "moneymoney/management/commands/procedure.py",
+      "moneymoney/management/commands/products_autoupdate_not_found.py",
       "moneymoney/migrations/0001_initial.py",
       "moneymoney/migrations/0002_auto_20230107_2039.py",
       "moneymoney/migrations/0003_add_group_catalog_manager.py",
@@ -282,6 +283,7 @@
       "moneymoney/migrations/0052_products_productsstrategies.py",
       "moneymoney/migrations/0053_migrate_from_pci_to_productstrategies.py",
       "moneymoney/migrations/0054_remove_products_pci.py",
+      "moneymoney/migrations/0055_currency_mandatory_and_in_settings.py",
       "moneymoney/migrations/__init__.py",
       "moneymoney/models.py",
       "moneymoney/paginators.py",
