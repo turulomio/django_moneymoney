@@ -958,13 +958,16 @@ class Products(models.Model):
         return request.build_absolute_uri(reverse('products-detail', args=(id, )))
         
     @staticmethod
-    def qs_distinct_with_investments():
+    def qs_distinct_with_investments(only_active=True):
         """
             Get queryset with all distinct products that have investments
+            if only_active is True show only active investments
         """
         qs_investments=Investments.objects.all()
+        if only_active is True:
+            qs_investments=qs_investments.filter(active=True)
         # Query to get quotes with that datetimes
-        return Products.objects.filter(investments__id__in=Subquery(qs_investments.values("id")))
+        return Products.objects.filter(investments__id__in=Subquery(qs_investments.values("id"))).distinct()
 
     def fullName(self):
         return "{} ({})".format(self.name, _(self.stockmarkets.name))

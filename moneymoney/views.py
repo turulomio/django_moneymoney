@@ -576,7 +576,7 @@ class InvestmentsClasses(APIView):
 
         def json_classes_by_product():
             ld=[]
-            for product in models.Products.qs_distinct_with_investments():
+            for product in models.Products.qs_distinct_with_investments(only_active=True):
                 d={"name": product.fullName(), "balance": 0,  "invested": 0}
                 for investment in qs_investments_active:
                     if investment.products==product:
