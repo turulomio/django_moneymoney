@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -7,7 +7,6 @@ from django.utils import timezone
 from json import loads
 from moneymoney import models, ios, investing_com, functions
 from moneymoney.reusing import tests_helpers
-from os import path
 from pydicts import lod, casts, dod
 from request_casting.request_casting import id_from_url
 from rest_framework import status
@@ -659,25 +658,7 @@ class API(APITestCase):
         self.assertEqual(len(lod_alerts["accounts_inactive_with_balance"]), 1 )
         self.assertEqual(len(lod_alerts["investments_inactive_with_balance"]), 1 )
 
-    def test_AssetsReport(self):
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(datetime=datetime(2023,12,29), amount=1000), status.HTTP_201_CREATED)
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(amount=100), status.HTTP_201_CREATED)
 
-        
-        
-        tests_helpers.client_post(self, self.client_authorized_1,"http://testserver/assets/report/",  { 
-            "format": "pdf", 
-            "chart_assets": js_image_b64, 
-            "chart_pie_product": js_image_b64, 
-            "chart_pie_percentage": js_image_b64, 
-            "chart_pie_pci": js_image_b64, 
-            "chart_pie_leverage": js_image_b64, 
-            "chart_pie_producttype": js_image_b64, 
-            "test": True,             
-        }, status.HTTP_200_OK, language="es-es")
-        assert path.exists("TestingAssetsReport.pdf")
-        
-    
     
     def test_Creditcards(self):
         # common _tests y deja creada una activa
