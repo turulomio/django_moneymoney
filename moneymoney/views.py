@@ -1,4 +1,4 @@
-from base64 import  b64encode, b64decode
+from base64 import  b64decode
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 from decimal import Decimal
@@ -22,7 +22,6 @@ from pydicts.percentage import Percentage,  percentage_between
 from request_casting.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestString, RequestInteger, RequestListOfIntegers, RequestListOfUrls, all_args_are_not_none
 from statistics import median
 from subprocess import run
-from os import path
 from pydicts import lod, lod_ymv, casts, myjsonencoder
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.exceptions import ValidationError
@@ -60,40 +59,6 @@ class CatalogModelViewSet(viewsets.ModelViewSet):
 @api_view(['GET', ])
 def CatalogManager(request):
     return JsonResponse( request.user.groups.filter(name="CatalogManager").exists(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
-
-
-@extend_schema(
-    parameters=[
-        OpenApiParameter(name='format', description='Output report format', required=True, type=str, default="pdf"), 
-    ],
-)
-@api_view(['POST', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def AssetsReport(request):
-    """
-        Generate user assets report
-        Charts are part of the request in dict request.data
-    """    
-    test=RequestBool(request, "test", False) #Used for testing
-    format_=RequestString(request, "format", "pdf")
-    if format_=="pdf":
-        mime="application/pdf"
-    elif format_=="odt":
-        mime="application/vnd.oasis.opendocument.text"
-    elif format_=="docx":
-        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    else:
-        return Response({'status': 'Bad Format '}, status=status.HTTP_400_BAD_REQUEST)
-
-    from moneymoney.assetsreport import generate_assets_report
-    filename=generate_assets_report(request, format_, test)
-    if test is True:# Creates a file in cwd
-        return Response(status=status.HTTP_200_OK)
-    else:
-        with open(filename, "rb") as doc:
-            encoded_string = b64encode(doc.read())
-            r={"filename":path.basename(filename),  "format": format_,  "data":encoded_string.decode("UTF-8"), "mime":mime}
-            return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
 class ConceptsViewSet(viewsets.ModelViewSet):
     queryset = models.Concepts.objects.all()
