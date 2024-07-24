@@ -24,7 +24,3 @@ def cypress_test_server():
     system("dropdb -U postgres -h 127.0.0.1 test_xulpymoney")
     print("- Launching python manage.py test_server with user 'test' and password 'test'")
     system("python manage.py testserver moneymoney/fixtures/all.json moneymoney/fixtures/test_server.json --addrport 8004")
-
-def cypress_test_server_for_github_actions():
-    print("- Launching python manage.py test_server with user 'test' and password 'test'")
-    system("python manage.py testserver moneymoney/fixtures/all.json moneymoney/fixtures/test_server.json --addrport 8004")

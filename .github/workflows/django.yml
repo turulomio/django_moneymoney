@@ -2,7 +2,7 @@ name: Django CI
 
 on:
   push:
-    branches: [ "main", "RemovingUnogenerator" ]
+    branches: [ "main", "128-valorate-to-remove-poe-for-github-and-settings-code" ]
   pull_request:
     branches: [ "main" ]
 
@@ -49,12 +49,9 @@ jobs:
           sleep 2
         done
 
-    - name: Install libreoffice 
-      run: |
-        sudo apt-get install python3.11 python3.11-venv
-
     - name: Install python dependencies ${{ matrix.python-version }}
       run: |
+        sudo apt-get install python3.11 python3.11-venv
         sudo python3.11 -m venv .python3.11
         sudo .python3.11/bin/pip install .
 
