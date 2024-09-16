@@ -80,7 +80,6 @@ class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
         updated.investments.set_attributes_after_investmentsoperations_crud()
         updated.update_associated_account_operation(self.context.get("request"))
         return updated
-        
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):

@@ -757,6 +757,9 @@ class Investmentsoperations(models.Model):
                 c.save()
                 self.associated_ao=c
                 self.save()
+        elif self.operationstypes.id==eOperationType.TransferFunds:#Fund transfer
+                self.associated_ao=None #Si hubiero associated_ao por haber puesto un tipo SharesPurchase y luego cambiar
+                self.save()
         
 
     
