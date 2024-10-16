@@ -684,18 +684,18 @@ class Timezones(APIView):
 
 
 class InvestmentsViewSet(viewsets.ModelViewSet):
-    queryset = models.Investments.objects.select_related("accounts").all()
+    queryset = models.Investments.objects.all().select_related("accounts")
     serializer_class = serializers.InvestmentsSerializer
     permission_classes = [permissions.IsAuthenticated]  
         
-    def queryset_for_list_methods(self):
-        active=RequestBool(self.request, "active")
-        bank_id=RequestInteger(self.request,"bank")
+    def queryset_for_list_methods(self,request):
+        active=RequestBool(request, "active")
+        bank_id=RequestInteger(request,"bank")
+        self.queryset=self.get_queryset()
         if bank_id is not None:
             self.queryset=self.queryset.filter(accounts__banks__id=bank_id,  active=True)
         elif active is not None:
             self.queryset=self.queryset.filter(active=active)
-
         return self.queryset
     
     
@@ -704,7 +704,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
             It's better to ovverride list than get_queryset due to active is a class_attribute, and list only is for list and queryset for all methods
         """
 
-        serializer = serializers.InvestmentsSerializer(self.queryset_for_list_methods(), many=True, context={'request': request})
+        serializer = self.get_serializer(self.queryset_for_list_methods(request), many=True)
         return Response(serializer.data)
             
     
@@ -724,7 +724,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
         if active is None:        
             return Response(_('You must set active parameter'), status=status.HTTP_400_BAD_REQUEST)
             
-        qs_investments=self.queryset_for_list_methods().select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages")
+        qs_investments=self.queryset_for_list_methods(request).select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages")
         plio=ios.IOS.from_qs(timezone.now(), 'EUR', qs_investments,  mode=2)
         r=[]
         for o in qs_investments:
