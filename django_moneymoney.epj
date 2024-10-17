@@ -2,7 +2,7 @@
   "header": {
     "comment": "eric project file for project django_moneymoney",
     "copyright": "Copyright (C) 2024 , ",
-    "saved": "2024-07-24, 04:06:28"
+    "saved": "2024-10-17, 23:29:09"
   },
   "project": {
     "AUTHOR": "",
@@ -224,6 +224,7 @@
       "moneymoney/management/commands/doxygen.py",
       "moneymoney/management/commands/dumpdata_catalogs.py",
       "moneymoney/management/commands/dumppostgres.py",
+      "moneymoney/management/commands/i_buy_everything.py",
       "moneymoney/management/commands/loaddata_catalogs.py",
       "moneymoney/management/commands/makedbmessages.py",
       "moneymoney/management/commands/procedure.py",
