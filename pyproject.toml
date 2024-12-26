@@ -10,7 +10,7 @@ readme = "README.md"
 
 python = ">=3.11,<4.0"
 django = ">=5.1.4"
-django-cors-headers = ">=4.4.0"
+django-cors-headers = ">=4.6.0"
 djangorestframework = ">=3.15.2"
 drf-spectacular = ">=0.28.0"
 pydicts = ">=0.17.0"
@@ -20,8 +20,8 @@ psycopg = ">=3.2.3"
 
 [tool.poetry.group.dev.dependencies]
 poetry = ">=1.8.5"
-poethepoet = ">=0.29.0"
-coverage = ">=7.6.1"
+poethepoet = ">=0.31.1"
+coverage = ">=7.6.9"
 
 [build-system]
 requires = ["poetry-core"]
