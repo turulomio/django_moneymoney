@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.test import tag
 from django.utils import timezone
 from json import loads
-from moneymoney import models, ios, investing_com, functions
+from moneymoney import models, ios, investing_com, functions, types
 from moneymoney.reusing import tests_helpers
 from pydicts import lod, casts, dod
 from request_casting.request_casting import id_from_url
@@ -217,7 +217,6 @@ class API(APITestCase):
     def test_ReportAnnual(self):
         tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/{today_year}/", status.HTTP_200_OK)
         
-    @tag("current")
     def test_ReportAnnualRevaluation(self):
         
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
@@ -808,11 +807,8 @@ class API(APITestCase):
         dict_sp_update=tests_helpers.client_put(self, self.client_catalog_manager, dict_sp["url"], dict_sp_update, status.HTTP_200_OK)
         tests_helpers.client_delete(self, self.client_authorized_1, dict_sp["url"], dict_sp_update, status.HTTP_400_BAD_REQUEST)
         tests_helpers.client_delete(self, self.client_catalog_manager, dict_sp["url"], dict_sp_update, status.HTTP_204_NO_CONTENT)
-        
-        
-        
-        
 
+    @tag("current")
     def test_Strategies(self):
         # Creates an investment with a quote and an io
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
@@ -833,3 +829,12 @@ class API(APITestCase):
         # Gests strategies by invesment
         lod_strategy_by_investment=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/?investment={dict_investment['url']}&active=true&type=2",  status.HTTP_200_OK)
         self.assertEqual(len(lod_strategy_by_investment), 1)
+
+    @tag("current")
+    def test_StrategiesFastOperations(self):
+        # Creates a fast operations strategy
+        dict_strategy=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies/",  models.Strategies.post_payload(type=4, name="FOS", accounts=["http://testserver/api/accounts/4/"] ), status.HTTP_201_CREATED)
+
+        hurl_fo=f"http://testserver/api/concepts/{types.eConcept.FastInvestmentOperations}/"
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_fo, amount=-10), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_fo, amount=1010), status.HTTP_201_CREATED)

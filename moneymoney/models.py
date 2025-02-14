@@ -1350,7 +1350,6 @@ class Strategies(models.Model):
                 
     @staticmethod
     def post_payload(
-        investments, #It's a list of urls of investments 
         name="New strategy", 
         dt_from=None, 
         dt_to=None, 
@@ -1365,7 +1364,9 @@ class Strategies(models.Model):
         additional7=79329, 
         additional8=79329, 
         additional9=79329, 
-        additional10=79329
+        additional10=79329,
+        accounts=[], # It's a list of accounts urls
+        investments=[], #It's a list of urls of investments 
     ):
         return {
             "name": name, 
@@ -1375,15 +1376,16 @@ class Strategies(models.Model):
             "type":type, 
             "comment":comment, 
             "additional1":additional1, 
-            "additional2":additional1, 
-            "additional3":additional1, 
-            "additional4":additional1, 
-            "additional5":additional1, 
-            "additional6":additional1, 
-            "additional7":additional1, 
-            "additional8":additional1, 
-            "additional9":additional1, 
-            "additional10":additional1, 
+            "additional2":additional2, 
+            "additional3":additional3, 
+            "additional4":additional4, 
+            "additional5":additional5, 
+            "additional6":additional6, 
+            "additional7":additional7, 
+            "additional8":additional8, 
+            "additional9":additional9, 
+            "additional10":additional10, 
+            "accounts": accounts,
         }
 
     ## Replaces None for dt_to and sets a very big datetine
