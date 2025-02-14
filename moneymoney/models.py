@@ -1321,10 +1321,11 @@ class StrategiesTypes(models.IntegerChoices):
     PairsInSameAccount = 1, _('Pairs in same account') #additional {"worse":_, "better":_ "account" }
     Ranges = 2,  _('Product ranges')
     Generic = 3, _('Generic') #additional { }
+    FastOperations = 4, _('Fast operations') #additional { }
 
 class Strategies(models.Model):
     name = models.TextField()
-    investments = models.ManyToManyField("Investments", blank=False)
+    investments = models.ManyToManyField("Investments", blank=True)
     dt_from = models.DateTimeField(blank=True, null=True)
     dt_to = models.DateTimeField(blank=True, null=True)
     type = models.IntegerField(choices=StrategiesTypes.choices)
@@ -1338,7 +1339,8 @@ class Strategies(models.Model):
     additional7 = models.IntegerField(blank=True, null=True)   
     additional8 = models.IntegerField(blank=True, null=True)   
     additional9 = models.IntegerField(blank=True, null=True)   
-    additional10 = models.IntegerField(blank=True, null=True)   
+    additional10 = models.IntegerField(blank=True, null=True) 
+    accounts = models.ManyToManyField("Accounts", blank=True)
     
     class Meta:
         managed = True
