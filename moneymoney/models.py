@@ -126,6 +126,18 @@ class Accounts(models.Model):
             return list(Accounts.objects.order_by().values_list("currency",flat=True).distinct())
         else:
             return list(qs.order_by().values_list("currency",flat=True).distinct())
+        
+    def amount_string(self, value):
+        """
+            Returns a string rounded to the number of decimals of this account
+
+            Args:
+                value (number): Any number
+
+            Returns:
+                str
+        """
+        return Currency(value, self.currency).string(self.decimals)
 
 class Operationstypes(models.Model):
     name = models.TextField()
@@ -277,7 +289,11 @@ class Accountsoperations(models.Model):
             if self.concepts.id==eConcept.TransferDestiny:
                 return _("Transfer from {0}. {1}").format(self.associated_transfer.origin.fullName(), self.comment)
             if self.concepts.id==eConcept.BankCommissions:
-                return _("Transfer of {0} from {1} to {2}. {3}").format(Currency(self.associated_transfer.amount, self.associated_transfer.origin.currency), self.associated_transfer.origin.fullName(), self.associated_transfer.destiny.fullName(), self.comment)
+                return _("Transfer of {0} from {1} to {2}. {3}").format( 
+                    self.associated_transfer.origin.amount_string(self.associated_transfer.amount),
+                    self.associated_transfer.origin.fullName(), 
+                    self.associated_transfer.destiny.fullName(), 
+                    self.comment)
         
         elif self.concepts.id==eConcept.CreditCardBilling:
             qs=self.paid_accountsoperations.all().select_related("creditcards")
@@ -290,17 +306,17 @@ class Accountsoperations(models.Model):
         elif hasattr(self, "dividends"):
             return _( "From {}. Gross {}. Net {}.".format(
                 self.dividends.investments.name, 
-                Currency(self.dividends.gross,  self.dividends.investments.accounts.currency), 
-                Currency(self.dividends.net, self.dividends.investments.accounts.currency))
+                self.dividends.investments.accounts.amount_string(self.dividends.gross), 
+                self.dividends.investments.accounts.amount_string(self.dividends.net))
             )
         
         elif hasattr(self,  "investmentsoperations"):
             return _("{}: {} shares. Amount: {}. Comission: {}. Taxes: {}").format(
                 self.investmentsoperations.investments.name, 
-                self.investmentsoperations.shares, 
-                self.investmentsoperations.shares*self.investmentsoperations.price,  
-                self.investmentsoperations.commission, 
-                self.investmentsoperations.taxes
+                self.investmentsoperations.investments.shares_string(self.investmentsoperations.shares),
+                self.investmentsoperations.investments.accounts.amount_string(self.investmentsoperations.shares*self.investmentsoperations.price),  
+                self.investmentsoperations.investments.accounts.amount_string(self.investmentsoperations.commission), 
+                self.investmentsoperations.investments.accounts.amount_string(self.investmentsoperations.taxes)
             )
 
         return self.comment
@@ -584,8 +600,25 @@ class Investments(models.Model):
     def __str__(self):
         return self.fullName()
 
+    def quote_string(self, value):
+        """
+            Returns a string with Currency.string ouput with self.products.decimals. 
+        """
+        return Currency(value, self.products.currency).string(self.products.decimals)
+    
+    def shares_string(self,value):
+        """ 
+            Returns a string with the number of shares round to investments.decimals
+
+            Args:
+                value (number): Any number
+        """
+        return str(round(value,self.decimals))
+
+
     def fullName(self):
         return "{} ({})".format(self.name, self.accounts.name)
+    
     @staticmethod
     def hurl(request, id):
         return request.build_absolute_uri(reverse('investments-detail', args=(id, )))
