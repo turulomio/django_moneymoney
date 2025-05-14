@@ -6,34 +6,21 @@ class Command(BaseCommand):
     help = 'New release procedure'
 
     def handle(self, *args, **options):
-        print(f"Updating versions of moneymoney frontend project to {__version__} and {__versiondatetime__}")
-        d=__versiondatetime__
-        system (f"""sed -i '3s/.*/  "version": "{__version__}",/' ../moneymoney/package.json""")
-        system (f"""sed -i '15s/.*/        version: "{__version__}",/' ../moneymoney/src/store.js""")
-        system (f"""sed -i '16s/.*/        versiondate: new Date({d.year}, {d.month-1}, {d.day}, {d.hour}, {d.minute}),/' ../moneymoney/src/store.js""")
-        system (f"""sed -i '3s/.*/version = "{__version__}"/' pyproject.toml""")
-
-        print()
         print(f"""To release a new version:
 DJANGO_MONEYMONEY
+  * Create issue and a branch associated to that issue, and paste code
   * Change version and version datetime in moneymoney/__init__.py
+  * Change version in pyproject.toml
   * python manage.py procedure
   * python manage.py makedbmessages
   * python manage.py makemessages --all
   * mcedit moneymoney/locale/es/LC_MESSAGES/django.po
   * python manage.py compilemessages
-  * python manage.py doxygen
   * git commit -a -m 'django_moneymoney-{__version__}'
   * git push
-  * Hacer un nuevo tag en GitHub de django_moneymoney con un texto vacio
+  * Hacer un pull request y comprobar que no hay fallos
+  * Hacer un nuevo tag en GitHub de django_moneymoney
 
-MONEYMONEY
-  * Cambiar a moneymoney project
-  * Add release changelog in README.md
-  * npm run translate
-  * mcedit src/locales/es.json
-  * git commit -a -m 'moneymoney-{__version__}'
-  * git push
-  * Hacer un nuevo tag en GitHub de moneymoney añadiendo el contenido del README
+OJO: Poner la misma versión {__version__} y hora en {__versiondatetime__} moneymoney y seguir sus instrucciones con npm run release
 """)
 
