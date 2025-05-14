@@ -476,10 +476,12 @@ class StrategiesViewSet(viewsets.ModelViewSet):
         r=[]
         for strategy in qs:
             if strategy.type==models.StrategiesTypes.FastOperations:
-                invested=12
-                gains_current_net_user=12
-                gains_historical_net_user=12
-                sum_dividends_net_user=12
+                invested=models.Accounts.accounts_balance(strategy.accounts.all(),strategy.dt_from,request.user.profile.currency)
+                qs=models.Accountsoperations.objects.filter(accounts__in=functions.qs_to_ids(strategy.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy.dt_from).select_related("accounts")
+                print(qs)
+                gains_current_net_user=qs.aggregate(Sum("amount"))["amount__sum"]
+                gains_historical_net_user=0
+                sum_dividends_net_user=0
 
             else:                
                 plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.investments.all(), 1)

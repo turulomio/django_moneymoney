@@ -839,6 +839,9 @@ class API(APITestCase):
         tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_fo, amount=-10), status.HTTP_201_CREATED)
         tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_fo, amount=1010), status.HTTP_201_CREATED)
 
+
+
         # With balance
         lod_strategy_with_balance=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/withbalance/?active=true",  status.HTTP_200_OK)
-        self.assertEqual(len(lod_strategy_with_balance), 1)
+        print(lod_strategy_with_balance)
+        self.assertEqual(len(lod_strategy_with_balance), 2)
