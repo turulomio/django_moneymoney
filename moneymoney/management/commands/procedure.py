@@ -10,6 +10,7 @@ class Command(BaseCommand):
 DJANGO_MONEYMONEY
   * Create issue and a branch associated to that issue, and paste code
   * Change version and version datetime in moneymoney/__init__.py
+  * Change version in pyproject.toml
   * python manage.py procedure
   * python manage.py makedbmessages
   * python manage.py makemessages --all
