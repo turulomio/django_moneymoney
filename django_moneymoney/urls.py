@@ -67,7 +67,6 @@ urlpatterns=[
     path('reports/annual/gainsbyproductstypes/<int:year>/', money_views.ReportAnnualGainsByProductstypes, name='ReportAnnualGainsByProductstypes'),
     path('statistics/', money_views.Statistics, name='Statistics'),
     path('timezones/', money_views.Timezones.as_view(), name='Timezones'),
-    path('unogenerator/working/', money_views.UnogeneratorWorking.as_view()),
     
     path('schema/', SpectacularAPIView.as_view(), name='schema'),
     path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),

@@ -608,21 +608,6 @@ class InvestmentsClasses(APIView):
         
         return JsonResponse( d, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
 
-class UnogeneratorWorking(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    @extend_schema(
-        description="Returns if unogenerator server is working", 
-        request=None, 
-        responses=OpenApiTypes.OBJECT
-    )
-    def get(self, request, *args, **kwargs):
-        from unogenerator import can_import_uno
-        if can_import_uno():
-            from unogenerator.server import is_server_working
-            return Response( is_server_working(), status=status.HTTP_200_OK)
-        else:
-            return Response(False, status=status.HTTP_200_OK)
-
 class Alerts(APIView):
     permission_classes = [permissions.IsAuthenticated]    
     @extend_schema(
