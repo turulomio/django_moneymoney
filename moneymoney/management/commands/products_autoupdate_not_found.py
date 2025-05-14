@@ -40,7 +40,6 @@ class Command(BaseCommand):
         for d in r:
             got_=[]
             for csv_ in lol_csv: 
-                print(csv_[1], d["code"])
                 if csv_[1] in d["code"] :
                     got_.append(csv_)
             d["csv"]=got_
