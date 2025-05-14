@@ -249,13 +249,17 @@ class Accountsoperations(models.Model):
 
 
     @staticmethod
-    def post_payload(accounts="http://testserver/api/accounts/4/",  concepts="http://testserver/api/concepts/1/", amount=1000,  comment="Opening account", datetime=timezone.now()):
+    def post_payload(accounts="http://testserver/api/accounts/4/",  concepts="http://testserver/api/concepts/1/", amount=1000,  comment="Opening account", datetime=None):
+        if datetime is None:
+            dt=timezone.now()
+        else:
+            dt=datetime
         return {
             "concepts":concepts, 
             "amount": amount, 
             "comment": comment, 
             "accounts": accounts, 
-            "datetime": datetime, 
+            "datetime": dt, 
         }
 
     def is_editable(self):

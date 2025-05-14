@@ -832,16 +832,17 @@ class API(APITestCase):
 
     @tag("current")
     def test_StrategiesFastOperations(self):
-        # Creates a fast operations strategy
+        # Creates a fast operations strategy                
+        hurl_fo=f"http://testserver/api/concepts/{types.eConcept.FastInvestmentOperations}/"
+
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_fo, amount=999999), status.HTTP_201_CREATED)
+
         dict_strategy=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies/",  models.Strategies.post_payload(type=4, name="FOS", accounts=["http://testserver/api/accounts/4/"] ), status.HTTP_201_CREATED)
 
-        hurl_fo=f"http://testserver/api/concepts/{types.eConcept.FastInvestmentOperations}/"
         tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_fo, amount=-10), status.HTTP_201_CREATED)
         tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_fo, amount=1010), status.HTTP_201_CREATED)
 
-
-
         # With balance
         lod_strategy_with_balance=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/withbalance/?active=true",  status.HTTP_200_OK)
-        print(lod_strategy_with_balance)
-        self.assertEqual(len(lod_strategy_with_balance), 2)
+        self.assertEqual(lod_strategy_with_balance[0]["invested"], 999999)
+        self.assertEqual(lod_strategy_with_balance[0]["gains_current_net_user"], 1000)
