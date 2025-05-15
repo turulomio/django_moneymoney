@@ -524,6 +524,16 @@ class StrategiesViewSet(viewsets.ModelViewSet):
             ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals)
             return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
         return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
+    
+    @action(detail=True, methods=["get"], name='Gets a detail of a fast operations strategy. Returns a list of account operations with fast operations', url_path="detailed_fastoperations", url_name='detailed_fastoperations', permission_classes=[permissions.IsAuthenticated])
+    def detailed_fastoperations(self, request, pk=None): 
+        strategy=self.get_object()
+        if strategy is not None:
+            qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy.dt_from).select_related("accounts")
+            
+            serializer = serializers.AccountsoperationsSerializer(qs_ao, many=True, context={'request': request})
+            return Response(serializer.data)
+        return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
 
 
 class InvestmentsClasses(APIView):

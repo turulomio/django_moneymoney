@@ -34,6 +34,11 @@ dtaware_yesterday=dtaware_now-timedelta(days=1)
 static_year=2024
 static_month=1
 
+# Concepts url
+hurl_concepts_oa=f"http://testserver/api/concepts/{types.eConcept.OpenAccount}/"
+hurl_concepts_fo=f"http://testserver/api/concepts/{types.eConcept.FastInvestmentOperations}/"
+
+
 class Functions(APITestCase):
     @functions.suppress_stdout
     def test_print_object(self):
@@ -808,7 +813,6 @@ class API(APITestCase):
         tests_helpers.client_delete(self, self.client_authorized_1, dict_sp["url"], dict_sp_update, status.HTTP_400_BAD_REQUEST)
         tests_helpers.client_delete(self, self.client_catalog_manager, dict_sp["url"], dict_sp_update, status.HTTP_204_NO_CONTENT)
 
-    @tag("current")
     def test_Strategies(self):
         # Creates an investment with a quote and an io
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
@@ -832,17 +836,20 @@ class API(APITestCase):
 
     @tag("current")
     def test_StrategiesFastOperations(self):
-        # Creates a fast operations strategy                
-        hurl_fo=f"http://testserver/api/concepts/{types.eConcept.FastInvestmentOperations}/"
+        # Opens account
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_concepts_oa, amount=999999), status.HTTP_201_CREATED)
 
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_fo, amount=999999), status.HTTP_201_CREATED)
-
+        # Creates a fast operations strategy
         dict_strategy=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies/",  models.Strategies.post_payload(type=4, name="FOS", accounts=["http://testserver/api/accounts/4/"] ), status.HTTP_201_CREATED)
 
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_fo, amount=-10), status.HTTP_201_CREATED)
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_fo, amount=1010), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_concepts_fo, amount=-10, comment="FO"), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_concepts_fo, amount=1010, comment="FO"), status.HTTP_201_CREATED)
 
-        # With balance
+        # List strategies with With balance
         lod_strategy_with_balance=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/withbalance/?active=true",  status.HTTP_200_OK)
         self.assertEqual(lod_strategy_with_balance[0]["invested"], 999999)
         self.assertEqual(lod_strategy_with_balance[0]["gains_current_net_user"], 1000)
+
+        # Get FO strategy detailed view
+        strategy_detail=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/{dict_strategy['id']}/detailed_fastoperations/",  status.HTTP_200_OK)
+        self.assertEqual(lod.lod_sum(strategy_detail,"amount"), 1000)
