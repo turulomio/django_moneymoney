@@ -475,22 +475,31 @@ class StrategiesViewSet(viewsets.ModelViewSet):
 
         r=[]
         for strategy in qs:
-            plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.investments.all(), 1)
+            if strategy.type==models.StrategiesTypes.FastOperations:
+                invested=models.Accounts.accounts_balance(strategy.accounts.all(),strategy.dt_from,request.user.profile.currency)["balance_user_currency"]
+                qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy.dt_from).select_related("accounts")
+                gains_current_net_user=qs_ao.aggregate(Sum("amount"))["amount__sum"] or 0
+                gains_historical_net_user=0
+                sum_dividends_net_user=0
 
-            gains_current_net_user=plio.sum_total_io_current()["gains_net_user"]
-            gains_historical_net_user=plio.io_historical_sum_between_dt(strategy.dt_from, strategy.dt_to_for_comparations(),  "gains_net_user")
-            lod_dividends_net_user=models.Dividends.lod_ym_netgains_dividends(request, ids=functions.qs_to_ids(strategy.investments.all()),  dt_from=strategy.dt_from, dt_to=strategy.dt_to_for_comparations())
+            else:                
+                plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.investments.all(), 1)
+                invested=plio.sum_total_io_current()["invested_user"]
+                gains_current_net_user=plio.sum_total_io_current()["gains_net_user"]
+                gains_historical_net_user=plio.io_historical_sum_between_dt(strategy.dt_from, strategy.dt_to_for_comparations(),  "gains_net_user")
+                lod_dividends_net_user=models.Dividends.lod_ym_netgains_dividends(request, ids=functions.qs_to_ids(strategy.investments.all()),  dt_from=strategy.dt_from, dt_to=strategy.dt_to_for_comparations())
+                sum_dividends_net_user=lod.lod_sum(lod_dividends_net_user, "total")
             r.append({
                 "id": strategy.id,  
                 "url": request.build_absolute_uri(reverse('strategies-detail', args=(strategy.pk, ))), 
                 "name":strategy.name, 
                 "dt_from": strategy.dt_from, 
                 "dt_to": strategy.dt_to, 
-                "invested": plio.sum_total_io_current()["invested_user"], 
+                "invested": invested,
                 "gains_current_net_user":  gains_current_net_user,  
                 "gains_historical_net_user": gains_historical_net_user, 
-                "dividends_net_user": lod.lod_sum(lod_dividends_net_user, "total"), 
-                "total_net_user":gains_current_net_user + gains_historical_net_user + lod.lod_sum(lod_dividends_net_user, "total"), 
+                "dividends_net_user": sum_dividends_net_user, 
+                "total_net_user":gains_current_net_user + gains_historical_net_user + sum_dividends_net_user, 
                 "investments":functions.qs_to_urls(request, strategy.investments.all()), 
                 "type": strategy.type, 
                 "comment": strategy.comment, 
@@ -504,6 +513,7 @@ class StrategiesViewSet(viewsets.ModelViewSet):
                 "additional8": strategy.additional8, 
                 "additional9": strategy.additional9, 
                 "additional10": strategy.additional10, 
+                "accounts":functions.qs_to_urls(request, strategy.accounts.all()), 
             })
         return Response(r)
         
@@ -513,6 +523,16 @@ class StrategiesViewSet(viewsets.ModelViewSet):
         if strategy is not None:
             ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals)
             return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
+        return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
+    
+    @action(detail=True, methods=["get"], name='Gets a detail of a fast operations strategy. Returns a list of account operations with fast operations', url_path="detailed_fastoperations", url_name='detailed_fastoperations', permission_classes=[permissions.IsAuthenticated])
+    def detailed_fastoperations(self, request, pk=None): 
+        strategy=self.get_object()
+        if strategy is not None:
+            qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy.dt_from).select_related("accounts")
+            
+            serializer = serializers.AccountsoperationsSerializer(qs_ao, many=True, context={'request': request})
+            return Response(serializer.data)
         return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
 
 

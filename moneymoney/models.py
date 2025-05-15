@@ -261,13 +261,17 @@ class Accountsoperations(models.Model):
 
 
     @staticmethod
-    def post_payload(accounts="http://testserver/api/accounts/4/",  concepts="http://testserver/api/concepts/1/", amount=1000,  comment="Opening account", datetime=timezone.now()):
+    def post_payload(accounts="http://testserver/api/accounts/4/",  concepts="http://testserver/api/concepts/1/", amount=1000,  comment="Opening account", datetime=None):
+        if datetime is None:
+            dt=timezone.now()
+        else:
+            dt=datetime
         return {
             "concepts":concepts, 
             "amount": amount, 
             "comment": comment, 
             "accounts": accounts, 
-            "datetime": datetime, 
+            "datetime": dt, 
         }
 
     def is_editable(self):
@@ -1354,10 +1358,11 @@ class StrategiesTypes(models.IntegerChoices):
     PairsInSameAccount = 1, _('Pairs in same account') #additional {"worse":_, "better":_ "account" }
     Ranges = 2,  _('Product ranges')
     Generic = 3, _('Generic') #additional { }
+    FastOperations = 4, _('Fast operations') #additional { }
 
 class Strategies(models.Model):
     name = models.TextField()
-    investments = models.ManyToManyField("Investments", blank=False)
+    investments = models.ManyToManyField("Investments", blank=True)
     dt_from = models.DateTimeField(blank=True, null=True)
     dt_to = models.DateTimeField(blank=True, null=True)
     type = models.IntegerField(choices=StrategiesTypes.choices)
@@ -1371,7 +1376,8 @@ class Strategies(models.Model):
     additional7 = models.IntegerField(blank=True, null=True)   
     additional8 = models.IntegerField(blank=True, null=True)   
     additional9 = models.IntegerField(blank=True, null=True)   
-    additional10 = models.IntegerField(blank=True, null=True)   
+    additional10 = models.IntegerField(blank=True, null=True) 
+    accounts = models.ManyToManyField("Accounts", blank=True)
     
     class Meta:
         managed = True
@@ -1381,7 +1387,6 @@ class Strategies(models.Model):
                 
     @staticmethod
     def post_payload(
-        investments, #It's a list of urls of investments 
         name="New strategy", 
         dt_from=None, 
         dt_to=None, 
@@ -1396,7 +1401,9 @@ class Strategies(models.Model):
         additional7=79329, 
         additional8=79329, 
         additional9=79329, 
-        additional10=79329
+        additional10=79329,
+        accounts=[], # It's a list of accounts urls
+        investments=[], #It's a list of urls of investments 
     ):
         return {
             "name": name, 
@@ -1406,15 +1413,16 @@ class Strategies(models.Model):
             "type":type, 
             "comment":comment, 
             "additional1":additional1, 
-            "additional2":additional1, 
-            "additional3":additional1, 
-            "additional4":additional1, 
-            "additional5":additional1, 
-            "additional6":additional1, 
-            "additional7":additional1, 
-            "additional8":additional1, 
-            "additional9":additional1, 
-            "additional10":additional1, 
+            "additional2":additional2, 
+            "additional3":additional3, 
+            "additional4":additional4, 
+            "additional5":additional5, 
+            "additional6":additional6, 
+            "additional7":additional7, 
+            "additional8":additional8, 
+            "additional9":additional9, 
+            "additional10":additional10, 
+            "accounts": accounts,
         }
 
     ## Replaces None for dt_to and sets a very big datetine

@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.test import tag
 from django.utils import timezone
 from json import loads
-from moneymoney import models, ios, investing_com, functions
+from moneymoney import models, ios, investing_com, functions, types
 from moneymoney.reusing import tests_helpers
 from pydicts import lod, casts, dod
 from request_casting.request_casting import id_from_url
@@ -33,6 +33,11 @@ dtaware_yesterday=dtaware_now-timedelta(days=1)
 # Defines report moment for static reports to avoid problems with asserts
 static_year=2024
 static_month=1
+
+# Concepts url
+hurl_concepts_oa=f"http://testserver/api/concepts/{types.eConcept.OpenAccount}/"
+hurl_concepts_fo=f"http://testserver/api/concepts/{types.eConcept.FastInvestmentOperations}/"
+
 
 class Functions(APITestCase):
     @functions.suppress_stdout
@@ -217,7 +222,6 @@ class API(APITestCase):
     def test_ReportAnnual(self):
         tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/{today_year}/", status.HTTP_200_OK)
         
-    @tag("current")
     def test_ReportAnnualRevaluation(self):
         
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
@@ -808,10 +812,6 @@ class API(APITestCase):
         dict_sp_update=tests_helpers.client_put(self, self.client_catalog_manager, dict_sp["url"], dict_sp_update, status.HTTP_200_OK)
         tests_helpers.client_delete(self, self.client_authorized_1, dict_sp["url"], dict_sp_update, status.HTTP_400_BAD_REQUEST)
         tests_helpers.client_delete(self, self.client_catalog_manager, dict_sp["url"], dict_sp_update, status.HTTP_204_NO_CONTENT)
-        
-        
-        
-        
 
     def test_Strategies(self):
         # Creates an investment with a quote and an io
@@ -833,3 +833,23 @@ class API(APITestCase):
         # Gests strategies by invesment
         lod_strategy_by_investment=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/?investment={dict_investment['url']}&active=true&type=2",  status.HTTP_200_OK)
         self.assertEqual(len(lod_strategy_by_investment), 1)
+
+    @tag("current")
+    def test_StrategiesFastOperations(self):
+        # Opens account
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_concepts_oa, amount=999999), status.HTTP_201_CREATED)
+
+        # Creates a fast operations strategy
+        dict_strategy=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies/",  models.Strategies.post_payload(type=4, name="FOS", accounts=["http://testserver/api/accounts/4/"] ), status.HTTP_201_CREATED)
+
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_concepts_fo, amount=-10, comment="FO"), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_concepts_fo, amount=1010, comment="FO"), status.HTTP_201_CREATED)
+
+        # List strategies with With balance
+        lod_strategy_with_balance=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/withbalance/?active=true",  status.HTTP_200_OK)
+        self.assertEqual(lod_strategy_with_balance[0]["invested"], 999999)
+        self.assertEqual(lod_strategy_with_balance[0]["gains_current_net_user"], 1000)
+
+        # Get FO strategy detailed view
+        strategy_detail=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/{dict_strategy['id']}/detailed_fastoperations/",  status.HTTP_200_OK)
+        self.assertEqual(lod.lod_sum(strategy_detail,"amount"), 1000)
