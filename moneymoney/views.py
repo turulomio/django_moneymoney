@@ -643,6 +643,7 @@ class Alerts(APIView):
                           "server_time": "2023-08-01T03:55:29.122943+00:00",
                           "expired_days": 7,
                           "orders_expired": [],
+                          "banks_inactive_with_balance": [],
                           "accounts_inactive_with_balance": [],
                           "investments_inactive_with_balance": []
                         },
@@ -660,6 +661,14 @@ class Alerts(APIView):
         r["expired_days"]=7
         r["orders_expired"]=functions.internal_modelviewset_request(OrdersViewSet, "list", {"expired_days":r["expired_days"]}, params_method="GET", user=request.user)
         
+        # Get all inactive banks with balance
+        r["banks_inactive_with_balance"]=[]
+        lod_banks=functions.internal_modelviewset_request(BanksViewSet, "withbalance", {"active":False},  params_method="GET", user=request.user)
+        for d in lod_banks:
+            if d["balance_total"]!=0:
+                r["banks_inactive_with_balance"].append(d)
+
+
         # Get all inactive accounts status
         r["accounts_inactive_with_balance"]=[]
         lod_accounts=functions.internal_modelviewset_request(AccountsViewSet, "withbalance", {"active":False},  params_method="GET", user=request.user)
@@ -677,7 +686,7 @@ class Alerts(APIView):
                 r["investments_inactive_with_balance"].append(plio)
         
         functions.show_queries_function()
-        return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
+        return JsonResponse(r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
 class Timezones(APIView):
     permission_classes = [permissions.IsAuthenticated]

@@ -337,10 +337,10 @@ class Banks(models.Model):
         return self.name  
         
     @staticmethod
-    def post_payload():
+    def post_payload(name="Bank for testing", active=True):
         return {
-            "name":  "Bank for testing", 
-            "active": True, 
+            "name": name, 
+            "active": active, 
         }
 
     def balance_accounts(self):
