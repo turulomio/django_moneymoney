@@ -1366,15 +1366,27 @@ class StrategiesPairsInSameAccount(models.Model):
     strategy = models.OneToOneField(NewStrategies, on_delete=models.CASCADE, primary_key=True)
     worse_product = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='worse_product')
     better_product = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='better_product')
-    accounts = models.ForeignKey(Accounts, on_delete=models.DO_NOTHING)
+    account = models.ForeignKey(Accounts, on_delete=models.DO_NOTHING)
 
     class Meta:
         managed = True
         db_table = 'strategies_pairs_in_same_account'
 
+    @staticmethod
+    def post_payload(
+        strategy, 
+        worse_product
+    ):
+        return {
+            "strategy": strategy,
+            "worse_product": worse_product,
+            "better_product": better_product,
+            "account": account,
+        }
+
 class StrategiesProductsRange(models.Model):
     strategy = models.OneToOneField(NewStrategies, on_delete=models.CASCADE, primary_key=True)
-    products = models.ForeignKey(Products, on_delete=models.DO_NOTHING)
+    product = models.ForeignKey(Products, on_delete=models.DO_NOTHING)
     investments = models.ManyToManyField("Investments", blank=False, null=False)
     percentage_between_ranges = models.DecimalField(blank=False, null=False)
     percentage_gains = models.DecimalField(blank=False, null=False)
@@ -1386,6 +1398,28 @@ class StrategiesProductsRange(models.Model):
         managed = True
         db_table = 'strategies_products_range'
 
+    @staticmethod
+    def post_payload(
+        strategy, 
+        product,
+        investments,
+        percentage_between_ranges,
+        percentage_gains,
+        amount,
+        recomendation_method,
+        only_first
+    ):
+        return {
+            "strategy": strategy,
+            "product": product,
+            "investments": investments,
+            "percentage_between_ranges": percentage_between_ranges,
+            "percentage_gains": percentage_gains,
+            "amount": amount,
+            "recomendation_method": recomendation_method,
+            "only_first": only_first,
+        }
+
 class StrategiesGeneric(models.Model):
     strategy = models.OneToOneField(NewStrategies, on_delete=models.CASCADE, primary_key=True)
     investments = models.ManyToManyField("Investments", blank=False, null=False)
@@ -1394,6 +1428,16 @@ class StrategiesGeneric(models.Model):
         managed = True
         db_table = 'strategies_generic'
 
+    @staticmethod
+    def post_payload(
+        strategy, 
+        investments
+    ):
+        return {
+            "strategy": strategy,
+            "investments": investments,
+        }
+
 class StrategiesFastOperations(models.Model):
     strategy = models.OneToOneField(NewStrategies, on_delete=models.CASCADE, primary_key=True)
     accounts = models.ManyToManyField("accounts", blank=False, null=False)
@@ -1401,6 +1445,17 @@ class StrategiesFastOperations(models.Model):
     class Meta:
         managed = True
         db_table = 'strategies_fast_operations'
+
+    @staticmethod
+    def post_payload(
+        strategy, 
+        accounts
+    ):
+        return {
+            "strategy": strategy,
+            "accounts": accounts,
+        }
+
 
 class NewStrategies(models.Model):
     name = models.TextField(blank=False, null=False)
@@ -1424,22 +1479,10 @@ class NewStrategies(models.Model):
     ):
         return {
             "name": name, 
-            "investments": investments, 
             "dt_from": timezone.now() if dt_from is None else dt_from, 
             "dt_to": dt_to, 
             "type":type, 
-            "comment":comment, 
-            "additional1":additional1, 
-            "additional2":additional2, 
-            "additional3":additional3, 
-            "additional4":additional4, 
-            "additional5":additional5, 
-            "additional6":additional6, 
-            "additional7":additional7, 
-            "additional8":additional8, 
-            "additional9":additional9, 
-            "additional10":additional10, 
-            "accounts": accounts,
+            "comment":comment,
         }
 
     ## Replaces None for dt_to and sets a very big datetine
@@ -1448,6 +1491,8 @@ class NewStrategies(models.Model):
             return timezone.now().replace(hour=23, minute=59)#End of the current day if strategy is not closed
         return self.dt_to
 
+
+# OBSOLETE
 class Strategies(models.Model):
     name = models.TextField()
     investments = models.ManyToManyField("Investments", blank=True)
