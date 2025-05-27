@@ -25,6 +25,11 @@ def migrate(apps, schema_editor):
             new_strategy.type=3
             new_strategy.save()
 
+        if new_strategy.type not in [1,2,3,4]:
+            new_strategy.type=3
+            new_strategy.save()
+
+
         if new_strategy.type==1:# Pairs en same account
             s=StrategiesPairsInSameAccount()
             s.strategy=new_strategy
