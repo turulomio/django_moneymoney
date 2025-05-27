@@ -29,6 +29,7 @@ router.register(r'productsstrategies', money_views.ProductsStrategiesViewSet)
 router.register(r'productstypes', money_views.ProductstypesViewSet)
 router.register(r'quotes', money_views.QuotesViewSet)
 router.register(r'strategies', money_views.StrategiesViewSet)
+router.register(r'newstrategies', money_views.NewStrategiesViewSet)
 router.register(r'stockmarkets', money_views.StockmarketsViewSet)
 
 urlpatterns=[
