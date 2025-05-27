@@ -10,7 +10,6 @@ def migrate(apps, schema_editor):
     StrategiesFastOperations=apps.get_model('moneymoney', 'StrategiesFastOperations')
     Products=apps.get_model('moneymoney', 'Products')
     Accounts=apps.get_model('moneymoney', 'Accounts')
-    # Strategy Pairs in same account
 
     for old_strategy in OldStrategies.objects.all():
         new_strategy=NewStrategies()
@@ -20,6 +19,11 @@ def migrate(apps, schema_editor):
         new_strategy.type=old_strategy.type
         new_strategy.comment=old_strategy.comment
         new_strategy.save()
+
+        ##Corrections
+        if new_strategy.type==1 and (old_strategy.additional1 is None or old_strategy.additional2 is None):
+            new_strategy.type=3
+            new_strategy.save()
 
         if new_strategy.type==1:# Pairs en same account
             s=StrategiesPairsInSameAccount()
@@ -47,15 +51,11 @@ def migrate(apps, schema_editor):
                 s.investments.add(old_investment)
             s.save()
         elif new_strategy.type==4: #FastOperations
-            s=StrategiesGeneric()
+            s=StrategiesFastOperations()
             s.strategy=new_strategy
             for old_account in old_strategy.accounts.all():
                 s.accounts.add(old_account)
             s.save()
-
-        
-
-    assert False
 
 class Migration(migrations.Migration):
 
