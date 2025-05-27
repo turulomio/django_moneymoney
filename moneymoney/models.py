@@ -1490,6 +1490,9 @@ class NewStrategies(models.Model):
         if self.dt_to is None:
             return timezone.now().replace(hour=23, minute=59)#End of the current day if strategy is not closed
         return self.dt_to
+    @staticmethod
+    def hurl(request, id):
+        return request.build_absolute_uri(reverse('newstrategies-detail', args=(id, )))
 
 
 # OBSOLETE

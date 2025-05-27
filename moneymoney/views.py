@@ -535,6 +535,10 @@ class StrategiesViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
 
+class StrategiesFastOperationsViewSet(viewsets.ModelViewSet):
+    queryset = models.StrategiesFastOperations.objects.all()
+    serializer_class = serializers.StrategiesFastOperationsSerializer
+    permission_classes = [permissions.IsAuthenticated]  
 
 class NewStrategiesViewSet(viewsets.ModelViewSet):
     queryset = models.NewStrategies.objects.all()
@@ -584,7 +588,7 @@ class NewStrategiesViewSet(viewsets.ModelViewSet):
                 sum_dividends_net_user=lod.lod_sum(lod_dividends_net_user, "total")
             r.append({
                 "id": strategy.id,  
-                "url": request.build_absolute_uri(reverse('newstrategies-detail', args=(strategy.pk, ))), 
+                "url": models.NewStrategies.hurl(request,strategy.pk),
                 "name":strategy.name, 
                 "dt_from": strategy.dt_from, 
                 "dt_to": strategy.dt_to, 

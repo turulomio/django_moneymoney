@@ -317,9 +317,13 @@ class NewStrategiesSerializer(serializers.HyperlinkedModelSerializer):
         model = models.Strategies
         fields = ('url', 'id', 'name',  'investments', 'dt_from','dt_to','type','comment')
 
+class StrategiesFastOperationsSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = models.StrategiesFastOperations
+        fields = ('url', 'strategy', 'accounts')
+
 
 class FastOperationsCoverageSerializer(serializers.HyperlinkedModelSerializer):
-    
     currency= serializers.SerializerMethodField()
     class Meta:
         model = models.FastOperationsCoverage

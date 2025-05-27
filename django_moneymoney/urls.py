@@ -28,7 +28,8 @@ router.register(r'productspairs', money_views.ProductspairsViewSet)
 router.register(r'productsstrategies', money_views.ProductsStrategiesViewSet)
 router.register(r'productstypes', money_views.ProductstypesViewSet)
 router.register(r'quotes', money_views.QuotesViewSet)
-router.register(r'strategies', money_views.StrategiesViewSet)
+router.register(r'strategies', money_views.StrategiesViewSet) #Obsolete is replaced by newstrategies
+router.register(r'strategies_fastoperations', money_views.StrategiesFastOperationsViewSet)
 router.register(r'newstrategies', money_views.NewStrategiesViewSet)
 router.register(r'stockmarkets', money_views.StockmarketsViewSet)
 
@@ -68,7 +69,6 @@ urlpatterns=[
     path('reports/annual/gainsbyproductstypes/<int:year>/', money_views.ReportAnnualGainsByProductstypes, name='ReportAnnualGainsByProductstypes'),
     path('statistics/', money_views.Statistics, name='Statistics'),
     path('timezones/', money_views.Timezones.as_view(), name='Timezones'),
-    
     path('schema/', SpectacularAPIView.as_view(), name='schema'),
     path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 ]
