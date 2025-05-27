@@ -1360,6 +1360,94 @@ class StrategiesTypes(models.IntegerChoices):
     Generic = 3, _('Generic') #additional { }
     FastOperations = 4, _('Fast operations') #additional { }
 
+
+
+class StrategiesPairsInSameAccount(models.Model):
+    strategy = models.OneToOneField(NewStrategies, on_delete=models.CASCADE, primary_key=True)
+    worse_product = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='worse_product')
+    better_product = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='better_product')
+    accounts = models.ForeignKey(Accounts, on_delete=models.DO_NOTHING)
+
+    class Meta:
+        managed = True
+        db_table = 'strategies_pairs_in_same_account'
+
+class StrategiesProductsRange(models.Model):
+    strategy = models.OneToOneField(NewStrategies, on_delete=models.CASCADE, primary_key=True)
+    products = models.ForeignKey(Products, on_delete=models.DO_NOTHING)
+    investments = models.ManyToManyField("Investments", blank=False, null=False)
+    percentage_between_ranges = models.DecimalField(blank=False, null=False)
+    percentage_gains = models.DecimalField(blank=False, null=False)
+    amount = models.DecimalField(blank=False, null=False)
+    recomendation_method = models.IntegerField(choices=RANGE_RECOMENDATION_CHOICES.choices)
+    only_first = models.BooleanField(blank=False, null=False)
+
+    class Meta:
+        managed = True
+        db_table = 'strategies_products_range'
+
+class StrategiesGeneric(models.Model):
+    strategy = models.OneToOneField(NewStrategies, on_delete=models.CASCADE, primary_key=True)
+    investments = models.ManyToManyField("Investments", blank=False, null=False)
+
+    class Meta:
+        managed = True
+        db_table = 'strategies_generic'
+
+class StrategiesFastOperations(models.Model):
+    strategy = models.OneToOneField(NewStrategies, on_delete=models.CASCADE, primary_key=True)
+    accounts = models.ManyToManyField("accounts", blank=False, null=False)
+
+    class Meta:
+        managed = True
+        db_table = 'strategies_fast_operations'
+
+class NewStrategies(models.Model):
+    name = models.TextField(blank=False, null=False)
+    dt_from = models.DateTimeField(blank=False, null=False)
+    dt_to = models.DateTimeField(blank=True, null=True)
+    type = models.IntegerField(choices=StrategiesTypes.choices)
+    comment = models.TextField(blank=True, null=True)
+    class Meta:
+        managed = True
+        db_table = 'new_strategies'
+
+
+                        
+    @staticmethod
+    def post_payload(
+        name="New strategy", 
+        dt_from=None, 
+        dt_to=None, 
+        type=2, 
+        comment="Strategy comment", 
+    ):
+        return {
+            "name": name, 
+            "investments": investments, 
+            "dt_from": timezone.now() if dt_from is None else dt_from, 
+            "dt_to": dt_to, 
+            "type":type, 
+            "comment":comment, 
+            "additional1":additional1, 
+            "additional2":additional2, 
+            "additional3":additional3, 
+            "additional4":additional4, 
+            "additional5":additional5, 
+            "additional6":additional6, 
+            "additional7":additional7, 
+            "additional8":additional8, 
+            "additional9":additional9, 
+            "additional10":additional10, 
+            "accounts": accounts,
+        }
+
+    ## Replaces None for dt_to and sets a very big datetine
+    def dt_to_for_comparations(self):
+        if self.dt_to is None:
+            return timezone.now().replace(hour=23, minute=59)#End of the current day if strategy is not closed
+        return self.dt_to
+
 class Strategies(models.Model):
     name = models.TextField()
     investments = models.ManyToManyField("Investments", blank=True)
