@@ -1363,7 +1363,7 @@ class StrategiesTypes(models.IntegerChoices):
 
 
 class StrategiesPairsInSameAccount(models.Model):
-    strategy = models.OneToOneField(NewStrategies, on_delete=models.CASCADE, primary_key=True)
+    strategy = models.OneToOneField("NewStrategies", on_delete=models.CASCADE, primary_key=True)
     worse_product = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='worse_product')
     better_product = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='better_product')
     account = models.ForeignKey(Accounts, on_delete=models.DO_NOTHING)
@@ -1385,13 +1385,13 @@ class StrategiesPairsInSameAccount(models.Model):
         }
 
 class StrategiesProductsRange(models.Model):
-    strategy = models.OneToOneField(NewStrategies, on_delete=models.CASCADE, primary_key=True)
+    strategy = models.OneToOneField("NewStrategies", on_delete=models.CASCADE, primary_key=True)
     product = models.ForeignKey(Products, on_delete=models.DO_NOTHING)
-    investments = models.ManyToManyField("Investments", blank=False, null=False)
-    percentage_between_ranges = models.DecimalField(blank=False, null=False)
-    percentage_gains = models.DecimalField(blank=False, null=False)
-    amount = models.DecimalField(blank=False, null=False)
-    recomendation_method = models.IntegerField(choices=RANGE_RECOMENDATION_CHOICES.choices)
+    investments = models.ManyToManyField("Investments", blank=False)
+    percentage_between_ranges = models.DecimalField(blank=False, null=False,max_digits=100, decimal_places=6)
+    percentage_gains = models.DecimalField(blank=False, null=False, max_digits=100, decimal_places=6)
+    amount = models.DecimalField(blank=False, null=False, max_digits=100, decimal_places=6)
+    recomendation_method = models.IntegerField(choices=RANGE_RECOMENDATION_CHOICES)
     only_first = models.BooleanField(blank=False, null=False)
 
     class Meta:
@@ -1421,8 +1421,8 @@ class StrategiesProductsRange(models.Model):
         }
 
 class StrategiesGeneric(models.Model):
-    strategy = models.OneToOneField(NewStrategies, on_delete=models.CASCADE, primary_key=True)
-    investments = models.ManyToManyField("Investments", blank=False, null=False)
+    strategy = models.OneToOneField("NewStrategies", on_delete=models.CASCADE, primary_key=True)
+    investments = models.ManyToManyField("Investments", blank=False)
 
     class Meta:
         managed = True
@@ -1439,8 +1439,8 @@ class StrategiesGeneric(models.Model):
         }
 
 class StrategiesFastOperations(models.Model):
-    strategy = models.OneToOneField(NewStrategies, on_delete=models.CASCADE, primary_key=True)
-    accounts = models.ManyToManyField("accounts", blank=False, null=False)
+    strategy = models.OneToOneField("NewStrategies", on_delete=models.CASCADE, primary_key=True)
+    accounts = models.ManyToManyField("accounts", blank=False)
 
     class Meta:
         managed = True
