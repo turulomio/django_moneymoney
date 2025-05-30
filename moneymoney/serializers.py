@@ -312,16 +312,75 @@ class StrategiesSerializer(serializers.HyperlinkedModelSerializer):
         model = models.Strategies
         fields = ('url', 'id', 'name',  'investments', 'dt_from','dt_to','type','comment','additional1','additional2','additional3','additional4','additional5','additional6','additional7','additional8','additional9','additional10', 'accounts')
 
+# Serializer para los campos comunes de la estrategia
 class NewStrategiesSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = models.Strategies
-        fields = ('url', 'id', 'name',  'investments', 'dt_from','dt_to','type','comment')
+        model = models.NewStrategies # Corrected model
+        fields = ('url', 'id', 'name', 'dt_from', 'dt_to', 'type', 'comment')
+        read_only_fields = ('id', 'url')
 
+# Serializer para EstrategiaMarketing
 class StrategiesFastOperationsSerializer(serializers.HyperlinkedModelSerializer):
+    # Anidamos el serializer de Estrategia para manejar los campos comunes
+    strategy = NewStrategiesSerializer()
+
     class Meta:
         model = models.StrategiesFastOperations
-        fields = ('url', 'strategy', 'accounts')
+        # Ensure 'url' (if needed, usually for HyperlinkedModelSerializer)
+        # 'strategy' for the nested NewStrategiesSerializer
+        # 'accounts' for the ManyToManyField
+        fields = ['url', 'strategy', 'accounts']
 
+    def create(self, validated_data):
+        # Extraemos los datos de la estrategia base
+        strategy_data = validated_data.pop('strategy')
+        # Extraemos los datos de la relación M2M 'accounts'
+        # models.StrategiesFastOperations.accounts is blank=False, so 'accounts' should be in validated_data.
+        accounts_data = validated_data.pop('accounts')
+
+        # Creamos la instancia de Estrategia
+        strategy_instance = models.NewStrategies.objects.create(**strategy_data)
+
+        # Creamos la instancia de StrategiesFastOperations.
+        # **validated_data should be empty here, as 'strategy' (PK) is handled by passing strategy_instance,
+        # and 'accounts' (M2M) was popped. If StrategiesFastOperations had other direct fields,
+        # they would be in validated_data.
+        sfo_instance = models.StrategiesFastOperations.objects.create(strategy=strategy_instance, **validated_data)
+
+        # Establecemos la relación M2M 'accounts'
+        sfo_instance.accounts.set(accounts_data)
+
+        return sfo_instance
+
+    def update(self, instance, validated_data):
+        # Extraemos los datos de la estrategia base si están presentes
+        strategy_data = validated_data.pop('strategy', None)
+        # Extraemos los datos de la relación M2M 'accounts'.
+        # Use None as default to check if 'accounts' was part of the update payload.
+        accounts_data = validated_data.pop('accounts', None)
+
+        if strategy_data:
+            # Actualizamos la instancia de Estrategia base usando su serializer
+            strategy_serializer = NewStrategiesSerializer(instance.strategy, data=strategy_data, partial=True, context=self.context)
+            strategy_serializer.is_valid(raise_exception=True)
+            strategy_serializer.save()
+
+        # Actualizamos los campos directos de StrategiesFastOperations (instance).
+        # Since StrategiesFastOperations has no other direct modifiable fields besides the PK (strategy)
+        # and M2M (accounts), validated_data should be empty here.
+        # If there were other fields, update them manually:
+        # for attr, value in validated_data.items():
+        #     setattr(instance, attr, value)
+        # if validated_data: # Check if there were any fields to update
+        #    instance.save(update_fields=validated_data.keys())
+        # For this model, super().update() with an empty validated_data is also fine.
+        super().update(instance, validated_data) # This is safe if validated_data is empty after pops.
+
+        # Actualizamos la relación M2M 'accounts'
+        if accounts_data is not None: # Allows clearing the relation if an empty list is passed for accounts
+            instance.accounts.set(accounts_data)
+
+        return instance
 
 class FastOperationsCoverageSerializer(serializers.HyperlinkedModelSerializer):
     currency= serializers.SerializerMethodField()
@@ -332,6 +391,10 @@ class FastOperationsCoverageSerializer(serializers.HyperlinkedModelSerializer):
     def get_currency(self, o):
         return o.investments.products.currency
         
+
+
+
+
 @extend_schema_serializer(
     component_name="IOSRequest", 
     examples = [

@@ -535,15 +535,76 @@ class StrategiesViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
 
-class StrategiesFastOperationsViewSet(viewsets.ModelViewSet):
-    queryset = models.StrategiesFastOperations.objects.all()
-    serializer_class = serializers.StrategiesFastOperationsSerializer
-    permission_classes = [permissions.IsAuthenticated]  
+
 
 class NewStrategiesViewSet(viewsets.ModelViewSet):
     queryset = models.NewStrategies.objects.all()
     serializer_class = serializers.NewStrategiesSerializer
     permission_classes = [permissions.IsAuthenticated]  
+
+class NewStrategyViewSet(viewsets.ModelViewSet):
+    queryset = models.NewStrategies.objects.all()
+
+    def get_serializer_class(self):
+        # Para acciones de listado y detalle, usamos el serializer que combina todo
+        if self.action in ['list', 'retrieve']:
+            return serializers.NewStrategiesDetailedSerializer
+        # Para otras acciones (create, update), el serializer se determinará dinámicamente
+        # en los métodos create/update, por lo que podemos devolver un serializer base
+        # o incluso None si no se usa directamente.
+        # Aquí, devolvemos EstrategiaSerializer como un fallback, aunque no se usará
+        # directamente para la validación completa en create/update.
+        return serializers.NewStrategiesSerializer
+
+    def create(self, request, *args, **kwargs):
+        type = request.data.get('type')
+        serializer = None
+
+        # Seleccionamos el serializer adecuado según el tipo de estrategia
+        if type == models.StrategiesTypes.FastOperations:
+            serializer = serializers.StrategiesFastOperationsSerializer(data=request.data)
+        # elif type == 'ventas':
+        #     serializer = EstrategiaVentasSerializer(data=request.data)
+        # elif type == 'producto':
+        #     serializer = EstrategiaProductoSerializer(data=request.data)
+        else:
+            return Response({"error": "Tipo de estrategia no válido."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validamos y guardamos la estrategia
+        if serializer.is_valid():
+            instance = serializer.save()
+            # Una vez guardado, serializamos la instancia completa para la respuesta
+            response_serializer = serializers.NewStrategyDetailedSerializer(instance.estrategia)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, *args, **kwargs):
+        # Obtenemos la instancia de Estrategia base
+        instance = self.get_object()
+        type = instance.type
+        serializer_instance = None
+
+        # Seleccionamos el serializer adecuado y la instancia específica a actualizar
+        if type == models.StrategiesTypes.FastOperations:
+            serializer_instance = serializers.StrategiesFastOperationsSerializer(instance.marketing, data=request.data, partial=True)
+        # elif tipo == 'ventas':
+        #     serializer = EstrategiaVentasSerializer(instance.ventas, data=request.data, partial=True)
+        # elif tipo == 'producto':
+        #     serializer = EstrategiaProductoSerializer(instance.producto, data=request.data, partial=True)
+        else:
+            return Response({"error": "Tipo de estrategia no válido para actualización."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validamos y guardamos la actualización
+        if serializer_instance.is_valid():
+            serializer_instance.save()
+            # Una vez actualizado, serializamos la instancia completa para la respuesta
+            response_serializer = serializers.NewStrategyDetailedSerializer(instance)
+            return Response(response_serializer.data)
+        return Response(serializer_instance.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # El método destroy (DELETE) de ModelViewSet funciona automáticamente
+    # debido a on_delete=models.CASCADE en OneToOneField.
+
         
     @extend_schema(
         parameters=[
@@ -556,7 +617,7 @@ class NewStrategiesViewSet(viewsets.ModelViewSet):
         type=RequestInteger(request, "type")
         if all_args_are_not_none(active, type):
             self.queryset=self.queryset.filter(dt_to__isnull=active, type=type)
-        serializer = serializers.NewStrategiesSerializer(self.queryset, many=True, context={'request': request})
+        serializer = self.get_serializer(self.queryset, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=["get"], name='List strategies with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
@@ -609,17 +670,25 @@ class NewStrategiesViewSet(viewsets.ModelViewSet):
             ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals)
             return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
         return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+class StrategiesFastOperationsViewSet(viewsets.ModelViewSet):
+    queryset = models.StrategiesFastOperations.objects.all()
+    serializer_class = serializers.StrategiesFastOperationsSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
     
     @action(detail=True, methods=["get"], name='Gets a detail of a fast operations strategy. Returns a list of account operations with fast operations', url_path="detailed_fastoperations", url_name='detailed_fastoperations', permission_classes=[permissions.IsAuthenticated])
-    def detailed_fastoperations(self, request, pk=None): 
-        strategy=self.get_object()
-        if strategy is not None:
-            qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy.dt_from).select_related("accounts")
-            
+    def detailed(self, request, pk=None): 
+        strategy_fos=self.get_object()
+        if strategy_fos is not None:
+            qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy_fos.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy_fos.strategy.dt_from).select_related("accounts")
             serializer = serializers.AccountsoperationsSerializer(qs_ao, many=True, context={'request': request})
             return Response(serializer.data)
         return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
-    
+
+
 class InvestmentsClasses(APIView):
     permission_classes = [permissions.IsAuthenticated]
     @extend_schema(
