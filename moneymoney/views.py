@@ -538,13 +538,10 @@ class StrategiesViewSet(viewsets.ModelViewSet):
 
 
 class NewStrategiesViewSet(viewsets.ModelViewSet):
-    queryset = models.NewStrategies.objects.all()
-    serializer_class = serializers.NewStrategiesSerializer
     permission_classes = [permissions.IsAuthenticated]  
-
-class NewStrategyViewSet(viewsets.ModelViewSet):
     queryset = models.NewStrategies.objects.all()
-
+    #http_method_names = ['get', 'delete', 'head', 'options', 'trace']
+    
     def get_serializer_class(self):
         # Para acciones de listado y detalle, usamos el serializer que combina todo
         if self.action in ['list', 'retrieve']:
@@ -562,7 +559,7 @@ class NewStrategyViewSet(viewsets.ModelViewSet):
 
         # Seleccionamos el serializer adecuado según el tipo de estrategia
         if type == models.StrategiesTypes.FastOperations:
-            serializer = serializers.StrategiesFastOperationsSerializer(data=request.data)
+            serializer = serializers.StrategiesFastOperationsSerializer(data=request.data, context={'request': request})
         # elif type == 'ventas':
         #     serializer = EstrategiaVentasSerializer(data=request.data)
         # elif type == 'producto':
@@ -574,7 +571,7 @@ class NewStrategyViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             instance = serializer.save()
             # Una vez guardado, serializamos la instancia completa para la respuesta
-            response_serializer = serializers.NewStrategyDetailedSerializer(instance.estrategia)
+            response_serializer = serializers.NewStrategyDetailedSerializer(instance.strategy, context={'request': request})
             return Response(response_serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -586,7 +583,11 @@ class NewStrategyViewSet(viewsets.ModelViewSet):
 
         # Seleccionamos el serializer adecuado y la instancia específica a actualizar
         if type == models.StrategiesTypes.FastOperations:
-            serializer_instance = serializers.StrategiesFastOperationsSerializer(instance.marketing, data=request.data, partial=True)
+            if hasattr(instance, 'strategiesfastoperations'):
+                sfo_instance = instance.strategiesfastoperations
+                serializer_instance = serializers.StrategiesFastOperationsSerializer(sfo_instance, data=request.data, partial=True, context={'request': request})
+            else:
+                return Response({"error": _("Associated FastOperations strategy details not found for this NewStrategy instance.")}, status=status.HTTP_404_NOT_FOUND)
         # elif tipo == 'ventas':
         #     serializer = EstrategiaVentasSerializer(instance.ventas, data=request.data, partial=True)
         # elif tipo == 'producto':
@@ -598,7 +599,7 @@ class NewStrategyViewSet(viewsets.ModelViewSet):
         if serializer_instance.is_valid():
             serializer_instance.save()
             # Una vez actualizado, serializamos la instancia completa para la respuesta
-            response_serializer = serializers.NewStrategyDetailedSerializer(instance)
+            response_serializer = serializers.NewStrategyDetailedSerializer(instance, context={'request': request})
             return Response(response_serializer.data)
         return Response(serializer_instance.errors, status=status.HTTP_400_BAD_REQUEST)
 

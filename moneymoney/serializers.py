@@ -382,6 +382,55 @@ class StrategiesFastOperationsSerializer(serializers.HyperlinkedModelSerializer)
 
         return instance
 
+
+# Serializer para la vista de detalle que combina todos los campos
+class NewStrategyDetailedSerializer(serializers.HyperlinkedModelSerializer):
+    # Incluimos los campos específicos como campos de solo lectura
+    # 'strategiesfastoperations' is the default reverse accessor from NewStrategies to StrategiesFastOperations
+    strategiesfastoperations = StrategiesFastOperationsSerializer(read_only=True, required=False)
+    # ventas = EstrategiaVentasSerializer(source='ventas', read_only=True, required=False)
+    # producto = EstrategiaProductoSerializer(source='producto', read_only=True, required=False)
+
+    class Meta:
+        model = models.NewStrategies
+        # 'investments' is not a direct field of NewStrategies. Specific types like StrategiesGeneric might have it.
+        fields = ('url', 'id', 'name', 'dt_from', 'dt_to', 'type', 'comment', 'strategiesfastoperations') # Add other specific types if needed
+    def to_representation(self, instance):
+        # Obtenemos la representación base
+        representation = super().to_representation(instance)
+
+
+        # Eliminamos los campos de relaciones OneToOne si no existen para esa instancia
+        # Esto limpia la salida JSON para que solo muestre el tipo relevante
+        if not hasattr(instance, 'strategiesfastoperations'):
+            representation.pop('strategiesfastoperations', None)
+        # if not hasattr(instance, 'ventas'):
+        #     representation.pop('ventas', None)
+        # if not hasattr(instance, 'producto'):
+        #     representation.pop('producto', None)
+
+
+        # Si existe una relación específica, la "aplanamos" en la representación principal
+        # para que los campos específicos aparezcan al mismo nivel que los campos base.
+        if instance.type == models.StrategiesTypes.FastOperations and hasattr(instance, 'strategiesfastoperations'):
+            # Pass context for hyperlinked fields in nested serializer
+            fo_datas = StrategiesFastOperationsSerializer(instance.strategiesfastoperations, context=self.context).data
+            representation.update({k: v for k, v in fo_datas.items() if k not in ['strategy', 'url','accounts']}) # Avoid duplicating strategy dict and its own url
+        # elif instance.tipo == 'ventas' and hasattr(instance, 'ventas'):
+        #     ventas_data = EstrategiaVentasSerializer(instance.ventas).data
+        #     representation.update({k: v for k, v in ventas_data.items() if k != 'estrategia'})
+        # elif instance.tipo == 'producto' and hasattr(instance, 'producto'):
+        #     producto_data = EstrategiaProductoSerializer(instance.producto).data
+        #     representation.update({k: v for k, v in producto_data.items() if k != 'estrategia'})
+
+        return representation
+
+
+
+
+
+
+
 class FastOperationsCoverageSerializer(serializers.HyperlinkedModelSerializer):
     currency= serializers.SerializerMethodField()
     class Meta:
@@ -391,7 +440,6 @@ class FastOperationsCoverageSerializer(serializers.HyperlinkedModelSerializer):
     def get_currency(self, o):
         return o.investments.products.currency
         
-
 
 
 
