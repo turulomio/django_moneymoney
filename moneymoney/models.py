@@ -1375,7 +1375,9 @@ class StrategiesPairsInSameAccount(models.Model):
     @staticmethod
     def post_payload(
         strategy, 
-        worse_product
+        worse_product, 
+        better_product, 
+        account
     ):
         return {
             "strategy": strategy,
@@ -1451,6 +1453,12 @@ class StrategiesFastOperations(models.Model):
         strategy, 
         accounts
     ):
+        """
+        Static method 
+
+        @param strategy Dictionary with strategy object
+        @param accounts List of urls
+        """
         return {
             "strategy": strategy,
             "accounts": accounts,

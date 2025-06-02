@@ -541,6 +541,7 @@ class NewStrategiesViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]  
     queryset = models.NewStrategies.objects.all()
     #http_method_names = ['get', 'delete', 'head', 'options', 'trace']
+    http_method_names = ['get', 'head', 'options']
     
     def get_serializer_class(self):
         # Para acciones de listado y detalle, usamos el serializer que combina todo

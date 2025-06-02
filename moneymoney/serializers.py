@@ -321,6 +321,11 @@ class NewStrategiesSerializer(serializers.HyperlinkedModelSerializer):
 
 # Serializer para EstrategiaMarketing
 class StrategiesFastOperationsSerializer(serializers.HyperlinkedModelSerializer):
+    """
+        Este serializer devuelve:
+            - Un objeto strategy
+            - "url", "accounts"
+    """
     # Anidamos el serializer de Estrategia para manejar los campos comunes
     strategy = NewStrategiesSerializer()
 
@@ -334,22 +339,9 @@ class StrategiesFastOperationsSerializer(serializers.HyperlinkedModelSerializer)
     def create(self, validated_data):
         # Extraemos los datos de la estrategia base
         strategy_data = validated_data.pop('strategy')
-        # Extraemos los datos de la relación M2M 'accounts'
-        # models.StrategiesFastOperations.accounts is blank=False, so 'accounts' should be in validated_data.
-        accounts_data = validated_data.pop('accounts')
-
-        # Creamos la instancia de Estrategia
         strategy_instance = models.NewStrategies.objects.create(**strategy_data)
-
-        # Creamos la instancia de StrategiesFastOperations.
-        # **validated_data should be empty here, as 'strategy' (PK) is handled by passing strategy_instance,
-        # and 'accounts' (M2M) was popped. If StrategiesFastOperations had other direct fields,
-        # they would be in validated_data.
-        sfo_instance = models.StrategiesFastOperations.objects.create(strategy=strategy_instance, **validated_data)
-
-        # Establecemos la relación M2M 'accounts'
-        sfo_instance.accounts.set(accounts_data)
-
+        sfo_instance = models.StrategiesFastOperations.objects.create(strategy=strategy_instance)
+        sfo_instance.accounts.set(validated_data["accounts"])
         return sfo_instance
 
     def update(self, instance, validated_data):

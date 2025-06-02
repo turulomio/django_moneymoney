@@ -851,7 +851,7 @@ class API(APITestCase):
         tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_concepts_fo, amount=1010, comment="FO"), status.HTTP_201_CREATED)
 
         # List strategies with With balance
-        lod_strategy_with_balance=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/withbalance/?active=true",  status.HTTP_200_OK)
+        lod_strategy_with_balance=tests_helpers.client_get(self, self.client_authorized_1, "/api/strategies/withbalance/?active=true",  status.HTTP_200_OK)
         self.assertEqual(lod_strategy_with_balance[0]["invested"], 999999)
         self.assertEqual(lod_strategy_with_balance[0]["gains_current_net_user"], 1000)
 
@@ -864,9 +864,7 @@ class API(APITestCase):
         # Opens account
         tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_concepts_oa, amount=999999), status.HTTP_201_CREATED)
 
-
         dict_strategy_fos=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies_fastoperations/",  models.StrategiesFastOperations.post_payload(strategy=models.NewStrategies.post_payload(name="FOS", type=models.StrategiesTypes.FastOperations), accounts=["http://testserver/api/accounts/4/"]), status.HTTP_201_CREATED)
-
         dod.dod_print(dict_strategy_fos)
 
         tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_concepts_fo, amount=-10, comment="FO"), status.HTTP_201_CREATED)
@@ -877,15 +875,12 @@ class API(APITestCase):
         self.assertEqual(lod.lod_sum(strategy_detail,"amount"), 1000)
 
         #Update fos
-        dict_strategy_fos=tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_fos["url"],  models.StrategiesFastOperations.post_payload(strategy=models.NewStrategies.post_payload(name="FOS2", type=models.StrategiesTypes.FastOperations), accounts=["http://testserver/api/accounts/4/"]), status.HTTP_200_OK)
-        self.assertEqual(dict_strategy_fos["strategy"]["name"], "FOS2")
-
-
+        dict_strategy_fos=tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_fos["url"],  models.StrategiesFastOperations.post_payload(strategy=models.NewStrategies.post_payload(name="FOS Updated", type=models.StrategiesTypes.FastOperations), accounts=["http://testserver/api/accounts/4/"]), status.HTTP_200_OK)
+        self.assertEqual(dict_strategy_fos["strategy"]["name"], "FOS Updated")
 
         # Creates a strategy empty directly should fail, due to it redirect to StrategiesFastOperations and needs accounts ...
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/newstrategies/",  models.NewStrategies.post_payload(type=models.StrategiesTypes.FastOperations, name="FOS"), status.HTTP_400_BAD_REQUEST)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/newstrategies/",  models.NewStrategies.post_payload(type=models.StrategiesTypes.FastOperations, name="FOS"), status.HTTP_405_METHOD_NOT_ALLOWED)
 
         # Update a strategy directly should fail
-        dict_strategy_direct_update=tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_fos["strategy"]["url"],  models.NewStrategies.post_payload(type=models.StrategiesTypes.FastOperations, name="FOS Direct update"), status.HTTP_200_OK)
-        dod.dod_print(dict_strategy_direct_update)
-        self.assertEqual(dict_strategy_direct_update["name"], "FOS Direct update")
+        tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_fos["strategy"]["url"],  models.NewStrategies.post_payload(type=models.StrategiesTypes.FastOperations, name="FOS Direct update"), status.HTTP_405_METHOD_NOT_ALLOWED)
+        
