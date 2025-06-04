@@ -864,6 +864,7 @@ class API(APITestCase):
         # Opens account
         tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_concepts_oa, amount=999999), status.HTTP_201_CREATED)
 
+        # Create a FO strategy
         dict_strategy_fos=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies_fastoperations/",  models.StrategiesFastOperations.post_payload(strategy=models.NewStrategies.post_payload(name="FOS", type=models.StrategiesTypes.FastOperations), accounts=["http://testserver/api/accounts/4/"]), status.HTTP_201_CREATED)
         dod.dod_print(dict_strategy_fos)
 
@@ -883,4 +884,10 @@ class API(APITestCase):
 
         # Update a strategy directly should fail
         tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_fos["strategy"]["url"],  models.NewStrategies.post_payload(type=models.StrategiesTypes.FastOperations, name="FOS Direct update"), status.HTTP_405_METHOD_NOT_ALLOWED)
+        
+        # Delete a strategy directly should fail
+        tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_fos["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
+        
+        # Delete a strategy directly should delete
+        tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_fos["url"], [], status.HTTP_204_NO_CONTENT)
         

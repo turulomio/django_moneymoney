@@ -554,60 +554,9 @@ class NewStrategiesViewSet(viewsets.ModelViewSet):
         # directamente para la validación completa en create/update.
         return serializers.NewStrategiesSerializer
 
-    def create(self, request, *args, **kwargs):
-        type = request.data.get('type')
-        serializer = None
+    def destroy(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        # Seleccionamos el serializer adecuado según el tipo de estrategia
-        if type == models.StrategiesTypes.FastOperations:
-            serializer = serializers.StrategiesFastOperationsSerializer(data=request.data, context={'request': request})
-        # elif type == 'ventas':
-        #     serializer = EstrategiaVentasSerializer(data=request.data)
-        # elif type == 'producto':
-        #     serializer = EstrategiaProductoSerializer(data=request.data)
-        else:
-            return Response({"error": "Tipo de estrategia no válido."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Validamos y guardamos la estrategia
-        if serializer.is_valid():
-            instance = serializer.save()
-            # Una vez guardado, serializamos la instancia completa para la respuesta
-            response_serializer = serializers.NewStrategyDetailedSerializer(instance.strategy, context={'request': request})
-            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def update(self, request, *args, **kwargs):
-        # Obtenemos la instancia de Estrategia base
-        instance = self.get_object()
-        type = instance.type
-        serializer_instance = None
-
-        # Seleccionamos el serializer adecuado y la instancia específica a actualizar
-        if type == models.StrategiesTypes.FastOperations:
-            if hasattr(instance, 'strategiesfastoperations'):
-                sfo_instance = instance.strategiesfastoperations
-                serializer_instance = serializers.StrategiesFastOperationsSerializer(sfo_instance, data=request.data, partial=True, context={'request': request})
-            else:
-                return Response({"error": _("Associated FastOperations strategy details not found for this NewStrategy instance.")}, status=status.HTTP_404_NOT_FOUND)
-        # elif tipo == 'ventas':
-        #     serializer = EstrategiaVentasSerializer(instance.ventas, data=request.data, partial=True)
-        # elif tipo == 'producto':
-        #     serializer = EstrategiaProductoSerializer(instance.producto, data=request.data, partial=True)
-        else:
-            return Response({"error": "Tipo de estrategia no válido para actualización."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Validamos y guardamos la actualización
-        if serializer_instance.is_valid():
-            serializer_instance.save()
-            # Una vez actualizado, serializamos la instancia completa para la respuesta
-            response_serializer = serializers.NewStrategyDetailedSerializer(instance, context={'request': request})
-            return Response(response_serializer.data)
-        return Response(serializer_instance.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    # El método destroy (DELETE) de ModelViewSet funciona automáticamente
-    # debido a on_delete=models.CASCADE en OneToOneField.
-
-        
     @extend_schema(
         parameters=[
             OpenApiParameter(name='active', description='Filter by active accounts', required=True, type=bool), 
@@ -689,7 +638,12 @@ class StrategiesFastOperationsViewSet(viewsets.ModelViewSet):
             serializer = serializers.AccountsoperationsSerializer(qs_ao, many=True, context={'request': request})
             return Response(serializer.data)
         return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
-
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.strategy.delete()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 class InvestmentsClasses(APIView):
     permission_classes = [permissions.IsAuthenticated]
