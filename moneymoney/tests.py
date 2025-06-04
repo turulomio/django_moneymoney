@@ -891,3 +891,7 @@ class API(APITestCase):
         # Delete a strategy directly should delete
         tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_fos["url"], [], status.HTTP_204_NO_CONTENT)
         
+
+        # GEt List of strategies
+        strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/",  status.HTTP_200_OK)
+        self.assertEqual(lod.lod_sum(strategy_detail,"amount"), 1000)
