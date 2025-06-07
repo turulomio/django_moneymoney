@@ -546,17 +546,17 @@ class NewStrategiesViewSet(viewsets.ModelViewSet):
     
     def get_serializer_class(self):
         # Para acciones de listado y detalle, usamos el serializer que combina todo
-        if self.action in ['list', 'retrieve']:
-            return serializers.NewStrategiesDetailedSerializer
+        # if self.action in ['list', 'retrieve']:
+        return serializers.NewStrategyDetailedSerializer
         # Para otras acciones (create, update), el serializer se determinará dinámicamente
         # en los métodos create/update, por lo que podemos devolver un serializer base
         # o incluso None si no se usa directamente.
         # Aquí, devolvemos EstrategiaSerializer como un fallback, aunque no se usará
         # directamente para la validación completa en create/update.
-        return serializers.NewStrategiesSerializer
+        # return serializers.NewStrategiesSerializer
 
-    def destroy(self, request, *args, **kwargs):
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+    # def destroy(self, request, *args, **kwargs):
+    #     return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
         parameters=[
