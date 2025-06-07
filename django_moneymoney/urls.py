@@ -30,6 +30,7 @@ router.register(r'productstypes', money_views.ProductstypesViewSet)
 router.register(r'quotes', money_views.QuotesViewSet)
 router.register(r'strategies', money_views.StrategiesViewSet) #Obsolete is replaced by newstrategies
 router.register(r'strategies_fastoperations', money_views.StrategiesFastOperationsViewSet)
+router.register(r'strategies_pairsinsameaccount', money_views.StrategiesPairsInSameAccountViewSet)
 router.register(r'strategies_generic', money_views.StrategiesGenericViewSet)
 router.register(r'newstrategies', money_views.NewStrategiesViewSet)
 router.register(r'stockmarkets', money_views.StockmarketsViewSet)

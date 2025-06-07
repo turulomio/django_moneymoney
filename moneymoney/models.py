@@ -1355,10 +1355,10 @@ class Splits(models.Model):
 
 
 class StrategiesTypes(models.IntegerChoices):
-    PairsInSameAccount = 1, _('Pairs in same account') #additional {"worse":_, "better":_ "account" }
+    PairsInSameAccount = 1, _('Pairs in same account')
     Ranges = 2,  _('Product ranges')
-    Generic = 3, _('Generic') #additional { }
-    FastOperations = 4, _('Fast operations') #additional { }
+    Generic = 3, _('Generic') 
+    FastOperations = 4, _('Fast operations') 
 
 
 

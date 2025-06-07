@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.test import tag
 from django.utils import timezone
 from json import loads
+from logging import getLogger, ERROR
 from moneymoney import models, ios, investing_com, functions, types
 from moneymoney.reusing import tests_helpers
 from pydicts import lod, casts, dod
@@ -127,6 +128,12 @@ class API(APITestCase):
             Only instantiated once
         """
         super().setUpClass()
+
+
+        # Store original logging level and set it higher to suppress warnings
+        logger = getLogger('django.request')
+        logger.setLevel(ERROR) # This will suppress INFO and WARNING
+
         
         # User to test api
         cls.user_authorized_1 = User(
@@ -868,14 +875,17 @@ class API(APITestCase):
         # Update a strategy directly should fail
         tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_fos["strategy"]["url"],  models.NewStrategies.post_payload(type=models.StrategiesTypes.FastOperations, name="FOS Direct update"), status.HTTP_405_METHOD_NOT_ALLOWED)
         
+        # GEt List of strategies
+        strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/",  status.HTTP_200_OK)
+        self.assertTrue("strategiesfastoperations" in strategies[0])
+
         # Delete a strategy directly should fail
         tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_fos["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
         
         # Delete a strategy fast operation directly should delete
         tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_fos["url"], [], status.HTTP_204_NO_CONTENT)
 
-        # GEt List of strategies
-        strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/",  status.HTTP_200_OK)
+
 
     @tag("current")
     def test_NewStrategiesGeneric(self):
@@ -909,10 +919,13 @@ class API(APITestCase):
         
         # Delete a strategy directly should fail
         tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_generic["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
-        
+
+
+        strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/",  status.HTTP_200_OK)
+        dod.dod_print(strategies)
         # Delete a strategy fast operation directly should delete
         tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_generic["url"], [], status.HTTP_204_NO_CONTENT)
-        
         # GEt List of strategies
         strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/",  status.HTTP_200_OK)
+        dod.dod_print(strategies)
         self.assertEqual(len(strategies), 0)
