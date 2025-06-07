@@ -631,14 +631,33 @@ class StrategiesFastOperationsViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]  
 
     
-    @action(detail=True, methods=["get"], name='Gets a detail of a fast operations strategy. Returns a list of account operations with fast operations', url_path="detailed_fastoperations", url_name='detailed_fastoperations', permission_classes=[permissions.IsAuthenticated])
+    @action(detail=True, methods=["get"], name='Gets a detail of a fast operations strategy. Returns a list of account operations with fast operations', url_path="detailed", url_name='detailed', permission_classes=[permissions.IsAuthenticated])
     def detailed(self, request, pk=None): 
         strategy_fos=self.get_object()
         if strategy_fos is not None:
             qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy_fos.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy_fos.strategy.dt_from).select_related("accounts")
             serializer = serializers.AccountsoperationsSerializer(qs_ao, many=True, context={'request': request})
             return Response(serializer.data)
-        return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'status': _('Fast operations strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.strategy.delete()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class StrategiesGenericViewSet(viewsets.ModelViewSet):
+    queryset = models.StrategiesGeneric.objects.all()
+    serializer_class = serializers.StrategiesGenericSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
+    @action(detail=True, methods=["get"], name='Gets a IOS from a strategy', url_path="detailed", url_name='detailed', permission_classes=[permissions.IsAuthenticated])
+    def ios(self, request, pk=None): 
+        strategy=self.get_object()
+        if strategy is not None:
+            ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals)
+            return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
+        return Response({'status': _('Generic strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
     
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()

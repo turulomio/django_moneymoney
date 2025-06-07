@@ -374,6 +374,47 @@ class StrategiesFastOperationsSerializer(serializers.HyperlinkedModelSerializer)
 
         return instance
 
+# Serializer para EstrategiaMarketing
+class StrategiesGenericSerializer(serializers.HyperlinkedModelSerializer):
+    # Anidamos el serializer de Estrategia para manejar los campos comunes
+    strategy = NewStrategiesSerializer()
+
+    class Meta:
+        model = models.StrategiesGeneric
+        # Ensure 'url' (if needed, usually for HyperlinkedModelSerializer)
+        # 'strategy' for the nested NewStrategiesSerializer
+        # 'accounts' for the ManyToManyField
+        fields = ['url', 'strategy', 'investments']
+
+    def create(self, validated_data):
+        # Extraemos los datos de la estrategia base
+        strategy_data = validated_data.pop('strategy')
+        strategy_instance = models.NewStrategies.objects.create(**strategy_data)
+        sg_instance = models.StrategiesGeneric.objects.create(strategy=strategy_instance)
+        sg_instance.investments.set(validated_data["investments"])
+        return sg_instance
+    
+    def update(self, instance, validated_data):
+        # Extraemos los datos de la estrategia base si están presentes
+        strategy_data = validated_data.pop('strategy', None)
+        # Extraemos los datos de la relación M2M 'accounts'.
+        # Use None as default to check if 'accounts' was part of the update payload.
+        investments_data = validated_data.pop('investments', None)
+
+        if strategy_data:
+            # Actualizamos la instancia de Estrategia base usando su serializer
+            strategy_serializer = NewStrategiesSerializer(instance.strategy, data=strategy_data, partial=True, context=self.context)
+            strategy_serializer.is_valid(raise_exception=True)
+            strategy_serializer.save()
+
+        super().update(instance, validated_data) # This is safe if validated_data is empty after pops.
+
+        # Actualizamos la relación M2M 'accounts'
+        if investments_data is not None: # Allows clearing the relation if an empty list is passed for accounts
+            instance.investments.set(investments_data)
+
+        return instance
+
 
 # Serializer para la vista de detalle que combina todos los campos
 class NewStrategyDetailedSerializer(serializers.HyperlinkedModelSerializer):
@@ -408,12 +449,9 @@ class NewStrategyDetailedSerializer(serializers.HyperlinkedModelSerializer):
             # Pass context for hyperlinked fields in nested serializer
             fo_datas = StrategiesFastOperationsSerializer(instance.strategiesfastoperations, context=self.context).data
             representation.update({k: v for k, v in fo_datas.items() if k not in ['strategy', 'url','accounts']}) # Avoid duplicating strategy dict and its own url
-        # elif instance.tipo == 'ventas' and hasattr(instance, 'ventas'):
-        #     ventas_data = EstrategiaVentasSerializer(instance.ventas).data
-        #     representation.update({k: v for k, v in ventas_data.items() if k != 'estrategia'})
-        # elif instance.tipo == 'producto' and hasattr(instance, 'producto'):
-        #     producto_data = EstrategiaProductoSerializer(instance.producto).data
-        #     representation.update({k: v for k, v in producto_data.items() if k != 'estrategia'})
+        elif instance.type == models.StrategiesTypes.Generic and hasattr(instance, 'strategiesgeneric'):
+            sg_datas = StrategiesGenericSerializer(instance.strategiesgeneric, context=self.context).data
+            representation.update({k: v for k, v in sg_datas.items() if k not in ['strategy', 'url', 'investments']})
 
         return representation
 
