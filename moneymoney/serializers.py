@@ -400,8 +400,10 @@ class StrategiesGenericSerializer(serializers.HyperlinkedModelSerializer):
         # Extraemos los datos de la relación M2M 'accounts'.
         # Use None as default to check if 'accounts' was part of the update payload.
         investments_data = validated_data.pop('investments', None)
-
+        
         if strategy_data:
+            if instance.strategy.type!=strategy_data["type"]:
+                raise serializers.ValidationError({"type": "You can't change strategy type"})
             # Actualizamos la instancia de Estrategia base usando su serializer
             strategy_serializer = NewStrategiesSerializer(instance.strategy, data=strategy_data, partial=True, context=self.context)
             strategy_serializer.is_valid(raise_exception=True)
@@ -455,47 +457,21 @@ class NewStrategyDetailedSerializer(serializers.HyperlinkedModelSerializer):
     strategiesfastoperations = StrategiesFastOperationsSerializer(read_only=True, required=False)
     strategiesgeneric = StrategiesGenericSerializer(read_only=True, required=False)
     strategiespairsinsameaccount = StrategiesPairsInSameAccountSerializer(read_only=True, required=False)
-    # ventas = EstrategiaVentasSerializer(source='ventas', read_only=True, required=False)
-    # producto = EstrategiaProductoSerializer(source='producto', read_only=True, required=False)
 
     class Meta:
         model = models.NewStrategies
         # 'investments' is not a direct field of NewStrategies. Specific types like StrategiesGeneric might have it.
         fields = ('url', 'id', 'name', 'dt_from', 'dt_to', 'type', 'comment', 'strategiesfastoperations', 'strategiesgeneric', 'strategiespairsinsameaccount') # Add other specific types if needed
     def to_representation(self, instance):
-        # Obtenemos la representación base
-        representation = super().to_representation(instance)
+        # Reescribe la representación para coincidir con los Serializer dependiendo de su type
+        if instance.type==models.StrategiesTypes.FastOperations:
+            return StrategiesFastOperationsSerializer(instance.strategiesfastoperations, context=self.context).data
 
+        if instance.type==models.StrategiesTypes.Generic:
+            return StrategiesGenericSerializer(instance.strategiesgeneric, context=self.context).data
 
-        # Eliminamos los campos de relaciones OneToOne si no existen para esa instancia
-        # Esto limpia la salida JSON para que solo muestre el tipo relevante
-        if not hasattr(instance, 'strategiesfastoperations'):
-            representation.pop('strategiesfastoperations', None)
-        if not hasattr(instance, 'strategiesgeneric'):
-            representation.pop('strategiesgeneric', None)
-        if not hasattr(instance, 'strategiespairsinsameaccount'):
-            representation.pop('strategiespairsinsameaccount', None)
-
-
-        # Si existe una relación específica, la "aplanamos" en la representación principal
-        # para que los campos específicos aparezcan al mismo nivel que los campos base.
-        if instance.type == models.StrategiesTypes.FastOperations and hasattr(instance, 'strategiesfastoperations'):
-            # Pass context for hyperlinked fields in nested serializer
-            fo_datas = StrategiesFastOperationsSerializer(instance.strategiesfastoperations, context=self.context).data
-            representation.update({k: v for k, v in fo_datas.items() if k not in ['strategy', 'url','accounts']}) # Avoid duplicating strategy dict and its own url
-        elif instance.type == models.StrategiesTypes.Generic and hasattr(instance, 'strategiesgeneric'):
-            sg_datas = StrategiesGenericSerializer(instance.strategiesgeneric, context=self.context).data
-            representation.update({k: v for k, v in sg_datas.items() if k not in ['strategy', 'url', 'investments']})
-        elif instance.type == models.StrategiesTypes.PairsInSameAccount and hasattr(instance, 'strategiespairsinsameaccount'):
-            sg_datas = StrategiesPairsInSameAccountSerializer(instance.strategiespairsinsameaccount, context=self.context).data
-            representation.update({k: v for k, v in sg_datas.items() if k not in ['strategy', 'url', 'investments']})
-
-        return representation
-
-
-
-
-
+        if instance.type==models.StrategiesTypes.PairsInSameAccount:
+            return StrategiesPairsInSameAccountSerializer(instance.strategiespairsinsameaccount, context=self.context).data
 
 
 class FastOperationsCoverageSerializer(serializers.HyperlinkedModelSerializer):

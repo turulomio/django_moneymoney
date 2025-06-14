@@ -540,7 +540,7 @@ class StrategiesViewSet(viewsets.ModelViewSet):
 class NewStrategiesViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]  
     queryset = models.NewStrategies.objects.all()
-    serializer_class = serializers.StrategiesSerializer
+    # serializer_class = serializers.StrategiesSerializer
     #http_method_names = ['get', 'delete', 'head', 'options', 'trace']
     http_method_names = ['get', 'head', 'options']
     

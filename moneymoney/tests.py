@@ -883,7 +883,8 @@ class API(APITestCase):
         tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_fos["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
         
         # Delete a strategy fast operation directly should delete
-        tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_fos["url"], [], status.HTTP_204_NO_CONTENT)
+        after_delete=tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_fos["url"], [], status.HTTP_204_NO_CONTENT)
+        self.assertEqual(len(after_delete), 0)
 
 
 
@@ -904,7 +905,7 @@ class API(APITestCase):
         self.assertEqual(strategy_detail[first_entry]["total_io_current"]["balance_user"], 10000)
 
         #Update fos
-        dict_strategy_generic=tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_generic["url"],  models.StrategiesGeneric.post_payload(strategy=models.NewStrategies.post_payload(name="GS Updated", type=models.StrategiesTypes.FastOperations), investments=[dict_investment["url"]]), status.HTTP_200_OK)
+        dict_strategy_generic=tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_generic["url"],  models.StrategiesGeneric.post_payload(strategy=models.NewStrategies.post_payload(name="GS Updated", type=models.StrategiesTypes.Generic), investments=[dict_investment["url"]]), status.HTTP_200_OK)
         self.assertEqual(dict_strategy_generic["strategy"]["name"], "GS Updated")
 
         # Get a created StrategiesFastOperations
@@ -914,6 +915,9 @@ class API(APITestCase):
         # Creates a strategy empty directly should fail, due to it redirect to StrategiesFastOperations and needs accounts ...
         tests_helpers.client_post(self, self.client_authorized_1, "/api/newstrategies/",  models.NewStrategies.post_payload(type=models.StrategiesTypes.Generic, name="GS"), status.HTTP_405_METHOD_NOT_ALLOWED)
 
+        # Tries to change type and returns error
+        tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_generic["url"],  models.StrategiesGeneric.post_payload(strategy=models.NewStrategies.post_payload(name="GS Updated", type=models.StrategiesTypes.FastOperations), investments=[dict_investment["url"]]), status.HTTP_400_BAD_REQUEST)
+
         # Update a strategy directly should fail
         tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_generic["strategy"]["url"],  models.NewStrategies.post_payload(type=models.StrategiesTypes.Generic, name="GS Direct update"), status.HTTP_405_METHOD_NOT_ALLOWED)
         
@@ -921,12 +925,18 @@ class API(APITestCase):
         tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_generic["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
-        strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/",  status.HTTP_200_OK)
-        print("Strategies Generic")
-        dod.dod_print(strategies)
-        # Delete a strategy fast operation directly should delete
-        tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_generic["url"], [], status.HTTP_204_NO_CONTENT)
+        dod.dod_print(dict_strategy_generic)
+        
+
+        
         # GEt List of strategies
         strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/",  status.HTTP_200_OK)
         dod.dod_print(strategies)
-        self.assertEqual(len(strategies), 0)
+        # self.assertTrue("strategiesgeneric" in strategies[0])
+
+        # Delete a strategy directly should fail
+        tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_generic["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
+        
+        # Delete a strategy fast operation directly should delete
+        after_delete=tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_generic["url"], [], status.HTTP_204_NO_CONTENT)
+        self.assertEqual(len(after_delete), 0)
