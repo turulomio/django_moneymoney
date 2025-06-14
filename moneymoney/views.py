@@ -517,14 +517,7 @@ class StrategiesViewSet(viewsets.ModelViewSet):
             d_strategy["balance"]=d_balance
             r.append(d_strategy)
         return Response(r)
-        
-    @action(detail=True, methods=["get"], name='Gets a IOS from a strategy', url_path="ios", url_name='ios', permission_classes=[permissions.IsAuthenticated])
-    def ios(self, request, pk=None): 
-        strategy=self.get_object()
-        if strategy is not None:
-            ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals)
-            return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
-        return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
+
 
 
 
@@ -577,12 +570,21 @@ class StrategiesProductsRangeViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=["get"], name='Gets a detail of a pairs in same account strategy', url_path="detailed", url_name='detailed', permission_classes=[permissions.IsAuthenticated])
     def detailed(self, request, pk=None): 
-        # strategy_fos=self.get_object()
-        # if strategy_fos is not None:
-        #     qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy_fos.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy_fos.strategy.dt_from).select_related("accounts")
-        #     serializer = serializers.AccountsoperationsSerializer(qs_ao, many=True, context={'request': request})
-        #     return Response(serializer.data)
-        return Response({'status': _('Not developed yet')}, status=status.HTTP_200_OK)
+        strategy=self.get_object()
+        if strategy is not None:
+            ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals)
+            return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
+        return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
+    
+
+            
+    # @action(detail=True, methods=["get"], name='Gets a IOS from a strategy', url_path="ios", url_name='ios', permission_classes=[permissions.IsAuthenticated])
+    # def ios(self, request, pk=None): 
+    #     strategy=self.get_object()
+    #     if strategy is not None:
+    #         ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals)
+    #         return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
+    #     return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
     
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -1318,14 +1320,14 @@ def ProductsQuotesOHCL(request):
 def ProductsRanges(request):
     product=RequestUrl(request, "product", models.Products)
     totalized_operations=RequestBool(request, "totalized_operations") 
-    percentage_between_ranges=RequestInteger(request, "percentage_between_ranges")
+    percentage_between_ranges=RequestDecimal(request, "percentage_between_ranges")
 
     if percentage_between_ranges is not None:
-        percentage_between_ranges=percentage_between_ranges/1000
-    percentage_gains=RequestInteger(request, "percentage_gains")
+        percentage_between_ranges=percentage_between_ranges
+    percentage_gains=RequestDecimal(request, "percentage_gains")
     if percentage_gains is not None:
-        percentage_gains=percentage_gains/1000
-    amount_to_invest=RequestInteger(request, "amount_to_invest")
+        percentage_gains=percentage_gains
+    amount_to_invest=RequestDecimal(request, "amount_to_invest")
     recomendation_methods=RequestInteger(request, "recomendation_methods")
     investments=RequestListOfUrls(request,"investments[]", models.Investments) 
     if investments is None:
