@@ -307,14 +307,217 @@ class StockmarketsSerializer(serializers.HyperlinkedModelSerializer):
     def get_localname(self, obj):
         return  _(obj.name)
 
+# Serializer para los campos comunes de la estrategia
 class StrategiesSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
+        model = models.Strategies # Corrected model
+        fields = ('url', 'id', 'name', 'dt_from', 'dt_to', 'type', 'comment')
+        read_only_fields = ('id', 'url')
+
+# Serializer para EstrategiaMarketing
+class StrategiesFastOperationsSerializer(serializers.HyperlinkedModelSerializer):
+    """
+        Este serializer devuelve:
+            - Un objeto strategy
+            - "url", "accounts"
+    """
+    # Anidamos el serializer de Estrategia para manejar los campos comunes
+    strategy = StrategiesSerializer()
+
+    class Meta:
+        model = models.StrategiesFastOperations
+        # Ensure 'url' (if needed, usually for HyperlinkedModelSerializer)
+        # 'strategy' for the nested StrategiesSerializer
+        # 'accounts' for the ManyToManyField
+        fields = ['url', 'strategy', 'accounts']
+
+    def create(self, validated_data):
+        # Extraemos los datos de la estrategia base
+        strategy_data = validated_data.pop('strategy')
+        if strategy_data["type"]!=models.StrategiesTypes.FastOperations:
+            raise serializers.ValidationError({"type": "Strategy type is wrong"})
+        strategy_instance = models.Strategies.objects.create(**strategy_data)
+        sfo_instance = models.StrategiesFastOperations.objects.create(strategy=strategy_instance)
+        sfo_instance.accounts.set(validated_data["accounts"])
+        return sfo_instance
+
+    def update(self, instance, validated_data):
+        # Extraemos los datos de la estrategia base si están presentes
+        strategy_data = validated_data.pop('strategy', None)
+        # Extraemos los datos de la relación M2M 'accounts'.
+        # Use None as default to check if 'accounts' was part of the update payload.
+        accounts_data = validated_data.pop('accounts', None)
+
+        if strategy_data:
+            if instance.strategy.type!=strategy_data["type"]:
+                raise serializers.ValidationError({"type": "You can't change strategy type"})
+            # Actualizamos la instancia de Estrategia base usando su serializer
+            strategy_serializer = StrategiesSerializer(instance.strategy, data=strategy_data, partial=True, context=self.context)
+            strategy_serializer.is_valid(raise_exception=True)
+            strategy_serializer.save()
+
+        # Actualizamos los campos directos de StrategiesFastOperations (instance).
+        # Since StrategiesFastOperations has no other direct modifiable fields besides the PK (strategy)
+        # and M2M (accounts), validated_data should be empty here.
+        # If there were other fields, update them manually:
+        # for attr, value in validated_data.items():
+        #     setattr(instance, attr, value)
+        # if validated_data: # Check if there were any fields to update
+        #    instance.save(update_fields=validated_data.keys())
+        # For this model, super().update() with an empty validated_data is also fine.
+        super().update(instance, validated_data) # This is safe if validated_data is empty after pops.
+
+        # Actualizamos la relación M2M 'accounts'
+        if accounts_data is not None: # Allows clearing the relation if an empty list is passed for accounts
+            instance.accounts.set(accounts_data)
+
+        return instance
+
+# Serializer para EstrategiaMarketing
+class StrategiesGenericSerializer(serializers.HyperlinkedModelSerializer):
+    # Anidamos el serializer de Estrategia para manejar los campos comunes
+    strategy = StrategiesSerializer()
+
+    class Meta:
+        model = models.StrategiesGeneric
+        # Ensure 'url' (if needed, usually for HyperlinkedModelSerializer)
+        # 'strategy' for the nested StrategiesSerializer
+        # 'accounts' for the ManyToManyField
+        fields = ['url', 'strategy', 'investments']
+
+    def create(self, validated_data):
+        # Extraemos los datos de la estrategia base
+        strategy_data = validated_data.pop('strategy')
+        if strategy_data["type"]!=models.StrategiesTypes.Generic:
+            raise serializers.ValidationError({"type": "Strategy type is wrong"})
+        strategy_instance = models.Strategies.objects.create(**strategy_data)
+        sg_instance = models.StrategiesGeneric.objects.create(strategy=strategy_instance)
+        sg_instance.investments.set(validated_data["investments"])
+        return sg_instance
+    
+    def update(self, instance, validated_data):
+        # Extraemos los datos de la estrategia base si están presentes
+        strategy_data = validated_data.pop('strategy', None)
+        # Extraemos los datos de la relación M2M 'accounts'.
+        # Use None as default to check if 'accounts' was part of the update payload.
+        investments_data = validated_data.pop('investments', None)
+        
+        if strategy_data:
+            if instance.strategy.type!=strategy_data["type"]:
+                raise serializers.ValidationError({"type": "You can't change strategy type"})
+            # Actualizamos la instancia de Estrategia base usando su serializer
+            strategy_serializer = StrategiesSerializer(instance.strategy, data=strategy_data, partial=True, context=self.context)
+            strategy_serializer.is_valid(raise_exception=True)
+            strategy_serializer.save()
+
+        super().update(instance, validated_data) # This is safe if validated_data is empty after pops.
+
+        # Actualizamos la relación M2M 'accounts'
+        if investments_data is not None: # Allows clearing the relation if an empty list is passed for accounts
+            instance.investments.set(investments_data)
+
+        return instance
+
+
+# Serializer para EstrategiaMarketing
+class StrategiesPairsInSameAccountSerializer(serializers.HyperlinkedModelSerializer):
+    # Anidamos el serializer de Estrategia para manejar los campos comunes
+    strategy = StrategiesSerializer()
+
+    class Meta:
+        model = models.StrategiesPairsInSameAccount
+        # Ensure 'url' (if needed, usually for HyperlinkedModelSerializer)
+        # 'strategy' for the nested StrategiesSerializer
+        # 'accounts' for the ManyToManyField
+        fields = ['url', 'strategy', 'better_product', 'worse_product', 'account']
+
+    def create(self, validated_data):
+        # Extraemos los datos de la estrategia base
+        strategy_data = validated_data.pop('strategy')
+
+        if strategy_data["type"]!=models.StrategiesTypes.PairsInSameAccount:
+            raise serializers.ValidationError({"type": "Strategy type is wrong"})
+        strategy_instance = models.Strategies.objects.create(**strategy_data)
+        sg_instance = models.StrategiesPairsInSameAccount.objects.create(strategy=strategy_instance, **validated_data)
+        return sg_instance
+    
+    def update(self, instance, validated_data):
+        # Extraemos los datos de la estrategia base si están presentes
+        strategy_data = validated_data.pop('strategy', None)
+
+        if strategy_data:
+            if instance.strategy.type!=strategy_data["type"]:
+                raise serializers.ValidationError({"type": "You can't change strategy type"})
+            # Actualizamos la instancia de Estrategia base usando su serializer
+            strategy_serializer = StrategiesSerializer(instance.strategy, data=strategy_data, partial=True, context=self.context)
+            strategy_serializer.is_valid(raise_exception=True)
+            strategy_serializer.save()
+
+        super().update(instance, validated_data) # This is safe if validated_data is empty after pops.
+        return instance
+
+class StrategiesProductsRangeSerializer(serializers.HyperlinkedModelSerializer):
+    strategy = StrategiesSerializer()
+
+    class Meta:
+        model = models.StrategiesProductsRange
+        fields = ['url', 'strategy', 'product', 'investments', 'percentage_between_ranges', 'percentage_gains', 'amount', 'recomendation_method', 'only_first']
+
+
+    def create(self, validated_data):
+        # Extraemos los datos de la estrategia base
+        strategy_data = validated_data.pop('strategy')
+        investments=validated_data.pop('investments')
+
+        if strategy_data["type"]!=models.StrategiesTypes.Ranges:
+            raise serializers.ValidationError({"type": "Strategy type is wrong"})
+        strategy_instance = models.Strategies.objects.create(**strategy_data)
+        sg_instance = models.StrategiesProductsRange.objects.create(strategy=strategy_instance, **validated_data)
+        sg_instance.investments.set(investments)
+        return sg_instance
+    
+    def update(self, instance, validated_data):
+        # Extraemos los datos de la estrategia base si están presentes
+        strategy_data = validated_data.pop('strategy', None)
+        investments_data = validated_data.pop('investments', None)
+
+        if strategy_data:
+            if instance.strategy.type!=strategy_data["type"]:
+                raise serializers.ValidationError({"type": "You can't change strategy type"})
+            # Actualizamos la instancia de Estrategia base usando su serializer
+            strategy_serializer = StrategiesSerializer(instance.strategy, data=strategy_data, partial=True, context=self.context)
+            strategy_serializer.is_valid(raise_exception=True)
+            strategy_serializer.save()
+
+        super().update(instance, validated_data) # This is safe if validated_data is empty after pops.
+        # Actualizamos la relación M2M 'accounts'
+        if investments_data is not None: # Allows clearing the relation if an empty list is passed for accounts
+            instance.investments.set(investments_data)
+        return instance
+
+
+# Serializer para la vista de detalle que combina todas las estrategias
+class NewStrategyDetailedSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
         model = models.Strategies
-        fields = ('url', 'id', 'name',  'investments', 'dt_from','dt_to','type','comment','additional1','additional2','additional3','additional4','additional5','additional6','additional7','additional8','additional9','additional10', 'accounts')
+        fields = ('url', 'id')
+        
+    def to_representation(self, instance):
+        # Reescribe la representación para coincidir con los Serializer dependiendo de su type
+        if instance.type==models.StrategiesTypes.FastOperations:
+            return StrategiesFastOperationsSerializer(instance.strategiesfastoperations, context=self.context).data
+
+        elif instance.type==models.StrategiesTypes.Generic:
+            return StrategiesGenericSerializer(instance.strategiesgeneric, context=self.context).data
+
+        elif instance.type==models.StrategiesTypes.PairsInSameAccount:
+            return StrategiesPairsInSameAccountSerializer(instance.strategiespairsinsameaccount, context=self.context).data
+
+        elif instance.type==models.StrategiesTypes.Ranges:
+            return StrategiesProductsRangeSerializer(instance.strategiesproductsrange, context=self.context).data
 
 
 class FastOperationsCoverageSerializer(serializers.HyperlinkedModelSerializer):
-    
     currency= serializers.SerializerMethodField()
     class Meta:
         model = models.FastOperationsCoverage
@@ -323,6 +526,9 @@ class FastOperationsCoverageSerializer(serializers.HyperlinkedModelSerializer):
     def get_currency(self, o):
         return o.investments.products.currency
         
+
+
+
 @extend_schema_serializer(
     component_name="IOSRequest", 
     examples = [

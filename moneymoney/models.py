@@ -1355,36 +1355,128 @@ class Splits(models.Model):
 
 
 class StrategiesTypes(models.IntegerChoices):
-    PairsInSameAccount = 1, _('Pairs in same account') #additional {"worse":_, "better":_ "account" }
+    PairsInSameAccount = 1, _('Pairs in same account')
     Ranges = 2,  _('Product ranges')
-    Generic = 3, _('Generic') #additional { }
-    FastOperations = 4, _('Fast operations') #additional { }
+    Generic = 3, _('Generic') 
+    FastOperations = 4, _('Fast operations') 
+
+
+
+class StrategiesPairsInSameAccount(models.Model):
+    strategy = models.OneToOneField("Strategies", on_delete=models.CASCADE, primary_key=True)
+    worse_product = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='worse_product')
+    better_product = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='better_product')
+    account = models.ForeignKey(Accounts, on_delete=models.DO_NOTHING)
+
+    class Meta:
+        managed = True
+        db_table = 'strategies_pairs_in_same_account'
+
+    @staticmethod
+    def post_payload(
+        strategy, 
+        worse_product="http://testserver/api/products/79329/", 
+        better_product="http://testserver/api/products/79328/", 
+        account="http://testserver/api/accounts/4/"
+    ):
+        return {
+            "strategy": strategy,
+            "worse_product": worse_product,
+            "better_product": better_product,
+            "account": account,
+        }
+
+class StrategiesProductsRange(models.Model):
+    strategy = models.OneToOneField("Strategies", on_delete=models.CASCADE, primary_key=True)
+    product = models.ForeignKey(Products, on_delete=models.DO_NOTHING)
+    investments = models.ManyToManyField("Investments", blank=False)
+    percentage_between_ranges = models.DecimalField(blank=False, null=False,max_digits=100, decimal_places=6)
+    percentage_gains = models.DecimalField(blank=False, null=False, max_digits=100, decimal_places=6)
+    amount = models.DecimalField(blank=False, null=False, max_digits=100, decimal_places=6)
+    recomendation_method = models.IntegerField(choices=RANGE_RECOMENDATION_CHOICES)
+    only_first = models.BooleanField(blank=False, null=False)
+
+    class Meta:
+        managed = True
+        db_table = 'strategies_products_range'
+
+    @staticmethod
+    def post_payload(
+        strategy, 
+        investments,
+        product="http://testserver/api/products/79329/",
+        percentage_between_ranges=0.05,
+        percentage_gains=0.10,
+        amount=10000,
+        recomendation_method=1,
+        only_first=False
+    ):
+        return {
+            "strategy": strategy,
+            "product": product,
+            "investments": investments,
+            "percentage_between_ranges": percentage_between_ranges,
+            "percentage_gains": percentage_gains,
+            "amount": amount,
+            "recomendation_method": recomendation_method,
+            "only_first": only_first,
+        }
+
+class StrategiesGeneric(models.Model):
+    strategy = models.OneToOneField("Strategies", on_delete=models.CASCADE, primary_key=True)
+    investments = models.ManyToManyField("Investments", blank=False)
+
+    class Meta:
+        managed = True
+        db_table = 'strategies_generic'
+
+    @staticmethod
+    def post_payload(
+        strategy, 
+        investments
+    ):
+        return {
+            "strategy": strategy,
+            "investments": investments,
+        }
+
+class StrategiesFastOperations(models.Model):
+    strategy = models.OneToOneField("Strategies", on_delete=models.CASCADE, primary_key=True)
+    accounts = models.ManyToManyField("accounts", blank=False)
+
+    class Meta:
+        managed = True
+        db_table = 'strategies_fast_operations'
+
+    @staticmethod
+    def post_payload(
+        strategy, 
+        accounts
+    ):
+        """
+        Static method 
+
+        @param strategy Dictionary with strategy object
+        @param accounts List of urls
+        """
+        return {
+            "strategy": strategy,
+            "accounts": accounts,
+        }
+
 
 class Strategies(models.Model):
-    name = models.TextField()
-    investments = models.ManyToManyField("Investments", blank=True)
-    dt_from = models.DateTimeField(blank=True, null=True)
+    name = models.TextField(blank=False, null=False)
+    dt_from = models.DateTimeField(blank=False, null=False)
     dt_to = models.DateTimeField(blank=True, null=True)
     type = models.IntegerField(choices=StrategiesTypes.choices)
     comment = models.TextField(blank=True, null=True)
-    additional1 = models.IntegerField(blank=True, null=True)   
-    additional2 = models.IntegerField(blank=True, null=True)   
-    additional3 = models.IntegerField(blank=True, null=True)   
-    additional4 = models.IntegerField(blank=True, null=True)   
-    additional5 = models.IntegerField(blank=True, null=True)   
-    additional6 = models.IntegerField(blank=True, null=True)   
-    additional7 = models.IntegerField(blank=True, null=True)   
-    additional8 = models.IntegerField(blank=True, null=True)   
-    additional9 = models.IntegerField(blank=True, null=True)   
-    additional10 = models.IntegerField(blank=True, null=True) 
-    accounts = models.ManyToManyField("Accounts", blank=True)
-    
     class Meta:
         managed = True
         db_table = 'strategies'
-        ordering = ['name']
-        
-                
+
+
+                        
     @staticmethod
     def post_payload(
         name="New strategy", 
@@ -1392,37 +1484,13 @@ class Strategies(models.Model):
         dt_to=None, 
         type=2, 
         comment="Strategy comment", 
-        additional1=79329, 
-        additional2=79329, 
-        additional3=79329, 
-        additional4=79329, 
-        additional5=79329, 
-        additional6=79329, 
-        additional7=79329, 
-        additional8=79329, 
-        additional9=79329, 
-        additional10=79329,
-        accounts=[], # It's a list of accounts urls
-        investments=[], #It's a list of urls of investments 
     ):
         return {
             "name": name, 
-            "investments": investments, 
             "dt_from": timezone.now() if dt_from is None else dt_from, 
             "dt_to": dt_to, 
             "type":type, 
-            "comment":comment, 
-            "additional1":additional1, 
-            "additional2":additional2, 
-            "additional3":additional3, 
-            "additional4":additional4, 
-            "additional5":additional5, 
-            "additional6":additional6, 
-            "additional7":additional7, 
-            "additional8":additional8, 
-            "additional9":additional9, 
-            "additional10":additional10, 
-            "accounts": accounts,
+            "comment":comment,
         }
 
     ## Replaces None for dt_to and sets a very big datetine
@@ -1430,8 +1498,9 @@ class Strategies(models.Model):
         if self.dt_to is None:
             return timezone.now().replace(hour=23, minute=59)#End of the current day if strategy is not closed
         return self.dt_to
-
-
+    @staticmethod
+    def hurl(request, id):
+        return request.build_absolute_uri(reverse('strategies-detail', args=(id, )))
 
 class Accountstransfers(models.Model):
     datetime = models.DateTimeField(blank=False, null=False)

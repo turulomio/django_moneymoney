@@ -1,8 +1,8 @@
 {
   "header": {
     "comment": "eric project file for project django_moneymoney",
-    "copyright": "Copyright (C) 2024 , ",
-    "saved": "2024-07-24, 04:06:28"
+    "copyright": "Copyright (C) 2025 , ",
+    "saved": "2025-06-02, 08:26:16"
   },
   "project": {
     "AUTHOR": "",
@@ -283,6 +283,9 @@
       "moneymoney/migrations/0053_migrate_from_pci_to_productstrategies.py",
       "moneymoney/migrations/0054_remove_products_pci.py",
       "moneymoney/migrations/0055_currency_mandatory_and_in_settings.py",
+      "moneymoney/migrations/0056_strategies_accounts_alter_strategies_investments_and_more.py",
+      "moneymoney/migrations/0057_newstrategies_strategiesfastoperations_and_more.py",
+      "moneymoney/migrations/0058_migrate_strategies_to_newstrategies.py",
       "moneymoney/migrations/__init__.py",
       "moneymoney/models.py",
       "moneymoney/paginators.py",

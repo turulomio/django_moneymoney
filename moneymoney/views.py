@@ -441,32 +441,35 @@ class OperationstypesViewSet(CatalogModelViewSet):
     queryset = models.Operationstypes.objects.all()
     serializer_class = serializers.OperationstypesSerializer
 
+
+
 class StrategiesViewSet(viewsets.ModelViewSet):
-    queryset = models.Strategies.objects.all()
-    serializer_class = serializers.StrategiesSerializer
     permission_classes = [permissions.IsAuthenticated]  
-        
+    queryset = models.Strategies.objects.all()
+    http_method_names = ['get', 'head', 'options']
+    
+    def get_serializer_class(self):
+        return serializers.NewStrategyDetailedSerializer
+
     @extend_schema(
         parameters=[
             OpenApiParameter(name='active', description='Filter by active accounts', required=True, type=bool), 
-            OpenApiParameter(name='investment', description='Filter by investment', required=True, type=OpenApiTypes.URI), 
             OpenApiParameter(name='type', description='Filter by type', required=True, type=int), 
         ],
     )
     def list(self, request):
         active=RequestBool(request, "active")
-        investment=RequestUrl(request, "investment", models.Investments)
         type=RequestInteger(request, "type")
-        if all_args_are_not_none(active, investment, type):
-            self.queryset=self.queryset.filter(dt_to__isnull=active,  investments=investment, type=type)
-        serializer = serializers.StrategiesSerializer(self.queryset, many=True, context={'request': request})
+        if all_args_are_not_none(active, type):
+            self.queryset=self.queryset.filter(dt_to__isnull=active, type=type)
+        serializer = self.get_serializer(self.queryset, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=["get"], name='List strategies with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
     def withbalance(self, request): 
         active=RequestBool(request, 'active')
         if active is None:
-            qs=models.Strategies.objects.all() 
+            qs=models.Strategies.objects.all()
         else:
             if active is True:
                 qs=models.Strategies.objects.filter(dt_to__isnull=True)
@@ -476,65 +479,137 @@ class StrategiesViewSet(viewsets.ModelViewSet):
         r=[]
         for strategy in qs:
             if strategy.type==models.StrategiesTypes.FastOperations:
-                invested=models.Accounts.accounts_balance(strategy.accounts.all(),strategy.dt_from,request.user.profile.currency)["balance_user_currency"]
-                qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy.dt_from).select_related("accounts")
+                invested=models.Accounts.accounts_balance(strategy.strategiesfastoperations.accounts.all(),strategy.dt_from,request.user.profile.currency)["balance_user_currency"]
+                qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy.strategiesfastoperations.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy.dt_from).select_related("accounts")
                 gains_current_net_user=qs_ao.aggregate(Sum("amount"))["amount__sum"] or 0
                 gains_historical_net_user=0
                 sum_dividends_net_user=0
 
-            else:                
-                plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.investments.all(), 1)
+            elif strategy.type==models.StrategiesTypes.Generic:                
+                plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.strategiesgeneric.investments.all(), 1)
                 invested=plio.sum_total_io_current()["invested_user"]
                 gains_current_net_user=plio.sum_total_io_current()["gains_net_user"]
                 gains_historical_net_user=plio.io_historical_sum_between_dt(strategy.dt_from, strategy.dt_to_for_comparations(),  "gains_net_user")
-                lod_dividends_net_user=models.Dividends.lod_ym_netgains_dividends(request, ids=functions.qs_to_ids(strategy.investments.all()),  dt_from=strategy.dt_from, dt_to=strategy.dt_to_for_comparations())
+                lod_dividends_net_user=models.Dividends.lod_ym_netgains_dividends(request, ids=functions.qs_to_ids(strategy.strategiesgeneric.investments.all()),  dt_from=strategy.dt_from, dt_to=strategy.dt_to_for_comparations())
                 sum_dividends_net_user=lod.lod_sum(lod_dividends_net_user, "total")
-            r.append({
-                "id": strategy.id,  
-                "url": request.build_absolute_uri(reverse('strategies-detail', args=(strategy.pk, ))), 
-                "name":strategy.name, 
-                "dt_from": strategy.dt_from, 
-                "dt_to": strategy.dt_to, 
-                "invested": invested,
+            elif strategy.type==models.StrategiesTypes.Ranges:                
+                plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.strategiesproductsrange.investments.all(), 1)
+                invested=plio.sum_total_io_current()["invested_user"]
+                gains_current_net_user=plio.sum_total_io_current()["gains_net_user"]
+                gains_historical_net_user=plio.io_historical_sum_between_dt(strategy.dt_from, strategy.dt_to_for_comparations(),  "gains_net_user")
+                lod_dividends_net_user=models.Dividends.lod_ym_netgains_dividends(request, ids=functions.qs_to_ids(strategy.strategiesproductsrange.investments.all()),  dt_from=strategy.dt_from, dt_to=strategy.dt_to_for_comparations())
+                sum_dividends_net_user=lod.lod_sum(lod_dividends_net_user, "total")
+
+            elif strategy.type==models.StrategiesTypes.PairsInSameAccount:                
+                invested=models.Accounts.accounts_balance(models.Accounts.objects.filter(id=strategy.strategiespairsinsameaccount.account.id),strategy.dt_from,request.user.profile.currency)["balance_user_currency"]
+                qs_ao=models.Accountsoperations.objects.filter(accounts=strategy.strategiespairsinsameaccount.account, concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy.dt_from).select_related("accounts")
+                gains_current_net_user=qs_ao.aggregate(Sum("amount"))["amount__sum"] or 0
+                gains_historical_net_user=0
+                sum_dividends_net_user=0
+            
+            d_balance={
                 "gains_current_net_user":  gains_current_net_user,  
                 "gains_historical_net_user": gains_historical_net_user, 
                 "dividends_net_user": sum_dividends_net_user, 
                 "total_net_user":gains_current_net_user + gains_historical_net_user + sum_dividends_net_user, 
-                "investments":functions.qs_to_urls(request, strategy.investments.all()), 
-                "type": strategy.type, 
-                "comment": strategy.comment, 
-                "additional1": strategy.additional1, 
-                "additional2": strategy.additional2, 
-                "additional3": strategy.additional3, 
-                "additional4": strategy.additional4, 
-                "additional5": strategy.additional5, 
-                "additional6": strategy.additional6, 
-                "additional7": strategy.additional7, 
-                "additional8": strategy.additional8, 
-                "additional9": strategy.additional9, 
-                "additional10": strategy.additional10, 
-                "accounts":functions.qs_to_urls(request, strategy.accounts.all()), 
-            })
+            }
+            d_strategy=serializers.NewStrategyDetailedSerializer(instance=strategy , context={'request': request}).data
+            d_strategy["balance"]=d_balance
+            r.append(d_strategy)
         return Response(r)
-        
-    @action(detail=True, methods=["get"], name='Gets a IOS from a strategy', url_path="ios", url_name='ios', permission_classes=[permissions.IsAuthenticated])
-    def ios(self, request, pk=None): 
+
+
+
+
+class StrategiesFastOperationsViewSet(viewsets.ModelViewSet):
+    queryset = models.StrategiesFastOperations.objects.all()
+    serializer_class = serializers.StrategiesFastOperationsSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
+    
+    @action(detail=True, methods=["get"], name='Gets a detail of a fast operations strategy. Returns a list of account operations with fast operations', url_path="detailed", url_name='detailed', permission_classes=[permissions.IsAuthenticated])
+    def detailed(self, request, pk=None): 
+        strategy_fos=self.get_object()
+        if strategy_fos is not None:
+            qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy_fos.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy_fos.strategy.dt_from).select_related("accounts")
+            serializer = serializers.AccountsoperationsSerializer(qs_ao, many=True, context={'request': request})
+            return Response(serializer.data)
+        return Response({'status': _('Fast operations strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.strategy.delete()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+class StrategiesPairsInSameAccountViewSet(viewsets.ModelViewSet):
+    queryset = models.StrategiesPairsInSameAccount.objects.all()
+    serializer_class = serializers.StrategiesPairsInSameAccountSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
+    
+    @action(detail=True, methods=["get"], name='Gets a detail of a pairs in same account strategy', url_path="detailed", url_name='detailed', permission_classes=[permissions.IsAuthenticated])
+    def detailed(self, request, pk=None): 
+        # strategy_fos=self.get_object()
+        # if strategy_fos is not None:
+        #     qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy_fos.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy_fos.strategy.dt_from).select_related("accounts")
+        #     serializer = serializers.AccountsoperationsSerializer(qs_ao, many=True, context={'request': request})
+        #     return Response(serializer.data)
+        return Response({'status': _('Not developed yet')}, status=status.HTTP_200_OK)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.strategy.delete()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)    
+class StrategiesProductsRangeViewSet(viewsets.ModelViewSet):
+    queryset = models.StrategiesProductsRange.objects.all()
+    serializer_class = serializers.StrategiesProductsRangeSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
+    
+    @action(detail=True, methods=["get"], name='Gets a detail of a pairs in same account strategy', url_path="detailed", url_name='detailed', permission_classes=[permissions.IsAuthenticated])
+    def detailed(self, request, pk=None): 
         strategy=self.get_object()
         if strategy is not None:
             ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals)
             return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
         return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
     
-    @action(detail=True, methods=["get"], name='Gets a detail of a fast operations strategy. Returns a list of account operations with fast operations', url_path="detailed_fastoperations", url_name='detailed_fastoperations', permission_classes=[permissions.IsAuthenticated])
-    def detailed_fastoperations(self, request, pk=None): 
+
+            
+    # @action(detail=True, methods=["get"], name='Gets a IOS from a strategy', url_path="ios", url_name='ios', permission_classes=[permissions.IsAuthenticated])
+    # def ios(self, request, pk=None): 
+    #     strategy=self.get_object()
+    #     if strategy is not None:
+    #         ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals)
+    #         return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
+    #     return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.strategy.delete()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class StrategiesGenericViewSet(viewsets.ModelViewSet):
+    queryset = models.StrategiesGeneric.objects.all()
+    serializer_class = serializers.StrategiesGenericSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
+    @action(detail=True, methods=["get"], name='Gets a IOS from a strategy', url_path="detailed", url_name='detailed', permission_classes=[permissions.IsAuthenticated])
+    def detailed(self, request, pk=None): 
         strategy=self.get_object()
         if strategy is not None:
-            qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy.dt_from).select_related("accounts")
-            
-            serializer = serializers.AccountsoperationsSerializer(qs_ao, many=True, context={'request': request})
-            return Response(serializer.data)
-        return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
-
+            ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals)
+            return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
+        return Response({'status': _('Generic strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.strategy.delete()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 class InvestmentsClasses(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -1245,14 +1320,14 @@ def ProductsQuotesOHCL(request):
 def ProductsRanges(request):
     product=RequestUrl(request, "product", models.Products)
     totalized_operations=RequestBool(request, "totalized_operations") 
-    percentage_between_ranges=RequestInteger(request, "percentage_between_ranges")
+    percentage_between_ranges=RequestDecimal(request, "percentage_between_ranges")
 
     if percentage_between_ranges is not None:
-        percentage_between_ranges=percentage_between_ranges/1000
-    percentage_gains=RequestInteger(request, "percentage_gains")
+        percentage_between_ranges=percentage_between_ranges
+    percentage_gains=RequestDecimal(request, "percentage_gains")
     if percentage_gains is not None:
-        percentage_gains=percentage_gains/1000
-    amount_to_invest=RequestInteger(request, "amount_to_invest")
+        percentage_gains=percentage_gains
+    amount_to_invest=RequestDecimal(request, "amount_to_invest")
     recomendation_methods=RequestInteger(request, "recomendation_methods")
     investments=RequestListOfUrls(request,"investments[]", models.Investments) 
     if investments is None:
