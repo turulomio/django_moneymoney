@@ -307,15 +307,10 @@ class StockmarketsSerializer(serializers.HyperlinkedModelSerializer):
     def get_localname(self, obj):
         return  _(obj.name)
 
+# Serializer para los campos comunes de la estrategia
 class StrategiesSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = models.Strategies
-        fields = ('url', 'id', 'name',  'investments', 'dt_from','dt_to','type','comment','additional1','additional2','additional3','additional4','additional5','additional6','additional7','additional8','additional9','additional10', 'accounts')
-
-# Serializer para los campos comunes de la estrategia
-class NewStrategiesSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = models.NewStrategies # Corrected model
+        model = models.Strategies # Corrected model
         fields = ('url', 'id', 'name', 'dt_from', 'dt_to', 'type', 'comment')
         read_only_fields = ('id', 'url')
 
@@ -327,12 +322,12 @@ class StrategiesFastOperationsSerializer(serializers.HyperlinkedModelSerializer)
             - "url", "accounts"
     """
     # Anidamos el serializer de Estrategia para manejar los campos comunes
-    strategy = NewStrategiesSerializer()
+    strategy = StrategiesSerializer()
 
     class Meta:
         model = models.StrategiesFastOperations
         # Ensure 'url' (if needed, usually for HyperlinkedModelSerializer)
-        # 'strategy' for the nested NewStrategiesSerializer
+        # 'strategy' for the nested StrategiesSerializer
         # 'accounts' for the ManyToManyField
         fields = ['url', 'strategy', 'accounts']
 
@@ -341,7 +336,7 @@ class StrategiesFastOperationsSerializer(serializers.HyperlinkedModelSerializer)
         strategy_data = validated_data.pop('strategy')
         if strategy_data["type"]!=models.StrategiesTypes.FastOperations:
             raise serializers.ValidationError({"type": "Strategy type is wrong"})
-        strategy_instance = models.NewStrategies.objects.create(**strategy_data)
+        strategy_instance = models.Strategies.objects.create(**strategy_data)
         sfo_instance = models.StrategiesFastOperations.objects.create(strategy=strategy_instance)
         sfo_instance.accounts.set(validated_data["accounts"])
         return sfo_instance
@@ -357,7 +352,7 @@ class StrategiesFastOperationsSerializer(serializers.HyperlinkedModelSerializer)
             if instance.strategy.type!=strategy_data["type"]:
                 raise serializers.ValidationError({"type": "You can't change strategy type"})
             # Actualizamos la instancia de Estrategia base usando su serializer
-            strategy_serializer = NewStrategiesSerializer(instance.strategy, data=strategy_data, partial=True, context=self.context)
+            strategy_serializer = StrategiesSerializer(instance.strategy, data=strategy_data, partial=True, context=self.context)
             strategy_serializer.is_valid(raise_exception=True)
             strategy_serializer.save()
 
@@ -381,12 +376,12 @@ class StrategiesFastOperationsSerializer(serializers.HyperlinkedModelSerializer)
 # Serializer para EstrategiaMarketing
 class StrategiesGenericSerializer(serializers.HyperlinkedModelSerializer):
     # Anidamos el serializer de Estrategia para manejar los campos comunes
-    strategy = NewStrategiesSerializer()
+    strategy = StrategiesSerializer()
 
     class Meta:
         model = models.StrategiesGeneric
         # Ensure 'url' (if needed, usually for HyperlinkedModelSerializer)
-        # 'strategy' for the nested NewStrategiesSerializer
+        # 'strategy' for the nested StrategiesSerializer
         # 'accounts' for the ManyToManyField
         fields = ['url', 'strategy', 'investments']
 
@@ -395,7 +390,7 @@ class StrategiesGenericSerializer(serializers.HyperlinkedModelSerializer):
         strategy_data = validated_data.pop('strategy')
         if strategy_data["type"]!=models.StrategiesTypes.Generic:
             raise serializers.ValidationError({"type": "Strategy type is wrong"})
-        strategy_instance = models.NewStrategies.objects.create(**strategy_data)
+        strategy_instance = models.Strategies.objects.create(**strategy_data)
         sg_instance = models.StrategiesGeneric.objects.create(strategy=strategy_instance)
         sg_instance.investments.set(validated_data["investments"])
         return sg_instance
@@ -411,7 +406,7 @@ class StrategiesGenericSerializer(serializers.HyperlinkedModelSerializer):
             if instance.strategy.type!=strategy_data["type"]:
                 raise serializers.ValidationError({"type": "You can't change strategy type"})
             # Actualizamos la instancia de Estrategia base usando su serializer
-            strategy_serializer = NewStrategiesSerializer(instance.strategy, data=strategy_data, partial=True, context=self.context)
+            strategy_serializer = StrategiesSerializer(instance.strategy, data=strategy_data, partial=True, context=self.context)
             strategy_serializer.is_valid(raise_exception=True)
             strategy_serializer.save()
 
@@ -427,12 +422,12 @@ class StrategiesGenericSerializer(serializers.HyperlinkedModelSerializer):
 # Serializer para EstrategiaMarketing
 class StrategiesPairsInSameAccountSerializer(serializers.HyperlinkedModelSerializer):
     # Anidamos el serializer de Estrategia para manejar los campos comunes
-    strategy = NewStrategiesSerializer()
+    strategy = StrategiesSerializer()
 
     class Meta:
         model = models.StrategiesPairsInSameAccount
         # Ensure 'url' (if needed, usually for HyperlinkedModelSerializer)
-        # 'strategy' for the nested NewStrategiesSerializer
+        # 'strategy' for the nested StrategiesSerializer
         # 'accounts' for the ManyToManyField
         fields = ['url', 'strategy', 'better_product', 'worse_product', 'account']
 
@@ -442,7 +437,7 @@ class StrategiesPairsInSameAccountSerializer(serializers.HyperlinkedModelSeriali
 
         if strategy_data["type"]!=models.StrategiesTypes.PairsInSameAccount:
             raise serializers.ValidationError({"type": "Strategy type is wrong"})
-        strategy_instance = models.NewStrategies.objects.create(**strategy_data)
+        strategy_instance = models.Strategies.objects.create(**strategy_data)
         sg_instance = models.StrategiesPairsInSameAccount.objects.create(strategy=strategy_instance, **validated_data)
         return sg_instance
     
@@ -454,7 +449,7 @@ class StrategiesPairsInSameAccountSerializer(serializers.HyperlinkedModelSeriali
             if instance.strategy.type!=strategy_data["type"]:
                 raise serializers.ValidationError({"type": "You can't change strategy type"})
             # Actualizamos la instancia de Estrategia base usando su serializer
-            strategy_serializer = NewStrategiesSerializer(instance.strategy, data=strategy_data, partial=True, context=self.context)
+            strategy_serializer = StrategiesSerializer(instance.strategy, data=strategy_data, partial=True, context=self.context)
             strategy_serializer.is_valid(raise_exception=True)
             strategy_serializer.save()
 
@@ -462,7 +457,7 @@ class StrategiesPairsInSameAccountSerializer(serializers.HyperlinkedModelSeriali
         return instance
 
 class StrategiesProductsRangeSerializer(serializers.HyperlinkedModelSerializer):
-    strategy = NewStrategiesSerializer()
+    strategy = StrategiesSerializer()
 
     class Meta:
         model = models.StrategiesProductsRange
@@ -476,7 +471,7 @@ class StrategiesProductsRangeSerializer(serializers.HyperlinkedModelSerializer):
 
         if strategy_data["type"]!=models.StrategiesTypes.Ranges:
             raise serializers.ValidationError({"type": "Strategy type is wrong"})
-        strategy_instance = models.NewStrategies.objects.create(**strategy_data)
+        strategy_instance = models.Strategies.objects.create(**strategy_data)
         sg_instance = models.StrategiesProductsRange.objects.create(strategy=strategy_instance, **validated_data)
         sg_instance.investments.set(investments)
         return sg_instance
@@ -490,7 +485,7 @@ class StrategiesProductsRangeSerializer(serializers.HyperlinkedModelSerializer):
             if instance.strategy.type!=strategy_data["type"]:
                 raise serializers.ValidationError({"type": "You can't change strategy type"})
             # Actualizamos la instancia de Estrategia base usando su serializer
-            strategy_serializer = NewStrategiesSerializer(instance.strategy, data=strategy_data, partial=True, context=self.context)
+            strategy_serializer = StrategiesSerializer(instance.strategy, data=strategy_data, partial=True, context=self.context)
             strategy_serializer.is_valid(raise_exception=True)
             strategy_serializer.save()
 
@@ -504,7 +499,7 @@ class StrategiesProductsRangeSerializer(serializers.HyperlinkedModelSerializer):
 # Serializer para la vista de detalle que combina todas las estrategias
 class NewStrategyDetailedSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = models.NewStrategies
+        model = models.Strategies
         fields = ('url', 'id')
         
     def to_representation(self, instance):

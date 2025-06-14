@@ -1363,7 +1363,7 @@ class StrategiesTypes(models.IntegerChoices):
 
 
 class StrategiesPairsInSameAccount(models.Model):
-    strategy = models.OneToOneField("NewStrategies", on_delete=models.CASCADE, primary_key=True)
+    strategy = models.OneToOneField("Strategies", on_delete=models.CASCADE, primary_key=True)
     worse_product = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='worse_product')
     better_product = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='better_product')
     account = models.ForeignKey(Accounts, on_delete=models.DO_NOTHING)
@@ -1387,7 +1387,7 @@ class StrategiesPairsInSameAccount(models.Model):
         }
 
 class StrategiesProductsRange(models.Model):
-    strategy = models.OneToOneField("NewStrategies", on_delete=models.CASCADE, primary_key=True)
+    strategy = models.OneToOneField("Strategies", on_delete=models.CASCADE, primary_key=True)
     product = models.ForeignKey(Products, on_delete=models.DO_NOTHING)
     investments = models.ManyToManyField("Investments", blank=False)
     percentage_between_ranges = models.DecimalField(blank=False, null=False,max_digits=100, decimal_places=6)
@@ -1423,7 +1423,7 @@ class StrategiesProductsRange(models.Model):
         }
 
 class StrategiesGeneric(models.Model):
-    strategy = models.OneToOneField("NewStrategies", on_delete=models.CASCADE, primary_key=True)
+    strategy = models.OneToOneField("Strategies", on_delete=models.CASCADE, primary_key=True)
     investments = models.ManyToManyField("Investments", blank=False)
 
     class Meta:
@@ -1441,7 +1441,7 @@ class StrategiesGeneric(models.Model):
         }
 
 class StrategiesFastOperations(models.Model):
-    strategy = models.OneToOneField("NewStrategies", on_delete=models.CASCADE, primary_key=True)
+    strategy = models.OneToOneField("Strategies", on_delete=models.CASCADE, primary_key=True)
     accounts = models.ManyToManyField("accounts", blank=False)
 
     class Meta:
@@ -1465,7 +1465,7 @@ class StrategiesFastOperations(models.Model):
         }
 
 
-class NewStrategies(models.Model):
+class Strategies(models.Model):
     name = models.TextField(blank=False, null=False)
     dt_from = models.DateTimeField(blank=False, null=False)
     dt_to = models.DateTimeField(blank=True, null=True)
@@ -1500,82 +1500,7 @@ class NewStrategies(models.Model):
         return self.dt_to
     @staticmethod
     def hurl(request, id):
-        return request.build_absolute_uri(reverse('newstrategies-detail', args=(id, )))
-
-
-# OBSOLETE
-class Strategies(models.Model):
-    name = models.TextField()
-    investments = models.ManyToManyField("Investments", blank=True)
-    dt_from = models.DateTimeField(blank=True, null=True)
-    dt_to = models.DateTimeField(blank=True, null=True)
-    type = models.IntegerField(choices=StrategiesTypes.choices)
-    comment = models.TextField(blank=True, null=True)
-    additional1 = models.IntegerField(blank=True, null=True)   
-    additional2 = models.IntegerField(blank=True, null=True)   
-    additional3 = models.IntegerField(blank=True, null=True)   
-    additional4 = models.IntegerField(blank=True, null=True)   
-    additional5 = models.IntegerField(blank=True, null=True)   
-    additional6 = models.IntegerField(blank=True, null=True)   
-    additional7 = models.IntegerField(blank=True, null=True)   
-    additional8 = models.IntegerField(blank=True, null=True)   
-    additional9 = models.IntegerField(blank=True, null=True)   
-    additional10 = models.IntegerField(blank=True, null=True) 
-    accounts = models.ManyToManyField("Accounts", blank=True)
-    
-    class Meta:
-        managed = True
-        db_table = 'strategies'
-        ordering = ['name']
-        
-                
-    @staticmethod
-    def post_payload(
-        name="New strategy", 
-        dt_from=None, 
-        dt_to=None, 
-        type=2, 
-        comment="Strategy comment", 
-        additional1=79329, 
-        additional2=79329, 
-        additional3=79329, 
-        additional4=79329, 
-        additional5=79329, 
-        additional6=79329, 
-        additional7=79329, 
-        additional8=79329, 
-        additional9=79329, 
-        additional10=79329,
-        accounts=[], # It's a list of accounts urls
-        investments=[], #It's a list of urls of investments 
-    ):
-        return {
-            "name": name, 
-            "investments": investments, 
-            "dt_from": timezone.now() if dt_from is None else dt_from, 
-            "dt_to": dt_to, 
-            "type":type, 
-            "comment":comment, 
-            "additional1":additional1, 
-            "additional2":additional2, 
-            "additional3":additional3, 
-            "additional4":additional4, 
-            "additional5":additional5, 
-            "additional6":additional6, 
-            "additional7":additional7, 
-            "additional8":additional8, 
-            "additional9":additional9, 
-            "additional10":additional10, 
-            "accounts": accounts,
-        }
-
-    ## Replaces None for dt_to and sets a very big datetine
-    def dt_to_for_comparations(self):
-        if self.dt_to is None:
-            return timezone.now().replace(hour=23, minute=59)#End of the current day if strategy is not closed
-        return self.dt_to
-
-
+        return request.build_absolute_uri(reverse('strategies-detail', args=(id, )))
 
 class Accountstransfers(models.Model):
     datetime = models.DateTimeField(blank=False, null=False)
