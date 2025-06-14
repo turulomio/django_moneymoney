@@ -1473,7 +1473,7 @@ class Strategies(models.Model):
     comment = models.TextField(blank=True, null=True)
     class Meta:
         managed = True
-        db_table = 'new_strategies'
+        db_table = 'strategies'
 
 
                         
