@@ -461,28 +461,65 @@ class StrategiesPairsInSameAccountSerializer(serializers.HyperlinkedModelSeriali
         super().update(instance, validated_data) # This is safe if validated_data is empty after pops.
         return instance
 
-# Serializer para la vista de detalle que combina todos los campos
-class NewStrategyDetailedSerializer(serializers.HyperlinkedModelSerializer):
-    # Incluimos los campos específicos como campos de solo lectura
-    # 'strategiesfastoperations' is the default reverse accessor from NewStrategies to StrategiesFastOperations
-    strategiesfastoperations = StrategiesFastOperationsSerializer(read_only=True, required=False)
-    strategiesgeneric = StrategiesGenericSerializer(read_only=True, required=False)
-    strategiespairsinsameaccount = StrategiesPairsInSameAccountSerializer(read_only=True, required=False)
+class StrategiesProductsRangeSerializer(serializers.HyperlinkedModelSerializer):
+    strategy = NewStrategiesSerializer()
 
     class Meta:
+        model = models.StrategiesProductsRange
+        fields = ['url', 'strategy', 'product', 'investments', 'percentage_between_ranges', 'percentage_gains', 'amount', 'recomendation_method', 'only_first']
+
+
+    def create(self, validated_data):
+        # Extraemos los datos de la estrategia base
+        strategy_data = validated_data.pop('strategy')
+        investments=validated_data.pop('investments')
+
+        if strategy_data["type"]!=models.StrategiesTypes.Ranges:
+            raise serializers.ValidationError({"type": "Strategy type is wrong"})
+        strategy_instance = models.NewStrategies.objects.create(**strategy_data)
+        sg_instance = models.StrategiesProductsRange.objects.create(strategy=strategy_instance, **validated_data)
+        sg_instance.investments.set(investments)
+        return sg_instance
+    
+    def update(self, instance, validated_data):
+        # Extraemos los datos de la estrategia base si están presentes
+        strategy_data = validated_data.pop('strategy', None)
+        investments_data = validated_data.pop('investments', None)
+
+        if strategy_data:
+            if instance.strategy.type!=strategy_data["type"]:
+                raise serializers.ValidationError({"type": "You can't change strategy type"})
+            # Actualizamos la instancia de Estrategia base usando su serializer
+            strategy_serializer = NewStrategiesSerializer(instance.strategy, data=strategy_data, partial=True, context=self.context)
+            strategy_serializer.is_valid(raise_exception=True)
+            strategy_serializer.save()
+
+        super().update(instance, validated_data) # This is safe if validated_data is empty after pops.
+        # Actualizamos la relación M2M 'accounts'
+        if investments_data is not None: # Allows clearing the relation if an empty list is passed for accounts
+            instance.investments.set(investments_data)
+        return instance
+
+
+# Serializer para la vista de detalle que combina todas las estrategias
+class NewStrategyDetailedSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
         model = models.NewStrategies
-        # 'investments' is not a direct field of NewStrategies. Specific types like StrategiesGeneric might have it.
-        fields = ('url', 'id', 'name', 'dt_from', 'dt_to', 'type', 'comment', 'strategiesfastoperations', 'strategiesgeneric', 'strategiespairsinsameaccount') # Add other specific types if needed
+        fields = ('url', 'id')
+        
     def to_representation(self, instance):
         # Reescribe la representación para coincidir con los Serializer dependiendo de su type
         if instance.type==models.StrategiesTypes.FastOperations:
             return StrategiesFastOperationsSerializer(instance.strategiesfastoperations, context=self.context).data
 
-        if instance.type==models.StrategiesTypes.Generic:
+        elif instance.type==models.StrategiesTypes.Generic:
             return StrategiesGenericSerializer(instance.strategiesgeneric, context=self.context).data
 
-        if instance.type==models.StrategiesTypes.PairsInSameAccount:
+        elif instance.type==models.StrategiesTypes.PairsInSameAccount:
             return StrategiesPairsInSameAccountSerializer(instance.strategiespairsinsameaccount, context=self.context).data
+
+        elif instance.type==models.StrategiesTypes.Ranges:
+            return StrategiesProductsRangeSerializer(instance.strategiesproductsrange, context=self.context).data
 
 
 class FastOperationsCoverageSerializer(serializers.HyperlinkedModelSerializer):

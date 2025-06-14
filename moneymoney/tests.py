@@ -933,8 +933,6 @@ class API(APITestCase):
         after_delete=tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_generic["url"], [], status.HTTP_204_NO_CONTENT)
         self.assertEqual(len(after_delete), 0)
 
-
-    @tag("current")
     def test_StrategiesPairsInSameAccount(self):
         # Create a Pairs strategy with wrong type
         dict_strategy_pairs=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies_pairsinsameaccount/", models.StrategiesPairsInSameAccount.post_payload(strategy=models.NewStrategies.post_payload(name="PairS", type=models.StrategiesTypes.Generic)), status.HTTP_400_BAD_REQUEST)
@@ -975,4 +973,51 @@ class API(APITestCase):
         
         # Delete a strategy fast operation directly should delete
         after_delete=tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_pairs["url"], [], status.HTTP_204_NO_CONTENT)
+        self.assertEqual(len(after_delete), 0)
+
+
+
+    @tag("current")
+    def test_StrategiesProductsRange(self):
+        # Creates an investment operation with a quote and an io
+        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(products=dict_investment["products"]), status.HTTP_201_CREATED)
+        # Create a Pairs strategy with wrong type
+        dict_strategy_pr=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies_productsrange/", models.StrategiesProductsRange.post_payload(strategy=models.NewStrategies.post_payload(name="PRS", type=models.StrategiesTypes.Generic), investments=[dict_investment["url"]]), status.HTTP_400_BAD_REQUEST)
+
+        # Create a Pairs strategy 
+        dict_strategy_pr=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies_productsrange/", models.StrategiesProductsRange.post_payload(strategy=models.NewStrategies.post_payload(name="PRS", type=models.StrategiesTypes.Ranges), investments=[dict_investment["url"]]), status.HTTP_201_CREATED)
+
+        # Get FO strategy detailed view
+        strategy_detail=tests_helpers.client_get(self, self.client_authorized_1, f"{dict_strategy_pr['url']}detailed/",  status.HTTP_200_OK)
+
+        #Update fos
+        dict_strategy_pr=tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_pr["url"],  models.StrategiesProductsRange.post_payload(strategy=models.NewStrategies.post_payload(name="PRS Updated", type=models.StrategiesTypes.Ranges), investments=[dict_investment["url"]]), status.HTTP_200_OK)
+        self.assertEqual(dict_strategy_pr["strategy"]["name"], "PRS Updated")
+
+        # Get a created StrategiesProductsRange
+        dict_strategy_pr=tests_helpers.client_get(self, self.client_authorized_1, dict_strategy_pr["url"], status.HTTP_200_OK)
+        self.assertEqual(dict_strategy_pr["strategy"]["name"], "PRS Updated")
+
+        # Creates a strategy empty directly should fail, due to it redirect to StrategiesFastOperations and needs accounts ...
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/newstrategies/",  models.NewStrategies.post_payload(type=models.StrategiesTypes.Ranges, name="PRS"), status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        # Tries to change type and returns error
+        tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_pr["url"],  models.StrategiesPairsInSameAccount.post_payload(strategy=models.NewStrategies.post_payload(name="GS Updated", type=models.StrategiesTypes.Generic)), status.HTTP_400_BAD_REQUEST)
+
+        # Update a strategy directly should fail
+        tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_pr["strategy"]["url"],  models.NewStrategies.post_payload(type=models.StrategiesTypes.Generic, name="GS Direct update"), status.HTTP_405_METHOD_NOT_ALLOWED)
+        
+        # Delete a strategy directly should fail
+        tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_pr["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        # GEt List of strategies
+        strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/",  status.HTTP_200_OK)
+        self.assertEqual(len(strategies), 1)
+
+        # Delete a strategy directly should fail
+        tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_pr["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
+        
+        # Delete a strategy fast operation directly should delete
+        after_delete=tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_pr["url"], [], status.HTTP_204_NO_CONTENT)
         self.assertEqual(len(after_delete), 0)

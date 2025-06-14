@@ -1403,13 +1403,13 @@ class StrategiesProductsRange(models.Model):
     @staticmethod
     def post_payload(
         strategy, 
-        product,
         investments,
-        percentage_between_ranges,
-        percentage_gains,
-        amount,
-        recomendation_method,
-        only_first
+        product="http://testserver/api/products/79329/",
+        percentage_between_ranges=0.05,
+        percentage_gains=0.10,
+        amount=10000,
+        recomendation_method=1,
+        only_first=False
     ):
         return {
             "strategy": strategy,

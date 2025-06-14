@@ -652,6 +652,26 @@ class StrategiesPairsInSameAccountViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         instance.strategy.delete()
         self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)    
+class StrategiesProductsRangeViewSet(viewsets.ModelViewSet):
+    queryset = models.StrategiesProductsRange.objects.all()
+    serializer_class = serializers.StrategiesProductsRangeSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
+    
+    @action(detail=True, methods=["get"], name='Gets a detail of a pairs in same account strategy', url_path="detailed", url_name='detailed', permission_classes=[permissions.IsAuthenticated])
+    def detailed(self, request, pk=None): 
+        # strategy_fos=self.get_object()
+        # if strategy_fos is not None:
+        #     qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy_fos.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy_fos.strategy.dt_from).select_related("accounts")
+        #     serializer = serializers.AccountsoperationsSerializer(qs_ao, many=True, context={'request': request})
+        #     return Response(serializer.data)
+        return Response({'status': _('Not developed yet')}, status=status.HTTP_200_OK)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.strategy.delete()
+        self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class StrategiesGenericViewSet(viewsets.ModelViewSet):
