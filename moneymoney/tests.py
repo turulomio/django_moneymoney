@@ -922,6 +922,7 @@ class API(APITestCase):
 
 
         strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/",  status.HTTP_200_OK)
+        print("Strategies Generic")
         dod.dod_print(strategies)
         # Delete a strategy fast operation directly should delete
         tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_generic["url"], [], status.HTTP_204_NO_CONTENT)

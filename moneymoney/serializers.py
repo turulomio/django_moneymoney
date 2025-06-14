@@ -453,6 +453,8 @@ class NewStrategyDetailedSerializer(serializers.HyperlinkedModelSerializer):
     # Incluimos los campos específicos como campos de solo lectura
     # 'strategiesfastoperations' is the default reverse accessor from NewStrategies to StrategiesFastOperations
     strategiesfastoperations = StrategiesFastOperationsSerializer(read_only=True, required=False)
+    strategiesgeneric = StrategiesGenericSerializer(read_only=True, required=False)
+    strategiespairsinsameaccount = StrategiesPairsInSameAccountSerializer(read_only=True, required=False)
     # ventas = EstrategiaVentasSerializer(source='ventas', read_only=True, required=False)
     # producto = EstrategiaProductoSerializer(source='producto', read_only=True, required=False)
 
