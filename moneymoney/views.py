@@ -573,33 +573,43 @@ class NewStrategiesViewSet(viewsets.ModelViewSet):
         r=[]
         for strategy in qs:
             if strategy.type==models.StrategiesTypes.FastOperations:
-                invested=models.Accounts.accounts_balance(strategy.accounts.all(),strategy.dt_from,request.user.profile.currency)["balance_user_currency"]
-                qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy.dt_from).select_related("accounts")
+                invested=models.Accounts.accounts_balance(strategy.strategiesfastoperations.accounts.all(),strategy.dt_from,request.user.profile.currency)["balance_user_currency"]
+                qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy.strategiesfastoperations.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy.dt_from).select_related("accounts")
                 gains_current_net_user=qs_ao.aggregate(Sum("amount"))["amount__sum"] or 0
                 gains_historical_net_user=0
                 sum_dividends_net_user=0
 
-            else:                
-                plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.investments.all(), 1)
+            elif strategy.type==models.StrategiesTypes.Generic:                
+                plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.strategiesgeneric.investments.all(), 1)
                 invested=plio.sum_total_io_current()["invested_user"]
                 gains_current_net_user=plio.sum_total_io_current()["gains_net_user"]
                 gains_historical_net_user=plio.io_historical_sum_between_dt(strategy.dt_from, strategy.dt_to_for_comparations(),  "gains_net_user")
-                lod_dividends_net_user=models.Dividends.lod_ym_netgains_dividends(request, ids=functions.qs_to_ids(strategy.investments.all()),  dt_from=strategy.dt_from, dt_to=strategy.dt_to_for_comparations())
+                lod_dividends_net_user=models.Dividends.lod_ym_netgains_dividends(request, ids=functions.qs_to_ids(strategy.strategiesgeneric.investments.all()),  dt_from=strategy.dt_from, dt_to=strategy.dt_to_for_comparations())
                 sum_dividends_net_user=lod.lod_sum(lod_dividends_net_user, "total")
-            r.append({
-                "id": strategy.id,  
-                "url": models.NewStrategies.hurl(request,strategy.pk),
-                "name":strategy.name, 
-                "dt_from": strategy.dt_from, 
-                "dt_to": strategy.dt_to, 
-                "invested": invested,
-                "type": strategy.type, 
-                "comment": strategy.comment, 
+            elif strategy.type==models.StrategiesTypes.Ranges:                
+                plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.strategiesproductsrange.investments.all(), 1)
+                invested=plio.sum_total_io_current()["invested_user"]
+                gains_current_net_user=plio.sum_total_io_current()["gains_net_user"]
+                gains_historical_net_user=plio.io_historical_sum_between_dt(strategy.dt_from, strategy.dt_to_for_comparations(),  "gains_net_user")
+                lod_dividends_net_user=models.Dividends.lod_ym_netgains_dividends(request, ids=functions.qs_to_ids(strategy.strategiesproductsrange.investments.all()),  dt_from=strategy.dt_from, dt_to=strategy.dt_to_for_comparations())
+                sum_dividends_net_user=lod.lod_sum(lod_dividends_net_user, "total")
+
+            elif strategy.type==models.StrategiesTypes.PairsInSameAccount:                
+                invested=models.Accounts.accounts_balance(models.Accounts.objects.filter(id=strategy.strategiespairsinsameaccount.account.id),strategy.dt_from,request.user.profile.currency)["balance_user_currency"]
+                qs_ao=models.Accountsoperations.objects.filter(accounts=strategy.strategiespairsinsameaccount.account, concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy.dt_from).select_related("accounts")
+                gains_current_net_user=qs_ao.aggregate(Sum("amount"))["amount__sum"] or 0
+                gains_historical_net_user=0
+                sum_dividends_net_user=0
+            
+            d_balance={
                 "gains_current_net_user":  gains_current_net_user,  
                 "gains_historical_net_user": gains_historical_net_user, 
                 "dividends_net_user": sum_dividends_net_user, 
                 "total_net_user":gains_current_net_user + gains_historical_net_user + sum_dividends_net_user, 
-            })
+            }
+            d_strategy=serializers.NewStrategyDetailedSerializer(instance=strategy , context={'request': request}).data
+            d_strategy["balance"]=d_balance
+            r.append(d_strategy)
         return Response(r)
         
     @action(detail=True, methods=["get"], name='Gets a IOS from a strategy', url_path="ios", url_name='ios', permission_classes=[permissions.IsAuthenticated])

@@ -878,6 +878,9 @@ class API(APITestCase):
         # GEt List of strategies
         strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/",  status.HTTP_200_OK)
         self.assertEqual(len(strategies), 1)
+        # GEt List of strategies with balance
+        strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/withbalance/",  status.HTTP_200_OK)
+        self.assertEqual(len(strategies), 1)
         
 
         # Delete a strategy directly should fail
@@ -925,6 +928,9 @@ class API(APITestCase):
         # GEt List of strategies
         strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/",  status.HTTP_200_OK)
         # self.assertTrue("strategiesgeneric" in strategies[0])
+        # GEt List of strategies with balance
+        strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/withbalance/",  status.HTTP_200_OK)
+        self.assertEqual(len(strategies), 1)
 
         # Delete a strategy directly should fail
         tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_generic["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
@@ -966,6 +972,9 @@ class API(APITestCase):
 
         # GEt List of strategies
         strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/",  status.HTTP_200_OK)
+        self.assertEqual(len(strategies), 1)
+        # GEt List of strategies with balance
+        strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/withbalance/",  status.HTTP_200_OK)
         self.assertEqual(len(strategies), 1)
 
         # Delete a strategy directly should fail
@@ -1013,6 +1022,10 @@ class API(APITestCase):
 
         # GEt List of strategies
         strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/",  status.HTTP_200_OK)
+        self.assertEqual(len(strategies), 1)
+
+        # GEt List of strategies with balance
+        strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/withbalance/",  status.HTTP_200_OK)
         self.assertEqual(len(strategies), 1)
 
         # Delete a strategy directly should fail
