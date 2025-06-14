@@ -540,23 +540,10 @@ class StrategiesViewSet(viewsets.ModelViewSet):
 class NewStrategiesViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]  
     queryset = models.NewStrategies.objects.all()
-    # serializer_class = serializers.StrategiesSerializer
-    #http_method_names = ['get', 'delete', 'head', 'options', 'trace']
     http_method_names = ['get', 'head', 'options']
     
     def get_serializer_class(self):
-        # Para acciones de listado y detalle, usamos el serializer que combina todo
-        # if self.action in ['list', 'retrieve']:
         return serializers.NewStrategyDetailedSerializer
-        # Para otras acciones (create, update), el serializer se determinará dinámicamente
-        # en los métodos create/update, por lo que podemos devolver un serializer base
-        # o incluso None si no se usa directamente.
-        # Aquí, devolvemos EstrategiaSerializer como un fallback, aunque no se usará
-        # directamente para la validación completa en create/update.
-        # return serializers.NewStrategiesSerializer
-
-    # def destroy(self, request, *args, **kwargs):
-    #     return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
         parameters=[
@@ -654,12 +641,12 @@ class StrategiesPairsInSameAccountViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=["get"], name='Gets a detail of a pairs in same account strategy', url_path="detailed", url_name='detailed', permission_classes=[permissions.IsAuthenticated])
     def detailed(self, request, pk=None): 
-        strategy_fos=self.get_object()
-        if strategy_fos is not None:
-            qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy_fos.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy_fos.strategy.dt_from).select_related("accounts")
-            serializer = serializers.AccountsoperationsSerializer(qs_ao, many=True, context={'request': request})
-            return Response(serializer.data)
-        return Response({'status': _('Pairs in same account strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
+        # strategy_fos=self.get_object()
+        # if strategy_fos is not None:
+        #     qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy_fos.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy_fos.strategy.dt_from).select_related("accounts")
+        #     serializer = serializers.AccountsoperationsSerializer(qs_ao, many=True, context={'request': request})
+        #     return Response(serializer.data)
+        return Response({'status': _('Not developed yet')}, status=status.HTTP_200_OK)
     
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()

@@ -339,6 +339,8 @@ class StrategiesFastOperationsSerializer(serializers.HyperlinkedModelSerializer)
     def create(self, validated_data):
         # Extraemos los datos de la estrategia base
         strategy_data = validated_data.pop('strategy')
+        if strategy_data["type"]!=models.StrategiesTypes.FastOperations:
+            raise serializers.ValidationError({"type": "Strategy type is wrong"})
         strategy_instance = models.NewStrategies.objects.create(**strategy_data)
         sfo_instance = models.StrategiesFastOperations.objects.create(strategy=strategy_instance)
         sfo_instance.accounts.set(validated_data["accounts"])
@@ -391,6 +393,8 @@ class StrategiesGenericSerializer(serializers.HyperlinkedModelSerializer):
     def create(self, validated_data):
         # Extraemos los datos de la estrategia base
         strategy_data = validated_data.pop('strategy')
+        if strategy_data["type"]!=models.StrategiesTypes.Generic:
+            raise serializers.ValidationError({"type": "Strategy type is wrong"})
         strategy_instance = models.NewStrategies.objects.create(**strategy_data)
         sg_instance = models.StrategiesGeneric.objects.create(strategy=strategy_instance)
         sg_instance.investments.set(validated_data["investments"])
@@ -435,6 +439,9 @@ class StrategiesPairsInSameAccountSerializer(serializers.HyperlinkedModelSeriali
     def create(self, validated_data):
         # Extraemos los datos de la estrategia base
         strategy_data = validated_data.pop('strategy')
+
+        if strategy_data["type"]!=models.StrategiesTypes.PairsInSameAccount:
+            raise serializers.ValidationError({"type": "Strategy type is wrong"})
         strategy_instance = models.NewStrategies.objects.create(**strategy_data)
         sg_instance = models.StrategiesPairsInSameAccount.objects.create(strategy=strategy_instance, **validated_data)
         return sg_instance

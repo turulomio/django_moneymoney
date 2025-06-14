@@ -887,9 +887,6 @@ class API(APITestCase):
         after_delete=tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_fos["url"], [], status.HTTP_204_NO_CONTENT)
         self.assertEqual(len(after_delete), 0)
 
-
-
-    @tag("current")
     def test_NewStrategiesGeneric(self):
         # Creates an investment operation with a quote and an io
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
@@ -934,4 +931,48 @@ class API(APITestCase):
         
         # Delete a strategy fast operation directly should delete
         after_delete=tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_generic["url"], [], status.HTTP_204_NO_CONTENT)
+        self.assertEqual(len(after_delete), 0)
+
+
+    @tag("current")
+    def test_StrategiesPairsInSameAccount(self):
+        # Create a Pairs strategy with wrong type
+        dict_strategy_pairs=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies_pairsinsameaccount/", models.StrategiesPairsInSameAccount.post_payload(strategy=models.NewStrategies.post_payload(name="PairS", type=models.StrategiesTypes.Generic)), status.HTTP_400_BAD_REQUEST)
+
+        # Create a Pairs strategy 
+        dict_strategy_pairs=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies_pairsinsameaccount/", models.StrategiesPairsInSameAccount.post_payload(strategy=models.NewStrategies.post_payload(name="PairS", type=models.StrategiesTypes.PairsInSameAccount)), status.HTTP_201_CREATED)
+
+        # Get FO strategy detailed view
+        strategy_detail=tests_helpers.client_get(self, self.client_authorized_1, f"{dict_strategy_pairs['url']}detailed/",  status.HTTP_200_OK)
+
+        #Update fos
+        dict_strategy_pairs=tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_pairs["url"],  models.StrategiesPairsInSameAccount.post_payload(strategy=models.NewStrategies.post_payload(name="GS Updated", type=models.StrategiesTypes.PairsInSameAccount)), status.HTTP_200_OK)
+        self.assertEqual(dict_strategy_pairs["strategy"]["name"], "GS Updated")
+
+        # Get a created StrategiesFastOperations
+        dict_strategy_pairs=tests_helpers.client_get(self, self.client_authorized_1, dict_strategy_pairs["url"], status.HTTP_200_OK)
+        self.assertEqual(dict_strategy_pairs["strategy"]["name"], "GS Updated")
+
+        # Creates a strategy empty directly should fail, due to it redirect to StrategiesFastOperations and needs accounts ...
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/newstrategies/",  models.NewStrategies.post_payload(type=models.StrategiesTypes.Generic, name="GS"), status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        # Tries to change type and returns error
+
+        tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_pairs["url"],  models.StrategiesPairsInSameAccount.post_payload(strategy=models.NewStrategies.post_payload(name="GS Updated", type=models.StrategiesTypes.Generic)), status.HTTP_400_BAD_REQUEST)
+
+        # Update a strategy directly should fail
+        tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_pairs["strategy"]["url"],  models.NewStrategies.post_payload(type=models.StrategiesTypes.Generic, name="GS Direct update"), status.HTTP_405_METHOD_NOT_ALLOWED)
+        
+        # Delete a strategy directly should fail
+        tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_pairs["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        # GEt List of strategies
+        strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/",  status.HTTP_200_OK)
+        self.assertEqual(len(strategies), 1)
+
+        # Delete a strategy directly should fail
+        tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_pairs["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
+        
+        # Delete a strategy fast operation directly should delete
+        after_delete=tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_pairs["url"], [], status.HTTP_204_NO_CONTENT)
         self.assertEqual(len(after_delete), 0)

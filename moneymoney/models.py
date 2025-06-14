@@ -1375,9 +1375,9 @@ class StrategiesPairsInSameAccount(models.Model):
     @staticmethod
     def post_payload(
         strategy, 
-        worse_product, 
-        better_product, 
-        account
+        worse_product="http://testserver/api/products/79329/", 
+        better_product="http://testserver/api/products/79328/", 
+        account="http://testserver/api/accounts/4/"
     ):
         return {
             "strategy": strategy,
