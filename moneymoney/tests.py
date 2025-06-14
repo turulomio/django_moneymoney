@@ -877,7 +877,8 @@ class API(APITestCase):
         
         # GEt List of strategies
         strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/",  status.HTTP_200_OK)
-        self.assertTrue("strategiesfastoperations" in strategies[0])
+        self.assertEqual(len(strategies), 1)
+        
 
         # Delete a strategy directly should fail
         tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_fos["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
@@ -924,14 +925,8 @@ class API(APITestCase):
         # Delete a strategy directly should fail
         tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_generic["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
 
-
-        dod.dod_print(dict_strategy_generic)
-        
-
-        
         # GEt List of strategies
         strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/newstrategies/",  status.HTTP_200_OK)
-        dod.dod_print(strategies)
         # self.assertTrue("strategiesgeneric" in strategies[0])
 
         # Delete a strategy directly should fail

@@ -352,6 +352,8 @@ class StrategiesFastOperationsSerializer(serializers.HyperlinkedModelSerializer)
         accounts_data = validated_data.pop('accounts', None)
 
         if strategy_data:
+            if instance.strategy.type!=strategy_data["type"]:
+                raise serializers.ValidationError({"type": "You can't change strategy type"})
             # Actualizamos la instancia de Estrategia base usando su serializer
             strategy_serializer = NewStrategiesSerializer(instance.strategy, data=strategy_data, partial=True, context=self.context)
             strategy_serializer.is_valid(raise_exception=True)
@@ -442,6 +444,8 @@ class StrategiesPairsInSameAccountSerializer(serializers.HyperlinkedModelSeriali
         strategy_data = validated_data.pop('strategy', None)
 
         if strategy_data:
+            if instance.strategy.type!=strategy_data["type"]:
+                raise serializers.ValidationError({"type": "You can't change strategy type"})
             # Actualizamos la instancia de Estrategia base usando su serializer
             strategy_serializer = NewStrategiesSerializer(instance.strategy, data=strategy_data, partial=True, context=self.context)
             strategy_serializer.is_valid(raise_exception=True)
