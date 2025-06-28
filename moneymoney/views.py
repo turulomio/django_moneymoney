@@ -508,6 +508,7 @@ class StrategiesViewSet(viewsets.ModelViewSet):
                 sum_dividends_net_user=0
             
             d_balance={
+                "invested":invested,
                 "gains_current_net_user":  gains_current_net_user,  
                 "gains_historical_net_user": gains_historical_net_user, 
                 "dividends_net_user": sum_dividends_net_user, 
