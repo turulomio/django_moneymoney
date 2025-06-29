@@ -1613,30 +1613,11 @@ api/quotes/?product=url&month=1&year=2021 Showss all quotes of a product in a mo
         
         if future is True:
             self.queryset=self.queryset.filter(datetime__gte=timezone.now()).select_related("products").order_by("datetime")
-                
-        ## Search last quote of al linvestments
-        if last is True:
-            self.queryset=models.Quotes.objects.raw("""
-                select 
-                    id, 
-                    quotes.products_id, 
-                    quotes.datetime, 
-                    quote 
-                from 
-                    quotes, 
-                    (select max(datetime) as datetime, products_id from quotes group by products_id) as maxdt 
-                where 
-                    quotes.products_id=maxdt.products_id and 
-                    quotes.datetime=maxdt.datetime 
-                order by 
-                    quotes.datetime desc
-            """)
-            #Querysets with raw sql can use select_related, but with one more query you can use this
-            prefetch_related_objects(self.queryset, 'products')
-
-        if all_args_are_not_none(product, year, month):
+        elif last is True:## Search last quote of all products with quotes
+            self.queryset=models.Quotes.qs_last_quotes().select_related("products")
+        elif all_args_are_not_none(product, year, month):
             self.queryset=self.queryset.filter(products=product, datetime__year=year, datetime__month=month).order_by("datetime")
-        if product is not None:
+        elif product is not None:
             self.queryset=self.queryset.filter(products=product).order_by("datetime")
         serializer = serializers.QuotesSerializer(self.queryset, many=True, context={'request': request})
         return Response(serializer.data)

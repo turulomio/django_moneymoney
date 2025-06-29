@@ -119,6 +119,15 @@ class Models(APITestCase):
         self.assertEqual(qs.count(), 1)
         self.assertEqual(qs[0].id, 79329)
 
+    def test_Quotes(self):
+        for i in range(4):
+            models.Quotes.objects.create(products_id=79328+i, datetime=casts.dtaware_now(),quote=i)
+            models.Quotes.objects.create(products_id=79328+i, datetime=casts.dtaware_now(),quote=i*10)
+
+        with self.assertNumQueries(1):
+            quotes=models.Quotes.qs_last_quotes()
+            self.assertEqual(quotes.count(), 4)
+
 class API(APITestCase):
     fixtures=["all.json"] #Para cargar datos por defecto
 
@@ -261,6 +270,13 @@ class API(APITestCase):
         #lod.lod_print(dict_)
         #TODO All kind of values
 
+    @tag("current")
+    def test_Quotes(self):
+        for i in range(2):
+            tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(quote=i+1), status.HTTP_201_CREATED)
+
+        with self.assertNumQueries(2):
+            quotes=tests_helpers.client_get(self, self.client_authorized_1, f"/api/quotes/?last=true", status.HTTP_200_OK)       
 
     def test_Quotes_get_quotes(self):
         quotes=[]
@@ -985,8 +1001,6 @@ class API(APITestCase):
         self.assertEqual(len(after_delete), 0)
 
 
-
-    @tag("current")
     def test_StrategiesProductsRange(self):
         # Creates an investment operation with a quote and an io
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
