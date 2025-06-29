@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.db import models, transaction, connection
-from django.db.models import Case, When, Sum, Value, Subquery
+from django.db.models import prefetch_related_objects, Case, When, Sum, Value, Subquery
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
@@ -1166,7 +1166,18 @@ class Quotes(models.Model):
     def __str__(self):
         return f"Quote ({self.id}) of '{self.products.name}' at {self.datetime} is {self.quote}"
 
-
+        
+    @staticmethod
+    def qs_last_quotes():
+        """
+            Returns a Quotes queryset with the last quotes of all products with quotes
+        """
+        return Quotes.objects.all().order_by(
+                'products_id', 
+                '-datetime'
+            ).distinct(
+                'products_id'
+            )     
 
     @staticmethod
     def post_payload(products="http://testserver/api/products/79329/", datetime=None, quote=10):
