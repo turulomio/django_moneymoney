@@ -119,6 +119,16 @@ class Models(APITestCase):
         self.assertEqual(qs.count(), 1)
         self.assertEqual(qs[0].id, 79329)
 
+
+    @tag("current")
+    def test_Quotes(self):
+        quotes=tests_helpers.client_get(self, self.client_authorized_1, f"/api/quotes/?last=true", status.HTTP_200_OK)
+        print(len(quotes))
+
+        from django.db import connection
+        print(connection.queries)
+        self.assertNumQueries(4)
+
 class API(APITestCase):
     fixtures=["all.json"] #Para cargar datos por defecto
 
@@ -260,6 +270,15 @@ class API(APITestCase):
         tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/gainsbyproductstypes/{today_year}/", status.HTTP_200_OK)
         #lod.lod_print(dict_)
         #TODO All kind of values
+
+    @tag("current")
+    def test_Quotes(self):
+        quotes=tests_helpers.client_get(self, self.client_authorized_1, f"/api/quotes/?last=true", status.HTTP_200_OK)
+        print(len(quotes))
+
+        from django.db import connection
+        print(connection.queries)
+        self.assertNumQueries(4)
 
 
     def test_Quotes_get_quotes(self):
@@ -985,8 +1004,6 @@ class API(APITestCase):
         self.assertEqual(len(after_delete), 0)
 
 
-
-    @tag("current")
     def test_StrategiesProductsRange(self):
         # Creates an investment operation with a quote and an io
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
