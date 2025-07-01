@@ -22,6 +22,7 @@ from pydicts.percentage import Percentage,  percentage_between
 from request_casting.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestString, RequestInteger, RequestListOfIntegers, RequestListOfUrls, all_args_are_not_none
 from statistics import median
 from subprocess import run
+from pandas import DataFrame, concat, to_numeric
 from pydicts import lod, lod_ymv, casts, myjsonencoder
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.exceptions import ValidationError
@@ -109,38 +110,71 @@ class ConceptsViewSet(viewsets.ModelViewSet):
     def historical_report(self, request, pk=None):
         concept= self.get_object()
         r={}
-        json_concepts_historical=[]
-        with connection.cursor() as c:
-            c.execute("""
-        select date_part('year',datetime)::int as year,  date_part('month',datetime)::int as month, sum(amount) as value 
-        from ( 
-                    SELECT accountsoperations.datetime, accountsoperations.concepts_id,  accountsoperations.amount  FROM accountsoperations where concepts_id=%s 
-                        UNION ALL 
-                    SELECT creditcardsoperations.datetime, creditcardsoperations.concepts_id, creditcardsoperations.amount FROM creditcardsoperations where concepts_id=%s
-                ) as uni 
-        group by date_part('year',datetime), date_part('month',datetime) order by 1,2 ;
-        """, [concept.id, concept.id])
-            rows=functions.dictfetchall(c)
+        # 1. ORM query for AccountsOperations
+        accounts_ops = models.Accountsoperations.objects.filter(concepts_id=concept.id).values(
+            'datetime', 'amount'
+        ).annotate(
+            year=ExtractYear('datetime'),
+            month=ExtractMonth('datetime')
+        ).values('year', 'month').annotate(
+            value=Sum('amount')
+        ).values('year', 'month', 'value')
 
-        if len(rows)==0:
+
+        # 2. ORM query for CreditCardsOperations
+        creditcards_ops = models.Creditcardsoperations.objects.filter(concepts_id=concept.id).values(
+            'datetime', 'amount'
+        ).annotate(
+            year=ExtractYear('datetime'),
+            month=ExtractMonth('datetime')
+        ).values('year', 'month').annotate(
+            value=Sum('amount')
+        ).values('year', 'month', 'value')
+
+        # 1. Convert lists of dictionaries to pandas DataFrames
+        df1 = DataFrame(accounts_ops)
+        df2 = DataFrame(creditcards_ops)
+
+        # 2. Concatenate the two DataFrames into one
+        combined_df = concat([df1, df2])
+        # 3. Group by year and month, sum the values, and reset the index
+        total_sales_df = combined_df.groupby(['year', 'month'])['value'].sum().reset_index()
+
+        if len(combined_df)==0:
             return JsonResponse( {"data":[], "total":0, "median":0, "average":0}, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
             
-        firstyear=int(rows[0]['year'])
-        # Create all data spaces filling year
-        for year in range(firstyear, date.today().year+1):
-            json_concepts_historical.append({"year": year, "m1":0, "m2":0, "m3":0, "m4":0, "m5":0, "m6":0, "m7":0, "m8":0, "m9":0, "m10":0, "m11":0, "m12":0, "total":0})
-        # Fills spaces with values
-        for row in rows:
-            j_row=json_concepts_historical[row['year']-firstyear]
-            j_row[f"m{row['month']}"]=float(row['value'])
-        
-        for d in json_concepts_historical:
-            d["total"]=d["m1"]+d["m2"]+d["m3"]+d["m4"]+d["m5"]+d["m6"]+d["m7"]+d["m8"]+d["m9"]+d["m10"]+d["m11"]+d["m12"]
+        # Asegúrate de que la columna 'value' sea numérica
+        total_sales_df['value'] = to_numeric(total_sales_df['value'], errors='coerce')
 
-        r["data"]=json_concepts_historical
-        r["total"]=lod.lod_sum(json_concepts_historical, "total")
-        r["median"]=lod.lod_median(rows, 'value')
-        r["average"]=lod.lod_average(rows, 'value')
+
+        # 2. Pivotar la tabla para que los meses se conviertan en columnas
+        #    - index='year': agrupa las filas por año.
+        #    - columns='month': crea una nueva columna para cada valor único de mes.
+        #    - values='value': rellena las celdas con el valor correspondiente.
+        #    - fill_value=0: pone 0 en los meses que no tienen datos.
+        pivoted_df = total_sales_df.pivot_table(
+            index='year', 
+            columns='month', 
+            values='value', 
+            fill_value=0
+        )
+
+        # 3. Renombrar las columnas de números (1, 2, ...) a 'm1', 'm2', ...
+        pivoted_df.rename(columns=lambda m: f"m{m}", inplace=True)
+
+        # 4. Asegurar que todas las 12 columnas de meses existan
+        month_cols = [f"m{i}" for i in range(1, 13)]
+        pivoted_df = pivoted_df.reindex(columns=month_cols, fill_value=0)
+
+        # 5. Calcular la columna 'total' sumando los valores de todos los meses
+        pivoted_df['total'] = pivoted_df.sum(axis=1)
+
+        # 6. Convertir el resultado final de vuelta a una lista de diccionarios
+        #    reset_index() convierte el índice 'year' de nuevo en una columna.
+        r["data"] = pivoted_df.reset_index().to_dict('records')
+        r["total"]=total_sales_df["value"].sum()
+        r["median"]=total_sales_df["value"].median()    
+        r["average"]=total_sales_df["value"].mean()
         return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
 
     @action(detail=True, methods=["get"], name='Returns historical concept report detail', url_path="historical_report_detail", url_name='historical_report_detail', permission_classes=[permissions.IsAuthenticated])
