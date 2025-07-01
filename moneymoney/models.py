@@ -4,7 +4,8 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.db import models, transaction, connection
-from django.db.models import prefetch_related_objects, Case, When, Sum, Value, Subquery
+from django.db.models import prefetch_related_objects, Case, When, Sum, Value, Subquery, F, Window, Min, Max
+from django.db.models.functions import FirstValue, LastValue, ExtractMonth, ExtractYear
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
@@ -1077,38 +1078,45 @@ class Products(models.Model):
         
     def ohclMonthlyBeforeSplits(self):
         if hasattr(self, "_ohcl_monthly_before_splits") is False:
-            with connection.cursor() as c:
-                c.execute("""
-                    select 
-                        t.products_id,
-                        date_part('year',date) as year, 
-                        date_part('month', date) as month, 
-                        (array_agg(t.open order by date))[1] as open, 
-                        min(t.low) as low, 
-                        max(t.high) as high, 
-                        (array_agg(t.close order by date desc))[1] as close 
-                    from (
-                    
-                    select 
-                        quotes.products_id, 
-                        datetime::date as date, 
-                        (array_agg(quote order by datetime))[1] as open, 
-                        min(quote) as low, 
-                        max(quote) as high, 
-                        (array_agg(quote order by datetime desc))[1] as close 
-                    from quotes 
-                    where quotes.products_id=%s
-                    group by quotes.products_id, datetime::date 
-                    order by datetime::date
-                    
-                    
-                    ) as t
-                    group by t.products_id,  year, month 
-                    order by year, month""", (self.id, ))
-            
-        
-                self._ohcl_monthly_before_splits=functions.dictfetchall(c)
+        # This is the main query
+            self._ohcl_monthly_before_splits = Quotes.objects.filter(
+                products_id=self.id
+            ).annotate(
+                # 1. First, create the 'month' field that we will partition by.
+                month=ExtractMonth('datetime'),
+                year=ExtractYear('datetime')
+            ).values(# This .values() call now defines our GROUP BY clause
+                    'year', 'month').annotate(
+                # 2. Next, apply all calculations as window functions.
+                # This calculates the result for each row's respective month.
+                # Note that Min() and Max() can also be used as window functions.
+                open=Window(
+                    expression=FirstValue('quote'),
+                    partition_by=[F('year'),F('month')],
+                    order_by=F('datetime').asc()
+                ),
+                high=Window(
+                    expression=Max('quote'),
+                    partition_by=[F('year'),F('month')]
+                ),
+                low=Window(
+                    expression=Min('quote'),
+                    partition_by=[F('year'),F('month')]
+                ),
+                close=Window(
+                    expression=LastValue('quote'),
+                    partition_by=[F('year'),F('month')],
+                    order_by=F('datetime').asc()
+                )
+            ).values(
+                # 3. Now, select only the columns we need.
+                'year','month', 'open', 'high', 'low', 'close', 'products_id'
+            ).distinct("year","month").order_by('year','month') # 4. Use distinct() to get one unique row per month.
+
         return self._ohcl_monthly_before_splits
+
+
+
 
     def ohclDailyBeforeSplits(self):
         if hasattr(self, "_ohcl_daily_before_splits") is False:
