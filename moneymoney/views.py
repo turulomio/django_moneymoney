@@ -22,7 +22,7 @@ from pydicts.percentage import Percentage,  percentage_between
 from request_casting.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestString, RequestInteger, RequestListOfIntegers, RequestListOfUrls, all_args_are_not_none
 from statistics import median
 from subprocess import run
-from pandas import DataFrame, concat
+from pandas import DataFrame, concat, to_numeric
 from pydicts import lod, lod_ymv, casts, myjsonencoder
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.exceptions import ValidationError
@@ -110,21 +110,6 @@ class ConceptsViewSet(viewsets.ModelViewSet):
     def historical_report(self, request, pk=None):
         concept= self.get_object()
         r={}
-        # json_concepts_historical=[]
-        # with connection.cursor() as c:
-        #     c.execute("""
-        # select date_part('year',datetime)::int as year,  date_part('month',datetime)::int as month, sum(amount) as value 
-        # from ( 
-        #             SELECT accountsoperations.datetime, accountsoperations.concepts_id,  accountsoperations.amount  FROM accountsoperations where concepts_id=%s 
-        #                 UNION ALL 
-        #             SELECT creditcardsoperations.datetime, creditcardsoperations.concepts_id, creditcardsoperations.amount FROM creditcardsoperations where concepts_id=%s
-        #         ) as uni 
-        # group by date_part('year',datetime), date_part('month',datetime) order by 1,2 ;
-        # """, [concept.id, concept.id])
-        #     rows=functions.dictfetchall(c)
-
-
-
         # 1. ORM query for AccountsOperations
         accounts_ops = models.Accountsoperations.objects.filter(concepts_id=concept.id).values(
             'datetime', 'amount'
@@ -146,21 +131,6 @@ class ConceptsViewSet(viewsets.ModelViewSet):
             value=Sum('amount')
         ).values('year', 'month', 'value')
 
-
-        # # 3. Combine the querysets
-        # # The .values() call ensures that the "columns" are the same for the union
-        # combined_ops_qs = accounts_ops.union(creditcards_ops)
-
-        # # 4. Group by year and month and sum the amounts
-        # # This executes the UNION query and then groups the results
-        # rows = combined_ops_qs.annotate(
-        #     year=ExtractYear('datetime'),
-        #     month=ExtractMonth('datetime')
-        # ).values('year', 'month').annotate(
-        #     value=Sum('amount')
-        # ).values('year', 'month', 'value').order_by('year', 'month')
-
-
         # 1. Convert lists of dictionaries to pandas DataFrames
         df1 = DataFrame(accounts_ops)
         df2 = DataFrame(creditcards_ops)
@@ -169,11 +139,13 @@ class ConceptsViewSet(viewsets.ModelViewSet):
         combined_df = concat([df1, df2])
         # 3. Group by year and month, sum the values, and reset the index
         total_sales_df = combined_df.groupby(['year', 'month'])['value'].sum().reset_index()
-        print(total_sales_df)
 
         if len(combined_df)==0:
             return JsonResponse( {"data":[], "total":0, "median":0, "average":0}, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
             
+        # Asegúrate de que la columna 'value' sea numérica
+        total_sales_df['value'] = to_numeric(total_sales_df['value'], errors='coerce')
+
 
         # 2. Pivotar la tabla para que los meses se conviertan en columnas
         #    - index='year': agrupa las filas por año.
@@ -200,25 +172,9 @@ class ConceptsViewSet(viewsets.ModelViewSet):
         # 6. Convertir el resultado final de vuelta a una lista de diccionarios
         #    reset_index() convierte el índice 'year' de nuevo en una columna.
         r["data"] = pivoted_df.reset_index().to_dict('records')
-
-
-        # firstyear=int(rows[0]['year'])
-        # # Create all data spaces filling year
-        # for year in range(firstyear, date.today().year+1):
-        #     json_concepts_historical.append({"year": year, "m1":0, "m2":0, "m3":0, "m4":0, "m5":0, "m6":0, "m7":0, "m8":0, "m9":0, "m10":0, "m11":0, "m12":0, "total":0})
-        # # Fills spaces with values
-        # for row in rows:
-        #     j_row=json_concepts_historical[row['year']-firstyear]
-        #     j_row[f"m{row['month']}"]=float(row['value'])
-        
-        # for d in json_concepts_historical:
-        #     d["total"]=d["m1"]+d["m2"]+d["m3"]+d["m4"]+d["m5"]+d["m6"]+d["m7"]+d["m8"]+d["m9"]+d["m10"]+d["m11"]+d["m12"]
-
-        # r["data"]=json_concepts_historical
         r["total"]=total_sales_df["value"].sum()
         r["median"]=total_sales_df["value"].median()    
         r["average"]=total_sales_df["value"].mean()
-
         return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
 
     @action(detail=True, methods=["get"], name='Returns historical concept report detail', url_path="historical_report_detail", url_name='historical_report_detail', permission_classes=[permissions.IsAuthenticated])
