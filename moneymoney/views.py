@@ -137,11 +137,11 @@ class ConceptsViewSet(viewsets.ModelViewSet):
 
         # 2. Concatenate the two DataFrames into one
         combined_df = concat([df1, df2])
-        # 3. Group by year and month, sum the values, and reset the index
-        total_sales_df = combined_df.groupby(['year', 'month'])['value'].sum().reset_index()
 
         if len(combined_df)==0:
             return JsonResponse( {"data":[], "total":0, "median":0, "average":0}, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+        # 3. Group by year and month, sum the values, and reset the index
+        total_sales_df = combined_df.groupby(['year', 'month'])['value'].sum().reset_index()
             
         # Asegúrate de que la columna 'value' sea numérica
         total_sales_df['value'] = to_numeric(total_sales_df['value'], errors='coerce')
