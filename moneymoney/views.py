@@ -1272,46 +1272,16 @@ def ProductsPairs(request):
     """
     product_better=RequestUrl(request, "a", models.Products)
     product_worse=RequestUrl(request, "b", models.Products)
-    interval_minutes=RequestInteger(request, "interval_minutes", 1)
 
-    with connection.cursor() as c:
-        c.execute("""
-            select 
-                a.datetime, 
-                a.datetime-b.datetime as diff, 
-                a.quote as quote_a, 
-                b.quote as quote_b, 
-                a.products_id as product_a, 
-                b.products_id as product_b  
-            from 
-                (select * from quotes where products_id=%s) as a, 
-                (select * from quotes where products_id=%s) as b 
-            where 
-                date_trunc('hour',a.datetime)=date_trunc('hour',b.datetime) and 
-                a.datetime-b.datetime between %s and %s     
-            order by
-                a.datetime
-        """, [product_worse.id, product_better.id, timedelta(minutes=-interval_minutes), timedelta(minutes=interval_minutes) ])
-        common_quotes=functions.dictfetchall(c)
-    
-    
-    r={}
-    r["product_a"]={"name":product_better.fullName(), "currency": product_better.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_better.id, ))), "current_price": product_better.basic_results()["last"]}
-    r["product_b"]={"name":product_worse.fullName(), "currency": product_worse.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_worse.id, ))), "current_price": product_worse.basic_results()["last"]}
-    r["data"]=[]
-    if len(common_quotes)>0:
-        first_pr=common_quotes[0]["quote_b"]/common_quotes[0]["quote_a"]
-        for row in common_quotes:#a worse, b better
-            pr=row["quote_b"]/row["quote_a"]
-            r["data"].append({
-                "datetime": row["datetime"], 
-                "diff": int(row["diff"].total_seconds()), 
-                "price_worse": row["quote_a"], 
-                "price_better": row["quote_b"], 
-                "price_ratio": pr, 
-                "price_ratio_percentage_from_start": percentage_between(first_pr, pr), 
-            })
-    return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+
+    if all_args_are_not_none(product_better, product_worse):
+        common_quotes=product_better.compare_with(product_worse)
+        r={}
+        r["product_a"]={"name":product_better.fullName(), "currency": product_better.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_better.id, ))), "current_price": product_better.basic_results()["last"]}
+        r["product_b"]={"name":product_worse.fullName(), "currency": product_worse.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_worse.id, ))), "current_price": product_worse.basic_results()["last"]}
+        r["data"]=common_quotes
+        return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+    return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET', 'DELETE' ])    
 @permission_classes([permissions.IsAuthenticated, ])

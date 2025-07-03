@@ -4,8 +4,8 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.db import models, transaction, connection
-from django.db.models import prefetch_related_objects, Case, When, Sum, Value, Subquery, F, Window, Min, Max, DateField
-from django.db.models.functions import FirstValue, LastValue, ExtractMonth, ExtractYear, Cast
+from django.db.models import prefetch_related_objects, Case, When, Sum, Value, Subquery, F, Window, Min, Max, DateField, OuterRef, ExpressionWrapper, DurationField, FloatField
+from django.db.models.functions import FirstValue, LastValue, ExtractMonth, ExtractYear, Cast, Extract
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
@@ -856,6 +856,7 @@ class ProductsStrategies(models.Model):
     class Meta:
         managed = True
 
+
 class Products(models.Model):
     """
         En este modelo se integran SistemProducts y PersonalProducts, para no generar dos tablas
@@ -1150,31 +1151,55 @@ class Products(models.Model):
             ).distinct("date").order_by('date') # 4. Use distinct() to get one unique row per month.
         return self._ohcl_daily_before_splits
         
+    def compare_with(self, other_product):
+        """
+            Compare product quotes between this product and other
+            Returns a list of dictionaries ordered by datetime
+        """
+        from .models import Quotes
+        # from django.db.models import (
+        #     Subquery, OuterRef, F, FloatField, DurationField,
+        #     BigIntegerField, ExpressionWrapper
+        # )
+        # from django.db.models.functions import Cast,Extract
+
+        # 1. Define your two base querysets
+        qs_better = Quotes.objects.filter(products=self).order_by('datetime')
+        qs_worse = Quotes.objects.filter(products=other_product)
+
+        # 2. Create two subqueries: one for the value, one for the datetime.
+        # A subquery can only return a single column, so we need two.
+
+        # Subquery to find the latest value
+        subquery_value = qs_worse.filter(
+            datetime__lte=OuterRef('datetime')
+        ).order_by('-datetime').values('quote')[:1]
+
+        # Subquery to find the datetime of that latest value
+        subquery_datetime = qs_worse.filter(
+            datetime__lte=OuterRef('datetime')
+        ).order_by('-datetime').values('datetime')[:1]
+
+        # 3. Annotate the first queryset with all calculated fields
+        comparison_queryset = qs_better.annotate(
+            # Get the corresponding value and datetime from the other stock
+            price_better=F('quote'),
+            price_worse=Subquery(subquery_value),
+            datetime_worse=Subquery(subquery_datetime),
+        ).annotate(
+            # Calculate the time difference. The result is a DurationField
+            diff=Extract(
+                     ExpressionWrapper(F('datetime') - F('datetime_worse'), output_field=DurationField()
+            ), "epoch"), 
+            price_ratio=Cast(F('quote'), FloatField()) / Cast(F('price_worse'), FloatField())
+        ).values("datetime", "price_better", "price_worse", "diff", "price_ratio").order_by("datetime")
+        return list(comparison_queryset)
+
+
+
     @staticmethod
     def next_system_products_id():
         return Products.objects.filter(id__lt=10000000).order_by("-id")[0].id+1
-
-class Productspairs(models.Model):
-    name = models.CharField(max_length=200, blank=False, null=False)
-    a = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='products')
-    b = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='+')
-
-    class Meta:
-        managed = True
-        db_table = 'productspairs'
-
-class Productstypes(models.Model):
-    name = models.TextField()
-
-    class Meta:
-        managed = True
-        db_table = 'productstypes'
-        
-    def __str__(self):
-        return self.fullName()
-        
-    def fullName(self):
-        return _(self.name)
 
 class Quotes(models.Model):
     datetime = models.DateTimeField(blank=True, null=True)
@@ -1374,6 +1399,28 @@ class Quotes(models.Model):
 #            else:
 #                print("MASSIVE FACTOR NOT FOUND",  needed_factor)
 #        return r_factors
+
+class Productspairs(models.Model):
+    name = models.CharField(max_length=200, blank=False, null=False)
+    a = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='products')
+    b = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='+')
+
+    class Meta:
+        managed = True
+        db_table = 'productspairs'
+
+class Productstypes(models.Model):
+    name = models.TextField()
+
+    class Meta:
+        managed = True
+        db_table = 'productstypes'
+        
+    def __str__(self):
+        return self.fullName()
+        
+    def fullName(self):
+        return _(self.name)
 
 class Splits(models.Model):
     datetime = models.DateTimeField()
