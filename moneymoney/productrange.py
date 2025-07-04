@@ -309,8 +309,8 @@ class ProductRangeManager:
         r={}
         ld_ohcl=self.product.ohclDailyBeforeSplits()         
         df=pd.DataFrame(ld_ohcl)
-        df['date'] = pd.to_datetime(df['date'])
-        df.set_index('date', inplace=True)# quick searchs with loc
+        # df['date'] = pd.to_datetime(df['date'])
+        # df.set_index('date', inplace=True)# quick searchs with loc
         df=self.append_indicators(df)
 
         r["pr"]=[]
