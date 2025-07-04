@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 from moneymoney import models, ios,indicators
 from pydicts.percentage import Percentage
+import pandas as pd
 
 
 ## INTEGRATE IN PYDICTS
@@ -312,15 +313,14 @@ class ProductRangeManager:
 
 
     def json(self):
-        import pandas as pd
         r={}
         ld_ohcl=self.product.ohclDailyBeforeSplits()         
         df=pd.DataFrame(ld_ohcl)
         df=self.append_indicators(df)
 
-        d=[]
+        r["pr"]=[]
         for i, o in enumerate(self.arr):
-            d.append({
+            r["pr"].append({
                 "value": round(float(o.value),  self.decimals), 
                 "recomendation_invest": o.setInvestRecomendations(self.method,df),
                 "investments_inside": o.getInvestmentsOperationsInsideJson(self.plio), 
@@ -328,8 +328,6 @@ class ProductRangeManager:
                 "current_in_range": o.isInside(self.product.basic_results()["last"]), 
                 "limits": str(o)
             })
-
-        r["pr"]=d
         r["product"]={
             "name": o.product.fullName(), 
             "last": o.product.basic_results()["last"], 
