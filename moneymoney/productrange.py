@@ -4,6 +4,8 @@ from django.urls import reverse
 from django.utils import timezone
 from moneymoney import models, ios
 from pydicts.percentage import Percentage
+import pandas as pd
+import numpy as np
 
 
 ## INTEGRATE IN PYDICTS
@@ -30,6 +32,50 @@ def lod_dtv_sma(lod_dtv, period):
         d["value"]=d["value"]/period
         r.append(d)
     return r
+
+def lod_dtv_hma(lod_dtv, period):
+    """
+        Calcula la Media Móvil de Hull (HMA) de manera eficiente usando pandas.
+
+        Args:
+            data_dicts (list): Una lista de diccionarios, cada uno con una clave 'date' (datetime) y 'value'.
+            period (int): El período para la HMA.
+
+        Returns:
+            pandas.DataFrame: Un DataFrame con la fecha, el valor original y la HMA calculada.
+    """
+    if not isinstance(period, int) or period <= 1:
+        raise ValueError("El período debe ser un entero mayor que 1.")
+
+    # 1. Convertir la lista de diccionarios a un DataFrame
+    # Esta parte funciona perfectamente con objetos datetime.
+    df = pd.DataFrame(lod_dtv)
+    df['date'] = pd.to_datetime(df['date']) # Asegura el tipo de dato, aunque ya sea datetime
+    df.set_index('date', inplace=True)
+
+
+
+    # Definir la función para la Media Móvil Ponderada (WMA)
+    def wma(series):
+        weights = np.arange(1, len(series) + 1)
+        return np.dot(series, weights) / weights.sum()
+
+    # 2. Calcular las dos WMAs iniciales
+    half_period = int(period / 2)
+    sqrt_period = int(np.sqrt(period))
+
+    wma_half = df['value'].rolling(window=half_period).apply(wma, raw=True)
+    wma_full = df['value'].rolling(window=period).apply(wma, raw=True)
+
+    # 3. Crear la serie de diferencias
+    df['diff'] = 2 * wma_half - wma_full
+
+    # 4. Calcular la HMA final sobre la serie de diferencias
+    df['hma'] = df['diff'].rolling(window=sqrt_period).apply(wma, raw=True)
+
+    r=df.dropna().reset_index().to_dict(orient="records")
+    return r
+    
 
 class ProductRange():
     def __init__(self, request,  id=None,  product=None,  value=None, percentage_down=None,  percentage_up=None, totalized_operations=True, decimals=2):
@@ -226,6 +272,8 @@ class ProductRangeManager:
             return [10, ]
         elif self.method==9:#ProductRangeInvestRecomendation.SMA 5
             return [5, ]
+        elif self.method==10:#ProductRangeInvestRecomendation.SMA 5
+            return [10 ]
 
     ## Set investment recomendations to all ProductRange objects in array 
     def setInvestRecomendation(self, method):
@@ -345,6 +393,33 @@ class ProductRangeManager:
                 if number_sma_over_price==0:
                     o.recomendation_invest=True
                 else: #number_sma_over_price=1 and o.id%4!=0
+                    o.recomendation_invest=False
+        elif self.method==10: #HMA 10       
+
+            from pydicts import lod    
+            list_ohcl=list(self.product.ohclDailyBeforeSplits())
+
+
+            lod.lod_print(list_ohcl[-10:])
+
+            lod_dtv_=[]
+            for d in list_ohcl:
+                lod_dtv_.append({"date":d["date"], "value":d["close"]})
+
+
+
+            #Remove last
+            last=lod_dtv_[len(lod_dtv_)-1]
+            print(last)
+            if last["date"]==date.today():
+                lod_dtv_.remove(last)
+            lod.lod_print(lod_dtv_[-10:])
+            hma10=list(lod_dtv_hma(lod_dtv_, 10))
+            lod.lod_print(hma10[-10:])
+            for o in self.arr:
+                if o.value>= hma10[len(hma10)-1]["value"]:
+                    o.recomendation_invest=True
+                else:
                     o.recomendation_invest=False
 
     def json(self):

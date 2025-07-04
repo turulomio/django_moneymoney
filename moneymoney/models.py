@@ -28,6 +28,7 @@ RANGE_RECOMENDATION_CHOICES =(
     (7, "None"), 
     (8, "SMA 10"), 
     (9, "SMA 5"), 
+    (10, "HMA 10"), 
 )
 
 
