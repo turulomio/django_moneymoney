@@ -17,7 +17,7 @@ dependencies = [
     "requests >=2.32.3",
     "request-casting >=0.7.0",
     "psycopg >=3.2.9",
-    "pandas (>=2.3.0,<3.0.0)"
+    "pandas (>=2.3.0,<3.0.0)",
 ]
 
 

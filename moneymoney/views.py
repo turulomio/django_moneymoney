@@ -1350,8 +1350,7 @@ def ProductsRanges(request):
     if all_args_are_not_none(product, totalized_operations,  percentage_between_ranges, percentage_gains, amount_to_invest, recomendation_methods):
         from moneymoney.productrange import ProductRangeManager
         
-        prm=ProductRangeManager(request, product, percentage_between_ranges, percentage_gains, totalized_operations,  qs_investments=qs_investments, decimals=product.decimals, additional_ranges=additional_ranges)
-        prm.setInvestRecomendation(recomendation_methods)
+        prm=ProductRangeManager(request, product, percentage_between_ranges, percentage_gains, totalized_operations,  qs_investments=qs_investments, decimals=product.decimals, additional_ranges=additional_ranges, recomendation_methods=recomendation_methods)
 
         return JsonResponse( prm.json(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
     return Response( status=status.HTTP_400_BAD_REQUEST)

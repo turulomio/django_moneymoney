@@ -2,10 +2,8 @@ from datetime import date
 from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
-from moneymoney import models, ios
+from moneymoney import models, ios,indicators
 from pydicts.percentage import Percentage
-import pandas as pd
-import numpy as np
 
 
 ## INTEGRATE IN PYDICTS
@@ -18,63 +16,6 @@ def lod_dtv_find_le(lod_dtv_, dt):
             return o
     return None
 
-def lod_dtv_sma(lod_dtv, period):
-    """
-        From a lod with datetime and value keys returns other lod_dv with the sma
-    """
-    r=[]
-    for i in range(period, len(lod_dtv)):
-        d={}
-        d["value"]=0
-        d["datetime"]=lod_dtv[i]["datetime"]
-        for p in range(period):
-            d["value"]=d["value"]+lod_dtv[i-p]["value"]
-        d["value"]=d["value"]/period
-        r.append(d)
-    return r
-
-def lod_dtv_hma(lod_dtv, period):
-    """
-        Calcula la Media Móvil de Hull (HMA) de manera eficiente usando pandas.
-
-        Args:
-            data_dicts (list): Una lista de diccionarios, cada uno con una clave 'date' (datetime) y 'value'.
-            period (int): El período para la HMA.
-
-        Returns:
-            pandas.DataFrame: Un DataFrame con la fecha, el valor original y la HMA calculada.
-    """
-    if not isinstance(period, int) or period <= 1:
-        raise ValueError("El período debe ser un entero mayor que 1.")
-
-    # 1. Convertir la lista de diccionarios a un DataFrame
-    # Esta parte funciona perfectamente con objetos datetime.
-    df = pd.DataFrame(lod_dtv)
-    df['date'] = pd.to_datetime(df['date']) # Asegura el tipo de dato, aunque ya sea datetime
-    df.set_index('date', inplace=True)
-
-
-
-    # Definir la función para la Media Móvil Ponderada (WMA)
-    def wma(series):
-        weights = np.arange(1, len(series) + 1)
-        return np.dot(series, weights) / weights.sum()
-
-    # 2. Calcular las dos WMAs iniciales
-    half_period = int(period / 2)
-    sqrt_period = int(np.sqrt(period))
-
-    wma_half = df['value'].rolling(window=half_period).apply(wma, raw=True)
-    wma_full = df['value'].rolling(window=period).apply(wma, raw=True)
-
-    # 3. Crear la serie de diferencias
-    df['diff'] = 2 * wma_half - wma_full
-
-    # 4. Calcular la HMA final sobre la serie de diferencias
-    df['hma'] = df['diff'].rolling(window=sqrt_period).apply(wma, raw=True)
-
-    r=df.dropna().reset_index().to_dict(orient="records")
-    return r
     
 
 class ProductRange():
@@ -118,6 +59,86 @@ class ProductRange():
             return False
 
         
+
+    def setInvestRecomendations(self, method, df):
+        print("RECO", method, df)
+
+        if method==0:#ProductRangeInvestRecomendation. None_:
+            return False
+        elif method==1:#ProductRangeInvestRecomendation.All:
+            return True
+        elif method==2:#ProductRangeInvestRecomendation.ThreeSMA:   
+            return False   
+
+            # for o in self.arr:
+            #     number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [10, 50, 200], dvm_smas,  "close"))
+            #     if number_sma_over_price==3 and o.id % 4==0:
+            #         o.recomendation_invest=True
+            #     elif number_sma_over_price==2 and o.id %2==0:
+            #         o.recomendation_invest=True
+            #     elif number_sma_over_price<=1:
+            #         o.recomendation_invest=True
+        elif method==3: #ProductRangeInvestRecomendation.SMA100:            
+            return False         
+            # for o in self.arr:
+            #     number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [100, ], dvm_smas,  "close"))
+            #     if number_sma_over_price==0:
+            #         o.recomendation_invest=True
+            #     else: #number_sma_over_price=1 and o.id%4!=0
+            #         o.recomendation_invest=False
+        elif method==4:#ProductRangeInvestRecomendation.StrictThreeSMA:            
+            return False         
+            
+            # for o in self.arr:
+            #     number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [10, 50, 200], dvm_smas,  "close"))
+            #     if number_sma_over_price==2 and o.id %2==0:
+            #         o.recomendation_invest=True
+            #     elif number_sma_over_price<=1:
+            #         o.recomendation_invest=True
+        elif method==5: #ProductRangeInvestRecomendation.SMA100 STRICT:        
+            return False                  
+           
+            # for o in self.arr:
+            #     number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [100, ], dvm_smas,  "close"))
+            #     if number_sma_over_price==0:
+            #         o.recomendation_invest=True
+            #     else:
+            #         o.recomendation_invest=False
+        elif method==6:#ProductRangeInvestRecomendation.Strict SMA 10 , 100:       
+            return False              
+           
+            # for o in self.arr:
+            #     number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [10,  100], dvm_smas,  "close"))
+            #     if number_sma_over_price<2:
+            #         o.recomendation_invest=True
+        elif method==8: #ProductRangeInvestRecomendation.SMA10 Entry below SMA10 aren't recommended      
+            if df.empty:
+                return False
+            return df["close"].iloc[-1] >= df["SMA10"].iloc[-1]   
+
+            
+            # for o in self.arr:
+            #     number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [10, ], dvm_smas,  "close"))
+            #     if number_sma_over_price==0:
+            #         o.recomendation_invest=True
+            #     else: #number_sma_over_price=1 and o.id%4!=0
+            #         o.recomendation_invest=False
+        elif method==9: #ProductRangeInvestRecomendation.SMA10 Entry below SMA10 aren't recommended            
+            return False              
+
+            
+            # for o in self.arr:
+            #     number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [5, ], dvm_smas,  "close"))
+            #     if number_sma_over_price==0:
+            #         o.recomendation_invest=True
+            #     else: #number_sma_over_price=1 and o.id%4!=0
+            #         o.recomendation_invest=False
+        elif method==10: #HMA 10           
+            if df.empty:
+                return False
+            return df["close"].iloc[-1] >= df["HMA10"].iloc[-1]
+
+
     ## Search for investments in self.mem.data and 
     def getInvestmentsOperationsInsideJson(self, plio):
         r=[]
@@ -172,7 +193,7 @@ class ProductRange():
 ## @param additional_ranges. Number ranges to show over and down calculated limits
 
 class ProductRangeManager:
-    def __init__(self, request, product, percentage_down, percentage_up, totalized_operations=True, decimals=2, qs_investments=[], additional_ranges=3):
+    def __init__(self, request, product, percentage_down, percentage_up, totalized_operations=True, decimals=2, qs_investments=[], additional_ranges=3, recomendation_methods=0):
         self.totalized_operations=totalized_operations
         self.request=request
         self.product=product
@@ -180,7 +201,7 @@ class ProductRangeManager:
         self.percentage_down=Percentage(percentage_down, 100)
         self.percentage_up=Percentage(percentage_up, 100)
         self.decimals=decimals
-        self.method=0
+        self.method=recomendation_methods
         
         self.plio=ios.IOS.from_qs( timezone.now(), request.user.profile.currency, self.qs_investments,  1)
 
@@ -259,205 +280,60 @@ class ProductRangeManager:
 
 
     
-    def list_of_sma_of_current_method(self):
+    def recomendationmethods2indicators(self):
         if self.method in (0, 1):#ProductRangeInvestRecomendation. None_:
             return []
         elif self.method in (2, 4):#ProductRangeInvestRecomendation.ThreeSMA:      
-            return [10, 50, 200]
-        elif self.method in (3, 5): #ProductRangeInvestRecomendation.SMA100:           
-            return [100, ]
+            return [("SMA", 10), ("SMA",50), ("SMA", 200)]
+        elif self.method in (3, 5): #ProductRangeInvestRecomendation.SMA100:        
+            return [("SMA", 100), ]
         elif self.method==6:#ProductRangeInvestRecomendation.Strict SMA 10 , 100:      
-            return [10,  100]
+            return  [("SMA", 10), ("SMA", 100)]
         elif self.method==8:#ProductRangeInvestRecomendation.SMA 10
-            return [10, ]
+            return [("SMA", 10),]
         elif self.method==9:#ProductRangeInvestRecomendation.SMA 5
-            return [5, ]
+            return [("SMA", 5)]
         elif self.method==10:#ProductRangeInvestRecomendation.SMA 5
-            return [10 ]
+            return  [("HMA", 10)]
+        
+    def append_indicators(self,df):
+        """
+            df is a panda Dataframe with ohcl and date keys
+        """
+        print(self.recomendationmethods2indicators())
+        for indicator in self.recomendationmethods2indicators():
+            if indicator[0]=="SMA":
+                df=indicators.sma(df, indicator[1])
+            elif indicator[0]=="HMA":
+                df=indicators.hma(df, indicator[1])
+        return df
 
-    ## Set investment recomendations to all ProductRange objects in array 
-    def setInvestRecomendation(self, method):
-        self.method=int(method)
-        if self.method==0:#ProductRangeInvestRecomendation. None_:
-            for o in self.arr:
-                o.recomendation_invest=False
-        elif self.method==1:#ProductRangeInvestRecomendation.All:
-            for o in self.arr:
-                o.recomendation_invest=True
-        elif self.method==2:#ProductRangeInvestRecomendation.ThreeSMA:      
-            list_ohcl=self.product.ohclDailyBeforeSplits()
-            lod_dtv_=[]
-            for d in list_ohcl:
-                lod_dtv_.append({"datetime":d["date"], "value":d["close"]})
-            dvm_smas=[]
-            for sma in [10, 50, 200]:
-                dvm_smas.append(lod_dtv_sma(lod_dtv_, sma))
             
-            for o in self.arr:
-                number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [10, 50, 200], dvm_smas,  "close"))
-                if number_sma_over_price==3 and o.id % 4==0:
-                    o.recomendation_invest=True
-                elif number_sma_over_price==2 and o.id %2==0:
-                    o.recomendation_invest=True
-                elif number_sma_over_price<=1:
-                    o.recomendation_invest=True
-        elif self.method==3: #ProductRangeInvestRecomendation.SMA100:           
-            list_ohcl=self.product.ohclDailyBeforeSplits()
-            lod_dtv_=[]
-            for d in list_ohcl:
-                lod_dtv_.append({"datetime":d["date"], "value":d["close"]})
-            dvm_smas=[]
-            for sma in [100, ]:
-                dvm_smas.append(lod_dtv_sma(lod_dtv_, sma))
-            
-            for o in self.arr:
-                number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [100, ], dvm_smas,  "close"))
-                if number_sma_over_price==0:
-                    o.recomendation_invest=True
-                else: #number_sma_over_price=1 and o.id%4!=0
-                    o.recomendation_invest=False
-        elif self.method==4:#ProductRangeInvestRecomendation.StrictThreeSMA:      
-            list_ohcl=self.product.ohclDailyBeforeSplits()
-            
-            lod_dtv_=[]
-            for d in list_ohcl:
-                lod_dtv_.append({"datetime":d["date"], "value":d["close"]})
-            dvm_smas=[]
-            for sma in [10, 50, 200]:
-                dvm_smas.append(lod_dtv_sma(lod_dtv_, sma))
-            
-            for o in self.arr:
-                number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [10, 50, 200], dvm_smas,  "close"))
-                if number_sma_over_price==2 and o.id %2==0:
-                    o.recomendation_invest=True
-                elif number_sma_over_price<=1:
-                    o.recomendation_invest=True
-        elif self.method==5: #ProductRangeInvestRecomendation.SMA100 STRICT:           
-            list_ohcl=self.product.ohclDailyBeforeSplits()
 
-            lod_dtv_=[]
-            for d in list_ohcl:
-                lod_dtv_.append({"datetime":d["date"], "value":d["close"]})
-            dvm_smas=[]
-            for sma in [100, ]:
-                dvm_smas.append(lod_dtv_sma(lod_dtv_, sma))
-            
-            for o in self.arr:
-                number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [100, ], dvm_smas,  "close"))
-                if number_sma_over_price==0:
-                    o.recomendation_invest=True
-                else:
-                    o.recomendation_invest=False
-        elif self.method==6:#ProductRangeInvestRecomendation.Strict SMA 10 , 100:      
-            list_ohcl=self.product.ohclDailyBeforeSplits()
-
-            lod_dtv_=[]
-            for d in list_ohcl:
-                lod_dtv_.append({"datetime":d["date"], "value":d["close"]})
-            dvm_smas=[]
-            for sma in [10, 100, ]:
-                dvm_smas.append(lod_dtv_sma(lod_dtv_, sma))
-            
-            for o in self.arr:
-                number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [10,  100], dvm_smas,  "close"))
-                if number_sma_over_price<2:
-                    o.recomendation_invest=True
-        elif self.method==8: #ProductRangeInvestRecomendation.SMA10 Entry below SMA10 aren't recommended           
-            list_ohcl=self.product.ohclDailyBeforeSplits()
-
-            lod_dtv_=[]
-            for d in list_ohcl:
-                lod_dtv_.append({"datetime":d["date"], "value":d["close"]})
-            dvm_smas=[]
-            for sma in [10, ]:
-                dvm_smas.append(lod_dtv_sma(lod_dtv_, sma))
-            
-            for o in self.arr:
-                number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [10, ], dvm_smas,  "close"))
-                if number_sma_over_price==0:
-                    o.recomendation_invest=True
-                else: #number_sma_over_price=1 and o.id%4!=0
-                    o.recomendation_invest=False
-        elif self.method==9: #ProductRangeInvestRecomendation.SMA10 Entry below SMA10 aren't recommended           
-            list_ohcl=self.product.ohclDailyBeforeSplits()
-
-            lod_dtv_=[]
-            for d in list_ohcl:
-                lod_dtv_.append({"datetime":d["date"], "value":d["close"]})
-            dvm_smas=[]
-            for sma in [5, ]:
-                dvm_smas.append(lod_dtv_sma(lod_dtv_, sma))
-            
-            for o in self.arr:
-                number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [5, ], dvm_smas,  "close"))
-                if number_sma_over_price==0:
-                    o.recomendation_invest=True
-                else: #number_sma_over_price=1 and o.id%4!=0
-                    o.recomendation_invest=False
-        elif self.method==10: #HMA 10       
-
-            from pydicts import lod    
-            list_ohcl=list(self.product.ohclDailyBeforeSplits())
-
-
-            lod.lod_print(list_ohcl[-10:])
-
-            lod_dtv_=[]
-            for d in list_ohcl:
-                lod_dtv_.append({"date":d["date"], "value":d["close"]})
-
-
-
-            #Remove last
-            last=lod_dtv_[len(lod_dtv_)-1]
-            print(last)
-            if last["date"]==date.today():
-                lod_dtv_.remove(last)
-            lod.lod_print(lod_dtv_[-10:])
-            hma10=list(lod_dtv_hma(lod_dtv_, 10))
-            lod.lod_print(hma10[-10:])
-            for o in self.arr:
-                if o.value>= hma10[len(hma10)-1]["value"]:
-                    o.recomendation_invest=True
-                else:
-                    o.recomendation_invest=False
 
     def json(self):
+        import pandas as pd
         r={}
-        ohcl=[]
         ld_ohcl=self.product.ohclDailyBeforeSplits()         
-        lod_dtv_=[]
-        for d in ld_ohcl:
-            ohcl.append((d["date"], d["close"]))
-            lod_dtv_.append({"datetime":d["date"], "value":d["close"]})
-        
-        #Series for variable smas
-        smas=[]
-        for sma_ in self.list_of_sma_of_current_method():   
-            
-            sma={"name": f"SMA{sma_}", "data":[]}
-            for o in lod_dtv_sma(lod_dtv_, sma_):
-                sma["data"].append((o["datetime"], o["value"]))
-                
-            smas.append(sma)
+        df=pd.DataFrame(ld_ohcl)
+        df=self.append_indicators(df)
 
         d=[]
         for i, o in enumerate(self.arr):
             d.append({
                 "value": round(float(o.value),  self.decimals), 
-                "recomendation_invest": o.recomendation_invest, 
+                "recomendation_invest": o.setInvestRecomendations(self.method,df),
                 "investments_inside": o.getInvestmentsOperationsInsideJson(self.plio), 
                 "orders_inside": o.getOrdersInsideJson(self.orders), 
                 "current_in_range": o.isInside(self.product.basic_results()["last"]), 
                 "limits": str(o)
             })
-            
+
         r["pr"]=d
         r["product"]={
             "name": o.product.fullName(), 
             "last": o.product.basic_results()["last"], 
             "currency": o.product.currency, 
         }
-        r["ohcl"]=ohcl
-        r["smas"]=smas
+        r["dataframe"]=df.to_dict('records')
         return r
