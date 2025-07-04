@@ -21,7 +21,7 @@ def lod_dtv_find_le(lod_dtv_, dt):
     
 
 class ProductRange():
-    def __init__(self, request,  id=None,  product=None,  value=None, percentage_down=None,  percentage_up=None, totalized_operations=True, decimals=2):
+    def __init__(self, request,  id=None,  product=None,  value=None, percentage_down=None,  percentage_up=None, totalized_operations=True):
         self.request=request
         self.id=id
         self.product=product
@@ -29,19 +29,16 @@ class ProductRange():
         self.percentage_down=percentage_down
         self.percentage_up=percentage_up
         self.totalized_operations=totalized_operations
-        self.decimals=decimals
-        self.recomendation_invest=False
-        self.recomendation_reinvest=False
         
     def __repr__(self):
         return "({}, {}]".format(
-            round(self.range_lowest_value(),  self.decimals), 
-            round(self.range_highest_value(), self.decimals), 
+            round(self.range_lowest_value(),  self.product.decimals), 
+            round(self.range_highest_value(), self.product.decimals), 
         )
     
     ## Returns the value rounded to the number of decimals
     def value_rounded(self):
-        return round(self.value, self.decimals)
+        return round(self.value, self.product.decimals)
         
     ## Return th value of the range highest value.. Points + percentage/2
     def range_highest_value(self):
@@ -111,10 +108,8 @@ class ProductRange():
             #     number_sma_over_price=len(self.list_of_sma_over_price(date.today(), o.value, [10,  100], dvm_smas,  "close"))
             #     if number_sma_over_price<2:
             #         o.recomendation_invest=True
-        elif method==8: #ProductRangeInvestRecomendation.SMA10 Entry below SMA10 aren't recommended      
-            if df.empty:
-                return False
-            return df["close"].iloc[-1] >= df["SMA10"].iloc[-1]   
+        elif method==8: #ProductRangeInvestRecomendation.SMA10 Entry below SMA10 aren't recommended    
+            return self.value >= df["SMA10"].iloc[-1]
 
             
             # for o in self.arr:
@@ -123,8 +118,8 @@ class ProductRange():
             #         o.recomendation_invest=True
             #     else: #number_sma_over_price=1 and o.id%4!=0
             #         o.recomendation_invest=False
-        elif method==9: #ProductRangeInvestRecomendation.SMA10 Entry below SMA10 aren't recommended            
-            return False              
+        elif method==9: #ProductRangeInvestRecomendation.SMA10 Entry below SMA10 aren't recommended  
+            return self.value >= df["SMA5"].iloc[-1]
 
             
             # for o in self.arr:
@@ -133,10 +128,10 @@ class ProductRange():
             #         o.recomendation_invest=True
             #     else: #number_sma_over_price=1 and o.id%4!=0
             #         o.recomendation_invest=False
-        elif method==10: #HMA 10           
-            if df.empty:
-                return False
-            return df["close"].iloc[-1] >= df["HMA10"].iloc[-1]
+        elif method==10: #HMA 10     
+            # print(df["close"].iloc[-1] , df["HMA10"].iloc[-1],df["close"].iloc[-1] >= df["HMA10"].iloc[-1])  
+            # df.loc['2025-07-03']
+            return self.value >= df["HMA10"].iloc[-1]
 
 
     ## Search for investments in self.mem.data and 
@@ -193,14 +188,13 @@ class ProductRange():
 ## @param additional_ranges. Number ranges to show over and down calculated limits
 
 class ProductRangeManager:
-    def __init__(self, request, product, percentage_down, percentage_up, totalized_operations=True, decimals=2, qs_investments=[], additional_ranges=3, recomendation_methods=0):
+    def __init__(self, request, product, percentage_down, percentage_up, totalized_operations=True, qs_investments=[], additional_ranges=3, recomendation_methods=0):
         self.totalized_operations=totalized_operations
         self.request=request
         self.product=product
         self.qs_investments=qs_investments
         self.percentage_down=Percentage(percentage_down, 100)
         self.percentage_up=Percentage(percentage_up, 100)
-        self.decimals=decimals
         self.method=recomendation_methods
         
         self.plio=ios.IOS.from_qs( timezone.now(), request.user.profile.currency, self.qs_investments,  1)
@@ -315,12 +309,14 @@ class ProductRangeManager:
         r={}
         ld_ohcl=self.product.ohclDailyBeforeSplits()         
         df=pd.DataFrame(ld_ohcl)
+        df['date'] = pd.to_datetime(df['date'])
+        df.set_index('date', inplace=True)# quick searchs with loc
         df=self.append_indicators(df)
 
         r["pr"]=[]
         for i, o in enumerate(self.arr):
             r["pr"].append({
-                "value": round(float(o.value),  self.decimals), 
+                "value": round(float(o.value),  self.product.decimals), 
                 "recomendation_invest": o.setInvestRecomendations(self.method,df),
                 "investments_inside": o.getInvestmentsOperationsInsideJson(self.plio), 
                 "orders_inside": o.getOrdersInsideJson(self.orders), 
