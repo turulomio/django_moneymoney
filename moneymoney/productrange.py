@@ -5,6 +5,7 @@ from django.utils import timezone
 from moneymoney import models, ios,indicators
 from pydicts.percentage import Percentage
 import pandas as pd
+import numpy as np
 
 
 ## INTEGRATE IN PYDICTS
@@ -62,8 +63,6 @@ class ProductRange():
         
 
     def setInvestRecomendations(self, method, df):
-        print("RECO", method, df)
-
         if method==0:#ProductRangeInvestRecomendation. None_:
             return False
         elif method==1:#ProductRangeInvestRecomendation.All:
@@ -333,5 +332,6 @@ class ProductRangeManager:
             "last": o.product.basic_results()["last"], 
             "currency": o.product.currency, 
         }
-        r["dataframe"]=df.to_dict('records')
+        print(df)
+        r["dataframe"]=df.replace(to_replace=np.nan, value=None).to_dict('records')#Conviert a None NAN y devuelve dictioanry
         return r
