@@ -1142,9 +1142,9 @@ class Products(models.Model):
                     partition_by=[F('date')]
                 ),
                 close=Window(
-                    expression=LastValue('quote'),
+                    expression=FirstValue('quote'),
                     partition_by=[F('date')],
-                    order_by=F('datetime').asc()
+                    order_by=F('datetime').desc()
                 )
             ).values(
                 # 3. Now, select only the columns we need.
