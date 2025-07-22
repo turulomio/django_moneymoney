@@ -1,4 +1,4 @@
-from base64 import  b64encode, b64decode
+from base64 import  b64decode
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 from decimal import Decimal
@@ -22,7 +22,7 @@ from pydicts.percentage import Percentage,  percentage_between
 from request_casting.request_casting import RequestBool, RequestDate, RequestDecimal, RequestDtaware, RequestUrl, RequestString, RequestInteger, RequestListOfIntegers, RequestListOfUrls, all_args_are_not_none
 from statistics import median
 from subprocess import run
-from os import path
+from pandas import DataFrame, concat, to_numeric
 from pydicts import lod, lod_ymv, casts, myjsonencoder
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.exceptions import ValidationError
@@ -60,40 +60,6 @@ class CatalogModelViewSet(viewsets.ModelViewSet):
 @api_view(['GET', ])
 def CatalogManager(request):
     return JsonResponse( request.user.groups.filter(name="CatalogManager").exists(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
-
-
-@extend_schema(
-    parameters=[
-        OpenApiParameter(name='format', description='Output report format', required=True, type=str, default="pdf"), 
-    ],
-)
-@api_view(['POST', ])    
-@permission_classes([permissions.IsAuthenticated, ])
-def AssetsReport(request):
-    """
-        Generate user assets report
-        Charts are part of the request in dict request.data
-    """    
-    test=RequestBool(request, "test", False) #Used for testing
-    format_=RequestString(request, "format", "pdf")
-    if format_=="pdf":
-        mime="application/pdf"
-    elif format_=="odt":
-        mime="application/vnd.oasis.opendocument.text"
-    elif format_=="docx":
-        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    else:
-        return Response({'status': 'Bad Format '}, status=status.HTTP_400_BAD_REQUEST)
-
-    from moneymoney.assetsreport import generate_assets_report
-    filename=generate_assets_report(request, format_, test)
-    if test is True:# Creates a file in cwd
-        return Response(status=status.HTTP_200_OK)
-    else:
-        with open(filename, "rb") as doc:
-            encoded_string = b64encode(doc.read())
-            r={"filename":path.basename(filename),  "format": format_,  "data":encoded_string.decode("UTF-8"), "mime":mime}
-            return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
 class ConceptsViewSet(viewsets.ModelViewSet):
     queryset = models.Concepts.objects.all()
@@ -144,38 +110,71 @@ class ConceptsViewSet(viewsets.ModelViewSet):
     def historical_report(self, request, pk=None):
         concept= self.get_object()
         r={}
-        json_concepts_historical=[]
-        with connection.cursor() as c:
-            c.execute("""
-        select date_part('year',datetime)::int as year,  date_part('month',datetime)::int as month, sum(amount) as value 
-        from ( 
-                    SELECT accountsoperations.datetime, accountsoperations.concepts_id,  accountsoperations.amount  FROM accountsoperations where concepts_id=%s 
-                        UNION ALL 
-                    SELECT creditcardsoperations.datetime, creditcardsoperations.concepts_id, creditcardsoperations.amount FROM creditcardsoperations where concepts_id=%s
-                ) as uni 
-        group by date_part('year',datetime), date_part('month',datetime) order by 1,2 ;
-        """, [concept.id, concept.id])
-            rows=functions.dictfetchall(c)
+        # 1. ORM query for AccountsOperations
+        accounts_ops = models.Accountsoperations.objects.filter(concepts_id=concept.id).values(
+            'datetime', 'amount'
+        ).annotate(
+            year=ExtractYear('datetime'),
+            month=ExtractMonth('datetime')
+        ).values('year', 'month').annotate(
+            value=Sum('amount')
+        ).values('year', 'month', 'value')
 
-        if len(rows)==0:
+
+        # 2. ORM query for CreditCardsOperations
+        creditcards_ops = models.Creditcardsoperations.objects.filter(concepts_id=concept.id).values(
+            'datetime', 'amount'
+        ).annotate(
+            year=ExtractYear('datetime'),
+            month=ExtractMonth('datetime')
+        ).values('year', 'month').annotate(
+            value=Sum('amount')
+        ).values('year', 'month', 'value')
+
+        # 1. Convert lists of dictionaries to pandas DataFrames
+        df1 = DataFrame(accounts_ops)
+        df2 = DataFrame(creditcards_ops)
+
+        # 2. Concatenate the two DataFrames into one
+        combined_df = concat([df1, df2])
+
+        if len(combined_df)==0:
             return JsonResponse( {"data":[], "total":0, "median":0, "average":0}, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+        # 3. Group by year and month, sum the values, and reset the index
+        total_sales_df = combined_df.groupby(['year', 'month'])['value'].sum().reset_index()
             
-        firstyear=int(rows[0]['year'])
-        # Create all data spaces filling year
-        for year in range(firstyear, date.today().year+1):
-            json_concepts_historical.append({"year": year, "m1":0, "m2":0, "m3":0, "m4":0, "m5":0, "m6":0, "m7":0, "m8":0, "m9":0, "m10":0, "m11":0, "m12":0, "total":0})
-        # Fills spaces with values
-        for row in rows:
-            j_row=json_concepts_historical[row['year']-firstyear]
-            j_row[f"m{row['month']}"]=float(row['value'])
-        
-        for d in json_concepts_historical:
-            d["total"]=d["m1"]+d["m2"]+d["m3"]+d["m4"]+d["m5"]+d["m6"]+d["m7"]+d["m8"]+d["m9"]+d["m10"]+d["m11"]+d["m12"]
+        # Asegúrate de que la columna 'value' sea numérica
+        total_sales_df['value'] = to_numeric(total_sales_df['value'], errors='coerce')
 
-        r["data"]=json_concepts_historical
-        r["total"]=lod.lod_sum(json_concepts_historical, "total")
-        r["median"]=lod.lod_median(rows, 'value')
-        r["average"]=lod.lod_average(rows, 'value')
+
+        # 2. Pivotar la tabla para que los meses se conviertan en columnas
+        #    - index='year': agrupa las filas por año.
+        #    - columns='month': crea una nueva columna para cada valor único de mes.
+        #    - values='value': rellena las celdas con el valor correspondiente.
+        #    - fill_value=0: pone 0 en los meses que no tienen datos.
+        pivoted_df = total_sales_df.pivot_table(
+            index='year', 
+            columns='month', 
+            values='value', 
+            fill_value=0
+        )
+
+        # 3. Renombrar las columnas de números (1, 2, ...) a 'm1', 'm2', ...
+        pivoted_df.rename(columns=lambda m: f"m{m}", inplace=True)
+
+        # 4. Asegurar que todas las 12 columnas de meses existan
+        month_cols = [f"m{i}" for i in range(1, 13)]
+        pivoted_df = pivoted_df.reindex(columns=month_cols, fill_value=0)
+
+        # 5. Calcular la columna 'total' sumando los valores de todos los meses
+        pivoted_df['total'] = pivoted_df.sum(axis=1)
+
+        # 6. Convertir el resultado final de vuelta a una lista de diccionarios
+        #    reset_index() convierte el índice 'year' de nuevo en una columna.
+        r["data"] = pivoted_df.reset_index().to_dict('records')
+        r["total"]=total_sales_df["value"].sum()
+        r["median"]=total_sales_df["value"].median()    
+        r["average"]=total_sales_df["value"].mean()
         return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
 
     @action(detail=True, methods=["get"], name='Returns historical concept report detail', url_path="historical_report_detail", url_name='historical_report_detail', permission_classes=[permissions.IsAuthenticated])
@@ -476,32 +475,35 @@ class OperationstypesViewSet(CatalogModelViewSet):
     queryset = models.Operationstypes.objects.all()
     serializer_class = serializers.OperationstypesSerializer
 
+
+
 class StrategiesViewSet(viewsets.ModelViewSet):
-    queryset = models.Strategies.objects.all()
-    serializer_class = serializers.StrategiesSerializer
     permission_classes = [permissions.IsAuthenticated]  
-        
+    queryset = models.Strategies.objects.all()
+    http_method_names = ['get', 'head', 'options']
+    
+    def get_serializer_class(self):
+        return serializers.NewStrategyDetailedSerializer
+
     @extend_schema(
         parameters=[
             OpenApiParameter(name='active', description='Filter by active accounts', required=True, type=bool), 
-            OpenApiParameter(name='investment', description='Filter by investment', required=True, type=OpenApiTypes.URI), 
             OpenApiParameter(name='type', description='Filter by type', required=True, type=int), 
         ],
     )
     def list(self, request):
         active=RequestBool(request, "active")
-        investment=RequestUrl(request, "investment", models.Investments)
         type=RequestInteger(request, "type")
-        if all_args_are_not_none(active, investment, type):
-            self.queryset=self.queryset.filter(dt_to__isnull=active,  investments=investment, type=type)
-        serializer = serializers.StrategiesSerializer(self.queryset, many=True, context={'request': request})
+        if all_args_are_not_none(active, type):
+            self.queryset=self.queryset.filter(dt_to__isnull=active, type=type)
+        serializer = self.get_serializer(self.queryset, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=["get"], name='List strategies with balance calculations', url_path="withbalance", url_name='withbalance', permission_classes=[permissions.IsAuthenticated])
     def withbalance(self, request): 
         active=RequestBool(request, 'active')
         if active is None:
-            qs=models.Strategies.objects.all() 
+            qs=models.Strategies.objects.all()
         else:
             if active is True:
                 qs=models.Strategies.objects.filter(dt_to__isnull=True)
@@ -510,46 +512,139 @@ class StrategiesViewSet(viewsets.ModelViewSet):
 
         r=[]
         for strategy in qs:
-            plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.investments.all(), 1)
+            if strategy.type==models.StrategiesTypes.FastOperations:
+                invested=models.Accounts.accounts_balance(strategy.strategiesfastoperations.accounts.all(),strategy.dt_from,request.user.profile.currency)["balance_user_currency"]
+                qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy.strategiesfastoperations.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy.dt_from).select_related("accounts")
+                gains_current_net_user=qs_ao.aggregate(Sum("amount"))["amount__sum"] or 0
+                gains_historical_net_user=0
+                sum_dividends_net_user=0
 
-            gains_current_net_user=plio.sum_total_io_current()["gains_net_user"]
-            gains_historical_net_user=plio.io_historical_sum_between_dt(strategy.dt_from, strategy.dt_to_for_comparations(),  "gains_net_user")
-            lod_dividends_net_user=models.Dividends.lod_ym_netgains_dividends(request, ids=functions.qs_to_ids(strategy.investments.all()),  dt_from=strategy.dt_from, dt_to=strategy.dt_to_for_comparations())
-            r.append({
-                "id": strategy.id,  
-                "url": request.build_absolute_uri(reverse('strategies-detail', args=(strategy.pk, ))), 
-                "name":strategy.name, 
-                "dt_from": strategy.dt_from, 
-                "dt_to": strategy.dt_to, 
-                "invested": plio.sum_total_io_current()["invested_user"], 
+            elif strategy.type==models.StrategiesTypes.Generic:                
+                plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.strategiesgeneric.investments.all(), 1)
+                invested=plio.sum_total_io_current()["invested_user"]
+                gains_current_net_user=plio.sum_total_io_current()["gains_net_user"]
+                gains_historical_net_user=plio.io_historical_sum_between_dt(strategy.dt_from, strategy.dt_to_for_comparations(),  "gains_net_user")
+                lod_dividends_net_user=models.Dividends.lod_ym_netgains_dividends(request, ids=functions.qs_to_ids(strategy.strategiesgeneric.investments.all()),  dt_from=strategy.dt_from, dt_to=strategy.dt_to_for_comparations())
+                sum_dividends_net_user=lod.lod_sum(lod_dividends_net_user, "total")
+            elif strategy.type==models.StrategiesTypes.Ranges:                
+                plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.strategiesproductsrange.investments.all(), 1)
+                invested=plio.sum_total_io_current()["invested_user"]
+                gains_current_net_user=plio.sum_total_io_current()["gains_net_user"]
+                gains_historical_net_user=plio.io_historical_sum_between_dt(strategy.dt_from, strategy.dt_to_for_comparations(),  "gains_net_user")
+                lod_dividends_net_user=models.Dividends.lod_ym_netgains_dividends(request, ids=functions.qs_to_ids(strategy.strategiesproductsrange.investments.all()),  dt_from=strategy.dt_from, dt_to=strategy.dt_to_for_comparations())
+                sum_dividends_net_user=lod.lod_sum(lod_dividends_net_user, "total")
+
+            elif strategy.type==models.StrategiesTypes.PairsInSameAccount:                
+                invested=models.Accounts.accounts_balance(models.Accounts.objects.filter(id=strategy.strategiespairsinsameaccount.account.id),strategy.dt_from,request.user.profile.currency)["balance_user_currency"]
+                qs_ao=models.Accountsoperations.objects.filter(accounts=strategy.strategiespairsinsameaccount.account, concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy.dt_from).select_related("accounts")
+                gains_current_net_user=qs_ao.aggregate(Sum("amount"))["amount__sum"] or 0
+                gains_historical_net_user=0
+                sum_dividends_net_user=0
+            
+            d_balance={
+                "invested":invested,
                 "gains_current_net_user":  gains_current_net_user,  
                 "gains_historical_net_user": gains_historical_net_user, 
-                "dividends_net_user": lod.lod_sum(lod_dividends_net_user, "total"), 
-                "total_net_user":gains_current_net_user + gains_historical_net_user + lod.lod_sum(lod_dividends_net_user, "total"), 
-                "investments":functions.qs_to_urls(request, strategy.investments.all()), 
-                "type": strategy.type, 
-                "comment": strategy.comment, 
-                "additional1": strategy.additional1, 
-                "additional2": strategy.additional2, 
-                "additional3": strategy.additional3, 
-                "additional4": strategy.additional4, 
-                "additional5": strategy.additional5, 
-                "additional6": strategy.additional6, 
-                "additional7": strategy.additional7, 
-                "additional8": strategy.additional8, 
-                "additional9": strategy.additional9, 
-                "additional10": strategy.additional10, 
-            })
+                "dividends_net_user": sum_dividends_net_user, 
+                "total_net_user":gains_current_net_user + gains_historical_net_user + sum_dividends_net_user, 
+            }
+            d_strategy=serializers.NewStrategyDetailedSerializer(instance=strategy , context={'request': request}).data
+            d_strategy["balance"]=d_balance
+            r.append(d_strategy)
         return Response(r)
-        
-    @action(detail=True, methods=["get"], name='Gets a IOS from a strategy', url_path="ios", url_name='ios', permission_classes=[permissions.IsAuthenticated])
-    def ios(self, request, pk=None): 
+
+
+
+
+class StrategiesFastOperationsViewSet(viewsets.ModelViewSet):
+    queryset = models.StrategiesFastOperations.objects.all()
+    serializer_class = serializers.StrategiesFastOperationsSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
+    
+    @action(detail=True, methods=["get"], name='Gets a detail of a fast operations strategy. Returns a list of account operations with fast operations', url_path="detailed", url_name='detailed', permission_classes=[permissions.IsAuthenticated])
+    def detailed(self, request, pk=None): 
+        strategy_fos=self.get_object()
+        if strategy_fos is not None:
+            qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy_fos.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy_fos.strategy.dt_from).select_related("accounts")
+            serializer = serializers.AccountsoperationsSerializer(qs_ao, many=True, context={'request': request})
+            return Response(serializer.data)
+        return Response({'status': _('Fast operations strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.strategy.delete()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+class StrategiesPairsInSameAccountViewSet(viewsets.ModelViewSet):
+    queryset = models.StrategiesPairsInSameAccount.objects.all()
+    serializer_class = serializers.StrategiesPairsInSameAccountSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
+    
+    @action(detail=True, methods=["get"], name='Gets a detail of a pairs in same account strategy', url_path="detailed", url_name='detailed', permission_classes=[permissions.IsAuthenticated])
+    def detailed(self, request, pk=None): 
+        # strategy_fos=self.get_object()
+        # if strategy_fos is not None:
+        #     qs_ao=models.Accountsoperations.objects.filter(accounts_id__in=functions.qs_to_ids(strategy_fos.accounts.all()), concepts_id=eConcept.FastInvestmentOperations, datetime__gte=strategy_fos.strategy.dt_from).select_related("accounts")
+        #     serializer = serializers.AccountsoperationsSerializer(qs_ao, many=True, context={'request': request})
+        #     return Response(serializer.data)
+        return Response({'status': _('Not developed yet')}, status=status.HTTP_200_OK)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.strategy.delete()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)    
+class StrategiesProductsRangeViewSet(viewsets.ModelViewSet):
+    queryset = models.StrategiesProductsRange.objects.all()
+    serializer_class = serializers.StrategiesProductsRangeSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
+    
+    @action(detail=True, methods=["get"], name='Gets a detail of a pairs in same account strategy', url_path="detailed", url_name='detailed', permission_classes=[permissions.IsAuthenticated])
+    def detailed(self, request, pk=None): 
         strategy=self.get_object()
         if strategy is not None:
             ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals)
             return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
         return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
+    
 
+            
+    # @action(detail=True, methods=["get"], name='Gets a IOS from a strategy', url_path="ios", url_name='ios', permission_classes=[permissions.IsAuthenticated])
+    # def ios(self, request, pk=None): 
+    #     strategy=self.get_object()
+    #     if strategy is not None:
+    #         ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals)
+    #         return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
+    #     return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.strategy.delete()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class StrategiesGenericViewSet(viewsets.ModelViewSet):
+    queryset = models.StrategiesGeneric.objects.all()
+    serializer_class = serializers.StrategiesGenericSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
+    @action(detail=True, methods=["get"], name='Gets a IOS from a strategy', url_path="detailed", url_name='detailed', permission_classes=[permissions.IsAuthenticated])
+    def detailed(self, request, pk=None): 
+        strategy=self.get_object()
+        if strategy is not None:
+            ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals)
+            return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
+        return Response({'status': _('Generic strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.strategy.delete()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 class InvestmentsClasses(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -576,7 +671,7 @@ class InvestmentsClasses(APIView):
 
         def json_classes_by_product():
             ld=[]
-            for product in models.Products.qs_distinct_with_investments():
+            for product in models.Products.qs_distinct_with_investments(only_active=True):
                 d={"name": product.fullName(), "balance": 0,  "invested": 0}
                 for investment in qs_investments_active:
                     if investment.products==product:
@@ -643,21 +738,6 @@ class InvestmentsClasses(APIView):
         
         return JsonResponse( d, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
 
-class UnogeneratorWorking(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    @extend_schema(
-        description="Returns if unogenerator server is working", 
-        request=None, 
-        responses=OpenApiTypes.OBJECT
-    )
-    def get(self, request, *args, **kwargs):
-        from unogenerator import can_import_uno
-        if can_import_uno():
-            from unogenerator.server import is_server_working
-            return Response( is_server_working(), status=status.HTTP_200_OK)
-        else:
-            return Response(False, status=status.HTTP_200_OK)
-
 class Alerts(APIView):
     permission_classes = [permissions.IsAuthenticated]    
     @extend_schema(
@@ -673,6 +753,7 @@ class Alerts(APIView):
                           "server_time": "2023-08-01T03:55:29.122943+00:00",
                           "expired_days": 7,
                           "orders_expired": [],
+                          "banks_inactive_with_balance": [],
                           "accounts_inactive_with_balance": [],
                           "investments_inactive_with_balance": []
                         },
@@ -690,6 +771,14 @@ class Alerts(APIView):
         r["expired_days"]=7
         r["orders_expired"]=functions.internal_modelviewset_request(OrdersViewSet, "list", {"expired_days":r["expired_days"]}, params_method="GET", user=request.user)
         
+        # Get all inactive banks with balance
+        r["banks_inactive_with_balance"]=[]
+        lod_banks=functions.internal_modelviewset_request(BanksViewSet, "withbalance", {"active":False},  params_method="GET", user=request.user)
+        for d in lod_banks:
+            if d["balance_total"]!=0:
+                r["banks_inactive_with_balance"].append(d)
+
+
         # Get all inactive accounts status
         r["accounts_inactive_with_balance"]=[]
         lod_accounts=functions.internal_modelviewset_request(AccountsViewSet, "withbalance", {"active":False},  params_method="GET", user=request.user)
@@ -707,7 +796,7 @@ class Alerts(APIView):
                 r["investments_inactive_with_balance"].append(plio)
         
         functions.show_queries_function()
-        return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
+        return JsonResponse(r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
 class Timezones(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -719,18 +808,18 @@ class Timezones(APIView):
 
 
 class InvestmentsViewSet(viewsets.ModelViewSet):
-    queryset = models.Investments.objects.select_related("accounts").all()
+    queryset = models.Investments.objects.all().select_related("accounts")
     serializer_class = serializers.InvestmentsSerializer
     permission_classes = [permissions.IsAuthenticated]  
         
-    def queryset_for_list_methods(self):
-        active=RequestBool(self.request, "active")
-        bank_id=RequestInteger(self.request,"bank")
+    def queryset_for_list_methods(self,request):
+        active=RequestBool(request, "active")
+        bank_id=RequestInteger(request,"bank")
+        self.queryset=self.get_queryset()
         if bank_id is not None:
             self.queryset=self.queryset.filter(accounts__banks__id=bank_id,  active=True)
         elif active is not None:
             self.queryset=self.queryset.filter(active=active)
-
         return self.queryset
     
     
@@ -739,7 +828,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
             It's better to ovverride list than get_queryset due to active is a class_attribute, and list only is for list and queryset for all methods
         """
 
-        serializer = serializers.InvestmentsSerializer(self.queryset_for_list_methods(), many=True, context={'request': request})
+        serializer = self.get_serializer(self.queryset_for_list_methods(request), many=True)
         return Response(serializer.data)
             
     
@@ -757,9 +846,9 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
         #######################################      
         active=RequestBool(request, "active")
         if active is None:        
-            return Response({'detail': _('You must set active parameter')}, status=status.HTTP_400_BAD_REQUEST)
-
-        qs_investments=models.Investments.objects.filter(active=active).select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages")
+            return Response(_('You must set active parameter'), status=status.HTTP_400_BAD_REQUEST)
+            
+        qs_investments=self.queryset_for_list_methods(request).select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages")
         plio=ios.IOS.from_qs(timezone.now(), 'EUR', qs_investments,  mode=2)
         r=[]
         for o in qs_investments:
@@ -798,7 +887,6 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "gains_at_selling_point_investment": o.selling_price*o.products.real_leveraged_multiplier()*plio.d_total_io_current(o.id)["shares"]-plio.d_total_io_current(o.id)["invested_investment"], 
                 "decimals": o.decimals, 
             })
-        functions.show_queries_function()
         return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
 
 
@@ -1184,46 +1272,16 @@ def ProductsPairs(request):
     """
     product_better=RequestUrl(request, "a", models.Products)
     product_worse=RequestUrl(request, "b", models.Products)
-    interval_minutes=RequestInteger(request, "interval_minutes", 1)
 
-    with connection.cursor() as c:
-        c.execute("""
-            select 
-                a.datetime, 
-                a.datetime-b.datetime as diff, 
-                a.quote as quote_a, 
-                b.quote as quote_b, 
-                a.products_id as product_a, 
-                b.products_id as product_b  
-            from 
-                (select * from quotes where products_id=%s) as a, 
-                (select * from quotes where products_id=%s) as b 
-            where 
-                date_trunc('hour',a.datetime)=date_trunc('hour',b.datetime) and 
-                a.datetime-b.datetime between %s and %s     
-            order by
-                a.datetime
-        """, [product_worse.id, product_better.id, timedelta(minutes=-interval_minutes), timedelta(minutes=interval_minutes) ])
-        common_quotes=functions.dictfetchall(c)
-    
-    
-    r={}
-    r["product_a"]={"name":product_better.fullName(), "currency": product_better.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_better.id, ))), "current_price": product_better.basic_results()["last"]}
-    r["product_b"]={"name":product_worse.fullName(), "currency": product_worse.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_worse.id, ))), "current_price": product_worse.basic_results()["last"]}
-    r["data"]=[]
-    if len(common_quotes)>0:
-        first_pr=common_quotes[0]["quote_b"]/common_quotes[0]["quote_a"]
-        for row in common_quotes:#a worse, b better
-            pr=row["quote_b"]/row["quote_a"]
-            r["data"].append({
-                "datetime": row["datetime"], 
-                "diff": int(row["diff"].total_seconds()), 
-                "price_worse": row["quote_a"], 
-                "price_better": row["quote_b"], 
-                "price_ratio": pr, 
-                "price_ratio_percentage_from_start": percentage_between(first_pr, pr), 
-            })
-    return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+
+    if all_args_are_not_none(product_better, product_worse):
+        common_quotes=product_better.compare_with(product_worse)
+        r={}
+        r["product_a"]={"name":product_better.fullName(), "currency": product_better.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_better.id, ))), "current_price": product_better.basic_results()["last"]}
+        r["product_b"]={"name":product_worse.fullName(), "currency": product_worse.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_worse.id, ))), "current_price": product_worse.basic_results()["last"]}
+        r["data"]=common_quotes
+        return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+    return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET', 'DELETE' ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -1267,14 +1325,14 @@ def ProductsQuotesOHCL(request):
 def ProductsRanges(request):
     product=RequestUrl(request, "product", models.Products)
     totalized_operations=RequestBool(request, "totalized_operations") 
-    percentage_between_ranges=RequestInteger(request, "percentage_between_ranges")
+    percentage_between_ranges=RequestDecimal(request, "percentage_between_ranges")
 
     if percentage_between_ranges is not None:
-        percentage_between_ranges=percentage_between_ranges/1000
-    percentage_gains=RequestInteger(request, "percentage_gains")
+        percentage_between_ranges=percentage_between_ranges
+    percentage_gains=RequestDecimal(request, "percentage_gains")
     if percentage_gains is not None:
-        percentage_gains=percentage_gains/1000
-    amount_to_invest=RequestInteger(request, "amount_to_invest")
+        percentage_gains=percentage_gains
+    amount_to_invest=RequestDecimal(request, "amount_to_invest")
     recomendation_methods=RequestInteger(request, "recomendation_methods")
     investments=RequestListOfUrls(request,"investments[]", models.Investments) 
     if investments is None:
@@ -1291,11 +1349,8 @@ def ProductsRanges(request):
 
     if all_args_are_not_none(product, totalized_operations,  percentage_between_ranges, percentage_gains, amount_to_invest, recomendation_methods):
         from moneymoney.productrange import ProductRangeManager
-        
-        prm=ProductRangeManager(request, product, percentage_between_ranges, percentage_gains, totalized_operations,  qs_investments=qs_investments, decimals=product.decimals, additional_ranges=additional_ranges)
-        prm.setInvestRecomendation(recomendation_methods)
-
-        return JsonResponse( prm.json(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+        prm=ProductRangeManager(request, product, percentage_between_ranges, percentage_gains, totalized_operations,  qs_investments=qs_investments, additional_ranges=additional_ranges, recomendation_methods=recomendation_methods)
+        return Response( prm.json())
     return Response( status=status.HTTP_400_BAD_REQUEST)
     
     
@@ -1559,30 +1614,11 @@ api/quotes/?product=url&month=1&year=2021 Showss all quotes of a product in a mo
         
         if future is True:
             self.queryset=self.queryset.filter(datetime__gte=timezone.now()).select_related("products").order_by("datetime")
-                
-        ## Search last quote of al linvestments
-        if last is True:
-            self.queryset=models.Quotes.objects.raw("""
-                select 
-                    id, 
-                    quotes.products_id, 
-                    quotes.datetime, 
-                    quote 
-                from 
-                    quotes, 
-                    (select max(datetime) as datetime, products_id from quotes group by products_id) as maxdt 
-                where 
-                    quotes.products_id=maxdt.products_id and 
-                    quotes.datetime=maxdt.datetime 
-                order by 
-                    quotes.datetime desc
-            """)
-            #Querysets with raw sql can use select_related, but with one more query you can use this
-            prefetch_related_objects(self.queryset, 'products')
-
-        if all_args_are_not_none(product, year, month):
+        elif last is True:## Search last quote of all products with quotes
+            self.queryset=models.Quotes.qs_last_quotes().select_related("products")
+        elif all_args_are_not_none(product, year, month):
             self.queryset=self.queryset.filter(products=product, datetime__year=year, datetime__month=month).order_by("datetime")
-        if product is not None:
+        elif product is not None:
             self.queryset=self.queryset.filter(products=product).order_by("datetime")
         serializer = serializers.QuotesSerializer(self.queryset, many=True, context={'request': request})
         return Response(serializer.data)

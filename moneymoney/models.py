@@ -4,7 +4,8 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.db import models, transaction, connection
-from django.db.models import Case, When, Sum, Value, Subquery
+from django.db.models import prefetch_related_objects, Case, When, Sum, Value, Subquery, F, Window, Min, Max, DateField, OuterRef, ExpressionWrapper, DurationField, FloatField
+from django.db.models.functions import FirstValue, LastValue, ExtractMonth, ExtractYear, Cast, Extract
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
@@ -28,6 +29,7 @@ RANGE_RECOMENDATION_CHOICES =(
     (7, "None"), 
     (8, "SMA 10"), 
     (9, "SMA 5"), 
+    (10, "HMA 10"), 
 )
 
 
@@ -127,6 +129,18 @@ class Accounts(models.Model):
             return list(Accounts.objects.order_by().values_list("currency",flat=True).distinct())
         else:
             return list(qs.order_by().values_list("currency",flat=True).distinct())
+        
+    def amount_string(self, value):
+        """
+            Returns a string rounded to the number of decimals of this account
+
+            Args:
+                value (number): Any number
+
+            Returns:
+                str
+        """
+        return Currency(value, self.currency).string(self.decimals)
 
 class Operationstypes(models.Model):
     name = models.TextField()
@@ -250,13 +264,17 @@ class Accountsoperations(models.Model):
 
 
     @staticmethod
-    def post_payload(accounts="http://testserver/api/accounts/4/",  concepts="http://testserver/api/concepts/1/", amount=1000,  comment="Opening account", datetime=timezone.now()):
+    def post_payload(accounts="http://testserver/api/accounts/4/",  concepts="http://testserver/api/concepts/1/", amount=1000,  comment="Opening account", datetime=None):
+        if datetime is None:
+            dt=timezone.now()
+        else:
+            dt=datetime
         return {
             "concepts":concepts, 
             "amount": amount, 
             "comment": comment, 
             "accounts": accounts, 
-            "datetime": datetime, 
+            "datetime": dt, 
         }
 
     def is_editable(self):
@@ -278,7 +296,11 @@ class Accountsoperations(models.Model):
             if self.concepts.id==eConcept.TransferDestiny:
                 return _("Transfer from {0}. {1}").format(self.associated_transfer.origin.fullName(), self.comment)
             if self.concepts.id==eConcept.BankCommissions:
-                return _("Transfer of {0} from {1} to {2}. {3}").format(Currency(self.associated_transfer.amount, self.associated_transfer.origin.currency), self.associated_transfer.origin.fullName(), self.associated_transfer.destiny.fullName(), self.comment)
+                return _("Transfer of {0} from {1} to {2}. {3}").format( 
+                    self.associated_transfer.origin.amount_string(self.associated_transfer.amount),
+                    self.associated_transfer.origin.fullName(), 
+                    self.associated_transfer.destiny.fullName(), 
+                    self.comment)
         
         elif self.concepts.id==eConcept.CreditCardBilling:
             qs=self.paid_accountsoperations.all().select_related("creditcards")
@@ -291,17 +313,17 @@ class Accountsoperations(models.Model):
         elif hasattr(self, "dividends"):
             return _( "From {}. Gross {}. Net {}.".format(
                 self.dividends.investments.name, 
-                Currency(self.dividends.gross,  self.dividends.investments.accounts.currency), 
-                Currency(self.dividends.net, self.dividends.investments.accounts.currency))
+                self.dividends.investments.accounts.amount_string(self.dividends.gross), 
+                self.dividends.investments.accounts.amount_string(self.dividends.net))
             )
         
         elif hasattr(self,  "investmentsoperations"):
             return _("{}: {} shares. Amount: {}. Comission: {}. Taxes: {}").format(
                 self.investmentsoperations.investments.name, 
-                self.investmentsoperations.shares, 
-                self.investmentsoperations.shares*self.investmentsoperations.price,  
-                self.investmentsoperations.commission, 
-                self.investmentsoperations.taxes
+                self.investmentsoperations.investments.shares_string(self.investmentsoperations.shares),
+                self.investmentsoperations.investments.accounts.amount_string(self.investmentsoperations.shares*self.investmentsoperations.price),  
+                self.investmentsoperations.investments.accounts.amount_string(self.investmentsoperations.commission), 
+                self.investmentsoperations.investments.accounts.amount_string(self.investmentsoperations.taxes)
             )
 
         return self.comment
@@ -318,10 +340,10 @@ class Banks(models.Model):
         return self.name  
         
     @staticmethod
-    def post_payload():
+    def post_payload(name="Bank for testing", active=True):
         return {
-            "name":  "Bank for testing", 
-            "active": True, 
+            "name": name, 
+            "active": active, 
         }
 
     def balance_accounts(self):
@@ -585,8 +607,25 @@ class Investments(models.Model):
     def __str__(self):
         return self.fullName()
 
+    def quote_string(self, value):
+        """
+            Returns a string with Currency.string ouput with self.products.decimals. 
+        """
+        return Currency(value, self.products.currency).string(self.products.decimals)
+    
+    def shares_string(self,value):
+        """ 
+            Returns a string with the number of shares round to investments.decimals
+
+            Args:
+                value (number): Any number
+        """
+        return str(round(value,self.decimals))
+
+
     def fullName(self):
         return "{} ({})".format(self.name, self.accounts.name)
+    
     @staticmethod
     def hurl(request, id):
         return request.build_absolute_uri(reverse('investments-detail', args=(id, )))
@@ -758,6 +797,9 @@ class Investmentsoperations(models.Model):
                 c.save()
                 self.associated_ao=c
                 self.save()
+        elif self.operationstypes.id==eOperationType.TransferFunds:#Fund transfer
+                self.associated_ao=None #Si hubiero associated_ao por haber puesto un tipo SharesPurchase y luego cambiar
+                self.save()
         
 
     
@@ -815,6 +857,7 @@ class ProductsStrategies(models.Model):
 
     class Meta:
         managed = True
+
 
 class Products(models.Model):
     """
@@ -959,13 +1002,16 @@ class Products(models.Model):
         return request.build_absolute_uri(reverse('products-detail', args=(id, )))
         
     @staticmethod
-    def qs_distinct_with_investments():
+    def qs_distinct_with_investments(only_active=True):
         """
             Get queryset with all distinct products that have investments
+            if only_active is True show only active investments
         """
         qs_investments=Investments.objects.all()
+        if only_active is True:
+            qs_investments=qs_investments.filter(active=True)
         # Query to get quotes with that datetimes
-        return Products.objects.filter(investments__id__in=Subquery(qs_investments.values("id")))
+        return Products.objects.filter(investments__id__in=Subquery(qs_investments.values("id"))).distinct()
 
     def fullName(self):
         return "{} ({})".format(self.name, _(self.stockmarkets.name))
@@ -1035,82 +1081,127 @@ class Products(models.Model):
         
     def ohclMonthlyBeforeSplits(self):
         if hasattr(self, "_ohcl_monthly_before_splits") is False:
-            with connection.cursor() as c:
-                c.execute("""
-                    select 
-                        t.products_id,
-                        date_part('year',date) as year, 
-                        date_part('month', date) as month, 
-                        (array_agg(t.open order by date))[1] as open, 
-                        min(t.low) as low, 
-                        max(t.high) as high, 
-                        (array_agg(t.close order by date desc))[1] as close 
-                    from (
-                    
-                    select 
-                        quotes.products_id, 
-                        datetime::date as date, 
-                        (array_agg(quote order by datetime))[1] as open, 
-                        min(quote) as low, 
-                        max(quote) as high, 
-                        (array_agg(quote order by datetime desc))[1] as close 
-                    from quotes 
-                    where quotes.products_id=%s
-                    group by quotes.products_id, datetime::date 
-                    order by datetime::date
-                    
-                    
-                    ) as t
-                    group by t.products_id,  year, month 
-                    order by year, month""", (self.id, ))
-            
-        
-                self._ohcl_monthly_before_splits=functions.dictfetchall(c)
+        # This is the main query
+            self._ohcl_monthly_before_splits = Quotes.objects.filter(
+                products_id=self.id
+            ).annotate(
+                # 1. First, create the 'month' field that we will partition by.
+                month=ExtractMonth('datetime'),
+                year=ExtractYear('datetime')
+            ).values(# This .values() call now defines our GROUP BY clause
+                    'year', 'month').annotate(
+                # 2. Next, apply all calculations as window functions.
+                # This calculates the result for each row's respective month.
+                # Note that Min() and Max() can also be used as window functions.
+                open=Window(
+                    expression=FirstValue('quote'),
+                    partition_by=[F('year'),F('month')],
+                    order_by=F('datetime').asc()
+                ),
+                high=Window(
+                    expression=Max('quote'),
+                    partition_by=[F('year'),F('month')]
+                ),
+                low=Window(
+                    expression=Min('quote'),
+                    partition_by=[F('year'),F('month')]
+                ),
+                close=Window(
+                    expression=LastValue('quote'),
+                    partition_by=[F('year'),F('month')],
+                    order_by=F('datetime').asc()
+                )
+            ).values(
+                # 3. Now, select only the columns we need.
+                'year','month', 'open', 'high', 'low', 'close', 'products_id'
+            ).distinct("year","month").order_by('year','month') # 4. Use distinct() to get one unique row per month.
+
         return self._ohcl_monthly_before_splits
 
     def ohclDailyBeforeSplits(self):
         if hasattr(self, "_ohcl_daily_before_splits") is False:
-            with connection.cursor() as c:
-                c.execute("""
-                    select 
-                        quotes.products_id, 
-                        datetime::date as date, 
-                        (array_agg(quote order by datetime))[1] as open, 
-                        min(quote) as low, 
-                        max(quote) as high, 
-                        (array_agg(quote order by datetime desc))[1] as close 
-                    from quotes 
-                    where quotes.products_id=%s
-                    group by quotes.products_id, datetime::date 
-                    order by datetime::date """, (self.id, ))
-                self._ohcl_daily_before_splits=functions.dictfetchall(c)
+            self._ohcl_daily_before_splits = Quotes.objects.filter(
+                products_id=self.id
+            ).annotate(
+                # 1. First, create the 'month' field that we will partition by.
+                date=Cast('datetime', output_field=DateField()),
+            ).values('date').annotate(# This .values() call now defines our GROUP BY clause
+                # 2. Next, apply all calculations as window functions.
+                # This calculates the result for each row's respective month.
+                # Note that Min() and Max() can also be used as window functions.
+                open=Window(
+                    expression=FirstValue('quote'),
+                    partition_by=[F('date')],
+                    order_by=F('datetime').asc()
+                ),
+                high=Window(
+                    expression=Max('quote'),
+                    partition_by=[F('date')]
+                ),
+                low=Window(
+                    expression=Min('quote'),
+                    partition_by=[F('date')]
+                ),
+                close=Window(
+                    expression=FirstValue('quote'),
+                    partition_by=[F('date')],
+                    order_by=F('datetime').desc()
+                )
+            ).values(
+                # 3. Now, select only the columns we need.
+                'date', 'open', 'high', 'low', 'close', 'products_id'
+            ).distinct("date").order_by('date') # 4. Use distinct() to get one unique row per month.
         return self._ohcl_daily_before_splits
         
+    def compare_with(self, other_product):
+        """
+            Compare product quotes between this product and other
+            Returns a list of dictionaries ordered by datetime
+        """
+        from .models import Quotes
+        # from django.db.models import (
+        #     Subquery, OuterRef, F, FloatField, DurationField,
+        #     BigIntegerField, ExpressionWrapper
+        # )
+        # from django.db.models.functions import Cast,Extract
+
+        # 1. Define your two base querysets
+        qs_better = Quotes.objects.filter(products=self).order_by('datetime')
+        qs_worse = Quotes.objects.filter(products=other_product)
+
+        # 2. Create two subqueries: one for the value, one for the datetime.
+        # A subquery can only return a single column, so we need two.
+
+        # Subquery to find the latest value
+        subquery_value = qs_worse.filter(
+            datetime__lte=OuterRef('datetime')
+        ).order_by('-datetime').values('quote')[:1]
+
+        # Subquery to find the datetime of that latest value
+        subquery_datetime = qs_worse.filter(
+            datetime__lte=OuterRef('datetime')
+        ).order_by('-datetime').values('datetime')[:1]
+
+        # 3. Annotate the first queryset with all calculated fields
+        comparison_queryset = qs_better.annotate(
+            # Get the corresponding value and datetime from the other stock
+            price_better=F('quote'),
+            price_worse=Subquery(subquery_value),
+            datetime_worse=Subquery(subquery_datetime),
+        ).annotate(
+            # Calculate the time difference. The result is a DurationField
+            diff=Extract(
+                     ExpressionWrapper(F('datetime') - F('datetime_worse'), output_field=DurationField()
+            ), "epoch"), 
+            price_ratio=Cast(F('quote'), FloatField()) / Cast(F('price_worse'), FloatField())
+        ).values("datetime", "price_better", "price_worse", "diff", "price_ratio").order_by("datetime")
+        return list(comparison_queryset)
+
+
+
     @staticmethod
     def next_system_products_id():
         return Products.objects.filter(id__lt=10000000).order_by("-id")[0].id+1
-
-class Productspairs(models.Model):
-    name = models.CharField(max_length=200, blank=False, null=False)
-    a = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='products')
-    b = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='+')
-
-    class Meta:
-        managed = True
-        db_table = 'productspairs'
-
-class Productstypes(models.Model):
-    name = models.TextField()
-
-    class Meta:
-        managed = True
-        db_table = 'productstypes'
-        
-    def __str__(self):
-        return self.fullName()
-        
-    def fullName(self):
-        return _(self.name)
 
 class Quotes(models.Model):
     datetime = models.DateTimeField(blank=True, null=True)
@@ -1124,7 +1215,18 @@ class Quotes(models.Model):
     def __str__(self):
         return f"Quote ({self.id}) of '{self.products.name}' at {self.datetime} is {self.quote}"
 
-
+        
+    @staticmethod
+    def qs_last_quotes():
+        """
+            Returns a Quotes queryset with the last quotes of all products with quotes
+        """
+        return Quotes.objects.all().order_by(
+                'products_id', 
+                '-datetime'
+            ).distinct(
+                'products_id'
+            )     
 
     @staticmethod
     def post_payload(products="http://testserver/api/products/79329/", datetime=None, quote=10):
@@ -1314,6 +1416,28 @@ class Quotes(models.Model):
 #                print("MASSIVE FACTOR NOT FOUND",  needed_factor)
 #        return r_factors
 
+class Productspairs(models.Model):
+    name = models.CharField(max_length=200, blank=False, null=False)
+    a = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='products')
+    b = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='+')
+
+    class Meta:
+        managed = True
+        db_table = 'productspairs'
+
+class Productstypes(models.Model):
+    name = models.TextField()
+
+    class Meta:
+        managed = True
+        db_table = 'productstypes'
+        
+    def __str__(self):
+        return self.fullName()
+        
+    def fullName(self):
+        return _(self.name)
+
 class Splits(models.Model):
     datetime = models.DateTimeField()
     products = models.ForeignKey(Products, models.DO_NOTHING)
@@ -1327,70 +1451,142 @@ class Splits(models.Model):
 
 
 class StrategiesTypes(models.IntegerChoices):
-    PairsInSameAccount = 1, _('Pairs in same account') #additional {"worse":_, "better":_ "account" }
+    PairsInSameAccount = 1, _('Pairs in same account')
     Ranges = 2,  _('Product ranges')
-    Generic = 3, _('Generic') #additional { }
+    Generic = 3, _('Generic') 
+    FastOperations = 4, _('Fast operations') 
+
+
+
+class StrategiesPairsInSameAccount(models.Model):
+    strategy = models.OneToOneField("Strategies", on_delete=models.CASCADE, primary_key=True)
+    worse_product = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='worse_product')
+    better_product = models.ForeignKey(Products, on_delete=models.DO_NOTHING, related_name='better_product')
+    account = models.ForeignKey(Accounts, on_delete=models.DO_NOTHING)
+
+    class Meta:
+        managed = True
+        db_table = 'strategies_pairs_in_same_account'
+
+    @staticmethod
+    def post_payload(
+        strategy, 
+        worse_product="http://testserver/api/products/79329/", 
+        better_product="http://testserver/api/products/79328/", 
+        account="http://testserver/api/accounts/4/"
+    ):
+        return {
+            "strategy": strategy,
+            "worse_product": worse_product,
+            "better_product": better_product,
+            "account": account,
+        }
+
+class StrategiesProductsRange(models.Model):
+    strategy = models.OneToOneField("Strategies", on_delete=models.CASCADE, primary_key=True)
+    product = models.ForeignKey(Products, on_delete=models.DO_NOTHING)
+    investments = models.ManyToManyField("Investments", blank=False)
+    percentage_between_ranges = models.DecimalField(blank=False, null=False,max_digits=100, decimal_places=6)
+    percentage_gains = models.DecimalField(blank=False, null=False, max_digits=100, decimal_places=6)
+    amount = models.DecimalField(blank=False, null=False, max_digits=100, decimal_places=6)
+    recomendation_method = models.IntegerField(choices=RANGE_RECOMENDATION_CHOICES)
+    only_first = models.BooleanField(blank=False, null=False)
+
+    class Meta:
+        managed = True
+        db_table = 'strategies_products_range'
+
+    @staticmethod
+    def post_payload(
+        strategy, 
+        investments,
+        product="http://testserver/api/products/79329/",
+        percentage_between_ranges=0.05,
+        percentage_gains=0.10,
+        amount=10000,
+        recomendation_method=1,
+        only_first=False
+    ):
+        return {
+            "strategy": strategy,
+            "product": product,
+            "investments": investments,
+            "percentage_between_ranges": percentage_between_ranges,
+            "percentage_gains": percentage_gains,
+            "amount": amount,
+            "recomendation_method": recomendation_method,
+            "only_first": only_first,
+        }
+
+class StrategiesGeneric(models.Model):
+    strategy = models.OneToOneField("Strategies", on_delete=models.CASCADE, primary_key=True)
+    investments = models.ManyToManyField("Investments", blank=False)
+
+    class Meta:
+        managed = True
+        db_table = 'strategies_generic'
+
+    @staticmethod
+    def post_payload(
+        strategy, 
+        investments
+    ):
+        return {
+            "strategy": strategy,
+            "investments": investments,
+        }
+
+class StrategiesFastOperations(models.Model):
+    strategy = models.OneToOneField("Strategies", on_delete=models.CASCADE, primary_key=True)
+    accounts = models.ManyToManyField("accounts", blank=False)
+
+    class Meta:
+        managed = True
+        db_table = 'strategies_fast_operations'
+
+    @staticmethod
+    def post_payload(
+        strategy, 
+        accounts
+    ):
+        """
+        Static method 
+
+        @param strategy Dictionary with strategy object
+        @param accounts List of urls
+        """
+        return {
+            "strategy": strategy,
+            "accounts": accounts,
+        }
+
 
 class Strategies(models.Model):
-    name = models.TextField()
-    investments = models.ManyToManyField("Investments", blank=False)
-    dt_from = models.DateTimeField(blank=True, null=True)
+    name = models.TextField(blank=False, null=False)
+    dt_from = models.DateTimeField(blank=False, null=False)
     dt_to = models.DateTimeField(blank=True, null=True)
     type = models.IntegerField(choices=StrategiesTypes.choices)
     comment = models.TextField(blank=True, null=True)
-    additional1 = models.IntegerField(blank=True, null=True)   
-    additional2 = models.IntegerField(blank=True, null=True)   
-    additional3 = models.IntegerField(blank=True, null=True)   
-    additional4 = models.IntegerField(blank=True, null=True)   
-    additional5 = models.IntegerField(blank=True, null=True)   
-    additional6 = models.IntegerField(blank=True, null=True)   
-    additional7 = models.IntegerField(blank=True, null=True)   
-    additional8 = models.IntegerField(blank=True, null=True)   
-    additional9 = models.IntegerField(blank=True, null=True)   
-    additional10 = models.IntegerField(blank=True, null=True)   
-    
     class Meta:
         managed = True
         db_table = 'strategies'
-        ordering = ['name']
-        
-                
+
+
+                        
     @staticmethod
     def post_payload(
-        investments, #It's a list of urls of investments 
         name="New strategy", 
         dt_from=None, 
         dt_to=None, 
         type=2, 
         comment="Strategy comment", 
-        additional1=79329, 
-        additional2=79329, 
-        additional3=79329, 
-        additional4=79329, 
-        additional5=79329, 
-        additional6=79329, 
-        additional7=79329, 
-        additional8=79329, 
-        additional9=79329, 
-        additional10=79329
     ):
         return {
             "name": name, 
-            "investments": investments, 
             "dt_from": timezone.now() if dt_from is None else dt_from, 
             "dt_to": dt_to, 
             "type":type, 
-            "comment":comment, 
-            "additional1":additional1, 
-            "additional2":additional1, 
-            "additional3":additional1, 
-            "additional4":additional1, 
-            "additional5":additional1, 
-            "additional6":additional1, 
-            "additional7":additional1, 
-            "additional8":additional1, 
-            "additional9":additional1, 
-            "additional10":additional1, 
+            "comment":comment,
         }
 
     ## Replaces None for dt_to and sets a very big datetine
@@ -1398,8 +1594,9 @@ class Strategies(models.Model):
         if self.dt_to is None:
             return timezone.now().replace(hour=23, minute=59)#End of the current day if strategy is not closed
         return self.dt_to
-
-
+    @staticmethod
+    def hurl(request, id):
+        return request.build_absolute_uri(reverse('strategies-detail', args=(id, )))
 
 class Accountstransfers(models.Model):
     datetime = models.DateTimeField(blank=False, null=False)

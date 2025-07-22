@@ -28,6 +28,10 @@ router.register(r'productspairs', money_views.ProductspairsViewSet)
 router.register(r'productsstrategies', money_views.ProductsStrategiesViewSet)
 router.register(r'productstypes', money_views.ProductstypesViewSet)
 router.register(r'quotes', money_views.QuotesViewSet)
+router.register(r'strategies_fastoperations', money_views.StrategiesFastOperationsViewSet)
+router.register(r'strategies_pairsinsameaccount', money_views.StrategiesPairsInSameAccountViewSet)
+router.register(r'strategies_productsrange', money_views.StrategiesProductsRangeViewSet)
+router.register(r'strategies_generic', money_views.StrategiesGenericViewSet)
 router.register(r'strategies', money_views.StrategiesViewSet)
 router.register(r'stockmarkets', money_views.StockmarketsViewSet)
 
@@ -37,7 +41,6 @@ urlpatterns=[
     path('alerts/', money_views.Alerts.as_view(), name='Alerts'),
     path('login/', money_views_login.login, name="login"), 
     path('logout/', money_views_login.logout, name="logout"), 
-    path('assets/report/', money_views.AssetsReport, name='AssetsReport'),
     path('catalog_manager/', money_views.CatalogManager, name='CatalogManager'),
     path('currencies/', money_views.Currencies, name='Currencies'),
     path('derivatives/', money_views.Derivatives.as_view(), name='Derivatives'),
@@ -68,8 +71,6 @@ urlpatterns=[
     path('reports/annual/gainsbyproductstypes/<int:year>/', money_views.ReportAnnualGainsByProductstypes, name='ReportAnnualGainsByProductstypes'),
     path('statistics/', money_views.Statistics, name='Statistics'),
     path('timezones/', money_views.Timezones.as_view(), name='Timezones'),
-    path('unogenerator/working/', money_views.UnogeneratorWorking.as_view()),
-    
     path('schema/', SpectacularAPIView.as_view(), name='schema'),
     path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 ]

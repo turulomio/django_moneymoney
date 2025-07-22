@@ -1,8 +1,8 @@
 {
   "header": {
     "comment": "eric project file for project django_moneymoney",
-    "copyright": "Copyright (C) 2024 , ",
-    "saved": "2024-04-28, 10:33:24"
+    "copyright": "Copyright (C) 2025 , ",
+    "saved": "2025-06-02, 08:26:16"
   },
   "project": {
     "AUTHOR": "",
@@ -215,7 +215,6 @@
       "moneymoney/__init__.py",
       "moneymoney/admin.py",
       "moneymoney/apps.py",
-      "moneymoney/assetsreport.py",
       "moneymoney/exceptions.py",
       "moneymoney/functions.py",
       "moneymoney/hardcoded_strings.py",
@@ -228,6 +227,7 @@
       "moneymoney/management/commands/loaddata_catalogs.py",
       "moneymoney/management/commands/makedbmessages.py",
       "moneymoney/management/commands/procedure.py",
+      "moneymoney/management/commands/products_autoupdate_not_found.py",
       "moneymoney/migrations/0001_initial.py",
       "moneymoney/migrations/0002_auto_20230107_2039.py",
       "moneymoney/migrations/0003_add_group_catalog_manager.py",
@@ -282,6 +282,10 @@
       "moneymoney/migrations/0052_products_productsstrategies.py",
       "moneymoney/migrations/0053_migrate_from_pci_to_productstrategies.py",
       "moneymoney/migrations/0054_remove_products_pci.py",
+      "moneymoney/migrations/0055_currency_mandatory_and_in_settings.py",
+      "moneymoney/migrations/0056_strategies_accounts_alter_strategies_investments_and_more.py",
+      "moneymoney/migrations/0057_newstrategies_strategiesfastoperations_and_more.py",
+      "moneymoney/migrations/0058_migrate_strategies_to_newstrategies.py",
       "moneymoney/migrations/__init__.py",
       "moneymoney/models.py",
       "moneymoney/paginators.py",

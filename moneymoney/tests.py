@@ -5,9 +5,9 @@ from django.core.exceptions import ValidationError
 from django.test import tag
 from django.utils import timezone
 from json import loads
-from moneymoney import models, ios, investing_com, functions
+from logging import getLogger, ERROR
+from moneymoney import models, ios, investing_com, functions, types
 from moneymoney.reusing import tests_helpers
-from os import path
 from pydicts import lod, casts, dod
 from request_casting.request_casting import id_from_url
 from rest_framework import status
@@ -35,6 +35,11 @@ dtaware_yesterday=dtaware_now-timedelta(days=1)
 # Defines report moment for static reports to avoid problems with asserts
 static_year=2024
 static_month=1
+
+# Concepts url
+hurl_concepts_oa=f"http://testserver/api/concepts/{types.eConcept.OpenAccount}/"
+hurl_concepts_fo=f"http://testserver/api/concepts/{types.eConcept.FastInvestmentOperations}/"
+
 
 class Functions(APITestCase):
     @functions.suppress_stdout
@@ -115,6 +120,15 @@ class Models(APITestCase):
         self.assertEqual(qs.count(), 1)
         self.assertEqual(qs[0].id, 79329)
 
+    def test_Quotes(self):
+        for i in range(4):
+            models.Quotes.objects.create(products_id=79328+i, datetime=casts.dtaware_now(),quote=i)
+            models.Quotes.objects.create(products_id=79328+i, datetime=casts.dtaware_now(),quote=i*10)
+
+        with self.assertNumQueries(1):
+            quotes=models.Quotes.qs_last_quotes()
+            self.assertEqual(quotes.count(), 4)
+
 class API(APITestCase):
     fixtures=["all.json"] #Para cargar datos por defecto
 
@@ -124,6 +138,12 @@ class API(APITestCase):
             Only instantiated once
         """
         super().setUpClass()
+
+
+        # Store original logging level and set it higher to suppress warnings
+        logger = getLogger('django.request')
+        logger.setLevel(ERROR) # This will suppress INFO and WARNING
+
         
         # User to test api
         cls.user_authorized_1 = User(
@@ -251,6 +271,12 @@ class API(APITestCase):
         #lod.lod_print(dict_)
         #TODO All kind of values
 
+    def test_Quotes(self):
+        for i in range(2):
+            tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(quote=i+1), status.HTTP_201_CREATED)
+
+        with self.assertNumQueries(2):
+            quotes=tests_helpers.client_get(self, self.client_authorized_1, f"/api/quotes/?last=true", status.HTTP_200_OK)       
 
     @tag("current")
     def test_Quotes_get_quotes(self):
@@ -658,33 +684,21 @@ class API(APITestCase):
         # Create an investmentoperation in an inactive investment
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(active=False), status.HTTP_201_CREATED)        
         tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
-        dict_investment=tests_helpers.client_put(self, self.client_authorized_1, dict_investment["url"], models.Investments.post_payload(active=False), status.HTTP_200_OK)        
-        
+        dict_investment=tests_helpers.client_put(self, self.client_authorized_1, dict_investment["url"], models.Investments.post_payload(active=False), status.HTTP_200_OK)     
+
+        # Create a bank inactive with accounts
+        dict_bank=tests_helpers.client_post(self, self.client_authorized_1, "/api/banks/",  models.Banks.post_payload(active=False), status.HTTP_201_CREATED)
+        dict_account=tests_helpers.client_post(self, self.client_authorized_1, "/api/accounts/",  models.Accounts.post_payload(banks=dict_bank["url"]), status.HTTP_201_CREATED)        
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(accounts=dict_account["url"]), status.HTTP_201_CREATED)
+
         # Search alerts
         lod_alerts=tests_helpers.client_get(self, self.client_authorized_1, "/alerts/",  status.HTTP_200_OK)
         self.assertEqual(len(lod_alerts["orders_expired"]), 1 )
         self.assertEqual(len(lod_alerts["accounts_inactive_with_balance"]), 1 )
         self.assertEqual(len(lod_alerts["investments_inactive_with_balance"]), 1 )
+        self.assertEqual(len(lod_alerts["banks_inactive_with_balance"]), 1 )
 
-    def test_AssetsReport(self):
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(datetime=datetime(2023,12,29), amount=1000), status.HTTP_201_CREATED)
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(amount=100), status.HTTP_201_CREATED)
 
-        
-        
-        tests_helpers.client_post(self, self.client_authorized_1,"http://testserver/assets/report/",  { 
-            "format": "pdf", 
-            "chart_assets": js_image_b64, 
-            "chart_pie_product": js_image_b64, 
-            "chart_pie_percentage": js_image_b64, 
-            "chart_pie_pci": js_image_b64, 
-            "chart_pie_leverage": js_image_b64, 
-            "chart_pie_producttype": js_image_b64, 
-            "test": True,             
-        }, status.HTTP_200_OK, language="es-es")
-        assert path.exists("TestingAssetsReport.pdf")
-        
-    
     
     def test_Creditcards(self):
         # common _tests y deja creada una activa
@@ -761,7 +775,7 @@ class API(APITestCase):
         r=tests_helpers.client_get(self, self.client_authorized_1,  "/api/concepts/used/", status.HTTP_200_OK)
         self.assertEqual(lod.lod_sum(r, "used"), 0)
         
-
+    @tag("current")
     def test_ProductsRange(self):
         def generate_url(d):            
             call=f"?product={d['product']}&totalized_operations={d['totalized_operations']}&percentage_between_ranges={d['percentage_between_ranges']}&percentage_gains={d['percentage_gains']}&amount_to_invest={d['amount_to_invest']}&recomendation_methods={d['recomendation_methods']}"
@@ -772,7 +786,7 @@ class API(APITestCase):
         # Product hasn't quotes
         d={
             "product": "http://testserver/api/products/79329/",   
-            "recomendation_methods":2,  
+            "recomendation_methods": 8, #SMA10 
             "investments":[] ,
             "totalized_operations":True, 
             "percentage_between_ranges":2500, 
@@ -782,7 +796,8 @@ class API(APITestCase):
         tests_helpers.client_get(self, self.client_authorized_1, generate_url(d) , status.HTTP_400_BAD_REQUEST)
         
         #Adding a quote and test again without investments
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
+        for i in range(30):
+            tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(datetime=datetime(2023,1,1)+timedelta(days=i), quote=i+1), status.HTTP_201_CREATED)
         tests_helpers.client_get(self, self.client_authorized_1, generate_url(d) , status.HTTP_200_OK)
 
         #Adding an investment operation and an order
@@ -791,7 +806,7 @@ class API(APITestCase):
         tests_helpers.client_post(self, self.client_authorized_1, "/api/orders/",  models.Orders.post_payload(date_=self.now.date(), investments=dict_investment["url"]), status.HTTP_201_CREATED)
         d={
             "product": "http://testserver/api/products/79329/",   
-            "recomendation_methods":3,  
+            "recomendation_methods":10,  #HMA10
             "investments":[dict_investment["id"], ] ,
             "totalized_operations":True, 
             "percentage_between_ranges":2500, 
@@ -834,28 +849,210 @@ class API(APITestCase):
         dict_sp_update=tests_helpers.client_put(self, self.client_catalog_manager, dict_sp["url"], dict_sp_update, status.HTTP_200_OK)
         tests_helpers.client_delete(self, self.client_authorized_1, dict_sp["url"], dict_sp_update, status.HTTP_400_BAD_REQUEST)
         tests_helpers.client_delete(self, self.client_catalog_manager, dict_sp["url"], dict_sp_update, status.HTTP_204_NO_CONTENT)
+
+    # def test_Strategies(self):
+    #     # Creates an investment with a quote and an io
+    #     dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
+    #     tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(products=dict_investment["products"]), status.HTTP_201_CREATED)
+    #     tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_201_CREATED)
+
+    #     # Creates a strategy for this investment
+    #     dict_strategy=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies/",  models.Strategies.post_payload(investments=[dict_investment['url'], ]), status.HTTP_201_CREATED)
         
+    #     # Gets strategy plio_id
+    #     dict_strategy_plio=tests_helpers.client_get(self, self.client_authorized_1, f"{dict_strategy['url']}ios/",  status.HTTP_200_OK)
+    #     self.assertEqual(dict_strategy_plio["entries"], ["79329"])
         
+    #     # Gets strategies with balance
+    #     lod_strategy_withbalance=tests_helpers.client_get(self, self.client_authorized_1, "/api/strategies/withbalance/",  status.HTTP_200_OK)
+    #     self.assertEqual(len(lod_strategy_withbalance), 1)
+
+    #     # Gests strategies by invesment
+    #     lod_strategy_by_investment=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/?investment={dict_investment['url']}&active=true&type=2",  status.HTTP_200_OK)
+    #     self.assertEqual(len(lod_strategy_by_investment), 1)
+
+    def test_StrategiesFastOperations(self):
+        # Opens account
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_concepts_oa, amount=999999), status.HTTP_201_CREATED)
+
+        # Create a FO strategy
+        dict_strategy_fos=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies_fastoperations/",  models.StrategiesFastOperations.post_payload(strategy=models.Strategies.post_payload(name="FOS", type=models.StrategiesTypes.FastOperations), accounts=["http://testserver/api/accounts/4/"]), status.HTTP_201_CREATED)
+
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_concepts_fo, amount=-10, comment="FO"), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_concepts_fo, amount=1010, comment="FO"), status.HTTP_201_CREATED)
+
+        # Get FO strategy detailed view
+        strategy_detail=tests_helpers.client_get(self, self.client_authorized_1, f"{dict_strategy_fos['url']}detailed/",  status.HTTP_200_OK)
+        self.assertEqual(lod.lod_sum(strategy_detail,"amount"), 1000)
+
+        #Update fos
+        dict_strategy_fos=tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_fos["url"],  models.StrategiesFastOperations.post_payload(strategy=models.Strategies.post_payload(name="FOS Updated", type=models.StrategiesTypes.FastOperations), accounts=["http://testserver/api/accounts/4/"]), status.HTTP_200_OK)
+        self.assertEqual(dict_strategy_fos["strategy"]["name"], "FOS Updated")
+
+        # Get a created StrategiesFastOperations
+        dict_strategy_fos=tests_helpers.client_get(self, self.client_authorized_1, dict_strategy_fos["url"], status.HTTP_200_OK)
+        self.assertEqual(dict_strategy_fos["strategy"]["name"], "FOS Updated")
+
+        # Creates a strategy empty directly should fail, due to it redirect to StrategiesFastOperations and needs accounts ...
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies/",  models.Strategies.post_payload(type=models.StrategiesTypes.FastOperations, name="FOS"), status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        # Update a strategy directly should fail
+        tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_fos["strategy"]["url"],  models.Strategies.post_payload(type=models.StrategiesTypes.FastOperations, name="FOS Direct update"), status.HTTP_405_METHOD_NOT_ALLOWED)
         
+        # GEt List of strategies
+        strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/",  status.HTTP_200_OK)
+        self.assertEqual(len(strategies), 1)
+        # GEt List of strategies with balance
+        strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/withbalance/",  status.HTTP_200_OK)
+        self.assertEqual(len(strategies), 1)
         
 
-    def test_Strategies(self):
-        # Creates an investment with a quote and an io
+        # Delete a strategy directly should fail
+        tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_fos["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
+        
+        # Delete a strategy fast operation directly should delete
+        after_delete=tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_fos["url"], [], status.HTTP_204_NO_CONTENT)
+        self.assertEqual(len(after_delete), 0)
+
+    def test_StrategiesGeneric(self):
+        # Creates an investment operation with a quote and an io
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(products=dict_investment["products"]), status.HTTP_201_CREATED)
+
+        # Create a Generic strategy
+        dict_strategy_generic=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies_generic/", models.StrategiesGeneric.post_payload(strategy=models.Strategies.post_payload(name="GS", type=models.StrategiesTypes.Generic), investments=[dict_investment["url"]]), status.HTTP_201_CREATED)
+
         tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_201_CREATED)
 
-        # Creates a strategy for this investment
-        dict_strategy=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies/",  models.Strategies.post_payload(investments=[dict_investment['url'], ]), status.HTTP_201_CREATED)
-        
-        # Gets strategy plio_id
-        dict_strategy_plio=tests_helpers.client_get(self, self.client_authorized_1, f"{dict_strategy['url']}ios/",  status.HTTP_200_OK)
-        self.assertEqual(dict_strategy_plio["entries"], ["79329"])
-        
-        # Gets strategies with balance
-        lod_strategy_withbalance=tests_helpers.client_get(self, self.client_authorized_1, "/api/strategies/withbalance/",  status.HTTP_200_OK)
-        self.assertEqual(len(lod_strategy_withbalance), 1)
+        # Get FO strategy detailed view
+        strategy_detail=tests_helpers.client_get(self, self.client_authorized_1, f"{dict_strategy_generic['url']}detailed/",  status.HTTP_200_OK)
+        first_entry=strategy_detail["entries"][0]
+        self.assertEqual(strategy_detail[first_entry]["total_io_current"]["balance_user"], 10000)
 
-        # Gests strategies by invesment
-        lod_strategy_by_investment=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/?investment={dict_investment['url']}&active=true&type=2",  status.HTTP_200_OK)
-        self.assertEqual(len(lod_strategy_by_investment), 1)
+        #Update fos
+        dict_strategy_generic=tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_generic["url"],  models.StrategiesGeneric.post_payload(strategy=models.Strategies.post_payload(name="GS Updated", type=models.StrategiesTypes.Generic), investments=[dict_investment["url"]]), status.HTTP_200_OK)
+        self.assertEqual(dict_strategy_generic["strategy"]["name"], "GS Updated")
+
+        # Get a created StrategiesFastOperations
+        dict_strategy_generic=tests_helpers.client_get(self, self.client_authorized_1, dict_strategy_generic["url"], status.HTTP_200_OK)
+        self.assertEqual(dict_strategy_generic["strategy"]["name"], "GS Updated")
+
+        # Creates a strategy empty directly should fail, due to it redirect to StrategiesFastOperations and needs accounts ...
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies/",  models.Strategies.post_payload(type=models.StrategiesTypes.Generic, name="GS"), status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        # Tries to change type and returns error
+        tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_generic["url"],  models.StrategiesGeneric.post_payload(strategy=models.Strategies.post_payload(name="GS Updated", type=models.StrategiesTypes.FastOperations), investments=[dict_investment["url"]]), status.HTTP_400_BAD_REQUEST)
+
+        # Update a strategy directly should fail
+        tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_generic["strategy"]["url"],  models.Strategies.post_payload(type=models.StrategiesTypes.Generic, name="GS Direct update"), status.HTTP_405_METHOD_NOT_ALLOWED)
+        
+        # Delete a strategy directly should fail
+        tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_generic["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        # GEt List of strategies
+        strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/",  status.HTTP_200_OK)
+        # self.assertTrue("strategiesgeneric" in strategies[0])
+        # GEt List of strategies with balance
+        strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/withbalance/",  status.HTTP_200_OK)
+        self.assertEqual(len(strategies), 1)
+
+        # Delete a strategy directly should fail
+        tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_generic["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
+        
+        # Delete a strategy fast operation directly should delete
+        after_delete=tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_generic["url"], [], status.HTTP_204_NO_CONTENT)
+        self.assertEqual(len(after_delete), 0)
+
+    def test_StrategiesPairsInSameAccount(self):
+        # Create a Pairs strategy with wrong type
+        dict_strategy_pairs=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies_pairsinsameaccount/", models.StrategiesPairsInSameAccount.post_payload(strategy=models.Strategies.post_payload(name="PairS", type=models.StrategiesTypes.Generic)), status.HTTP_400_BAD_REQUEST)
+
+        # Create a Pairs strategy 
+        dict_strategy_pairs=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies_pairsinsameaccount/", models.StrategiesPairsInSameAccount.post_payload(strategy=models.Strategies.post_payload(name="PairS", type=models.StrategiesTypes.PairsInSameAccount)), status.HTTP_201_CREATED)
+
+        # Get FO strategy detailed view
+        strategy_detail=tests_helpers.client_get(self, self.client_authorized_1, f"{dict_strategy_pairs['url']}detailed/",  status.HTTP_200_OK)
+
+        #Update fos
+        dict_strategy_pairs=tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_pairs["url"],  models.StrategiesPairsInSameAccount.post_payload(strategy=models.Strategies.post_payload(name="GS Updated", type=models.StrategiesTypes.PairsInSameAccount)), status.HTTP_200_OK)
+        self.assertEqual(dict_strategy_pairs["strategy"]["name"], "GS Updated")
+
+        # Get a created StrategiesFastOperations
+        dict_strategy_pairs=tests_helpers.client_get(self, self.client_authorized_1, dict_strategy_pairs["url"], status.HTTP_200_OK)
+        self.assertEqual(dict_strategy_pairs["strategy"]["name"], "GS Updated")
+
+        # Creates a strategy empty directly should fail, due to it redirect to StrategiesFastOperations and needs accounts ...
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies/",  models.Strategies.post_payload(type=models.StrategiesTypes.Generic, name="GS"), status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        # Tries to change type and returns error
+
+        tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_pairs["url"],  models.StrategiesPairsInSameAccount.post_payload(strategy=models.Strategies.post_payload(name="GS Updated", type=models.StrategiesTypes.Generic)), status.HTTP_400_BAD_REQUEST)
+
+        # Update a strategy directly should fail
+        tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_pairs["strategy"]["url"],  models.Strategies.post_payload(type=models.StrategiesTypes.Generic, name="GS Direct update"), status.HTTP_405_METHOD_NOT_ALLOWED)
+        
+        # Delete a strategy directly should fail
+        tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_pairs["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        # GEt List of strategies
+        strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/",  status.HTTP_200_OK)
+        self.assertEqual(len(strategies), 1)
+        # GEt List of strategies with balance
+        strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/withbalance/",  status.HTTP_200_OK)
+        self.assertEqual(len(strategies), 1)
+
+        # Delete a strategy directly should fail
+        tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_pairs["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
+        
+        # Delete a strategy fast operation directly should delete
+        after_delete=tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_pairs["url"], [], status.HTTP_204_NO_CONTENT)
+        self.assertEqual(len(after_delete), 0)
+
+
+    def test_StrategiesProductsRange(self):
+        # Creates an investment operation with a quote and an io
+        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(products=dict_investment["products"]), status.HTTP_201_CREATED)
+        # Create a Pairs strategy with wrong type
+        dict_strategy_pr=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies_productsrange/", models.StrategiesProductsRange.post_payload(strategy=models.Strategies.post_payload(name="PRS", type=models.StrategiesTypes.Generic), investments=[dict_investment["url"]]), status.HTTP_400_BAD_REQUEST)
+
+        # Create a Pairs strategy 
+        dict_strategy_pr=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies_productsrange/", models.StrategiesProductsRange.post_payload(strategy=models.Strategies.post_payload(name="PRS", type=models.StrategiesTypes.Ranges), investments=[dict_investment["url"]]), status.HTTP_201_CREATED)
+
+        # Get FO strategy detailed view
+        strategy_detail=tests_helpers.client_get(self, self.client_authorized_1, f"{dict_strategy_pr['url']}detailed/",  status.HTTP_200_OK)
+
+        #Update fos
+        dict_strategy_pr=tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_pr["url"],  models.StrategiesProductsRange.post_payload(strategy=models.Strategies.post_payload(name="PRS Updated", type=models.StrategiesTypes.Ranges), investments=[dict_investment["url"]]), status.HTTP_200_OK)
+        self.assertEqual(dict_strategy_pr["strategy"]["name"], "PRS Updated")
+
+        # Get a created StrategiesProductsRange
+        dict_strategy_pr=tests_helpers.client_get(self, self.client_authorized_1, dict_strategy_pr["url"], status.HTTP_200_OK)
+        self.assertEqual(dict_strategy_pr["strategy"]["name"], "PRS Updated")
+
+        # Creates a strategy empty directly should fail, due to it redirect to StrategiesFastOperations and needs accounts ...
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies/",  models.Strategies.post_payload(type=models.StrategiesTypes.Ranges, name="PRS"), status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        # Tries to change type and returns error
+        tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_pr["url"],  models.StrategiesPairsInSameAccount.post_payload(strategy=models.Strategies.post_payload(name="GS Updated", type=models.StrategiesTypes.Generic)), status.HTTP_400_BAD_REQUEST)
+
+        # Update a strategy directly should fail
+        tests_helpers.client_put(self, self.client_authorized_1, dict_strategy_pr["strategy"]["url"],  models.Strategies.post_payload(type=models.StrategiesTypes.Generic, name="GS Direct update"), status.HTTP_405_METHOD_NOT_ALLOWED)
+        
+        # Delete a strategy directly should fail
+        tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_pr["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        # GEt List of strategies
+        strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/",  status.HTTP_200_OK)
+        self.assertEqual(len(strategies), 1)
+
+        # GEt List of strategies with balance
+        strategies=tests_helpers.client_get(self, self.client_authorized_1, f"/api/strategies/withbalance/",  status.HTTP_200_OK)
+        self.assertEqual(len(strategies), 1)
+
+        # Delete a strategy directly should fail
+        tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_pr["strategy"]["url"], [], status.HTTP_405_METHOD_NOT_ALLOWED)
+        
+        # Delete a strategy fast operation directly should delete
+        after_delete=tests_helpers.client_delete(self, self.client_authorized_1, dict_strategy_pr["url"], [], status.HTTP_204_NO_CONTENT)
+        self.assertEqual(len(after_delete), 0)
