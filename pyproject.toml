@@ -33,7 +33,7 @@ coverage = ">=7.9.1"
 
 [tool.poe.tasks]
 reusing = { script = "moneymoney.poethepoet:reusing" }
-cypress_test_server = { script = "moneymoney.poethepoet:cypress_test_server" }
+testserver_e2e = { script = "moneymoney.poethepoet:testserver_e2e" }
 
 [project.urls]
 homepage = "https://github.com/turulomio/django_moneymoney/"

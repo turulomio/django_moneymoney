@@ -14,7 +14,7 @@ else:
     TESTING=False
 
 
-if environ.get("E2E_TESTING")==1:
+if environ.get("E2E_TESTING") in [1, "1"]:
     E2E_TESTING=True
 else:
     E2E_TESTING=False
