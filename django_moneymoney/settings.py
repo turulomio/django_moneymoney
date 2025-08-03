@@ -12,8 +12,14 @@ if "test" in argv or "coverage" in argv:
     TESTING=True
 else:
     TESTING=False
+
+
+if environ.get("E2E_TESTING")==1:
+    E2E_TESTING=True
+else:
+    E2E_TESTING=False
     
-print("TESTING",  TESTING)
+print("TESTING",  TESTING, "E2E_TESTING", E2E_TESTING)
 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
