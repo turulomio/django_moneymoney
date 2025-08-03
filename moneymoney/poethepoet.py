@@ -1,6 +1,6 @@
 from sys import argv
 from moneymoney.reusing.github import download_from_github
-from os import system
+from os import system, environ
 
 def reusing():
     """
@@ -19,8 +19,9 @@ def reusing():
         download_from_github("turulomio", "django_calories_tracker", "calories_tracker/tests_helpers.py", "moneymoney/reusing")
 
 
-def cypress_test_server():
+def testserver_e2e():
     print("- Dropping test_xulpymoney database...")
     system("dropdb -U postgres -h 127.0.0.1 test_xulpymoney")
-    print("- Launching python manage.py test_server with user 'test' and password 'test'")
+    print("- Launching python manage.py test_server with user 'test' and password 'test' and fixed token to allow e2e paralellism")
+    environ["E2E_TESTING"]="1"
     system("python manage.py testserver moneymoney/fixtures/all.json moneymoney/fixtures/test_server.json --addrport 8004")

@@ -1,5 +1,5 @@
 ## This file belongs to https://github.com/turulomio/django_moneymoney project. If you want to reuse it pleuse copy with this reference
-
+from django.conf import settings
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -39,10 +39,22 @@ def login(request):
         if not pwd_valid:
             return Response("Wrong credentials", status=status.HTTP_401_UNAUTHORIZED)
 
-        if Token.objects.filter(user=user).exists():#Lo borra
-            token=Token.objects.get(user=user)
-            token.delete()
-        token=Token.objects.create(user=user)
+
+        if settings.E2E_TESTING:        # Allows parallelism
+            testing_e2e_token_value="testing_e2e_token"
+            if Token.objects.filter(user=user).exists():
+                token=Token.objects.get(user=user)
+                if not token.key==testing_e2e_token_value:
+                    token.key=testing_e2e_token_value
+                    token.save()
+            else:
+                token=Token.objects.create(user=user,key=testing_e2e_token_value)
+                token.save()
+        else: #NORMAL
+            if Token.objects.filter(user=user).exists():#Lo borra
+                token=Token.objects.get(user=user)
+                token.delete()
+            token=Token.objects.create(user=user)
         
         user.last_login=timezone.now()
         user.save()

@@ -35,11 +35,7 @@ class ProductRange():
             round(self.range_lowest_value(),  self.product.decimals), 
             round(self.range_highest_value(), self.product.decimals), 
         )
-    
-    ## Returns the value rounded to the number of decimals
-    def value_rounded(self):
-        return round(self.value, self.product.decimals)
-        
+            
     ## Return th value of the range highest value.. Points + percentage/2
     def range_highest_value(self):
         points_to_next_high= self.value/(1-self.percentage_down.value)-self.value
@@ -242,11 +238,6 @@ class ProductRangeManager:
             if pr.isInside(value) is True:
                 return index
         return None
-
-    ## @return LIst of range values of the manager
-    def list_of_range_values(self):
-        return self.list_of("value")
-
 
     ## Returns a list of sma from smas, which dt values are over price parameter
     ## @param dt. datetime
