@@ -379,6 +379,9 @@ class API(APITestCase):
         payload=models.Investments.post_payload(products=dict_product["url"], accounts=dict_account["url"])
         tests_helpers.common_tests_Collaborative(self, "/api/investments/", payload, self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
 
+
+
+
     def test_InvestmentsClasses(self):
         #Empty
         dict_classes=tests_helpers.client_get(self, self.client_authorized_1, "/investments/classes/", status.HTTP_200_OK)
@@ -498,6 +501,10 @@ class API(APITestCase):
         dict_ios_ids_simulation=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_merging_pp, status.HTTP_200_OK)
         self.assertEqual(dict_ios_ids_simulation["79329"]["total_io_current"]["balance_user"], 19980)
 
+
+
+
+    @tag("current")
     def test_Investmentsoperations(self):        
         # Create an investment operation
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
@@ -524,6 +531,13 @@ class API(APITestCase):
             
         with self.assertRaises(models.Investmentsoperations.DoesNotExist):
             models.Investmentsoperations.objects.get(pk=dict_io_updated["id"])
+
+        # Query investments operations with and investment without quotes
+        dict_product=tests_helpers.client_get(self, self.client_authorized_1, "/api/products/79226/", status.HTTP_200_OK)
+        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(products=dict_product["url"]), status.HTTP_201_CREATED)
+        response=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response[0], "Investment operation can't be created because its related product hasn't quotes.")
+
 
     def test_IOS(self):
         """
@@ -767,7 +781,6 @@ class API(APITestCase):
         r=tests_helpers.client_get(self, self.client_authorized_1,  "/api/concepts/used/", status.HTTP_200_OK)
         self.assertEqual(lod.lod_sum(r, "used"), 0)
         
-    @tag("current")
     def test_ProductsRange(self):
         def generate_url(d):            
             call=f"?product={d['product']}&totalized_operations={d['totalized_operations']}&percentage_between_ranges={d['percentage_between_ranges']}&percentage_gains={d['percentage_gains']}&amount_to_invest={d['amount_to_invest']}&recomendation_methods={d['recomendation_methods']}"
