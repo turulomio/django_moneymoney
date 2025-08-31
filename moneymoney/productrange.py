@@ -18,8 +18,6 @@ def lod_dtv_find_le(lod_dtv_, dt):
             return o
     return None
 
-    
-
 class ProductRange():
     def __init__(self, request,  id=None,  product=None,  value=None, percentage_down=None,  percentage_up=None, totalized_operations=True):
         self.request=request
@@ -262,8 +260,6 @@ class ProductRangeManager:
             if sma_value is not None and  price<sma_value["value"]:
                 r.append(smas[i])
         return r
-
-
     
     def recomendationmethods2indicators(self):
         if self.method in (0, 1):#ProductRangeInvestRecomendation. None_:
@@ -291,8 +287,6 @@ class ProductRangeManager:
             elif indicator[0]=="HMA":
                 df=indicators.hma(df, indicator[1])
         return df
-
-            
 
 
     def json(self):
