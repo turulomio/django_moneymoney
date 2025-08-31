@@ -18,8 +18,6 @@ def lod_dtv_find_le(lod_dtv_, dt):
             return o
     return None
 
-    
-
 class ProductRange():
     def __init__(self, request,  id=None,  product=None,  value=None, percentage_down=None,  percentage_up=None, totalized_operations=True):
         self.request=request
@@ -262,8 +260,6 @@ class ProductRangeManager:
             if sma_value is not None and  price<sma_value["value"]:
                 r.append(smas[i])
         return r
-
-
     
     def recomendationmethods2indicators(self):
         if self.method in (0, 1):#ProductRangeInvestRecomendation. None_:
@@ -285,15 +281,12 @@ class ProductRangeManager:
         """
             df is a panda Dataframe with ohcl and date keys
         """
-        print(self.recomendationmethods2indicators())
         for indicator in self.recomendationmethods2indicators():
             if indicator[0]=="SMA":
                 df=indicators.sma(df, indicator[1])
             elif indicator[0]=="HMA":
                 df=indicators.hma(df, indicator[1])
         return df
-
-            
 
 
     def json(self):
@@ -319,6 +312,5 @@ class ProductRangeManager:
             "last": o.product.basic_results()["last"], 
             "currency": o.product.currency, 
         }
-        print(df)
         r["dataframe"]=df.replace(to_replace=np.nan, value=None).to_dict('records')#Conviert a None NAN y devuelve dictioanry
         return r

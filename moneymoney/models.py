@@ -1115,7 +1115,7 @@ class Products(models.Model):
                 'year','month', 'open', 'high', 'low', 'close', 'products_id'
             ).distinct("year","month").order_by('year','month') # 4. Use distinct() to get one unique row per month.
 
-        return self._ohcl_monthly_before_splits
+        return list(self._ohcl_monthly_before_splits)
 
     def ohclDailyBeforeSplits(self):
         if hasattr(self, "_ohcl_daily_before_splits") is False:
@@ -1150,7 +1150,7 @@ class Products(models.Model):
                 # 3. Now, select only the columns we need.
                 'date', 'open', 'high', 'low', 'close', 'products_id'
             ).distinct("date").order_by('date') # 4. Use distinct() to get one unique row per month.
-        return self._ohcl_daily_before_splits
+        return list(self._ohcl_daily_before_splits)
         
     def compare_with(self, other_product):
         """
