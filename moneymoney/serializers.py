@@ -68,6 +68,10 @@ class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         created=serializers.HyperlinkedModelSerializer.create(self,  validated_data)
+        #Checks investment has quotes
+        if not models.Quotes.objects.filter(products=created.investments.products).exists():
+            raise serializers.ValidationError(_("Investment operation can't be created because its related product hasn't quotes."))
+
         created.save()
         created.investments.set_attributes_after_investmentsoperations_crud()
         created.update_associated_account_operation(self.context.get("request"))
@@ -76,6 +80,10 @@ class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     @transaction.atomic
     def update(self, instance, validated_data):
         updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
+        #Checks investment has quotes
+        if not models.Quotes.objects.filter(products=updated.investments.products).exists():
+            raise serializers.ValidationError(_("Investment operation can't be updated because its related product hasn't quotes."))
+
         updated.save()
         updated.investments.set_attributes_after_investmentsoperations_crud()
         updated.update_associated_account_operation(self.context.get("request"))
