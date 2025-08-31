@@ -285,7 +285,6 @@ class ProductRangeManager:
         """
             df is a panda Dataframe with ohcl and date keys
         """
-        print(self.recomendationmethods2indicators())
         for indicator in self.recomendationmethods2indicators():
             if indicator[0]=="SMA":
                 df=indicators.sma(df, indicator[1])
@@ -319,6 +318,5 @@ class ProductRangeManager:
             "last": o.product.basic_results()["last"], 
             "currency": o.product.currency, 
         }
-        print(df)
         r["dataframe"]=df.replace(to_replace=np.nan, value=None).to_dict('records')#Conviert a None NAN y devuelve dictioanry
         return r
