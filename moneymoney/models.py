@@ -719,6 +719,8 @@ class Investmentsoperations(models.Model):
     comment = models.TextField(blank=True, null=True)
     currency_conversion = models.DecimalField(max_digits=30, decimal_places=10, blank=False, null=False)
     associated_ao=models.OneToOneField("Accountsoperations", models.DO_NOTHING, blank=True, null=True)
+    associated_tranfer=models.OneToOneField("Investmentstransfers", models.DO_NOTHING, blank=True, null=True)
+
 
     class Meta:
         managed = True
@@ -801,6 +803,46 @@ class Investmentsoperations(models.Model):
                 self.save()
         
 
+
+
+class Investmentstransferstypes(models.Model):
+    name = models.TextField()
+
+    class Meta:
+        managed = True
+        db_table = 'investmentstransferstypes'
+        
+    def __str__(self):
+        return self.fullName()
+        
+    def fullName(self):
+        return _(self.name)
+
+class Investmentstransfers(models.Model):
+
+    type=models.ForeignKey('Investmentstransferstypes', models.DO_NOTHING, blank=False, null=False)
+
+    datetime_origin = models.DateTimeField(blank=False, null=False)
+    origin= models.ForeignKey('Investments', models.CASCADE, blank=False, null=False, related_name="origin")
+    shares_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
+    price_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
+    commission_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
+    taxes_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
+
+
+    datetime_destiny = models.DateTimeField(blank=False, null=False)
+    destiny= models.ForeignKey('Investments', models.CASCADE, blank=False, null=False, related_name="destiny")
+    shares_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
+    price_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
+    commission_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
+    taxes_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
+        
+    class Meta:
+        managed = True
+        db_table = 'investmentstransfers'
+        
+    def __str__(self):
+        return functions.string_oneline_object(self)
     
 class Leverages(models.Model):
     name = models.TextField()
