@@ -781,7 +781,7 @@ class Investmentsoperations(models.Model):
         """
         if self.associated_ao and self.associated_ao.id is not None:
             self.associated_ao.delete()
-            self.associated_ao=None
+            self.associated_ao = None
         super(Investmentsoperations, self).save(*args, **kwargs) #To generate io and then plio
 
         # No associated ao if daily_adjustment
@@ -824,8 +824,9 @@ class Investmentsoperations(models.Model):
                 c.accounts=self.investments.accounts
                 c.save()
                 self.associated_ao=c
-               
-        super(Investmentsoperations, self).save(*args, **kwargs) #To generate io and then plio
+
+        
+        super(Investmentsoperations, self).save(update_fields=['associated_ao']) #Forces and update to avoid double insert a integrity key error
 
 
 
