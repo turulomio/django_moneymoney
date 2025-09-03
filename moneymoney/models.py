@@ -779,7 +779,9 @@ class Investmentsoperations(models.Model):
         """
             This save must use self.fullClean when used as a model
         """
-
+        if self.associated_ao and self.associated_ao.id is not None:
+            self.associated_ao.delete()
+            self.associated_ao=None
         super(Investmentsoperations, self).save(*args, **kwargs) #To generate io and then plio
 
         # No associated ao if daily_adjustment
@@ -794,12 +796,6 @@ class Investmentsoperations(models.Model):
             if o["id"]==self.id:
                 io=o
         
-        
-        if self.associated_ao and self.associated_ao.id is not None:
-            self.associated_ao.delete()
-            self.associated_ao=None
-            super(Investmentsoperations, self).save(*args, **kwargs) #Saves again to update associated_ao
-
         if self.operationstypes.id==eOperationType.SharesPurchase:#Compra Acciones
             c=Accountsoperations()
             c.datetime=self.datetime
@@ -828,8 +824,9 @@ class Investmentsoperations(models.Model):
                 c.accounts=self.investments.accounts
                 c.save()
                 self.associated_ao=c
-        
-        super(Investmentsoperations, self).save(*args, **kwargs) #Saves again to update associated_ao
+               
+        super(Investmentsoperations, self).save(*args, **kwargs) #To generate io and then plio
+
 
 
 class Investmentstransfers(models.Model):
@@ -898,7 +895,7 @@ class Investmentstransfers(models.Model):
         origin.currency_conversion=self.currency_conversion_origin
         origin.associated_it=self
         origin.comment
-        origin.full_clean()
+        # origin.clean()
         origin.save()
 
         ## Create or update destiny
@@ -914,7 +911,7 @@ class Investmentstransfers(models.Model):
         destiny.taxes=self.taxes_destiny
         destiny.currency_conversion=self.currency_conversion_destiny
         destiny.associated_it=self
-        destiny.full_clean()
+        # destiny.clean()
         destiny.save()
 
     def origin_gross_amount(self):

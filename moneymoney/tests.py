@@ -2,6 +2,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.test import tag
 from django.utils import timezone
 from json import loads
@@ -76,7 +77,6 @@ class Models(APITestCase):
 
 
     
-    @tag("current")
     def test_Investmentsoperations(self):
         # Create investments
         inv=models.Investments()
@@ -464,6 +464,9 @@ class API(APITestCase):
         r=models.Accounts.accounts_balance(qs_accounts, timezone.now(), 'EUR')
         self.assertEqual(r["balance_user_currency"], 1000)
 
+
+    @tag("current")
+    @transaction.atomic
     def test_Accountsoperations_associated_fields(self):
         #Add a investment operation to check associated_io
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
