@@ -72,8 +72,66 @@ class Models(APITestCase):
     def test_Operationstypes(self):
         o=models.Operationstypes.objects.get(pk=1)
         str(o)    
+
+
+
     
     @tag("current")
+    def test_Investmentsoperations(self):
+        # Create investments
+        inv=models.Investments()
+        inv.name="Investment to test investments operations"
+        inv.active=True
+        inv.accounts_id=4
+        inv.products_id=81718 #Index
+        inv.selling_price=0
+        inv.daily_adjustment=False
+        inv.balance_percentage=100
+        inv.full_clean()
+        inv.save()
+
+        # Create investment operation
+        io=models.Investmentsoperations()
+        io.datetime=timezone.now()
+        io.operationstypes_id=types.eOperationType.SharesPurchase
+        io.investments=inv
+        io.price=10
+        io.shares=100
+        io.commission=1
+        io.taxes=1
+        io.currency_conversion=1
+        io.comment="Testing"
+        with self.assertRaises(ValidationError) as cm:
+            io.full_clean()
+        self.assertEqual("Investment operation can't be created because its related product hasn't quotes.", cm.exception.message_dict['__all__'][0])
+
+        #Adds a quote
+        models.Quotes.objects.create(products_id=inv.products_id, datetime=casts.dtaware_now(),quote=10)
+
+        # Creates now investment wich product has a quoite
+        io.full_clean()
+        io.save()
+
+        # Check associated_ao exists
+        self.assertEqual(io.associated_ao.amount, -1002)
+
+        # Now i change operations type to AddShares
+        io.operationstypes_id=types.eOperationType.SharesAdd
+        io.full_clean()
+        io.save()
+        self.assertEqual(io.associated_ao.amount, -2)
+
+        #Now I remove commissions and taxes
+        io.commission=0
+        io.taxes=0
+        io.full_clean()
+        io.save()
+        self.assertEqual(io.associated_ao, None)
+
+
+        
+
+
     def test_Investmentstransfers(self):
         # Create investments
         origin=models.Investments()
