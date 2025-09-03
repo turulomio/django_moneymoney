@@ -721,7 +721,7 @@ class Investmentsoperations(models.Model):
     comment = models.TextField(blank=True, null=True)
     currency_conversion = models.DecimalField(max_digits=30, decimal_places=10, blank=False, null=False)
     associated_ao=models.OneToOneField("Accountsoperations", models.DO_NOTHING, blank=True, null=True)
-    associated_it=models.OneToOneField("Investmentstransfers", models.DO_NOTHING, blank=True, null=True)
+    associated_it=models.ForeignKey("Investmentstransfers", models.DO_NOTHING, blank=True, null=True)
 
 
     class Meta:
@@ -840,9 +840,12 @@ class Investmentstransfers(models.Model):
     comment=models.TextField(blank=True, null=False)
 
     def clean(self):
-        print("Clean execution")
         if not self.investments_origin.products.productstypes==self.investments_destiny.products.productstypes:
             raise ValidationError(_("Investment transfer can't be created if products types are not the same"))
+        
+        if self.investments_origin.id==self.investments_destiny.id:
+            raise ValidationError(_("Investment transfer can't be created if investments are the same"))
+
 
     class Meta:
         managed = True
@@ -872,9 +875,9 @@ class Investmentstransfers(models.Model):
         ## Create or update origin
         origin=self.origin_investmentoperation()
         if origin is None:
-            origin=Investments()
+            origin=Investmentsoperations()
         origin.datetime=self.datetime_origin
-        origin.operationstypes=eOperationType.TransferSharesOrigin
+        origin.operationstypes_id=eOperationType.TransferSharesOrigin
         origin.investments=self.investments_origin
         origin.shares=self.shares_origin
         origin.price=self.price_origin
@@ -888,9 +891,9 @@ class Investmentstransfers(models.Model):
         ## Create or update destiny
         destiny=self.destiny_investmentoperation()
         if destiny is None:
-            destiny=Investments()
+            destiny=Investmentsoperations()
         destiny.datetime=self.datetime_destiny
-        destiny.operationstypes=eOperationType.TransferSharesDestiny
+        destiny.operationstypes_id=eOperationType.TransferSharesDestiny
         destiny.investments=self.investments_destiny
         destiny.shares=self.shares_destiny
         destiny.price=self.price_destiny

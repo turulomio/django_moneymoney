@@ -75,37 +75,69 @@ class Models(APITestCase):
     
     @tag("current")
     def test_Investmentstransfers(self):
-        o=models.Investmentstransfers()
-    # datetime_origin = models.DateTimeField(blank=False, null=False)
-    # investments_origin= models.ForeignKey('Investments', models.CASCADE, blank=False, null=False, related_name="origin")
-    # shares_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
-    # price_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
-    # commission_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
-    # taxes_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
-    # currency_conversion_origin = models.DecimalField(max_digits=30, decimal_places=10, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=1)
+        # Create investments
+        origin=models.Investments()
+        origin.name="Investment origin"
+        origin.active=True
+        origin.accounts_id=4
+        origin.products_id=79329 #Index
+        origin.selling_price=0
+        origin.daily_adjustment=False
+        origin.balance_percentage=100
+        origin.full_clean()
+        origin.save()
 
-    # datetime_destiny = models.DateTimeField(blank=False, null=False)
-    # investments_destiny= models.ForeignKey('Investments', models.CASCADE, blank=False, null=False, related_name="destiny")
-    # shares_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
-    # price_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
-    # commission_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
-    # taxes_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
-    # currency_conversion_destiny  = models.DecimalField(max_digits=30, decimal_places=10, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=1)
+        destiny=models.Investments()
+        destiny.name="Investment destiny"
+        destiny.active=True
+        destiny.accounts_id=4
+        destiny.products_id=81718 #Fund
+        destiny.selling_price=0
+        destiny.daily_adjustment=False
+        destiny.balance_percentage=100
+        destiny.full_clean()
+        destiny.save()
 
-    # comment=models.TextField(blank=True, null=False)
+        # Create investment transfer
+        it=models.Investmentstransfers()
+        it.datetime_origin=timezone.now()
+        it.investments_origin=origin
+        it.shares_origin=100
+        it.price_origin=10
+        it.datetime_destiny=timezone.now()
+        it.investments_destiny=destiny
+        it.shares_destiny=1000
+        it.price_destiny=1
+        it.comment="Test investment transfer"
 
-        o.datetime_origin=timezone.now()
-        o.investments_origin_id=79329
-        o.shares_origin=100
-        o.price_origin=10
-        o.datetime_destiny=timezone.now()
-        o.investments_destiny_id=79328
-        o.shares_destiny=1000
-        o.price_destiny=1
-        o.comment="Test investment transfer"
-        o.save()
+        #Fails due to the ValidationError
+        with self.assertRaises(ValidationError) as cm:
+            it.full_clean()
+        self.assertEqual("Investment transfer can't be created if products types are not the same", cm.exception.message_dict['__all__'][0])
+
+        # Tries to transfer to same origin and destiny
+        it.investments_origin=destiny
+        with self.assertRaises(ValidationError) as cm:
+            it.full_clean()
+        self.assertEqual("Investment transfer can't be created if investments are the same", cm.exception.message_dict['__all__'][0])
+
+        # Now both are funds and different investments
+        origin.products_id=81719 
+        origin.full_clean()
+        origin.save()
         
-        
+        it.investments_origin=origin
+        it.full_clean()
+        it.save()
+
+        # Checks investments operations
+        io_origin=models.Investmentsoperations.objects.get(associated_it=it, operationstypes_id=types.eOperationType.TransferSharesOrigin)
+        io_destiny=models.Investmentsoperations.objects.get(associated_it=it, operationstypes_id=types.eOperationType.TransferSharesDestiny)
+
+
+
+
+
 
 
     def test_Stockmarkets(self):
