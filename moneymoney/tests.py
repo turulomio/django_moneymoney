@@ -133,6 +133,11 @@ class Models(APITestCase):
 
 
     def test_Investmentstransfers(self):
+        # Add needed quotes for this test
+        models.Quotes.objects.create(products_id=81718, datetime=casts.dtaware_now(),quote=10)
+        models.Quotes.objects.create(products_id=81719, datetime=casts.dtaware_now(),quote=10)
+
+
         # Create investments
         origin=models.Investments()
         origin.name="Investment origin"
@@ -144,6 +149,7 @@ class Models(APITestCase):
         origin.balance_percentage=100
         origin.full_clean()
         origin.save()
+
 
         destiny=models.Investments()
         destiny.name="Investment destiny"

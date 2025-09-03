@@ -760,6 +760,7 @@ class Investmentsoperations(models.Model):
         }
 
     def clean(self):
+        print("AHORA")
         #Checks investment has quotes
         if not Quotes.objects.filter(products=self.investments.products).exists():
             raise ValidationError(_("Investment operation can't be created because its related product hasn't quotes."))
