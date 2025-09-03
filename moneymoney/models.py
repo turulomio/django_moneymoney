@@ -738,7 +738,8 @@ class Investmentsoperations(models.Model):
 
     def nice_comment(self):
         if self.associated_it is not None:
-            return _("Transfer from {0} to {1} started at {2}. {3}").format(
+            return _("{0} transfer from '{1}' to '{2}' started at {3}. {4}").format(
+                self.investments.products.productstypes.fullName(),#Same for both investments in investments transfer
                 self.associated_it.investments_origin.fullName(),
                 self.associated_it.investments_destiny.fullName(),
                 self.associated_it.datetime_origin,
