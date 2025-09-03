@@ -735,6 +735,15 @@ class Investmentsoperations(models.Model):
     def hurl(request, id):
         return request.build_absolute_uri(reverse('investmentsoperations-detail', args=(id, )))
 
+
+    def nice_comment(self):
+        if self.associated_it is not None:
+            return _("Transfer from {0} to {1} started at {2}. {3}").format(
+                self.associated_it.investments_origin.fullName(),
+                self.associated_it.investments_destiny.fullName(),
+                self.associated_it.datetime_origin,
+                "" if self.comment is None else self.comment)
+
     @staticmethod
     def post_payload(investments="http://testserver/api/investments/1/", datetime=timezone.now(), shares=1000, price=10,  taxes=0, commission=0,  operationstypes="http://testserver/api/operationstypes/4/", currency_conversion=1):
         return {
@@ -885,6 +894,7 @@ class Investmentstransfers(models.Model):
         origin.taxes=self.taxes_origin
         origin.currency_conversion=self.currency_conversion_origin
         origin.associated_it=self
+        origin.comment
         origin.full_clean()
         origin.save()
 
@@ -903,8 +913,6 @@ class Investmentstransfers(models.Model):
         destiny.associated_it=self
         destiny.full_clean()
         destiny.save()
-
-        # TODO SET 3 COMMENTS
 
     def origin_gross_amount(self):
         return Currency(self.price_origin*self.shares_origin*self.investments_origin.products.real_leveraged_multiplier(), self.investments_origin.products.currency)

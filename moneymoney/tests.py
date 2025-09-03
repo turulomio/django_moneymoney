@@ -134,6 +134,8 @@ class Models(APITestCase):
         io_origin=models.Investmentsoperations.objects.get(associated_it=it, operationstypes_id=types.eOperationType.TransferSharesOrigin)
         io_destiny=models.Investmentsoperations.objects.get(associated_it=it, operationstypes_id=types.eOperationType.TransferSharesDestiny)
 
+        print(io_origin.nice_comment())
+        print(io_destiny.nice_comment())
 
 
 
