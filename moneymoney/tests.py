@@ -73,6 +73,41 @@ class Models(APITestCase):
         o=models.Operationstypes.objects.get(pk=1)
         str(o)    
     
+    @tag("current")
+    def test_Investmentstransfers(self):
+        o=models.Investmentstransfers()
+    # datetime_origin = models.DateTimeField(blank=False, null=False)
+    # investments_origin= models.ForeignKey('Investments', models.CASCADE, blank=False, null=False, related_name="origin")
+    # shares_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
+    # price_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
+    # commission_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
+    # taxes_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
+    # currency_conversion_origin = models.DecimalField(max_digits=30, decimal_places=10, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=1)
+
+    # datetime_destiny = models.DateTimeField(blank=False, null=False)
+    # investments_destiny= models.ForeignKey('Investments', models.CASCADE, blank=False, null=False, related_name="destiny")
+    # shares_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
+    # price_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
+    # commission_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
+    # taxes_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
+    # currency_conversion_destiny  = models.DecimalField(max_digits=30, decimal_places=10, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=1)
+
+    # comment=models.TextField(blank=True, null=False)
+
+        o.datetime_origin=timezone.now()
+        o.investments_origin_id=79329
+        o.shares_origin=100
+        o.price_origin=10
+        o.datetime_destiny=timezone.now()
+        o.investments_destiny_id=79328
+        o.shares_destiny=1000
+        o.price_destiny=1
+        o.comment="Test investment transfer"
+        o.save()
+        
+        
+
+
     def test_Stockmarkets(self):
         o=models.Stockmarkets.objects.get(pk=1)
         str(o)
@@ -277,7 +312,6 @@ class API(APITestCase):
         with self.assertNumQueries(2):
             quotes=tests_helpers.client_get(self, self.client_authorized_1, f"/api/quotes/?last=true", status.HTTP_200_OK)     
 
-    @tag("current")
     def test_Quotes_ohcl(self):
         for i in range(3):
             tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(quote=i+1,datetime=casts.dtaware_now()-timedelta(days=i), products="/api/products/79228/") , status.HTTP_201_CREATED)

@@ -2,10 +2,12 @@ from datetime import date, timedelta
 from decimal import Decimal
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction, connection
 from django.db.models import prefetch_related_objects, Case, When, Sum, Value, Subquery, F, Window, Min, Max, DateField, OuterRef, ExpressionWrapper, DurationField, FloatField
 from django.db.models.functions import FirstValue, LastValue, ExtractMonth, ExtractYear, Cast, Extract
+
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
@@ -719,7 +721,7 @@ class Investmentsoperations(models.Model):
     comment = models.TextField(blank=True, null=True)
     currency_conversion = models.DecimalField(max_digits=30, decimal_places=10, blank=False, null=False)
     associated_ao=models.OneToOneField("Accountsoperations", models.DO_NOTHING, blank=True, null=True)
-    associated_tranfer=models.OneToOneField("Investmentstransfers", models.DO_NOTHING, blank=True, null=True)
+    associated_it=models.OneToOneField("Investmentstransfers", models.DO_NOTHING, blank=True, null=True)
 
 
     class Meta:
@@ -805,44 +807,110 @@ class Investmentsoperations(models.Model):
 
 
 
-class Investmentstransferstypes(models.Model):
-    name = models.TextField()
+# class Investmentstransferstypes(models.Model):
+#     name = models.TextField()
 
-    class Meta:
-        managed = True
-        db_table = 'investmentstransferstypes'
+#     class Meta:
+#         managed = True
+#         db_table = 'investmentstransferstypes'
         
-    def __str__(self):
-        return self.fullName()
+#     def __str__(self):
+#         return self.fullName()
         
-    def fullName(self):
-        return _(self.name)
+#     def fullName(self):
+#         return _(self.name)
 
 class Investmentstransfers(models.Model):
-
-    type=models.ForeignKey('Investmentstransferstypes', models.DO_NOTHING, blank=False, null=False)
-
     datetime_origin = models.DateTimeField(blank=False, null=False)
-    origin= models.ForeignKey('Investments', models.CASCADE, blank=False, null=False, related_name="origin")
+    investments_origin= models.ForeignKey('Investments', models.CASCADE, blank=False, null=False, related_name="origin")
     shares_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
     price_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
-    commission_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
-    taxes_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
-
+    commission_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
+    taxes_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
+    currency_conversion_origin = models.DecimalField(max_digits=30, decimal_places=10, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=1)
 
     datetime_destiny = models.DateTimeField(blank=False, null=False)
-    destiny= models.ForeignKey('Investments', models.CASCADE, blank=False, null=False, related_name="destiny")
+    investments_destiny= models.ForeignKey('Investments', models.CASCADE, blank=False, null=False, related_name="destiny")
     shares_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
     price_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
-    commission_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
-    taxes_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
-        
+    commission_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
+    taxes_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
+    currency_conversion_destiny  = models.DecimalField(max_digits=30, decimal_places=10, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=1)
+
+    comment=models.TextField(blank=True, null=False)
+
+    def clean(self):
+        print("Clean execution")
+        if not self.investments_origin.products.productstypes==self.investments_destiny.products.productstypes:
+            raise ValidationError(_("Investment transfer can't be created if products types are not the same"))
+
     class Meta:
         managed = True
         db_table = 'investmentstransfers'
         
     def __str__(self):
         return functions.string_oneline_object(self)
+    
+
+    def origin_investmentoperation(self):
+        try:
+            return Investmentsoperations.objects.get(associated_it=self, Operationstypes_id=eOperationType.TransferSharesOrigin)
+        except:
+            return None
+    
+    def destiny_investmentoperation(self):
+        try:
+            return Investmentsoperations.objects.get(associated_it=self, Operationstypes_id=eOperationType.TransferSharesDestiny)
+        except:
+            return None 
+    
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        ## Creates Investmentstransfer and generates id
+        super(Investmentstransfers, self).save(*args, **kwargs)
+        
+        ## Create or update origin
+        origin=self.origin_investmentoperation()
+        if origin is None:
+            origin=Investments()
+        origin.datetime=self.datetime_origin
+        origin.operationstypes=eOperationType.TransferSharesOrigin
+        origin.investments=self.investments_origin
+        origin.shares=self.shares_origin
+        origin.price=self.price_origin
+        origin.commission=self.commission_origin
+        origin.taxes=self.taxes_origin
+        origin.currency_conversion=self.currency_conversion_origin
+        origin.associated_it=self
+        origin.full_clean()
+        origin.save()
+
+        ## Create or update destiny
+        destiny=self.destiny_investmentoperation()
+        if destiny is None:
+            destiny=Investments()
+        destiny.datetime=self.datetime_destiny
+        destiny.operationstypes=eOperationType.TransferSharesDestiny
+        destiny.investments=self.investments_destiny
+        destiny.shares=self.shares_destiny
+        destiny.price=self.price_destiny
+        destiny.commission=self.commission_destiny
+        destiny.taxes=self.taxes_destiny
+        destiny.currency_conversion=self.currency_conversion_destiny
+        destiny.associated_it=self
+        destiny.full_clean()
+        destiny.save()
+
+        # TODO SET 3 COMMENTS
+
+    def origin_gross_amount(self):
+        return Currency(self.price_origin*self.shares_origin*self.investments_origin.products.real_leveraged_multiplier(), self.investments_origin.products.currency)
+
+    def destiny_gross_amount(self):
+        return Currency(self.price_destiny*self.shares_destiny*self.investments_destiny.products.real_leveraged_multiplier(), self.investments_destiny.products.currency)
+    
+
+
     
 class Leverages(models.Model):
     name = models.TextField()
