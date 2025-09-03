@@ -65,17 +65,6 @@ class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
         model = models.Investmentsoperations
         fields = ('url', 'id','operationstypes', 'investments','shares', 'taxes', 'commission',  'price', 'datetime', 'comment', 'currency_conversion', 'currency', 'associated_ao')
 
-    @transaction.atomic
-    def create(self, validated_data):
-        created=serializers.HyperlinkedModelSerializer.create(self,  validated_data)
-        created.save()
-        return created
-    
-    @transaction.atomic
-    def update(self, instance, validated_data):
-        updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
-        updated.save()
-        return updated
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):
