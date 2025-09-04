@@ -679,6 +679,14 @@ class API(APITestCase):
         response=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response[0], "Investment operation can't be created because its related product hasn't quotes.")
 
+    def test_Investmentstransfers(self):        
+        # Create an investment operation
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
+        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
+        dict_io=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+       
+        # Checks exists associated_ao
+        self.assertEqual(models.Accountsoperations.objects.get(pk=id_from_url(dict_io["associated_ao"])).investmentsoperations.id, dict_io["id"])#Comprueba que existe ao
 
     def test_IOS(self):
         """
