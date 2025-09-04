@@ -1070,6 +1070,19 @@ class InvestmentstransfersViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.InvestmentstransfersSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='investment', description='Filter by investment url', required=False, type=OpenApiTypes.URI), 
+        ],
+    )
+    def list(self, request):
+        investment=RequestUrl(self.request, 'investment', models.Investments)
+        if investment is not None:
+            self.queryset=self.queryset.filter(Q(investments_origin=investment) | Q(investments_destiny=investment))
+        
+        serializer = self.get_serializer(self.queryset, many=True)
+        return Response(serializer.data)
+
 class BanksViewSet(viewsets.ModelViewSet):
     queryset = models.Banks.objects.all()
     permission_classes = [permissions.IsAuthenticated]  
