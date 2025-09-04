@@ -849,6 +849,43 @@ class Investmentstransfers(models.Model):
 
     comment=models.TextField(blank=True, null=False)
 
+
+    @staticmethod
+    def post_payload(
+        datetime_origin=timezone.now(), 
+        investments_origin="http://testserver/api/investments/1/", 
+        shares_origin=1000, 
+        price_origin=10, 
+        commission_origin=0, 
+        taxes_origin=0, 
+        currency_conversion_origin=1,   
+        datetime_destiny=timezone.now(), 
+        investments_destiny="http://testserver/api/investments/1/",         
+        shares_destiny=1000, 
+        price_destiny=10, 
+        commission_destiny=0, 
+        taxes_destiny=0, 
+        currency_conversion_destiny=1,   
+        comment=""
+    ):
+        return {
+            "datetime_origin": datetime_origin,
+            "investments_origin": investments_origin,
+            "shares_origin": shares_origin,
+            "price_origin": price_origin,  
+            "commission_origin": commission_origin, 
+            "taxes_origin": taxes_origin, 
+            "currency_conversion_origin": currency_conversion_origin,   
+            "datetime_destiny": datetime_destiny,
+            "investments_destiny": investments_destiny,         
+            "shares_destiny": shares_destiny, 
+            "price_destiny": price_destiny, 
+            "commission_destiny": commission_destiny, 
+            "taxes_destiny": taxes_destiny, 
+            "currency_conversion_destiny": currency_conversion_destiny,   
+            "comment": comment, 
+        }
+
     def clean(self):
         if not self.investments_origin.products.productstypes==self.investments_destiny.products.productstypes:
             raise ValidationError(_("Investment transfer can't be created if products types are not the same"))
