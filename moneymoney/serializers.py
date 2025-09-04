@@ -198,6 +198,29 @@ class AccountstransfersSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = models.Accountstransfers
         fields = ('id','url', 'datetime', 'origin', 'destiny', 'amount','commission','comment','ao_origin',  'ao_destiny', 'ao_commission')
+
+class InvestmentstransfersSerializer(serializers.HyperlinkedModelSerializer):
+    origin_investmentoperation = serializers.SerializerMethodField()
+    destiny_investmentoperation = serializers.SerializerMethodField()
+
+    class Meta:
+        model = models.Investmentstransfers
+        fields = (
+            'url', 'id',
+            'datetime_origin', 'investments_origin', 'shares_origin', 'price_origin', 'commission_origin', 'taxes_origin', 'currency_conversion_origin',
+            'datetime_destiny', 'investments_destiny', 'shares_destiny', 'price_destiny', 'commission_destiny', 'taxes_destiny', 'currency_conversion_destiny',
+            'comment', 'origin_investmentoperation', 'destiny_investmentoperation'
+        )
+
+    @extend_schema_field(OpenApiTypes.URI)
+    def get_origin_investmentoperation(self, obj):
+        op = obj.origin_investmentoperation()
+        return models.Investmentsoperations.hurl(self.context['request'], op.id) if op else None
+
+    @extend_schema_field(OpenApiTypes.URI)
+    def get_destiny_investmentoperation(self, obj):
+        op = obj.destiny_investmentoperation()
+        return models.Investmentsoperations.hurl(self.context['request'], op.id) if op else None
                 
 class LeveragesSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()

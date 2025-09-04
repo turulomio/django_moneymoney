@@ -1065,6 +1065,11 @@ class AccountstransfersViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.AccountstransfersSerializer
     permission_classes = [permissions.IsAuthenticated]  
 
+class InvestmentstransfersViewSet(viewsets.ModelViewSet):
+    queryset = models.Investmentstransfers.objects.all()
+    serializer_class = serializers.InvestmentstransfersSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
 class BanksViewSet(viewsets.ModelViewSet):
     queryset = models.Banks.objects.all()
     permission_classes = [permissions.IsAuthenticated]  
