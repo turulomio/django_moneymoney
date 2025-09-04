@@ -2,6 +2,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.test import tag
 from django.utils import timezone
 from json import loads
@@ -72,9 +73,71 @@ class Models(APITestCase):
     def test_Operationstypes(self):
         o=models.Operationstypes.objects.get(pk=1)
         str(o)    
+
+
+
     
-    @tag("current")
+    def test_Investmentsoperations(self):
+        # Create investments
+        inv=models.Investments()
+        inv.name="Investment to test investments operations"
+        inv.active=True
+        inv.accounts_id=4
+        inv.products_id=81718 #Index
+        inv.selling_price=0
+        inv.daily_adjustment=False
+        inv.balance_percentage=100
+        inv.full_clean()
+        inv.save()
+
+        # Create investment operation
+        io=models.Investmentsoperations()
+        io.datetime=timezone.now()
+        io.operationstypes_id=types.eOperationType.SharesPurchase
+        io.investments=inv
+        io.price=10
+        io.shares=100
+        io.commission=1
+        io.taxes=1
+        io.currency_conversion=1
+        io.comment="Testing"
+        with self.assertRaises(ValidationError) as cm:
+            io.full_clean()
+        self.assertEqual("Investment operation can't be created because its related product hasn't quotes.", cm.exception.message_dict['__all__'][0])
+
+        #Adds a quote
+        models.Quotes.objects.create(products_id=inv.products_id, datetime=casts.dtaware_now(),quote=10)
+
+        # Creates now investment wich product has a quoite
+        io.full_clean()
+        io.save()
+
+        # Check associated_ao exists
+        self.assertEqual(io.associated_ao.amount, -1002)
+
+        # Now i change operations type to AddShares
+        io.operationstypes_id=types.eOperationType.SharesAdd
+        io.full_clean()
+        io.save()
+        self.assertEqual(io.associated_ao.amount, -2)
+
+        #Now I remove commissions and taxes
+        io.commission=0
+        io.taxes=0
+        io.full_clean()
+        io.save()
+        self.assertEqual(io.associated_ao, None)
+
+
+        
+
+
     def test_Investmentstransfers(self):
+        # Add needed quotes for this test
+        models.Quotes.objects.create(products_id=81718, datetime=casts.dtaware_now(),quote=10)
+        models.Quotes.objects.create(products_id=81719, datetime=casts.dtaware_now(),quote=10)
+
+
         # Create investments
         origin=models.Investments()
         origin.name="Investment origin"
@@ -86,6 +149,7 @@ class Models(APITestCase):
         origin.balance_percentage=100
         origin.full_clean()
         origin.save()
+
 
         destiny=models.Investments()
         destiny.name="Investment destiny"
@@ -400,6 +464,9 @@ class API(APITestCase):
         r=models.Accounts.accounts_balance(qs_accounts, timezone.now(), 'EUR')
         self.assertEqual(r["balance_user_currency"], 1000)
 
+
+    @tag("current")
+    @transaction.atomic
     def test_Accountsoperations_associated_fields(self):
         #Add a investment operation to check associated_io
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)

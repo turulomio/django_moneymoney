@@ -729,7 +729,7 @@ class Investmentsoperations(models.Model):
         db_table = 'investmentsoperations'
         
     def __str__(self):
-        return "InvestmentOperation"
+        return functions.string_oneline_object(self)
 
     @staticmethod
     def hurl(request, id):
@@ -759,36 +759,52 @@ class Investmentsoperations(models.Model):
             "currency_conversion": currency_conversion, 
         }
 
+    def clean(self):
+        print("AHORA")
+        #Checks investment has quotes
+        if not Quotes.objects.filter(products=self.investments.products).exists():
+            raise ValidationError(_("Investment operation can't be created because its related product hasn't quotes."))
+
+
     @transaction.atomic
     def delete(self):
+        investment=self.investments
         if self.associated_ao is not None:
             self.associated_ao.delete()
         models.Model.delete(self)
+        investment.set_attributes_after_investmentsoperations_crud()
 
     @transaction.atomic
-    def update_associated_account_operation(self,  request):
-        if self.associated_ao is not None:
+    def save(self, *args, **kwargs):
+        """
+            This save must use self.fullClean when used as a model
+        """
+        if self.associated_ao and self.associated_ao.id is not None:
             self.associated_ao.delete()
-        plio=ios.IOS.from_ids(timezone.now(), request.user.profile.currency, [self.investments.id, ], 1)
+            self.associated_ao = None
+        super(Investmentsoperations, self).save(*args, **kwargs) #To generate io and then plio
+
+        # No associated ao if daily_adjustment
+        if self.investments.daily_adjustment is True: #Because it uses adjustment information
+            return
+        
+        # Updates asociated ao
+        plio=ios.IOS.from_ids(timezone.now(), "EUR", [self.investments.id, ], 1) #I set EUR to reuse this code but __user values will not be used
         #Searches io investments operations of the comment
         io=None
         for o in plio.d_io(self.investments.id):
             if o["id"]==self.id:
                 io=o
         
-        if self.investments.daily_adjustment is True: #Because it uses adjustment information
-            return
-        
         if self.operationstypes.id==eOperationType.SharesPurchase:#Compra Acciones
             c=Accountsoperations()
             c.datetime=self.datetime
-            c.concepts=Concepts.objects.get(pk=eConcept.BuyShares)
+            c.concepts_id=eConcept.BuyShares
             c.amount=-io['net_account']
             c.comment=self.comment
             c.accounts=self.investments.accounts
             c.save()
             self.associated_ao=c
-            self.save()
         elif self.operationstypes.id==eOperationType.SharesSale:#// Venta Acciones
             c=Accountsoperations()
             c.datetime=self.datetime
@@ -798,9 +814,8 @@ class Investmentsoperations(models.Model):
             c.accounts=self.investments.accounts
             c.save()
             self.associated_ao=c
-            self.save()
-        elif self.operationstypes.id==eOperationType.SharesAdd:#Added
-            if(self.commission!=0):
+        elif self.operationstypes.id in [eOperationType.SharesAdd, eOperationType.TransferFunds]:
+            if self.commission!=0:#No associated_ao
                 c=Accountsoperations()
                 c.datetime=self.datetime
                 c.concepts=Concepts.objects.get(pk=eConcept.BankCommissions)
@@ -809,26 +824,11 @@ class Investmentsoperations(models.Model):
                 c.accounts=self.investments.accounts
                 c.save()
                 self.associated_ao=c
-                self.save()
-        elif self.operationstypes.id==eOperationType.TransferFunds:#Fund transfer
-                self.associated_ao=None #Si hubiero associated_ao por haber puesto un tipo SharesPurchase y luego cambiar
-                self.save()
+
         
+        super(Investmentsoperations, self).save(update_fields=['associated_ao']) #Forces and update to avoid double insert a integrity key error
 
 
-
-# class Investmentstransferstypes(models.Model):
-#     name = models.TextField()
-
-#     class Meta:
-#         managed = True
-#         db_table = 'investmentstransferstypes'
-        
-#     def __str__(self):
-#         return self.fullName()
-        
-#     def fullName(self):
-#         return _(self.name)
 
 class Investmentstransfers(models.Model):
     datetime_origin = models.DateTimeField(blank=False, null=False)
@@ -896,7 +896,7 @@ class Investmentstransfers(models.Model):
         origin.currency_conversion=self.currency_conversion_origin
         origin.associated_it=self
         origin.comment
-        origin.full_clean()
+        # origin.clean()
         origin.save()
 
         ## Create or update destiny
@@ -912,7 +912,7 @@ class Investmentstransfers(models.Model):
         destiny.taxes=self.taxes_destiny
         destiny.currency_conversion=self.currency_conversion_destiny
         destiny.associated_it=self
-        destiny.full_clean()
+        # destiny.clean()
         destiny.save()
 
     def origin_gross_amount(self):
