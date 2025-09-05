@@ -645,7 +645,6 @@ class API(APITestCase):
         dict_ios_ids_simulation=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_merging_pp, status.HTTP_200_OK)
         self.assertEqual(dict_ios_ids_simulation["79329"]["total_io_current"]["balance_user"], 19980)
 
-    @tag("current")
     def test_Investmentsoperations(self):        
         # Create an investment operation
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
@@ -663,43 +662,66 @@ class API(APITestCase):
         self.assertIsNotNone(dict_io_updated["associated_ao"], "Associated account operation should exist")
         self.assertTrue(models.Accountsoperations.objects.filter(pk=id_from_url(dict_io_updated["associated_ao"])).exists(), "Associated account operation should exist")
 
-        # # Checks dict_io associated_ao doesn't exist and dict_io_updated associated_ao doesn
-        # # Check that the old associated_ao was deleted
-        # with self.assertRaises(models.Accountsoperations.DoesNotExist):
-        #     self.assertEqual(models.Accountsoperations.objects.get(pk=id_from_url(dict_io_updated["associated_ao"])).investmentsoperations.id, dict_io_updated["id"])#Comprueba que existe ao
-        #     models.Accountsoperations.objects.get(pk=old_ao_id)
-
-        # # Check that the new associated_ao exists and is linked
-        # self.assertIsNotNone(dict_io_updated["associated_ao"])
-        # new_ao_id = id_from_url(dict_io_updated["associated_ao"])
-        # self.assertNotEqual(old_ao_id, new_ao_id)
-        # new_ao = models.Accountsoperations.objects.get(pk=new_ao_id)
-        # self.assertEqual(new_ao.investmentsoperations.id, dict_io_updated["id"])
         
-        # # Delete io
-        # self.client_authorized_1.delete(dict_io_updated["url"])
+        # Delete io
+        self.client_authorized_1.delete(dict_io_updated["url"])
+        self.assertFalse(models.Investmentsoperations.objects.filter(pk=dict_io_updated["id"]).exists(), "Investments operation should not exist")
+        self.assertFalse(models.Accountsoperations.objects.filter(pk=id_from_url(dict_io_updated["associated_ao"])).exists(), "Associated account operation should not exist")
 
-        # # Checks associated_ao doesn't exist and io doesn't exist
-        # with self.assertRaises(models.Accountsoperations.DoesNotExist):
-        #     models.Accountsoperations.objects.get(pk=id_from_url(dict_io_updated["associated_ao"]))
-            
-        # with self.assertRaises(models.Investmentsoperations.DoesNotExist):
-        #     models.Investmentsoperations.objects.get(pk=dict_io_updated["id"])
+        # Query investments operations with and investment without quotes 79226
+        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(products="/api/products/79226/"), status.HTTP_201_CREATED)
+        self.assertEqual(models.Quotes.objects.filter(products_id=79226).count(), 0)
+        response=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(investments=dict_investment["url"]), status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response["__all__"][0], "Investment operation can't be created because its related product hasn't quotes.")
 
-        # # Query investments operations with and investment without quotes
-        # dict_product=tests_helpers.client_get(self, self.client_authorized_1, "/api/products/79226/", status.HTTP_200_OK)
-        # dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(products=dict_product["url"]), status.HTTP_201_CREATED)
-        # response=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_400_BAD_REQUEST)
-        # self.assertEqual(response[0], "Investment operation can't be created because its related product hasn't quotes.")
+    @tag("current")
+    def test_Investmentstransfers(self): 
+        # Create needed quotes for io
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(products="/api/products/81718/"), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(products="/api/products/81719/"), status.HTTP_201_CREATED)
 
-    def test_Investmentstransfers(self):        
-        # Create an investment operation
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
-        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
-        dict_io=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
-       
-        # Checks exists associated_ao
-        self.assertEqual(models.Accountsoperations.objects.get(pk=id_from_url(dict_io["associated_ao"])).investmentsoperations.id, dict_io["id"])#Comprueba que existe ao
+
+        # Create an investment origin, destiny and origin io
+        dict_investment_origin=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(products="/api/products/81718/"), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment_origin["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+        dict_investment_destiny=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(products="/api/products/81719/"), status.HTTP_201_CREATED)
+
+        # Create transfer
+        dict_it=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentstransfers/", models.Investmentstransfers.post_payload(investments_origin=dict_investment_origin["url"], investments_destiny=dict_investment_destiny["url"]), status.HTTP_201_CREATED)
+        self.assertTrue(models.Investmentstransfers.objects.filter(pk=dict_it["id"]).exists(), "Investment transfer should exist")
+        self.assertTrue(models.Investmentsoperations.objects.filter(pk=id_from_url(dict_it["origin_investmentoperation"])).exists(), "Origin investment operation should exist")
+        self.assertTrue(models.Investmentsoperations.objects.filter(pk=id_from_url(dict_it["destiny_investmentoperation"])).exists(), "Destiny investment operation should exist")
+
+
+
+
+        # #Fails due to the ValidationError
+        # with self.assertRaises(ValidationError) as cm:
+        #     it.full_clean()
+        # self.assertEqual("Investment transfer can't be created if products types are not the same", cm.exception.message_dict['__all__'][0])
+
+        # # Tries to transfer to same origin and destiny
+        # it.investments_origin=destiny
+        # with self.assertRaises(ValidationError) as cm:
+        #     it.full_clean()
+        # self.assertEqual("Investment transfer can't be created if investments are the same", cm.exception.message_dict['__all__'][0])
+
+        # # Now both are funds and different investments
+        # origin.products_id=81719 
+        # origin.full_clean()
+        # origin.save()
+        
+        # it.investments_origin=origin
+        # it.full_clean()
+        # it.save()
+
+        # # Checks investments operations
+        # io_origin=models.Investmentsoperations.objects.get(associated_it=it, operationstypes_id=types.eOperationType.TransferSharesOrigin)
+        # io_destiny=models.Investmentsoperations.objects.get(associated_it=it, operationstypes_id=types.eOperationType.TransferSharesDestiny)
+
+        # print(io_origin.nice_comment())
+        # print(io_destiny.nice_comment())
+
 
     def test_IOS(self):
         """

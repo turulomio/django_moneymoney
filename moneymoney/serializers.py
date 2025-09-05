@@ -1,5 +1,6 @@
 from datetime import date
 from django.db import transaction
+from django.core.exceptions import ValidationError as DjangoValidationError
 from moneymoney import models
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -65,6 +66,39 @@ class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
         model = models.Investmentsoperations
         fields = ('url', 'id','operationstypes', 'investments','shares', 'taxes', 'commission',  'price', 'datetime', 'comment', 'currency_conversion', 'currency', 'associated_ao')
 
+    def create(self, validated_data):
+        """
+        Create and return a new `Investmentsoperations` instance.
+        This method calls the model's `full_clean()` to enforce model-level validation
+        before calling the model's `save()` method which contains business logic.
+        """
+        instance = models.Investmentsoperations(**validated_data)
+        try:
+            instance.full_clean()
+        except DjangoValidationError as e:
+            # Re-raise validation errors as a DRF exception
+            raise serializers.ValidationError(serializers.as_serializer_error(e))
+        
+        instance.save()
+        return instance
+
+    def update(self, instance, validated_data):
+        """
+        Update and return an existing `Investmentsoperations` instance.
+        This method calls the model's `full_clean()` to enforce model-level validation
+        before calling the model's `save()` method which contains business logic.
+        """
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        try:
+            instance.full_clean()
+        except DjangoValidationError as e:
+            # Re-raise validation errors
+            raise serializers.ValidationError(serializers.as_serializer_error(e))
+
+        instance.save()
+        return instance
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):

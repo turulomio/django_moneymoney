@@ -760,7 +760,6 @@ class Investmentsoperations(models.Model):
         }
 
     def clean(self):
-        print("AHORA")
         #Checks investment has quotes
         if not Quotes.objects.filter(products=self.investments.products).exists():
             raise ValidationError(_("Investment operation can't be created because its related product hasn't quotes."))
@@ -768,7 +767,6 @@ class Investmentsoperations(models.Model):
 
     @transaction.atomic
     def delete(self):
-        print("deleting io")
         investment=self.investments
         if self.associated_ao is not None:
             self.associated_ao.delete()
@@ -780,11 +778,13 @@ class Investmentsoperations(models.Model):
         """
             This save must use self.fullClean when used as a model
         """
+
+        super(Investmentsoperations, self).save(*args, **kwargs) #To generate io and then plio
+
         if self.associated_ao and self.associated_ao.id is not None:
             self.associated_ao.delete()
             self.associated_ao = None
-        super(Investmentsoperations, self).save(*args, **kwargs) #To generate io and then plio
-
+        
         # No associated ao if daily_adjustment
         if self.investments.daily_adjustment is True: #Because it uses adjustment information
             return
@@ -905,13 +905,13 @@ class Investmentstransfers(models.Model):
 
     def origin_investmentoperation(self):
         try:
-            return Investmentsoperations.objects.get(associated_it=self, Operationstypes_id=eOperationType.TransferSharesOrigin)
+            return Investmentsoperations.objects.get(associated_it=self, operationstypes_id=eOperationType.TransferSharesOrigin)
         except:
             return None
     
     def destiny_investmentoperation(self):
         try:
-            return Investmentsoperations.objects.get(associated_it=self, Operationstypes_id=eOperationType.TransferSharesDestiny)
+            return Investmentsoperations.objects.get(associated_it=self, operationstypes_id=eOperationType.TransferSharesDestiny)
         except:
             return None 
     
@@ -933,8 +933,7 @@ class Investmentstransfers(models.Model):
         origin.taxes=self.taxes_origin
         origin.currency_conversion=self.currency_conversion_origin
         origin.associated_it=self
-        origin.comment
-        # origin.clean()
+        origin.clean()
         origin.save()
 
         ## Create or update destiny
@@ -950,7 +949,7 @@ class Investmentstransfers(models.Model):
         destiny.taxes=self.taxes_destiny
         destiny.currency_conversion=self.currency_conversion_destiny
         destiny.associated_it=self
-        # destiny.clean()
+        destiny.clean()
         destiny.save()
 
     def origin_gross_amount(self):
