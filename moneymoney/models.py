@@ -537,7 +537,7 @@ class Dividends(models.Model):
     @transaction.atomic
     def delete(self):
         self.accountsoperations.delete()
-        models.Model.delete(self)
+        super().delete()
 
     @staticmethod
     def lod_ym_netgains_dividends(request,  dt_from=None,  dt_to=None, ids=None):
@@ -768,10 +768,11 @@ class Investmentsoperations(models.Model):
 
     @transaction.atomic
     def delete(self):
+        print("deleting io")
         investment=self.investments
         if self.associated_ao is not None:
             self.associated_ao.delete()
-        models.Model.delete(self)
+        super().delete()
         investment.set_attributes_after_investmentsoperations_crud()
 
     @transaction.atomic

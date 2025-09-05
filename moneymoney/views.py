@@ -945,12 +945,6 @@ class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.InvestmentsoperationsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
-    # def destroy(self, request, *args, **kwargs):
-    #     instance = self.get_object()
-    #     self.perform_destroy(instance)
-    #     instance.investments.set_attributes_after_investmentsoperations_crud()
-    #     return Response(status=status.HTTP_204_NO_CONTENT)    
-
 class AccountsViewSet(viewsets.ModelViewSet):
     queryset = models.Accounts.objects.select_related("banks").all()
     serializer_class = serializers.AccountsSerializer
