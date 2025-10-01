@@ -692,6 +692,11 @@ class API(APITestCase):
         self.assertTrue(models.Investmentsoperations.objects.filter(pk=id_from_url(dict_it["origin_investmentoperation"])).exists(), "Origin investment operation should exist")
         self.assertTrue(models.Investmentsoperations.objects.filter(pk=id_from_url(dict_it["destiny_investmentoperation"])).exists(), "Destiny investment operation should exist")
 
+        # Queries all investments transfer for a given investment
+        dict_it=tests_helpers.client_get(self, self.client_authorized_1, f"/api/investmentstransfers/?investments={dict_investment_origin['id']}", status.HTTP_200_OK)
+        self.assertEqual(len(dict_it), 1)
+
+
 
 
 
