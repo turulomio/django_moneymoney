@@ -855,7 +855,7 @@ class Investmentstransfers(models.Model):
     def post_payload(
         datetime_origin=timezone.now(), 
         investments_origin="http://testserver/api/investments/1/", 
-        shares_origin=1000, 
+        shares_origin=-1000, 
         price_origin=10, 
         commission_origin=0, 
         taxes_origin=0, 
@@ -922,6 +922,7 @@ class Investmentstransfers(models.Model):
     @transaction.atomic
     def save(self, *args, **kwargs):
         ## Creates Investmentstransfer and generates id
+        self.full_clean()
         super(Investmentstransfers, self).save(*args, **kwargs)
         
         ## Create or update origin

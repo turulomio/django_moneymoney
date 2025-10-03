@@ -9,6 +9,41 @@ from drf_spectacular.utils import extend_schema_field, extend_schema_serializer,
 from drf_spectacular.types import OpenApiTypes
 from request_casting.request_casting import id_from_url
 
+
+from rest_framework.exceptions import ValidationError as DRFValidationError
+from django.core.exceptions import ValidationError as DjangoValidationError
+
+class ExceptionHandlingInModelHyperlinkedModelSerializer(serializers.HyperlinkedModelSerializer):
+    """
+    Clase base para HyperlinkedModelSerializer que intercepta el DjangoValidationError
+    lanzado desde el método save() del modelo (por self.full_clean()).
+    """
+    
+    # Define la excepción de DRF que quieres lanzar. Por defecto, usa 400.
+    EXCEPTION_TO_RAISE = DRFValidationError
+
+    def handle_save_exception(self, exc: DjangoValidationError):
+        """Transforma el ValidationError de Django en una excepción de DRF."""
+        # 'exc.message_dict' es el diccionario de errores que contiene los detalles.
+        raise self.EXCEPTION_TO_RAISE(detail=exc.message_dict)
+
+    def create(self, validated_data):
+        try:
+            # Llama a la implementación estándar de create() (que hace model.objects.create())
+            return super().create(validated_data)
+        except DjangoValidationError as e:
+            # Captura el error de validación de tu modelo
+            self.handle_save_exception(e)
+
+    def update(self, instance, validated_data):
+        try:
+            # Llama a la implementación estándar de update()
+            return super().update(instance, validated_data)
+        except DjangoValidationError as e:
+            # Captura el error de validación de tu modelo
+            self.handle_save_exception(e)
+
+
 class SuccessSerializer(serializers.Serializer):
     success=serializers.BooleanField()
     detail = serializers.CharField()
@@ -210,7 +245,7 @@ class AccountstransfersSerializer(serializers.HyperlinkedModelSerializer):
         model = models.Accountstransfers
         fields = ('id','url', 'datetime', 'origin', 'destiny', 'amount','commission','comment','ao_origin',  'ao_destiny', 'ao_commission')
 
-class InvestmentstransfersSerializer(serializers.HyperlinkedModelSerializer):
+class InvestmentstransfersSerializer(ExceptionHandlingInModelHyperlinkedModelSerializer):
     origin_investmentoperation = serializers.SerializerMethodField()
     destiny_investmentoperation = serializers.SerializerMethodField()
 

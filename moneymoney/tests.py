@@ -692,11 +692,19 @@ class API(APITestCase):
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(products="/api/products/81718/"), status.HTTP_201_CREATED)
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(products="/api/products/81719/"), status.HTTP_201_CREATED)
 
-
         # Create an investment origin, destiny and origin io
         dict_investment_origin=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(products="/api/products/81718/"), status.HTTP_201_CREATED)
         tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment_origin["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
         dict_investment_destiny=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(products="/api/products/81719/"), status.HTTP_201_CREATED)
+
+
+        # Fails due to same sign in shares
+        response=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentstransfers/", models.Investmentstransfers.post_payload(shares_origin=10, shares_destiny=10, investments_origin=dict_investment_origin["url"], investments_destiny=dict_investment_destiny["url"]), status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response["__all__"][0], "Shares amount can't be of the same sign")
+
+        # Tries to transfer to same origin and destiny
+        response=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentstransfers/", models.Investmentstransfers.post_payload(investments_origin=dict_investment_origin["url"], investments_destiny=dict_investment_origin["url"]), status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response["__all__"][0], "Investment transfer can't be created if investments are the same")
 
         # Create transfer
         dict_it=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentstransfers/", models.Investmentstransfers.post_payload(investments_origin=dict_investment_origin["url"], investments_destiny=dict_investment_destiny["url"]), status.HTTP_201_CREATED)
@@ -707,38 +715,6 @@ class API(APITestCase):
         # Queries all investments transfer for a given investment
         dict_it=tests_helpers.client_get(self, self.client_authorized_1, f"/api/investmentstransfers/?investments={dict_investment_origin['id']}", status.HTTP_200_OK)
         self.assertEqual(len(dict_it), 1)
-
-
-
-
-
-        # #Fails due to the ValidationError
-        # with self.assertRaises(ValidationError) as cm:
-        #     it.full_clean()
-        # self.assertEqual("Investment transfer can't be created if products types are not the same", cm.exception.message_dict['__all__'][0])
-
-        # # Tries to transfer to same origin and destiny
-        # it.investments_origin=destiny
-        # with self.assertRaises(ValidationError) as cm:
-        #     it.full_clean()
-        # self.assertEqual("Investment transfer can't be created if investments are the same", cm.exception.message_dict['__all__'][0])
-
-        # # Now both are funds and different investments
-        # origin.products_id=81719 
-        # origin.full_clean()
-        # origin.save()
-        
-        # it.investments_origin=origin
-        # it.full_clean()
-        # it.save()
-
-        # # Checks investments operations
-        # io_origin=models.Investmentsoperations.objects.get(associated_it=it, operationstypes_id=types.eOperationType.TransferSharesOrigin)
-        # io_destiny=models.Investmentsoperations.objects.get(associated_it=it, operationstypes_id=types.eOperationType.TransferSharesDestiny)
-
-        # print(io_origin.nice_comment())
-        # print(io_destiny.nice_comment())
-
 
     def test_IOS(self):
         """
