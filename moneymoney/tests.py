@@ -55,8 +55,15 @@ class Functions(APITestCase):
         b.name="Newbank"
         b.save()
         assert len(functions.string_oneline_object(b))>0
-        
-        
+
+    def test_have_different_sign(self):
+        assert functions.have_different_sign(1, 1)==False
+        assert functions.have_different_sign(1, -1)==True
+        assert functions.have_different_sign(-1, 1)==True
+        assert functions.have_different_sign(-1, -1)==False
+        assert functions.have_different_sign(0, 1)==True
+        assert functions.have_different_sign(-1, 0)==True
+        assert functions.have_different_sign(0, 0)==True        
 
 class Models(APITestCase):
     fixtures=["all.json"] #Para cargar datos por defecto
@@ -185,12 +192,17 @@ class Models(APITestCase):
             it.full_clean()
         self.assertEqual("Investment transfer can't be created if investments are the same", cm.exception.message_dict['__all__'][0])
 
-        # Now both are funds and different investments
-        origin.products_id=81719 
+        # Tries to transfer with origin shares and destiny shares with the same sign
+        it.investments_origin=origin# To avoid upper error
+        origin.products_id=81719 # Now both are funds and different investments
         origin.full_clean()
         origin.save()
+        with self.assertRaises(ValidationError) as cm:
+            it.full_clean()
+        self.assertEqual("Shares amount can't be of the same sign", cm.exception.message_dict['__all__'][0])
+
         
-        it.investments_origin=origin
+        it.shares_origin=-100 # To avoid upper error
         it.full_clean()
         it.save()
 

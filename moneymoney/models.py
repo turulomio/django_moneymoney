@@ -834,7 +834,7 @@ class Investmentsoperations(models.Model):
 class Investmentstransfers(models.Model):
     datetime_origin = models.DateTimeField(blank=False, null=False)
     investments_origin= models.ForeignKey('Investments', models.CASCADE, blank=False, null=False, related_name="origin")
-    shares_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
+    shares_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False) #Can be positive and negative
     price_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
     commission_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
     taxes_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
@@ -842,7 +842,7 @@ class Investmentstransfers(models.Model):
 
     datetime_destiny = models.DateTimeField(blank=False, null=False)
     investments_destiny= models.ForeignKey('Investments', models.CASCADE, blank=False, null=False, related_name="destiny")
-    shares_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
+    shares_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False) #Can be positive and negative
     price_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
     commission_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
     taxes_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
@@ -893,6 +893,10 @@ class Investmentstransfers(models.Model):
         
         if self.investments_origin.id==self.investments_destiny.id:
             raise ValidationError(_("Investment transfer can't be created if investments are the same"))
+        
+        if not functions.have_different_sign(self.shares_origin, self.shares_destiny):
+            raise ValidationError(_("Shares amount can't be of the same sign"))
+
 
 
     class Meta:

@@ -145,3 +145,10 @@ def requests_get(url, request):
         }    
         return get(url, headers=headers, verify=False)
 
+def have_different_sign(a, b):
+    """
+        Si algun valor es 0 o los dos devuelve True
+    """
+    if (a>0 and b>0) or (a<0 and b<0):
+        return False 
+    return True
