@@ -75,7 +75,7 @@ class AccountsSerializer(serializers.HyperlinkedModelSerializer):
         return  obj.fullName()
         
         
-class DividendsSerializer(serializers.HyperlinkedModelSerializer):
+class DividendsSerializer(ExceptionHandlingInModelHyperlinkedModelSerializer):
     currency = serializers.SerializerMethodField()
     class Meta:
         model = models.Dividends
@@ -95,45 +95,11 @@ class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
     def get_fullname(self, obj):
         return obj.fullName()
 
-class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
+class InvestmentsoperationsSerializer(ExceptionHandlingInModelHyperlinkedModelSerializer):
     currency = serializers.SerializerMethodField()
     class Meta:
         model = models.Investmentsoperations
         fields = ('url', 'id','operationstypes', 'investments','shares', 'taxes', 'commission',  'price', 'datetime', 'comment', 'currency_conversion', 'currency', 'associated_ao')
-
-    def create(self, validated_data):
-        """
-        Create and return a new `Investmentsoperations` instance.
-        This method calls the model's `full_clean()` to enforce model-level validation
-        before calling the model's `save()` method which contains business logic.
-        """
-        instance = models.Investmentsoperations(**validated_data)
-        try:
-            instance.full_clean()
-        except DjangoValidationError as e:
-            # Re-raise validation errors as a DRF exception
-            raise serializers.ValidationError(serializers.as_serializer_error(e))
-        
-        instance.save()
-        return instance
-
-    def update(self, instance, validated_data):
-        """
-        Update and return an existing `Investmentsoperations` instance.
-        This method calls the model's `full_clean()` to enforce model-level validation
-        before calling the model's `save()` method which contains business logic.
-        """
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-
-        try:
-            instance.full_clean()
-        except DjangoValidationError as e:
-            # Re-raise validation errors
-            raise serializers.ValidationError(serializers.as_serializer_error(e))
-
-        instance.save()
-        return instance
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):
@@ -239,7 +205,7 @@ class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
             return models.Dividends.hurl(request, obj.dividends.id)
         return None        
 
-class AccountstransfersSerializer(serializers.HyperlinkedModelSerializer):    
+class AccountstransfersSerializer(ExceptionHandlingInModelHyperlinkedModelSerializer):    
     
     class Meta:
         model = models.Accountstransfers
@@ -356,7 +322,7 @@ class ProductstypesSerializer(serializers.HyperlinkedModelSerializer):
     def get_localname(self, obj):
         return  _(obj.name)
 
-class QuotesSerializer(serializers.HyperlinkedModelSerializer):
+class QuotesSerializer(ExceptionHandlingInModelHyperlinkedModelSerializer):
     name = serializers.SerializerMethodField()
     decimals = serializers.SerializerMethodField()
     currency = serializers.SerializerMethodField()
