@@ -210,12 +210,6 @@ class Models(APITestCase):
         io_origin=models.Investmentsoperations.objects.get(associated_it=it, operationstypes_id=types.eOperationType.TransferSharesOrigin)
         io_destiny=models.Investmentsoperations.objects.get(associated_it=it, operationstypes_id=types.eOperationType.TransferSharesDestiny)
 
-        print(io_origin.nice_comment())
-        print(io_destiny.nice_comment())
-
-
-
-
 
 
     def test_Stockmarkets(self):
@@ -713,8 +707,27 @@ class API(APITestCase):
         self.assertTrue(models.Investmentsoperations.objects.filter(pk=id_from_url(dict_it["destiny_investmentoperation"])).exists(), "Destiny investment operation should exist")
 
         # Queries all investments transfer for a given investment
-        dict_it=tests_helpers.client_get(self, self.client_authorized_1, f"/api/investmentstransfers/?investments={dict_investment_origin['id']}", status.HTTP_200_OK)
-        self.assertEqual(len(dict_it), 1)
+        dict_its=tests_helpers.client_get(self, self.client_authorized_1, f"/api/investmentstransfers/?investments={dict_investment_origin['id']}", status.HTTP_200_OK)
+        self.assertEqual(len(dict_its), 1)
+
+        # Converts investment transfer to unifinished transfer setting datetime_destiny to null
+        payload_unfinished=dict_it.copy()
+        payload_unfinished["datetime_destiny"]=None
+        dict_it_unfinished=tests_helpers.client_put(self, self.client_authorized_1, payload_unfinished["url"], payload_unfinished, status.HTTP_200_OK)
+        self.assertEqual(dict_it_unfinished["finished"], False)
+        self.assertEqual(dict_it_unfinished["destiny_investmentoperation"], None)
+        
+        # Tries to set null origin datetime and should fail
+        payload_origin_datetime_null=dict_it.copy()
+        payload_origin_datetime_null["datetime_origin"]=None
+        response=tests_helpers.client_put(self, self.client_authorized_1, payload_origin_datetime_null["url"], payload_origin_datetime_null, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response["datetime_origin"][0], "This field may not be null.") 
+
+        # Converts again dict_it_unfinished to dict_it_finished
+        payload_finished=payload_unfinished.copy()
+        payload_finished["datetime_destiny"]=timezone.now() 
+        dict_it_finished=tests_helpers.client_put(self, self.client_authorized_1, payload_finished["url"], payload_finished, status.HTTP_200_OK)
+        self.assertEqual(dict_it_finished["finished"], True)
 
     def test_IOS(self):
         """

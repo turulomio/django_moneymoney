@@ -832,6 +832,10 @@ class Investmentsoperations(models.Model):
 
 
 class Investmentstransfers(models.Model):
+    """
+        If datetime_destiny is null, transfers hasn't finished
+        investments_destiny is known
+    """
     datetime_origin = models.DateTimeField(blank=False, null=False)
     investments_origin= models.ForeignKey('Investments', models.CASCADE, blank=False, null=False, related_name="origin")
     shares_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False) #Can be positive and negative
@@ -840,13 +844,13 @@ class Investmentstransfers(models.Model):
     taxes_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
     currency_conversion_origin = models.DecimalField(max_digits=30, decimal_places=10, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=1)
 
-    datetime_destiny = models.DateTimeField(blank=False, null=False)
+    datetime_destiny = models.DateTimeField(blank=True, null=True, default=None)
     investments_destiny= models.ForeignKey('Investments', models.CASCADE, blank=False, null=False, related_name="destiny")
-    shares_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False) #Can be positive and negative
-    price_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
-    commission_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
-    taxes_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
-    currency_conversion_destiny  = models.DecimalField(max_digits=30, decimal_places=10, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=1)
+    shares_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True) #Can be positive and negative
+    price_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(Decimal(0))])
+    commission_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(Decimal(0))], default=0)
+    taxes_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(Decimal(0))], default=0)
+    currency_conversion_destiny  = models.DecimalField(max_digits=30, decimal_places=10, blank=True, null=True, validators=[MinValueValidator(Decimal(0))], default=1)
 
     comment=models.TextField(blank=True, null=False)
 
@@ -888,14 +892,15 @@ class Investmentstransfers(models.Model):
         }
 
     def clean(self):
-        if not self.investments_origin.products.productstypes==self.investments_destiny.products.productstypes:
-            raise ValidationError(_("Investment transfer can't be created if products types are not the same"))
-        
-        if self.investments_origin.id==self.investments_destiny.id:
-            raise ValidationError(_("Investment transfer can't be created if investments are the same"))
-        
-        if not functions.have_different_sign(self.shares_origin, self.shares_destiny):
-            raise ValidationError(_("Shares amount can't be of the same sign"))
+        if self.finished() is True:
+            if not self.investments_origin.products.productstypes==self.investments_destiny.products.productstypes:
+                raise ValidationError(_("Investment transfer can't be created if products types are not the same"))
+            
+            if self.investments_origin.id==self.investments_destiny.id:
+                raise ValidationError(_("Investment transfer can't be created if investments are the same"))
+            
+            if not functions.have_different_sign(self.shares_origin, self.shares_destiny):
+                raise ValidationError(_("Shares amount can't be of the same sign"))
 
 
 
@@ -918,6 +923,12 @@ class Investmentstransfers(models.Model):
             return Investmentsoperations.objects.get(associated_it=self, operationstypes_id=eOperationType.TransferSharesDestiny)
         except:
             return None 
+        
+    def finished(self):
+        """
+            Boolean to know if an IT is finished
+        """
+        return False if self.datetime_destiny is None else True
     
     @transaction.atomic
     def save(self, *args, **kwargs):
@@ -926,36 +937,38 @@ class Investmentstransfers(models.Model):
         super(Investmentstransfers, self).save(*args, **kwargs)
         
         ## Create or update origin
-        origin=self.origin_investmentoperation()
-        if origin is None:
-            origin=Investmentsoperations()
-        origin.datetime=self.datetime_origin
-        origin.operationstypes_id=eOperationType.TransferSharesOrigin
-        origin.investments=self.investments_origin
-        origin.shares=self.shares_origin
-        origin.price=self.price_origin
-        origin.commission=self.commission_origin
-        origin.taxes=self.taxes_origin
-        origin.currency_conversion=self.currency_conversion_origin
-        origin.associated_it=self
-        origin.full_clean()
-        origin.save()
+        origin_io=self.origin_investmentoperation()
+        if origin_io is None:
+            origin_io=Investmentsoperations()
+        origin_io.datetime=self.datetime_origin
+        origin_io.operationstypes_id=eOperationType.TransferSharesOrigin
+        origin_io.investments=self.investments_origin
+        origin_io.shares=self.shares_origin
+        origin_io.price=self.price_origin
+        origin_io.commission=self.commission_origin
+        origin_io.taxes=self.taxes_origin
+        origin_io.currency_conversion=self.currency_conversion_origin
+        origin_io.associated_it=self
+        origin_io.save()
 
-        ## Create or update destiny
-        destiny=self.destiny_investmentoperation()
-        if destiny is None:
-            destiny=Investmentsoperations()
-        destiny.datetime=self.datetime_destiny
-        destiny.operationstypes_id=eOperationType.TransferSharesDestiny
-        destiny.investments=self.investments_destiny
-        destiny.shares=self.shares_destiny
-        destiny.price=self.price_destiny
-        destiny.commission=self.commission_destiny
-        destiny.taxes=self.taxes_destiny
-        destiny.currency_conversion=self.currency_conversion_destiny
-        destiny.associated_it=self
-        destiny.full_clean()
-        destiny.save()
+        destiny_io=self.destiny_investmentoperation()
+        if self.datetime_destiny is None: #IT unfinished. destiny_io must be deleted
+            if destiny_io is not None:
+                destiny_io.delete()
+        else:
+            ## Create or update destiny
+            if destiny_io is None:
+                destiny_io=Investmentsoperations()
+            destiny_io.datetime=self.datetime_destiny
+            destiny_io.operationstypes_id=eOperationType.TransferSharesDestiny
+            destiny_io.investments=self.investments_destiny
+            destiny_io.shares=self.shares_destiny
+            destiny_io.price=self.price_destiny
+            destiny_io.commission=self.commission_destiny
+            destiny_io.taxes=self.taxes_destiny
+            destiny_io.currency_conversion=self.currency_conversion_destiny
+            destiny_io.associated_it=self
+            destiny_io.save()
 
     def origin_gross_amount(self):
         return Currency(self.price_origin*self.shares_origin*self.investments_origin.products.real_leveraged_multiplier(), self.investments_origin.products.currency)

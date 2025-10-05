@@ -214,6 +214,7 @@ class AccountstransfersSerializer(ExceptionHandlingInModelHyperlinkedModelSerial
 class InvestmentstransfersSerializer(ExceptionHandlingInModelHyperlinkedModelSerializer):
     origin_investmentoperation = serializers.SerializerMethodField()
     destiny_investmentoperation = serializers.SerializerMethodField()
+    finished = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Investmentstransfers
@@ -221,7 +222,7 @@ class InvestmentstransfersSerializer(ExceptionHandlingInModelHyperlinkedModelSer
             'url', 'id',
             'datetime_origin', 'investments_origin', 'shares_origin', 'price_origin', 'commission_origin', 'taxes_origin', 'currency_conversion_origin',
             'datetime_destiny', 'investments_destiny', 'shares_destiny', 'price_destiny', 'commission_destiny', 'taxes_destiny', 'currency_conversion_destiny',
-            'comment', 'origin_investmentoperation', 'destiny_investmentoperation'
+            'comment', 'origin_investmentoperation', 'destiny_investmentoperation', 'finished'
         )
 
     @extend_schema_field(OpenApiTypes.URI)
@@ -233,6 +234,10 @@ class InvestmentstransfersSerializer(ExceptionHandlingInModelHyperlinkedModelSer
     def get_destiny_investmentoperation(self, obj):
         op = obj.destiny_investmentoperation()
         return models.Investmentsoperations.hurl(self.context['request'], op.id) if op else None
+    
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_finished(self, obj):
+        return obj.finished()
                 
 class LeveragesSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()
