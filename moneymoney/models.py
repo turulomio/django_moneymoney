@@ -899,7 +899,10 @@ class Investmentstransfers(models.Model):
             if self.investments_origin.id==self.investments_destiny.id:
                 raise ValidationError(_("Investment transfer can't be created if investments are the same"))
             
-            if not functions.have_different_sign(self.shares_origin, self.shares_destiny):
+            if self.shares_origin is None or self.shares_destiny is None:
+                raise ValidationError(_("Shares amount can't be null"))
+
+            if self.shares_origin is not None and self.shares_destiny is not None and not functions.have_different_sign(self.shares_origin, self.shares_destiny):
                 raise ValidationError(_("Shares amount can't be of the same sign"))
 
 
