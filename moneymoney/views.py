@@ -796,10 +796,10 @@ class Alerts(APIView):
                 r["investments_inactive_with_balance"].append(plio)
 
         # Get all unfinished investments transfers
-        r["investments_transfers_unfinished"]=[]
         qs=models.Investmentstransfers.objects.filter(datetime_destiny__isnull=True)
-        for it in qs:
-            r["investments_transfers_unfinished"].append({"id": it.id, "alert": it.alert()})
+
+        serializer = serializers.InvestmentstransfersSerializer(qs, many=True, context={'request': request})
+        r["investments_transfers_unfinished"]=serializer.data
 
         functions.show_queries_function()
         return JsonResponse(r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
