@@ -224,16 +224,24 @@ class Models(APITestCase):
         o.estimated_datetime_for_daily_quote()
         o.estimated_datetime_for_intraday_quote()
         o.estimated_datetime_for_intraday_quote(delay=True)
-        
+            
+    @tag("current")
     def test_Accountsoperations(self):
         o=models.Accountsoperations()
         o.accounts_id=4
-        o.amount=1000
+        o.amount=-1000
         o.datetime=timezone.now()
-        o.concepts_id=1
+        o.concepts_id=types.eConcept.BankCommissions
         o.save()
-        str(o)
-        repr(o)
+
+        #Creates 2 refunds
+        refund=o.create_refund(timezone.now(), -10)
+        refund=o.create_refund(timezone.now(), -20)
+
+        self.assertEqual(len(o.refunds.all()),2)
+        self.assertEqual(refund.refund_original, o)
+
+
 
     def test_Banks(self):
         o=models.Banks.objects.get(pk=3)
@@ -470,6 +478,15 @@ class API(APITestCase):
         r=models.Accounts.accounts_balance(qs_accounts, timezone.now(), 'EUR')
         self.assertEqual(r["balance_user_currency"], 1000)
 
+    def test_Accountsoperations_refunds(self):
+        #accounts_balance with empty database
+        qs_accounts=models.Accounts.objects.filter(active=True)
+        r=models.Accounts.accounts_balance(qs_accounts, timezone.now(), 'EUR')
+        self.assertEqual(r["balance_user_currency"], Decimal(0))
+        
+        #Adding an ao
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(), status.HTTP_201_CREATED)
+        
 
     @transaction.atomic
     def test_Accountsoperations_associated_fields(self):
@@ -680,7 +697,7 @@ class API(APITestCase):
         response=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(investments=dict_investment["url"]), status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response["__all__"][0], "Investment operation can't be created because its related product hasn't quotes.")
 
-    @tag("current")
+
     def test_Investmentstransfers(self): 
         # Create needed quotes for io
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(products="/api/products/81718/"), status.HTTP_201_CREATED)

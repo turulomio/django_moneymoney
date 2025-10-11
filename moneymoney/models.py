@@ -251,6 +251,7 @@ class Accountsoperations(models.Model):
     datetime = models.DateTimeField(blank=False, null=False)
     associated_transfer=models.ForeignKey("Accountstransfers", models.DO_NOTHING, blank=True, null=True)
     associated_cc=models.ForeignKey("Creditcards", models.DO_NOTHING, blank=True, null=True)
+    refund_original = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True, related_name="refunds")    
 
     class Meta:
         managed = True
@@ -303,6 +304,12 @@ class Accountsoperations(models.Model):
                     self.associated_transfer.destiny.fullName(), 
                     self.comment)
         
+        elif self.concepts.id==eConcept.CreditCardRefund:
+            return _("Refund of operation at {0} with {1}. {2}").format( 
+                    self.original.datetime,
+                    self.original.amount,  
+                    self.comment)
+        
         elif self.concepts.id==eConcept.CreditCardBilling:
             qs=self.paid_accountsoperations.all().select_related("creditcards")
             if len(qs)>0:
@@ -328,6 +335,38 @@ class Accountsoperations(models.Model):
             )
 
         return self.comment
+    
+    def get_total_refunded_amount(self):
+        """Calculates the total amount refunded against this transaction."""
+        # Use an aggregation (Sum) on the reverse relationship (refunds)
+        r=0
+        for refund in self.refunds.all():
+            r+=refund.amount
+        return r
+
+    @transaction.atomic
+    def create_refund(self, datetime, refund_amount):
+        """Creates a refund transaction linked to this original sale."""
+        if self.concepts.operationstypes_id != eOperationType.Expense:
+            raise ValueError("Only 'Expense' transactions can be refunded.")
+            
+        # Check if the refund amount exceeds the remaining refundable amount
+        remaining_refundable = self.amount + self.get_total_refunded_amount()
+        if refund_amount > abs(remaining_refundable):
+            raise ValueError(f"Refund amount ${refund_amount} exceeds remaining refundable amount ${remaining_refundable}")
+
+        # Create the new refund transaction
+        refund_tx = Accountsoperations.objects.create(
+            datetime=datetime,
+            accounts=self.accounts,
+            concepts_id=eConcept.CreditCardRefund,
+            amount=refund_amount,
+            refund_original=self
+        )
+        self.save()
+
+        return refund_tx
+
 
 class Banks(models.Model):
     name = models.TextField()
