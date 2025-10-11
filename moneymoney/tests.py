@@ -887,12 +887,19 @@ class API(APITestCase):
         dict_account=tests_helpers.client_post(self, self.client_authorized_1, "/api/accounts/",  models.Accounts.post_payload(banks=dict_bank["url"]), status.HTTP_201_CREATED)        
         tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(accounts=dict_account["url"]), status.HTTP_201_CREATED)
 
+        # Create an unfinished investments transfer
+        dict_investment_for_it=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)  
+        dict_it=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentstransfers/", models.Investmentstransfers.post_payload(investments_origin=dict_investment_for_it["url"], investments_destiny=dict_investment_for_it["url"], datetime_destiny=None), status.HTTP_201_CREATED)
+        self.assertEqual(dict_it["finished"], False)
+
+
         # Search alerts
         lod_alerts=tests_helpers.client_get(self, self.client_authorized_1, "/alerts/",  status.HTTP_200_OK)
         self.assertEqual(len(lod_alerts["orders_expired"]), 1 )
         self.assertEqual(len(lod_alerts["accounts_inactive_with_balance"]), 1 )
         self.assertEqual(len(lod_alerts["investments_inactive_with_balance"]), 1 )
         self.assertEqual(len(lod_alerts["banks_inactive_with_balance"]), 1 )
+        self.assertEqual(len(lod_alerts["investments_transfers_unfinished"]), 1 )
 
 
     
