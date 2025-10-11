@@ -794,7 +794,13 @@ class Alerts(APIView):
             plio=plio_inactive.d(id)
             if plio["total_io_current"]["balance_investment"]!=0:
                 r["investments_inactive_with_balance"].append(plio)
-        
+
+        # Get all unfinished investments transfers
+        qs=models.Investmentstransfers.objects.filter(datetime_destiny__isnull=True)
+
+        serializer = serializers.InvestmentstransfersSerializer(qs, many=True, context={'request': request})
+        r["investments_transfers_unfinished"]=serializer.data
+
         functions.show_queries_function()
         return JsonResponse(r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 

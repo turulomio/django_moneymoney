@@ -978,10 +978,10 @@ class Investmentstransfers(models.Model):
 
     def destiny_gross_amount(self):
         return Currency(self.price_destiny*self.shares_destiny*self.investments_destiny.products.real_leveraged_multiplier(), self.investments_destiny.products.currency)
-    
 
 
-    
+
+
 class Leverages(models.Model):
     name = models.TextField()
     multiplier = models.DecimalField(max_digits=100, decimal_places=2)
