@@ -1060,6 +1060,25 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
         ao.delete() #Must be at the end due to middle queries
         return JsonResponse( True, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
 
+    @action(detail=True, methods=['POST'], name='Create a refund from an expense', url_path="create_refund", url_name='create_refund', permission_classes=[permissions.IsAuthenticated])
+    @transaction.atomic
+    def create_refund(self, request, pk=None):
+        ao=self.get_object()
+        datetime=RequestDtaware(request, "datetime", request.user.profile.zone)
+        refund_amount=RequestDecimal(request,"refund_amount")
+        if all_args_are_not_none(datetime, refund_amount):
+            refund=ao.create_refund(datetime, refund_amount)
+            serializer = serializers.AccountsoperationsSerializer(refund, many=False, context={'request': request})
+            return Response(serializer.data)
+        return Response(_("Can't make a refund"), status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['POST'], name='Get refunds from an expense', url_path="get_refunds", url_name='get_refunds', permission_classes=[permissions.IsAuthenticated])
+    @transaction.atomic
+    def get_refunds(self, request, pk=None):
+        ao=self.get_object()
+        serializer = serializers.AccountsoperationsSerializer(ao.refunds.all(), many=False, context={'request': request})
+        return Response(serializer.data)
+
 class AccountstransfersViewSet(viewsets.ModelViewSet):
     queryset = models.Accountstransfers.objects.all()
     serializer_class = serializers.AccountstransfersSerializer

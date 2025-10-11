@@ -306,8 +306,8 @@ class Accountsoperations(models.Model):
         
         elif self.concepts.id==eConcept.CreditCardRefund:
             return _("Refund of operation at {0} with {1}. {2}").format( 
-                    self.original.datetime,
-                    self.original.amount,  
+                    self.refund_original.datetime,
+                    self.refund_original.amount,  
                     self.comment)
         
         elif self.concepts.id==eConcept.CreditCardBilling:
@@ -347,14 +347,6 @@ class Accountsoperations(models.Model):
     @transaction.atomic
     def create_refund(self, datetime, refund_amount):
         """Creates a refund transaction linked to this original sale."""
-        if self.concepts.operationstypes_id != eOperationType.Expense:
-            raise ValueError("Only 'Expense' transactions can be refunded.")
-            
-        # Check if the refund amount exceeds the remaining refundable amount
-        remaining_refundable = self.amount + self.get_total_refunded_amount()
-        if refund_amount > abs(remaining_refundable):
-            raise ValueError(f"Refund amount ${refund_amount} exceeds remaining refundable amount ${remaining_refundable}")
-
         # Create the new refund transaction
         refund_tx = Accountsoperations.objects.create(
             datetime=datetime,
@@ -366,6 +358,30 @@ class Accountsoperations(models.Model):
         self.save()
 
         return refund_tx
+
+    def clean(self):            
+        if self.concepts.operationstypes.id== eOperationType.Income and self.amount<0:
+            raise ValueError(_("Income operations amount must be greater or equal to 0."))
+        if self.concepts.operationstypes.id == eOperationType.Expense and self.amount>0:
+            raise ValueError(_("Expense operations amount must be less or equal to 0."))
+        # Refund
+        if self.refund_original is not None:
+            if self.refund_original.concepts.operationstypes.id != eOperationType.Expense:
+                raise ValueError("Only 'Expense' accounts operations can be refunded.")
+                
+            # Check if the refund amount exceeds the remaining refundable amount
+            remaining_refundable = self.refund_original.amount + self.refund_original.get_total_refunded_amount()
+            if self.amount > abs(remaining_refundable):
+                raise ValueError(f"Refund amount ${self.amount} exceeds remaining refundable amount ${remaining_refundable}")
+
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        """
+            This save must use self.fullClean when used as a model
+        """
+        self.full_clean()
+        super(Accountsoperations, self).save(*args, **kwargs) #To generate io and then plio
 
 
 class Banks(models.Model):

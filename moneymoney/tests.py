@@ -235,10 +235,10 @@ class Models(APITestCase):
         o.save()
 
         #Creates 2 refunds
-        refund=o.create_refund(timezone.now(), -10)
-        refund=o.create_refund(timezone.now(), -20)
+        refund=o.create_refund(timezone.now(), 10)
+        refund=o.create_refund(timezone.now(), 20)
 
-        self.assertEqual(len(o.refunds.all()),2)
+        self.assertEqual(len(o.refunds.all()), 2)
         self.assertEqual(refund.refund_original, o)
 
 
@@ -478,15 +478,15 @@ class API(APITestCase):
         r=models.Accounts.accounts_balance(qs_accounts, timezone.now(), 'EUR')
         self.assertEqual(r["balance_user_currency"], 1000)
 
+    @tag("current")
     def test_Accountsoperations_refunds(self):
-        #accounts_balance with empty database
-        qs_accounts=models.Accounts.objects.filter(active=True)
-        r=models.Accounts.accounts_balance(qs_accounts, timezone.now(), 'EUR')
-        self.assertEqual(r["balance_user_currency"], Decimal(0))
-        
         #Adding an ao
-        tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(), status.HTTP_201_CREATED)
+        dict_ao=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=f"/api/concepts/{types.eConcept.BankCommissions}/", amount=-1000), status.HTTP_201_CREATED)
         
+        # Make two refunds        
+        dict_refund1=tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":10} , status.HTTP_200_OK)
+        self.assertEqual(dict_refund1["refund_original"],dict_ao["url"])
+
 
     @transaction.atomic
     def test_Accountsoperations_associated_fields(self):

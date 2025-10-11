@@ -167,7 +167,7 @@ class OperationstypesSerializer(serializers.HyperlinkedModelSerializer):
     def get_localname(self, obj):
         return  _(obj.name)
         
-class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
+class AccountsoperationsSerializer(ExceptionHandlingInModelHyperlinkedModelSerializer):
     currency = serializers.SerializerMethodField()
     nice_comment = serializers.SerializerMethodField()
     is_editable= serializers.SerializerMethodField()
@@ -177,7 +177,7 @@ class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = models.Accountsoperations
         fields = ('id','url', 'datetime', 'concepts', 'amount','comment','accounts',  'currency', 'associated_transfer',  'nice_comment', 'is_editable',  'associated_io', 
-        'associated_dividend')
+        'associated_dividend', "refund_original")
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):
