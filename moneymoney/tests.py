@@ -2,6 +2,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.test import tag
 from django.utils import timezone
 from json import loads
@@ -54,8 +55,15 @@ class Functions(APITestCase):
         b.name="Newbank"
         b.save()
         assert len(functions.string_oneline_object(b))>0
-        
-        
+
+    def test_have_different_sign(self):
+        assert functions.have_different_sign(1, 1)==False
+        assert functions.have_different_sign(1, -1)==True
+        assert functions.have_different_sign(-1, 1)==True
+        assert functions.have_different_sign(-1, -1)==False
+        assert functions.have_different_sign(0, 1)==True
+        assert functions.have_different_sign(-1, 0)==True
+        assert functions.have_different_sign(0, 0)==True        
 
 class Models(APITestCase):
     fixtures=["all.json"] #Para cargar datos por defecto
@@ -72,7 +80,138 @@ class Models(APITestCase):
     def test_Operationstypes(self):
         o=models.Operationstypes.objects.get(pk=1)
         str(o)    
+
+
+
     
+    def test_Investmentsoperations(self):
+        # Create investments
+        inv=models.Investments()
+        inv.name="Investment to test investments operations"
+        inv.active=True
+        inv.accounts_id=4
+        inv.products_id=81718 #Index
+        inv.selling_price=0
+        inv.daily_adjustment=False
+        inv.balance_percentage=100
+        inv.full_clean()
+        inv.save()
+
+        # Create investment operation
+        io=models.Investmentsoperations()
+        io.datetime=timezone.now()
+        io.operationstypes_id=types.eOperationType.SharesPurchase
+        io.investments=inv
+        io.price=10
+        io.shares=100
+        io.commission=1
+        io.taxes=1
+        io.currency_conversion=1
+        io.comment="Testing"
+        with self.assertRaises(ValidationError) as cm:
+            io.full_clean()
+        self.assertEqual("Investment operation can't be created because its related product hasn't quotes.", cm.exception.message_dict['__all__'][0])
+
+        #Adds a quote
+        models.Quotes.objects.create(products_id=inv.products_id, datetime=casts.dtaware_now(),quote=10)
+
+        # Creates now investment wich product has a quoite
+        io.full_clean()
+        io.save()
+
+        # Check associated_ao exists
+        self.assertEqual(io.associated_ao.amount, -1002)
+
+        # Now i change operations type to AddShares
+        io.operationstypes_id=types.eOperationType.SharesAdd
+        io.full_clean()
+        io.save()
+        self.assertEqual(io.associated_ao.amount, -2)
+
+        #Now I remove commissions and taxes
+        io.commission=0
+        io.taxes=0
+        io.full_clean()
+        io.save()
+        self.assertEqual(io.associated_ao, None)
+
+
+        
+
+
+    def test_Investmentstransfers(self):
+        # Add needed quotes for this test
+        models.Quotes.objects.create(products_id=81718, datetime=casts.dtaware_now(),quote=10)
+        models.Quotes.objects.create(products_id=81719, datetime=casts.dtaware_now(),quote=10)
+
+
+        # Create investments
+        origin=models.Investments()
+        origin.name="Investment origin"
+        origin.active=True
+        origin.accounts_id=4
+        origin.products_id=79329 #Index
+        origin.selling_price=0
+        origin.daily_adjustment=False
+        origin.balance_percentage=100
+        origin.full_clean()
+        origin.save()
+
+
+        destiny=models.Investments()
+        destiny.name="Investment destiny"
+        destiny.active=True
+        destiny.accounts_id=4
+        destiny.products_id=81718 #Fund
+        destiny.selling_price=0
+        destiny.daily_adjustment=False
+        destiny.balance_percentage=100
+        destiny.full_clean()
+        destiny.save()
+
+        # Create investment transfer
+        it=models.Investmentstransfers()
+        it.datetime_origin=timezone.now()
+        it.investments_origin=origin
+        it.shares_origin=100
+        it.price_origin=10
+        it.datetime_destiny=timezone.now()
+        it.investments_destiny=destiny
+        it.shares_destiny=1000
+        it.price_destiny=1
+        it.comment="Test investment transfer"
+
+        #Fails due to the ValidationError
+        with self.assertRaises(ValidationError) as cm:
+            it.full_clean()
+        self.assertEqual("Investment transfer can't be created if products types are not the same", cm.exception.message_dict['__all__'][0])
+
+        # Tries to transfer to same origin and destiny
+        it.investments_origin=destiny
+        with self.assertRaises(ValidationError) as cm:
+            it.full_clean()
+        self.assertEqual("Investment transfer can't be created if investments are the same", cm.exception.message_dict['__all__'][0])
+
+        # Tries to transfer with origin shares and destiny shares with the same sign
+        it.investments_origin=origin# To avoid upper error
+        origin.products_id=81719 # Now both are funds and different investments
+        origin.full_clean()
+        origin.save()
+        with self.assertRaises(ValidationError) as cm:
+            it.full_clean()
+        self.assertEqual("Shares amount can't be of the same sign", cm.exception.message_dict['__all__'][0])
+
+        
+        it.shares_origin=-100 # To avoid upper error
+        it.full_clean()
+        it.save()
+
+        # Checks investments operations
+        io_origin=models.Investmentsoperations.objects.get(associated_it=it, operationstypes_id=types.eOperationType.TransferSharesOrigin)
+        io_destiny=models.Investmentsoperations.objects.get(associated_it=it, operationstypes_id=types.eOperationType.TransferSharesDestiny)
+
+
+
     def test_Stockmarkets(self):
         o=models.Stockmarkets.objects.get(pk=1)
         str(o)
@@ -277,7 +416,6 @@ class API(APITestCase):
         with self.assertNumQueries(2):
             quotes=tests_helpers.client_get(self, self.client_authorized_1, f"/api/quotes/?last=true", status.HTTP_200_OK)     
 
-    @tag("current")
     def test_Quotes_ohcl(self):
         for i in range(3):
             tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(quote=i+1,datetime=casts.dtaware_now()-timedelta(days=i), products="/api/products/79228/") , status.HTTP_201_CREATED)
@@ -332,6 +470,8 @@ class API(APITestCase):
         r=models.Accounts.accounts_balance(qs_accounts, timezone.now(), 'EUR')
         self.assertEqual(r["balance_user_currency"], 1000)
 
+
+    @transaction.atomic
     def test_Accountsoperations_associated_fields(self):
         #Add a investment operation to check associated_io
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
@@ -519,31 +659,75 @@ class API(APITestCase):
        
         # Checks exists associated_ao
         self.assertEqual(models.Accountsoperations.objects.get(pk=id_from_url(dict_io["associated_ao"])).investmentsoperations.id, dict_io["id"])#Comprueba que existe ao
-        
+        # Checks associated_ao exists in dict_io and in accounsoperation table
+        self.assertIsNotNone(dict_io["associated_ao"])
+        self.assertTrue(models.Accountsoperations.objects.filter(pk=id_from_url(dict_io["associated_ao"])).exists())
+
         # Update io        
         dict_io_updated=tests_helpers.client_put(self, self.client_authorized_1, dict_io["url"], models.Investmentsoperations.post_payload(dict_investment["url"], shares=10000), status.HTTP_200_OK)
-        
-        # Checks dict_io associated_ao doesn't exist and dict_io_updated associated_ao doesn
-        with self.assertRaises(models.Accountsoperations.DoesNotExist):
-            models.Accountsoperations.objects.get(pk=id_from_url(dict_io["associated_ao"]))
-        models.Accountsoperations.objects.get(pk=id_from_url(dict_io_updated["associated_ao"]))
+        self.assertIsNotNone(dict_io_updated["associated_ao"], "Associated account operation should exist")
+        self.assertTrue(models.Accountsoperations.objects.filter(pk=id_from_url(dict_io_updated["associated_ao"])).exists(), "Associated account operation should exist")
+
         
         # Delete io
         self.client_authorized_1.delete(dict_io_updated["url"])
+        self.assertFalse(models.Investmentsoperations.objects.filter(pk=dict_io_updated["id"]).exists(), "Investments operation should not exist")
+        self.assertFalse(models.Accountsoperations.objects.filter(pk=id_from_url(dict_io_updated["associated_ao"])).exists(), "Associated account operation should not exist")
 
-        # Checks associated_ao doesn't exist and io doesn't exist
-        with self.assertRaises(models.Accountsoperations.DoesNotExist):
-            models.Accountsoperations.objects.get(pk=id_from_url(dict_io_updated["associated_ao"]))
-            
-        with self.assertRaises(models.Investmentsoperations.DoesNotExist):
-            models.Investmentsoperations.objects.get(pk=dict_io_updated["id"])
+        # Query investments operations with and investment without quotes 79226
+        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(products="/api/products/79226/"), status.HTTP_201_CREATED)
+        self.assertEqual(models.Quotes.objects.filter(products_id=79226).count(), 0)
+        response=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(investments=dict_investment["url"]), status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response["__all__"][0], "Investment operation can't be created because its related product hasn't quotes.")
 
-        # Query investments operations with and investment without quotes
-        dict_product=tests_helpers.client_get(self, self.client_authorized_1, "/api/products/79226/", status.HTTP_200_OK)
-        dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(products=dict_product["url"]), status.HTTP_201_CREATED)
-        response=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"]), status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response[0], "Investment operation can't be created because its related product hasn't quotes.")
+    @tag("current")
+    def test_Investmentstransfers(self): 
+        # Create needed quotes for io
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(products="/api/products/81718/"), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(products="/api/products/81719/"), status.HTTP_201_CREATED)
 
+        # Create an investment origin, destiny and origin io
+        dict_investment_origin=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(products="/api/products/81718/"), status.HTTP_201_CREATED)
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment_origin["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+        dict_investment_destiny=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(products="/api/products/81719/"), status.HTTP_201_CREATED)
+
+
+        # Fails due to same sign in shares
+        response=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentstransfers/", models.Investmentstransfers.post_payload(shares_origin=10, shares_destiny=10, investments_origin=dict_investment_origin["url"], investments_destiny=dict_investment_destiny["url"]), status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response["__all__"][0], "Shares amount can't be of the same sign")
+
+        # Tries to transfer to same origin and destiny
+        response=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentstransfers/", models.Investmentstransfers.post_payload(investments_origin=dict_investment_origin["url"], investments_destiny=dict_investment_origin["url"]), status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response["__all__"][0], "Investment transfer can't be created if investments are the same")
+
+        # Create transfer
+        dict_it=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentstransfers/", models.Investmentstransfers.post_payload(investments_origin=dict_investment_origin["url"], investments_destiny=dict_investment_destiny["url"]), status.HTTP_201_CREATED)
+        self.assertTrue(models.Investmentstransfers.objects.filter(pk=dict_it["id"]).exists(), "Investment transfer should exist")
+        self.assertTrue(models.Investmentsoperations.objects.filter(pk=id_from_url(dict_it["origin_investmentoperation"])).exists(), "Origin investment operation should exist")
+        self.assertTrue(models.Investmentsoperations.objects.filter(pk=id_from_url(dict_it["destiny_investmentoperation"])).exists(), "Destiny investment operation should exist")
+
+        # Queries all investments transfer for a given investment
+        dict_its=tests_helpers.client_get(self, self.client_authorized_1, f"/api/investmentstransfers/?investments={dict_investment_origin['id']}", status.HTTP_200_OK)
+        self.assertEqual(len(dict_its), 1)
+
+        # Converts investment transfer to unifinished transfer setting datetime_destiny to null
+        payload_unfinished=dict_it.copy()
+        payload_unfinished["datetime_destiny"]=None
+        dict_it_unfinished=tests_helpers.client_put(self, self.client_authorized_1, payload_unfinished["url"], payload_unfinished, status.HTTP_200_OK)
+        self.assertEqual(dict_it_unfinished["finished"], False)
+        self.assertEqual(dict_it_unfinished["destiny_investmentoperation"], None)
+        
+        # Tries to set null origin datetime and should fail
+        payload_origin_datetime_null=dict_it.copy()
+        payload_origin_datetime_null["datetime_origin"]=None
+        response=tests_helpers.client_put(self, self.client_authorized_1, payload_origin_datetime_null["url"], payload_origin_datetime_null, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response["datetime_origin"][0], "This field may not be null.") 
+
+        # Converts again dict_it_unfinished to dict_it_finished
+        payload_finished=payload_unfinished.copy()
+        payload_finished["datetime_destiny"]=timezone.now() 
+        dict_it_finished=tests_helpers.client_put(self, self.client_authorized_1, payload_finished["url"], payload_finished, status.HTTP_200_OK)
+        self.assertEqual(dict_it_finished["finished"], True)
 
     def test_IOS(self):
         """

@@ -1,5 +1,6 @@
 from datetime import date
 from django.db import transaction
+from django.core.exceptions import ValidationError as DjangoValidationError
 from moneymoney import models
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -7,6 +8,41 @@ from django.utils.translation import gettext as _
 from drf_spectacular.utils import extend_schema_field, extend_schema_serializer, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 from request_casting.request_casting import id_from_url
+
+
+from rest_framework.exceptions import ValidationError as DRFValidationError
+from django.core.exceptions import ValidationError as DjangoValidationError
+
+class ExceptionHandlingInModelHyperlinkedModelSerializer(serializers.HyperlinkedModelSerializer):
+    """
+    Clase base para HyperlinkedModelSerializer que intercepta el DjangoValidationError
+    lanzado desde el método save() del modelo (por self.full_clean()).
+    """
+    
+    # Define la excepción de DRF que quieres lanzar. Por defecto, usa 400.
+    EXCEPTION_TO_RAISE = DRFValidationError
+
+    def handle_save_exception(self, exc: DjangoValidationError):
+        """Transforma el ValidationError de Django en una excepción de DRF."""
+        # 'exc.message_dict' es el diccionario de errores que contiene los detalles.
+        raise self.EXCEPTION_TO_RAISE(detail=exc.message_dict)
+
+    def create(self, validated_data):
+        try:
+            # Llama a la implementación estándar de create() (que hace model.objects.create())
+            return super().create(validated_data)
+        except DjangoValidationError as e:
+            # Captura el error de validación de tu modelo
+            self.handle_save_exception(e)
+
+    def update(self, instance, validated_data):
+        try:
+            # Llama a la implementación estándar de update()
+            return super().update(instance, validated_data)
+        except DjangoValidationError as e:
+            # Captura el error de validación de tu modelo
+            self.handle_save_exception(e)
+
 
 class SuccessSerializer(serializers.Serializer):
     success=serializers.BooleanField()
@@ -39,7 +75,7 @@ class AccountsSerializer(serializers.HyperlinkedModelSerializer):
         return  obj.fullName()
         
         
-class DividendsSerializer(serializers.HyperlinkedModelSerializer):
+class DividendsSerializer(ExceptionHandlingInModelHyperlinkedModelSerializer):
     currency = serializers.SerializerMethodField()
     class Meta:
         model = models.Dividends
@@ -59,35 +95,11 @@ class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
     def get_fullname(self, obj):
         return obj.fullName()
 
-class InvestmentsoperationsSerializer(serializers.HyperlinkedModelSerializer):
+class InvestmentsoperationsSerializer(ExceptionHandlingInModelHyperlinkedModelSerializer):
     currency = serializers.SerializerMethodField()
     class Meta:
         model = models.Investmentsoperations
         fields = ('url', 'id','operationstypes', 'investments','shares', 'taxes', 'commission',  'price', 'datetime', 'comment', 'currency_conversion', 'currency', 'associated_ao')
-
-    @transaction.atomic
-    def create(self, validated_data):
-        created=serializers.HyperlinkedModelSerializer.create(self,  validated_data)
-        #Checks investment has quotes
-        if not models.Quotes.objects.filter(products=created.investments.products).exists():
-            raise serializers.ValidationError(_("Investment operation can't be created because its related product hasn't quotes."))
-
-        created.save()
-        created.investments.set_attributes_after_investmentsoperations_crud()
-        created.update_associated_account_operation(self.context.get("request"))
-        return created
-    
-    @transaction.atomic
-    def update(self, instance, validated_data):
-        updated=serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
-        #Checks investment has quotes
-        if not models.Quotes.objects.filter(products=updated.investments.products).exists():
-            raise serializers.ValidationError(_("Investment operation can't be updated because its related product hasn't quotes."))
-
-        updated.save()
-        updated.investments.set_attributes_after_investmentsoperations_crud()
-        updated.update_associated_account_operation(self.context.get("request"))
-        return updated
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):
@@ -193,11 +205,39 @@ class AccountsoperationsSerializer(serializers.HyperlinkedModelSerializer):
             return models.Dividends.hurl(request, obj.dividends.id)
         return None        
 
-class AccountstransfersSerializer(serializers.HyperlinkedModelSerializer):    
+class AccountstransfersSerializer(ExceptionHandlingInModelHyperlinkedModelSerializer):    
     
     class Meta:
         model = models.Accountstransfers
         fields = ('id','url', 'datetime', 'origin', 'destiny', 'amount','commission','comment','ao_origin',  'ao_destiny', 'ao_commission')
+
+class InvestmentstransfersSerializer(ExceptionHandlingInModelHyperlinkedModelSerializer):
+    origin_investmentoperation = serializers.SerializerMethodField()
+    destiny_investmentoperation = serializers.SerializerMethodField()
+    finished = serializers.SerializerMethodField()
+
+    class Meta:
+        model = models.Investmentstransfers
+        fields = (
+            'url', 'id',
+            'datetime_origin', 'investments_origin', 'shares_origin', 'price_origin', 'commission_origin', 'taxes_origin', 'currency_conversion_origin',
+            'datetime_destiny', 'investments_destiny', 'shares_destiny', 'price_destiny', 'commission_destiny', 'taxes_destiny', 'currency_conversion_destiny',
+            'comment', 'origin_investmentoperation', 'destiny_investmentoperation', 'finished'
+        )
+
+    @extend_schema_field(OpenApiTypes.URI)
+    def get_origin_investmentoperation(self, obj):
+        op = obj.origin_investmentoperation()
+        return models.Investmentsoperations.hurl(self.context['request'], op.id) if op else None
+
+    @extend_schema_field(OpenApiTypes.URI)
+    def get_destiny_investmentoperation(self, obj):
+        op = obj.destiny_investmentoperation()
+        return models.Investmentsoperations.hurl(self.context['request'], op.id) if op else None
+    
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_finished(self, obj):
+        return obj.finished()
                 
 class LeveragesSerializer(serializers.HyperlinkedModelSerializer):
     localname = serializers.SerializerMethodField()
@@ -287,7 +327,7 @@ class ProductstypesSerializer(serializers.HyperlinkedModelSerializer):
     def get_localname(self, obj):
         return  _(obj.name)
 
-class QuotesSerializer(serializers.HyperlinkedModelSerializer):
+class QuotesSerializer(ExceptionHandlingInModelHyperlinkedModelSerializer):
     name = serializers.SerializerMethodField()
     decimals = serializers.SerializerMethodField()
     currency = serializers.SerializerMethodField()

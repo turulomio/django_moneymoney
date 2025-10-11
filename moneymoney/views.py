@@ -945,12 +945,6 @@ class InvestmentsoperationsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.InvestmentsoperationsSerializer
     permission_classes = [permissions.IsAuthenticated]  
     
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        self.perform_destroy(instance)
-        instance.investments.set_attributes_after_investmentsoperations_crud()
-        return Response(status=status.HTTP_204_NO_CONTENT)    
-
 class AccountsViewSet(viewsets.ModelViewSet):
     queryset = models.Accounts.objects.select_related("banks").all()
     serializer_class = serializers.AccountsSerializer
@@ -1064,6 +1058,24 @@ class AccountstransfersViewSet(viewsets.ModelViewSet):
     queryset = models.Accountstransfers.objects.all()
     serializer_class = serializers.AccountstransfersSerializer
     permission_classes = [permissions.IsAuthenticated]  
+
+class InvestmentstransfersViewSet(viewsets.ModelViewSet):
+    queryset = models.Investmentstransfers.objects.all()
+    serializer_class = serializers.InvestmentstransfersSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='investment', description='Filter by investment url', required=False, type=OpenApiTypes.URI), 
+        ],
+    )
+    def list(self, request):
+        investment=RequestUrl(self.request, 'investment', models.Investments)
+        if investment is not None:
+            self.queryset=self.queryset.filter(Q(investments_origin=investment) | Q(investments_destiny=investment))
+        
+        serializer = self.get_serializer(self.queryset, many=True)
+        return Response(serializer.data)
 
 class BanksViewSet(viewsets.ModelViewSet):
     queryset = models.Banks.objects.all()

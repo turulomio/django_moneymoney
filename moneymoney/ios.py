@@ -2,7 +2,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from json import dumps
 from logging import debug, error
-from moneymoney import models
+from moneymoney import models, types
 from pydicts.percentage import Percentage, percentage_between
 from pydicts.myjsonencoder import MyJSONEncoderDecimalsAsFloat
 from pydicts import lod
@@ -717,7 +717,7 @@ class IOS:
             h['years']=IOS.__ioh_years(h)
             h['account2user_start']=lf(data["currency_account"], data["currency_user"], h["dt_start"] )
             h['account2user_end']=lf(data["currency_account"], data["currency_user"], h["dt_end"] )
-            h['gross_start_investment']=0 if h['operationstypes_id'] in (9,10) else abs(h['shares']*h['price_start_investment']*data['real_leverages'])#Transfer shares 9, 10
+            h['gross_start_investment']=0 if h['operationstypes_id'] in (types.eOperationType.TransferSharesOrigin,types.eOperationType.TransferSharesDestiny) else abs(h['shares']*h['price_start_investment']*data['real_leverages'])#Transfer shares 9, 10
             if h['operationstypes_id'] in (9,10):
                 h['gross_end_investment']=0
             elif h['shares']<0:#Sell after bought
@@ -770,7 +770,7 @@ class IOS:
 
     @staticmethod
     def __operationstypes(shares):
-        return 4 if shares>=0 else 5
+        return types.eOperationType.SharesPurchase if shares>=0 else types.eOperationType.SharesSale
 
     @staticmethod
     def __get_all_quotes( t):       

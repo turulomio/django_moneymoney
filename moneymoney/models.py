@@ -2,10 +2,12 @@ from datetime import date, timedelta
 from decimal import Decimal
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction, connection
 from django.db.models import prefetch_related_objects, Case, When, Sum, Value, Subquery, F, Window, Min, Max, DateField, OuterRef, ExpressionWrapper, DurationField, FloatField
 from django.db.models.functions import FirstValue, LastValue, ExtractMonth, ExtractYear, Cast, Extract
+
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
@@ -535,7 +537,7 @@ class Dividends(models.Model):
     @transaction.atomic
     def delete(self):
         self.accountsoperations.delete()
-        models.Model.delete(self)
+        super().delete()
 
     @staticmethod
     def lod_ym_netgains_dividends(request,  dt_from=None,  dt_to=None, ids=None):
@@ -719,17 +721,29 @@ class Investmentsoperations(models.Model):
     comment = models.TextField(blank=True, null=True)
     currency_conversion = models.DecimalField(max_digits=30, decimal_places=10, blank=False, null=False)
     associated_ao=models.OneToOneField("Accountsoperations", models.DO_NOTHING, blank=True, null=True)
+    associated_it=models.ForeignKey("Investmentstransfers", models.DO_NOTHING, blank=True, null=True)
+
 
     class Meta:
         managed = True
         db_table = 'investmentsoperations'
         
     def __str__(self):
-        return "InvestmentOperation"
+        return functions.string_oneline_object(self)
 
     @staticmethod
     def hurl(request, id):
         return request.build_absolute_uri(reverse('investmentsoperations-detail', args=(id, )))
+
+
+    def nice_comment(self):
+        if self.associated_it is not None:
+            return _("{0} transfer from '{1}' to '{2}' started at {3}. {4}").format(
+                self.investments.products.productstypes.fullName(),#Same for both investments in investments transfer
+                self.associated_it.investments_origin.fullName(),
+                self.associated_it.investments_destiny.fullName(),
+                self.associated_it.datetime_origin,
+                "" if self.comment is None else self.comment)
 
     @staticmethod
     def post_payload(investments="http://testserver/api/investments/1/", datetime=timezone.now(), shares=1000, price=10,  taxes=0, commission=0,  operationstypes="http://testserver/api/operationstypes/4/", currency_conversion=1):
@@ -745,36 +759,53 @@ class Investmentsoperations(models.Model):
             "currency_conversion": currency_conversion, 
         }
 
-    @transaction.atomic
-    def delete(self):
-        if self.associated_ao is not None:
-            self.associated_ao.delete()
-        models.Model.delete(self)
+    def clean(self):
+        #Checks investment has quotes
+        if not Quotes.objects.filter(products=self.investments.products).exists():
+            raise ValidationError(_("Investment operation can't be created because its related product hasn't quotes."))
+
 
     @transaction.atomic
-    def update_associated_account_operation(self,  request):
+    def delete(self):
+        investment=self.investments
         if self.associated_ao is not None:
             self.associated_ao.delete()
-        plio=ios.IOS.from_ids(timezone.now(), request.user.profile.currency, [self.investments.id, ], 1)
+        super().delete()
+        investment.set_attributes_after_investmentsoperations_crud()
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        """
+            This save must use self.fullClean when used as a model
+        """
+        self.full_clean()
+        super(Investmentsoperations, self).save(*args, **kwargs) #To generate io and then plio
+
+        if self.associated_ao and self.associated_ao.id is not None:
+            self.associated_ao.delete()
+            self.associated_ao = None
+        
+        # No associated ao if daily_adjustment
+        if self.investments.daily_adjustment is True: #Because it uses adjustment information
+            return
+        
+        # Updates asociated ao
+        plio=ios.IOS.from_ids(timezone.now(), "EUR", [self.investments.id, ], 1) #I set EUR to reuse this code but __user values will not be used
         #Searches io investments operations of the comment
         io=None
         for o in plio.d_io(self.investments.id):
             if o["id"]==self.id:
                 io=o
         
-        if self.investments.daily_adjustment is True: #Because it uses adjustment information
-            return
-        
         if self.operationstypes.id==eOperationType.SharesPurchase:#Compra Acciones
             c=Accountsoperations()
             c.datetime=self.datetime
-            c.concepts=Concepts.objects.get(pk=eConcept.BuyShares)
+            c.concepts_id=eConcept.BuyShares
             c.amount=-io['net_account']
             c.comment=self.comment
             c.accounts=self.investments.accounts
             c.save()
             self.associated_ao=c
-            self.save()
         elif self.operationstypes.id==eOperationType.SharesSale:#// Venta Acciones
             c=Accountsoperations()
             c.datetime=self.datetime
@@ -784,9 +815,8 @@ class Investmentsoperations(models.Model):
             c.accounts=self.investments.accounts
             c.save()
             self.associated_ao=c
-            self.save()
-        elif self.operationstypes.id==eOperationType.SharesAdd:#Added
-            if(self.commission!=0):
+        elif self.operationstypes.id in [eOperationType.SharesAdd, eOperationType.TransferFunds]:
+            if self.commission!=0:#No associated_ao
                 c=Accountsoperations()
                 c.datetime=self.datetime
                 c.concepts=Concepts.objects.get(pk=eConcept.BankCommissions)
@@ -795,11 +825,161 @@ class Investmentsoperations(models.Model):
                 c.accounts=self.investments.accounts
                 c.save()
                 self.associated_ao=c
-                self.save()
-        elif self.operationstypes.id==eOperationType.TransferFunds:#Fund transfer
-                self.associated_ao=None #Si hubiero associated_ao por haber puesto un tipo SharesPurchase y luego cambiar
-                self.save()
+
         
+        super(Investmentsoperations, self).save(update_fields=['associated_ao']) #Forces and update to avoid double insert a integrity key error
+
+
+
+class Investmentstransfers(models.Model):
+    """
+        If datetime_destiny is null, transfers hasn't finished
+        investments_destiny is known
+    """
+    datetime_origin = models.DateTimeField(blank=False, null=False)
+    investments_origin= models.ForeignKey('Investments', models.CASCADE, blank=False, null=False, related_name="origin")
+    shares_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False) #Can be positive and negative
+    price_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
+    commission_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
+    taxes_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
+    currency_conversion_origin = models.DecimalField(max_digits=30, decimal_places=10, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=1)
+
+    datetime_destiny = models.DateTimeField(blank=True, null=True, default=None)
+    investments_destiny= models.ForeignKey('Investments', models.CASCADE, blank=False, null=False, related_name="destiny")
+    shares_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True) #Can be positive and negative
+    price_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(Decimal(0))])
+    commission_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(Decimal(0))], default=0)
+    taxes_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(Decimal(0))], default=0)
+    currency_conversion_destiny  = models.DecimalField(max_digits=30, decimal_places=10, blank=True, null=True, validators=[MinValueValidator(Decimal(0))], default=1)
+
+    comment=models.TextField(blank=True, null=False)
+
+
+    @staticmethod
+    def post_payload(
+        datetime_origin=timezone.now(), 
+        investments_origin="http://testserver/api/investments/1/", 
+        shares_origin=-1000, 
+        price_origin=10, 
+        commission_origin=0, 
+        taxes_origin=0, 
+        currency_conversion_origin=1,   
+        datetime_destiny=timezone.now(), 
+        investments_destiny="http://testserver/api/investments/1/",         
+        shares_destiny=1000, 
+        price_destiny=10, 
+        commission_destiny=0, 
+        taxes_destiny=0, 
+        currency_conversion_destiny=1,   
+        comment=""
+    ):
+        return {
+            "datetime_origin": datetime_origin,
+            "investments_origin": investments_origin,
+            "shares_origin": shares_origin,
+            "price_origin": price_origin,  
+            "commission_origin": commission_origin, 
+            "taxes_origin": taxes_origin, 
+            "currency_conversion_origin": currency_conversion_origin,   
+            "datetime_destiny": datetime_destiny,
+            "investments_destiny": investments_destiny,         
+            "shares_destiny": shares_destiny, 
+            "price_destiny": price_destiny, 
+            "commission_destiny": commission_destiny, 
+            "taxes_destiny": taxes_destiny, 
+            "currency_conversion_destiny": currency_conversion_destiny,   
+            "comment": comment, 
+        }
+
+    def clean(self):
+        if self.finished() is True:
+            if not self.investments_origin.products.productstypes==self.investments_destiny.products.productstypes:
+                raise ValidationError(_("Investment transfer can't be created if products types are not the same"))
+            
+            if self.investments_origin.id==self.investments_destiny.id:
+                raise ValidationError(_("Investment transfer can't be created if investments are the same"))
+            
+            if self.shares_origin is None or self.shares_destiny is None:
+                raise ValidationError(_("Shares amount can't be null"))
+
+            if self.shares_origin is not None and self.shares_destiny is not None and not functions.have_different_sign(self.shares_origin, self.shares_destiny):
+                raise ValidationError(_("Shares amount can't be of the same sign"))
+
+
+
+    class Meta:
+        managed = True
+        db_table = 'investmentstransfers'
+        
+    def __str__(self):
+        return functions.string_oneline_object(self)
+    
+
+    def origin_investmentoperation(self):
+        try:
+            return Investmentsoperations.objects.get(associated_it=self, operationstypes_id=eOperationType.TransferSharesOrigin)
+        except:
+            return None
+    
+    def destiny_investmentoperation(self):
+        try:
+            return Investmentsoperations.objects.get(associated_it=self, operationstypes_id=eOperationType.TransferSharesDestiny)
+        except:
+            return None 
+        
+    def finished(self):
+        """
+            Boolean to know if an IT is finished
+        """
+        return False if self.datetime_destiny is None else True
+    
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        ## Creates Investmentstransfer and generates id
+        self.full_clean()
+        super(Investmentstransfers, self).save(*args, **kwargs)
+        
+        ## Create or update origin
+        origin_io=self.origin_investmentoperation()
+        if origin_io is None:
+            origin_io=Investmentsoperations()
+        origin_io.datetime=self.datetime_origin
+        origin_io.operationstypes_id=eOperationType.TransferSharesOrigin
+        origin_io.investments=self.investments_origin
+        origin_io.shares=self.shares_origin
+        origin_io.price=self.price_origin
+        origin_io.commission=self.commission_origin
+        origin_io.taxes=self.taxes_origin
+        origin_io.currency_conversion=self.currency_conversion_origin
+        origin_io.associated_it=self
+        origin_io.save()
+
+        destiny_io=self.destiny_investmentoperation()
+        if self.datetime_destiny is None: #IT unfinished. destiny_io must be deleted
+            if destiny_io is not None:
+                destiny_io.delete()
+        else:
+            ## Create or update destiny
+            if destiny_io is None:
+                destiny_io=Investmentsoperations()
+            destiny_io.datetime=self.datetime_destiny
+            destiny_io.operationstypes_id=eOperationType.TransferSharesDestiny
+            destiny_io.investments=self.investments_destiny
+            destiny_io.shares=self.shares_destiny
+            destiny_io.price=self.price_destiny
+            destiny_io.commission=self.commission_destiny
+            destiny_io.taxes=self.taxes_destiny
+            destiny_io.currency_conversion=self.currency_conversion_destiny
+            destiny_io.associated_it=self
+            destiny_io.save()
+
+    def origin_gross_amount(self):
+        return Currency(self.price_origin*self.shares_origin*self.investments_origin.products.real_leveraged_multiplier(), self.investments_origin.products.currency)
+
+    def destiny_gross_amount(self):
+        return Currency(self.price_destiny*self.shares_destiny*self.investments_destiny.products.real_leveraged_multiplier(), self.investments_destiny.products.currency)
+    
+
 
     
 class Leverages(models.Model):
