@@ -548,7 +548,7 @@ class Dividends(models.Model):
     net = models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True)
     dps = models.DecimalField(max_digits=100, decimal_places=6, blank=True, null=True)
     datetime = models.DateTimeField(blank=True, null=True)
-    accountsoperations = models.OneToOneField("Accountsoperations", models.DO_NOTHING, null=True)
+    accountsoperations = models.OneToOneField("Accountsoperations", models.DO_NOTHING, null=True, blank=True)
     commission = models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True)
     concepts = models.ForeignKey(Concepts, models.DO_NOTHING)
     currency_conversion = models.DecimalField(max_digits=10, decimal_places=6)
@@ -617,30 +617,25 @@ class Dividends(models.Model):
                 ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(casts.dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["sum"], currency, request.user.profile.currency)})
         return lod_ymv.lod_ymv_transposition(ld)
 
-    @transaction.atomic
-    def save(self, *args, **kwargs):
+
+    def clean(self):
         if self.commission <0 or self.taxes<0:
             raise _("Taxes and commissions must be equal or greater than zero")
             return 
         
+    @transaction.atomic
+    def save(self, *args, **kwargs):
         if self.accountsoperations is None:#Insert
-            c=Accountsoperations()
-            c.datetime=self.datetime
-            c.concepts=self.concepts
-            c.amount=self.net
-            #c.comment="Transaction not finished"
-            c.comment=""
-            c.accounts=self.investments.accounts
-            c.save()
-            self.accountsoperations=c
-        else:#update
-            self.accountsoperations.datetime=self.datetime
-            self.accountsoperations.concepts=self.concepts
-            self.accountsoperations.amount=self.net
-            self.accountsoperations.comment=""
-            self.accountsoperations.accounts=self.investments.accounts
-            self.accountsoperations.save()
-        models.Model.save(self)
+            self.accountsoperations=Accountsoperations()
+        self.accountsoperations.datetime=self.datetime
+        self.accountsoperations.concepts=self.concepts
+        self.accountsoperations.amount=self.net
+        self.accountsoperations.comment=""
+        self.accountsoperations.accounts=self.investments.accounts
+        self.accountsoperations.save()
+
+        self.full_clean()        
+        super(Dividends, self).save(*args, **kwargs) #To generate io and then plio
 
 
 class Investments(models.Model):
@@ -856,7 +851,7 @@ class Investmentsoperations(models.Model):
             c=Accountsoperations()
             c.datetime=self.datetime
             c.concepts_id=eConcept.BuyShares
-            c.amount=-io['net_account']
+            c.amount=round(-io['net_account'],2) # Accountsoperations model
             c.comment=self.comment
             c.accounts=self.investments.accounts
             c.save()
@@ -865,7 +860,7 @@ class Investmentsoperations(models.Model):
             c=Accountsoperations()
             c.datetime=self.datetime
             c.concepts=Concepts.objects.get(pk=eConcept.SellShares)
-            c.amount=io['net_account']
+            c.amount=round(io['net_account'],2)# Accountsoperations model
             c.comment=self.comment
             c.accounts=self.investments.accounts
             c.save()
@@ -875,7 +870,7 @@ class Investmentsoperations(models.Model):
                 c=Accountsoperations()
                 c.datetime=self.datetime
                 c.concepts=Concepts.objects.get(pk=eConcept.BankCommissions)
-                c.amount=-io['taxes_account']-io['commission_account']
+                c.amount=round(-io['taxes_account']-io['commission_account'],2)# Accountsoperations model
                 c.comment=self.comment
                 c.accounts=self.investments.accounts
                 c.save()

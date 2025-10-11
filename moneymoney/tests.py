@@ -407,6 +407,7 @@ class API(APITestCase):
     def test_ReportAnnualIncomeDetails(self):       
         # Adds a dividend to control it only appears in dividends not in dividends+incomes        
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)        
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(quote=10), status.HTTP_201_CREATED)  
         tests_helpers.client_post(self, self.client_authorized_1, "/api/dividends/",  models.Dividends.post_payload(datetime=casts.dtaware_month_end(static_year, static_month, timezone_madrid), investments=dict_investment["url"]), status.HTTP_201_CREATED)        
         dod_=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/details/{static_year}/{static_month}/", status.HTTP_200_OK)
         self.assertEqual(len(dod_["dividends"]), 1 )
@@ -830,7 +831,7 @@ class API(APITestCase):
         dict_concept_from=tests_helpers.client_post(self, self.client_authorized_1, "/api/concepts/", models.Concepts.post_payload(name="Concept from"), status.HTTP_201_CREATED)
         
         # We create an accounts operations, creditcardsoperations and dividends with this new concept
-        dict_ao=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=dict_concept_from["url"]), status.HTTP_201_CREATED)
+        dict_ao=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=dict_concept_from["url"], amount=-1000), status.HTTP_201_CREATED)
         dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(), status.HTTP_201_CREATED)
         dict_cco=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"], concepts=dict_concept_from["url"]), status.HTTP_201_CREATED)
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(accounts=dict_ao["accounts"]), status.HTTP_201_CREATED)

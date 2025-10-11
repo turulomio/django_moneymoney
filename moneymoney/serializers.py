@@ -80,6 +80,7 @@ class DividendsSerializer(ExceptionHandlingInModelHyperlinkedModelSerializer):
     class Meta:
         model = models.Dividends
         fields = ('url', 'id', 'investments', 'gross','taxes','net', 'dps', 'datetime', 'accountsoperations', 'commission', 'concepts', 'currency_conversion',  'currency')
+        read_only_fields = ('accountsoperations',) # It's added later in the save
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):
