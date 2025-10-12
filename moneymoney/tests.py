@@ -485,8 +485,16 @@ class API(APITestCase):
         dict_ao=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=f"/api/concepts/{types.eConcept.BankCommissions}/", amount=-1000), status.HTTP_201_CREATED)
         
         # Make two refunds        
-        dict_refund1=tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":10} , status.HTTP_200_OK)
+        dict_refund1=tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":100} , status.HTTP_200_OK)
         self.assertEqual(dict_refund1["refund_original"],dict_ao["url"])
+
+        dict_refund2=tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":200} , status.HTTP_200_OK)
+        self.assertEqual(dict_refund2["refund_original"],dict_ao["url"])
+
+        # Get refunds
+        lod_refunds=tests_helpers.client_get(self, self.client_authorized_1, dict_ao["url"]+"get_refunds/" , status.HTTP_200_OK)
+        sum_refunds=lod.lod_sum(lod_refunds, "amount")
+        self.assertEqual(dict_ao["amount"]+sum_refunds, -700)
 
 
     @transaction.atomic

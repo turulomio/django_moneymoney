@@ -1072,11 +1072,11 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         return Response(_("Can't make a refund"), status=status.HTTP_400_BAD_REQUEST)
     
-    @action(detail=True, methods=['POST'], name='Get refunds from an expense', url_path="get_refunds", url_name='get_refunds', permission_classes=[permissions.IsAuthenticated])
+    @action(detail=True, methods=['GET'], name='Get refunds from an expense', url_path="get_refunds", url_name='get_refunds', permission_classes=[permissions.IsAuthenticated])
     @transaction.atomic
     def get_refunds(self, request, pk=None):
         ao=self.get_object()
-        serializer = serializers.AccountsoperationsSerializer(ao.refunds.all(), many=False, context={'request': request})
+        serializer = serializers.AccountsoperationsSerializer(ao.refunds.all(), many=True, context={'request': request})
         return Response(serializer.data)
 
 class AccountstransfersViewSet(viewsets.ModelViewSet):
