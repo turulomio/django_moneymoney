@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.management import call_command
 from django.db import transaction, connection, reset_queries
-from django.db.models import prefetch_related_objects, Count, Sum, Q, Max, Subquery
+from django.db.models import prefetch_related_objects, Count, Sum, Q, Max, Subquery, OuterRef, Exists
 from django.db.models.functions.datetime import ExtractMonth, ExtractYear
 from django.urls import reverse
 from django.utils import timezone
@@ -29,6 +29,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework import viewsets, permissions, status, serializers as drf_serializers
 from rest_framework.views import APIView
+from django.core.exceptions import ValidationError as DjangoValidationError
 from zoneinfo import available_timezones
 from tempfile import TemporaryDirectory
 
@@ -1006,16 +1007,23 @@ class AccountsViewSet(viewsets.ModelViewSet):
         return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
 class AccountsoperationsViewSet(viewsets.ModelViewSet):
-    queryset = models.Accountsoperations.objects.select_related(
-        "accounts",
-        "concepts", 
-        "associated_transfer__origin__banks", 
-        "associated_transfer__destiny__banks", 
-        "dividends__investments__accounts", 
-        "investmentsoperations__investments", 
-    ).all()
     serializer_class = serializers.AccountsoperationsSerializer
     permission_classes = [permissions.IsAuthenticated]  
+    queryset=models.Accountsoperations.objects.all()
+
+
+    def get_queryset(self):
+        refunds_subquery = models.Accountsoperations.objects.filter(refund_original=OuterRef('pk'))
+        return models.Accountsoperations.objects.select_related(
+            "accounts",
+            "concepts", 
+            "associated_transfer__origin__banks", 
+            "associated_transfer__destiny__banks", 
+            "dividends__investments__accounts", 
+            "investmentsoperations__investments", 
+        ).annotate(
+            has_refunds=Exists(refunds_subquery)
+        )
     
     @extend_schema(
         parameters=[
@@ -1031,24 +1039,25 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
         year=RequestInteger(self.request, 'year')
         month=RequestInteger(self.request, 'month')
         account=RequestUrl(self.request, 'account', models.Accounts)
+        queryset = self.get_queryset()
 
         if search is not None:
-            self.queryset=self.queryset.filter(comment__icontains=search)
+            queryset=queryset.filter(comment__icontains=search)
         elif all_args_are_not_none(account, year, month):
             dt_initial=casts.dtaware_month_start(year, month, request.user.profile.zone)
             initial_balance=account.balance( dt_initial, request.user.profile.currency)['balance_account_currency']
-            self.queryset=self.queryset.filter(accounts=account, datetime__year=year, datetime__month=month).order_by("datetime")
-            serializer = serializers.AccountsoperationsSerializer(self.queryset, many=True, context={'request': request})
+            queryset=queryset.filter(accounts=account, datetime__year=year, datetime__month=month).order_by("datetime")
+            serializer = self.get_serializer(queryset, many=True)
             for d in serializer.data:
                 d["balance"]=initial_balance+d["amount"]
                 initial_balance+=d["amount"]
             functions.show_queries_function()
             return Response(serializer.data)
         elif all_args_are_not_none(concept, year, month):
-            self.queryset=self.queryset.filter(concepts=concept, datetime__year=year, datetime__month=month)
+            queryset=queryset.filter(concepts=concept, datetime__year=year, datetime__month=month)
         elif all_args_are_not_none(concept, year):
-            self.queryset=self.queryset.filter(concepts=concept, datetime__year=year)
-        serializer = serializers.AccountsoperationsSerializer(self.queryset, many=True, context={'request': request})
+            queryset=queryset.filter(concepts=concept, datetime__year=year)
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
 
@@ -1059,6 +1068,29 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
         models.Creditcardsoperations.objects.filter(accountsoperations_id=ao.id).update(paid_datetime=None,  paid=False, accountsoperations_id=None)
         ao.delete() #Must be at the end due to middle queries
         return JsonResponse( True, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
+
+    @action(detail=True, methods=['POST'], name='Create a refund from an expense', url_path="create_refund", url_name='create_refund', permission_classes=[permissions.IsAuthenticated])
+    @transaction.atomic
+    def create_refund(self, request, pk=None):
+        ao=self.get_object()
+        datetime=RequestDtaware(request, "datetime", request.user.profile.zone)
+        comment=RequestString(request, "comment")
+        refund_amount=RequestDecimal(request,"refund_amount")
+        if all_args_are_not_none(datetime, refund_amount, comment):
+            try:
+                refund=ao.create_refund(datetime, refund_amount, comment)
+                serializer = serializers.AccountsoperationsSerializer(refund, many=False, context={'request': request})
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            except DjangoValidationError as e:
+                return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)
+        return Response(_("Can't make a refund with those parameters"), status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['GET'], name='Get refunds from an expense', url_path="get_refunds", url_name='get_refunds', permission_classes=[permissions.IsAuthenticated])
+    @transaction.atomic
+    def get_refunds(self, request, pk=None):
+        ao=self.get_object()
+        serializer = serializers.AccountsoperationsSerializer(ao.refunds.all(), many=True, context={'request': request})
+        return Response(serializer.data)
 
 class AccountstransfersViewSet(viewsets.ModelViewSet):
     queryset = models.Accountstransfers.objects.all()

@@ -251,6 +251,7 @@ class Accountsoperations(models.Model):
     datetime = models.DateTimeField(blank=False, null=False)
     associated_transfer=models.ForeignKey("Accountstransfers", models.DO_NOTHING, blank=True, null=True)
     associated_cc=models.ForeignKey("Creditcards", models.DO_NOTHING, blank=True, null=True)
+    refund_original = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True, related_name="refunds")    
 
     class Meta:
         managed = True
@@ -289,6 +290,7 @@ class Accountsoperations(models.Model):
         if self.associated_transfer is not None:
             return False
         return True
+
         
     def nice_comment(self):
         if self.associated_transfer is not None:
@@ -301,6 +303,12 @@ class Accountsoperations(models.Model):
                     self.associated_transfer.origin.amount_string(self.associated_transfer.amount),
                     self.associated_transfer.origin.fullName(), 
                     self.associated_transfer.destiny.fullName(), 
+                    self.comment)
+        
+        elif self.concepts.id==eConcept.CreditCardRefund:
+            return _("Refund of operation at {0} with {1}. {2}").format( 
+                    self.refund_original.datetime,
+                    self.refund_original.amount,  
                     self.comment)
         
         elif self.concepts.id==eConcept.CreditCardBilling:
@@ -328,6 +336,55 @@ class Accountsoperations(models.Model):
             )
 
         return self.comment
+    
+    def get_total_refunded_amount(self):
+        """Calculates the total amount refunded against this transaction."""
+        # Use an aggregation (Sum) on the reverse relationship (refunds)
+        r=0
+        for refund in self.refunds.all():
+            r+=refund.amount
+        return r
+
+    @transaction.atomic
+    def create_refund(self, datetime, refund_amount, comment):
+        """Creates a refund transaction linked to this original sale."""
+        # Create the new refund transaction
+        refund_tx = Accountsoperations.objects.create(
+            datetime=datetime,
+            accounts=self.accounts,
+            concepts_id=eConcept.CreditCardRefund,
+            amount=refund_amount,
+            refund_original=self,
+            comment=comment
+        )
+        self.save()
+
+        return refund_tx
+
+    def clean(self):            
+        if self.concepts.operationstypes.id== eOperationType.Income and self.amount<0:
+            raise ValidationError(_("Income operations amount must be greater or equal to 0."))
+        if self.concepts.operationstypes.id == eOperationType.Expense and self.amount>0:
+            raise ValidationError(_("Expense operations amount must be less or equal to 0."))
+        # Refund
+        if self.refund_original is not None:
+            if self.refund_original.concepts.operationstypes.id != eOperationType.Expense:
+                raise ValidationError("Only 'Expense' accounts operations can be refunded.")
+                
+            # Check if the refund amount exceeds the remaining refundable amount
+            remaining_refundable = self.refund_original.amount + self.refund_original.get_total_refunded_amount()
+            if self.amount > abs(remaining_refundable):
+                raise ValidationError(f"Refund amount {Currency(self.amount, self.accounts.currency)} exceeds remaining refundable amount {Currency(remaining_refundable, self.accounts.currency)}")
+
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        """
+            This save must use self.fullClean when used as a model
+        """
+        self.full_clean()
+        super(Accountsoperations, self).save(*args, **kwargs) #To generate io and then plio
+
 
 class Banks(models.Model):
     name = models.TextField()
@@ -493,7 +550,7 @@ class Dividends(models.Model):
     net = models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True)
     dps = models.DecimalField(max_digits=100, decimal_places=6, blank=True, null=True)
     datetime = models.DateTimeField(blank=True, null=True)
-    accountsoperations = models.OneToOneField("Accountsoperations", models.DO_NOTHING, null=True)
+    accountsoperations = models.OneToOneField("Accountsoperations", models.DO_NOTHING, null=True, blank=True)
     commission = models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True)
     concepts = models.ForeignKey(Concepts, models.DO_NOTHING)
     currency_conversion = models.DecimalField(max_digits=10, decimal_places=6)
@@ -562,30 +619,24 @@ class Dividends(models.Model):
                 ld.append({"year":o["datetime__year"], "month":o["datetime__month"], "value": Assets.money_convert(casts.dtaware_month_end(o["datetime__year"], o["datetime__month"], request.user.profile.zone), o["sum"], currency, request.user.profile.currency)})
         return lod_ymv.lod_ymv_transposition(ld)
 
+
+    def clean(self):
+        if self.commission <0 or self.taxes<0:
+            raise ValidationError(_("Taxes and commissions must be equal or greater than zero"))
+        
     @transaction.atomic
     def save(self, *args, **kwargs):
-        if self.commission <0 or self.taxes<0:
-            raise _("Taxes and commissions must be equal or greater than zero")
-            return 
-        
         if self.accountsoperations is None:#Insert
-            c=Accountsoperations()
-            c.datetime=self.datetime
-            c.concepts=self.concepts
-            c.amount=self.net
-            #c.comment="Transaction not finished"
-            c.comment=""
-            c.accounts=self.investments.accounts
-            c.save()
-            self.accountsoperations=c
-        else:#update
-            self.accountsoperations.datetime=self.datetime
-            self.accountsoperations.concepts=self.concepts
-            self.accountsoperations.amount=self.net
-            self.accountsoperations.comment=""
-            self.accountsoperations.accounts=self.investments.accounts
-            self.accountsoperations.save()
-        models.Model.save(self)
+            self.accountsoperations=Accountsoperations()
+        self.accountsoperations.datetime=self.datetime
+        self.accountsoperations.concepts=self.concepts
+        self.accountsoperations.amount=self.net
+        self.accountsoperations.comment=""
+        self.accountsoperations.accounts=self.investments.accounts
+        self.accountsoperations.save()
+
+        self.full_clean()        
+        super(Dividends, self).save(*args, **kwargs) #To generate io and then plio
 
 
 class Investments(models.Model):
@@ -801,7 +852,7 @@ class Investmentsoperations(models.Model):
             c=Accountsoperations()
             c.datetime=self.datetime
             c.concepts_id=eConcept.BuyShares
-            c.amount=-io['net_account']
+            c.amount=round(-io['net_account'],2) # Accountsoperations model
             c.comment=self.comment
             c.accounts=self.investments.accounts
             c.save()
@@ -810,7 +861,7 @@ class Investmentsoperations(models.Model):
             c=Accountsoperations()
             c.datetime=self.datetime
             c.concepts=Concepts.objects.get(pk=eConcept.SellShares)
-            c.amount=io['net_account']
+            c.amount=round(io['net_account'],2)# Accountsoperations model
             c.comment=self.comment
             c.accounts=self.investments.accounts
             c.save()
@@ -820,7 +871,7 @@ class Investmentsoperations(models.Model):
                 c=Accountsoperations()
                 c.datetime=self.datetime
                 c.concepts=Concepts.objects.get(pk=eConcept.BankCommissions)
-                c.amount=-io['taxes_account']-io['commission_account']
+                c.amount=round(-io['taxes_account']-io['commission_account'],2)# Accountsoperations model
                 c.comment=self.comment
                 c.accounts=self.investments.accounts
                 c.save()

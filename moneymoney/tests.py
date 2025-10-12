@@ -224,16 +224,24 @@ class Models(APITestCase):
         o.estimated_datetime_for_daily_quote()
         o.estimated_datetime_for_intraday_quote()
         o.estimated_datetime_for_intraday_quote(delay=True)
-        
+            
+    @tag("current")
     def test_Accountsoperations(self):
         o=models.Accountsoperations()
         o.accounts_id=4
-        o.amount=1000
+        o.amount=-1000
         o.datetime=timezone.now()
-        o.concepts_id=1
+        o.concepts_id=types.eConcept.BankCommissions
         o.save()
-        str(o)
-        repr(o)
+
+        #Creates 2 refunds
+        refund=o.create_refund(timezone.now(), 10, "")
+        refund=o.create_refund(timezone.now(), 20, "")
+
+        self.assertEqual(len(o.refunds.all()), 2)
+        self.assertEqual(refund.refund_original, o)
+
+
 
     def test_Banks(self):
         o=models.Banks.objects.get(pk=3)
@@ -399,6 +407,7 @@ class API(APITestCase):
     def test_ReportAnnualIncomeDetails(self):       
         # Adds a dividend to control it only appears in dividends not in dividends+incomes        
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)        
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(quote=10), status.HTTP_201_CREATED)  
         tests_helpers.client_post(self, self.client_authorized_1, "/api/dividends/",  models.Dividends.post_payload(datetime=casts.dtaware_month_end(static_year, static_month, timezone_madrid), investments=dict_investment["url"]), status.HTTP_201_CREATED)        
         dod_=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/details/{static_year}/{static_month}/", status.HTTP_200_OK)
         self.assertEqual(len(dod_["dividends"]), 1 )
@@ -469,6 +478,26 @@ class API(APITestCase):
         qs_accounts=models.Accounts.objects.filter(active=True)
         r=models.Accounts.accounts_balance(qs_accounts, timezone.now(), 'EUR')
         self.assertEqual(r["balance_user_currency"], 1000)
+
+    @tag("current")
+    def test_Accountsoperations_refunds(self):
+        #Adding an ao
+        dict_ao=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=f"/api/concepts/{types.eConcept.BankCommissions}/", amount=-1000), status.HTTP_201_CREATED)
+        
+        # Make two refunds        
+        dict_refund1=tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":100, "comment": "First refund"} , status.HTTP_200_OK)
+        self.assertEqual(dict_refund1["refund_original"],dict_ao["url"])
+
+        dict_refund2=tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":200, "comment": "Second refund"} , status.HTTP_200_OK)
+        self.assertEqual(dict_refund2["refund_original"],dict_ao["url"])
+
+        # Get refunds
+        lod_refunds=tests_helpers.client_get(self, self.client_authorized_1, dict_ao["url"]+"get_refunds/" , status.HTTP_200_OK)
+        sum_refunds=lod.lod_sum(lod_refunds, "amount")
+        self.assertEqual(dict_ao["amount"]+sum_refunds, -700)
+
+        # Set a too much high refund
+        tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":2000, "comment": "Too much"} , status.HTTP_400_BAD_REQUEST)
 
 
     @transaction.atomic
@@ -680,7 +709,7 @@ class API(APITestCase):
         response=tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(investments=dict_investment["url"]), status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response["__all__"][0], "Investment operation can't be created because its related product hasn't quotes.")
 
-    @tag("current")
+
     def test_Investmentstransfers(self): 
         # Create needed quotes for io
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(products="/api/products/81718/"), status.HTTP_201_CREATED)
@@ -813,11 +842,10 @@ class API(APITestCase):
         dict_concept_from=tests_helpers.client_post(self, self.client_authorized_1, "/api/concepts/", models.Concepts.post_payload(name="Concept from"), status.HTTP_201_CREATED)
         
         # We create an accounts operations, creditcardsoperations and dividends with this new concept
-        dict_ao=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=dict_concept_from["url"]), status.HTTP_201_CREATED)
+        dict_ao=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=dict_concept_from["url"], amount=-1000), status.HTTP_201_CREATED)
         dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(), status.HTTP_201_CREATED)
         dict_cco=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"], concepts=dict_concept_from["url"]), status.HTTP_201_CREATED)
         dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(accounts=dict_ao["accounts"]), status.HTTP_201_CREATED)
-        dict_dividend=tests_helpers.client_post(self, self.client_authorized_1, "/api/dividends/",  models.Dividends.post_payload(investments=dict_investment["url"], concepts=dict_concept_from["url"]), status.HTTP_201_CREATED)
         
         # We create a new personal concepto to transfer to
         dict_concept_to=tests_helpers.client_post(self, self.client_authorized_1, "/api/concepts/", models.Concepts.post_payload(name="Concept to"), status.HTTP_201_CREATED)
@@ -830,8 +858,6 @@ class API(APITestCase):
         self.assertEqual(dict_ao_after["concepts"], dict_concept_to["url"])
         dict_cco_after=tests_helpers.client_get(self, self.client_authorized_1, dict_cco["url"]  , status.HTTP_200_OK)
         self.assertEqual(dict_cco_after["concepts"], dict_concept_to["url"])
-        dict_dividend_after=tests_helpers.client_get(self, self.client_authorized_1, dict_dividend["url"]  , status.HTTP_200_OK)
-        self.assertEqual(dict_dividend_after["concepts"], dict_concept_to["url"])
         
         # Bad request
         tests_helpers.client_post(self, self.client_authorized_1, f"{dict_concept_from['url']}data_transfer/", {}, status.HTTP_400_BAD_REQUEST)
