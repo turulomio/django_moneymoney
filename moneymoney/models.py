@@ -305,7 +305,7 @@ class Accountsoperations(models.Model):
                     self.associated_transfer.destiny.fullName(), 
                     self.comment)
         
-        elif self.concepts.id==eConcept.CreditCardRefund:
+        elif self.concepts.id==eConcept.CreditCardRefund and self.refund_original is not None: #Old refunds can exist
             return _("Refund of operation at {0} with {1}. {2}").format( 
                     self.refund_original.datetime,
                     self.refund_original.amount,  
