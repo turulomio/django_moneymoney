@@ -496,6 +496,9 @@ class API(APITestCase):
         sum_refunds=lod.lod_sum(lod_refunds, "amount")
         self.assertEqual(dict_ao["amount"]+sum_refunds, -700)
 
+        # Set a too much high refund
+        tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":2000} , status.HTTP_400_BAD_REQUEST)
+
 
     @transaction.atomic
     def test_Accountsoperations_associated_fields(self):

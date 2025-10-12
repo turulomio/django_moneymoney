@@ -29,6 +29,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework import viewsets, permissions, status, serializers as drf_serializers
 from rest_framework.views import APIView
+from django.core.exceptions import ValidationError as DjangoValidationError
 from zoneinfo import available_timezones
 from tempfile import TemporaryDirectory
 
@@ -1067,10 +1068,13 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
         datetime=RequestDtaware(request, "datetime", request.user.profile.zone)
         refund_amount=RequestDecimal(request,"refund_amount")
         if all_args_are_not_none(datetime, refund_amount):
-            refund=ao.create_refund(datetime, refund_amount)
-            serializer = serializers.AccountsoperationsSerializer(refund, many=False, context={'request': request})
-            return Response(serializer.data)
-        return Response(_("Can't make a refund"), status=status.HTTP_400_BAD_REQUEST)
+            try:
+                refund=ao.create_refund(datetime, refund_amount)
+                serializer = serializers.AccountsoperationsSerializer(refund, many=False, context={'request': request})
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            except DjangoValidationError as e:
+                return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)
+        return Response(_("Can't make a refund with those parameters"), status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=True, methods=['GET'], name='Get refunds from an expense', url_path="get_refunds", url_name='get_refunds', permission_classes=[permissions.IsAuthenticated])
     @transaction.atomic

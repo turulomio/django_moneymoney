@@ -361,18 +361,18 @@ class Accountsoperations(models.Model):
 
     def clean(self):            
         if self.concepts.operationstypes.id== eOperationType.Income and self.amount<0:
-            raise ValueError(_("Income operations amount must be greater or equal to 0."))
+            raise ValidationError(_("Income operations amount must be greater or equal to 0."))
         if self.concepts.operationstypes.id == eOperationType.Expense and self.amount>0:
-            raise ValueError(_("Expense operations amount must be less or equal to 0."))
+            raise ValidationError(_("Expense operations amount must be less or equal to 0."))
         # Refund
         if self.refund_original is not None:
             if self.refund_original.concepts.operationstypes.id != eOperationType.Expense:
-                raise ValueError("Only 'Expense' accounts operations can be refunded.")
+                raise ValidationError("Only 'Expense' accounts operations can be refunded.")
                 
             # Check if the refund amount exceeds the remaining refundable amount
             remaining_refundable = self.refund_original.amount + self.refund_original.get_total_refunded_amount()
             if self.amount > abs(remaining_refundable):
-                raise ValueError(f"Refund amount ${self.amount} exceeds remaining refundable amount ${remaining_refundable}")
+                raise ValidationError(f"Refund amount {Currency(self.amount, self.accounts.currency)} exceeds remaining refundable amount {Currency(remaining_refundable, self.accounts.currency)}")
 
 
     @transaction.atomic
@@ -620,8 +620,7 @@ class Dividends(models.Model):
 
     def clean(self):
         if self.commission <0 or self.taxes<0:
-            raise _("Taxes and commissions must be equal or greater than zero")
-            return 
+            raise ValidationError(_("Taxes and commissions must be equal or greater than zero"))
         
     @transaction.atomic
     def save(self, *args, **kwargs):
