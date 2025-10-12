@@ -290,6 +290,7 @@ class Accountsoperations(models.Model):
         if self.associated_transfer is not None:
             return False
         return True
+
         
     def nice_comment(self):
         if self.associated_transfer is not None:
@@ -345,7 +346,7 @@ class Accountsoperations(models.Model):
         return r
 
     @transaction.atomic
-    def create_refund(self, datetime, refund_amount):
+    def create_refund(self, datetime, refund_amount, comment):
         """Creates a refund transaction linked to this original sale."""
         # Create the new refund transaction
         refund_tx = Accountsoperations.objects.create(
@@ -353,7 +354,8 @@ class Accountsoperations(models.Model):
             accounts=self.accounts,
             concepts_id=eConcept.CreditCardRefund,
             amount=refund_amount,
-            refund_original=self
+            refund_original=self,
+            comment=comment
         )
         self.save()
 

@@ -174,11 +174,12 @@ class AccountsoperationsSerializer(ExceptionHandlingInModelHyperlinkedModelSeria
     is_editable= serializers.SerializerMethodField()
     associated_io= serializers.SerializerMethodField()
     associated_dividend= serializers.SerializerMethodField()
+    has_refunds = serializers.BooleanField(read_only=True)
     
     class Meta:
         model = models.Accountsoperations
         fields = ('id','url', 'datetime', 'concepts', 'amount','comment','accounts',  'currency', 'associated_transfer',  'nice_comment', 'is_editable',  'associated_io', 
-        'associated_dividend', "refund_original")
+        'associated_dividend', "refund_original", "has_refunds")
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):

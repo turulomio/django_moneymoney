@@ -235,8 +235,8 @@ class Models(APITestCase):
         o.save()
 
         #Creates 2 refunds
-        refund=o.create_refund(timezone.now(), 10)
-        refund=o.create_refund(timezone.now(), 20)
+        refund=o.create_refund(timezone.now(), 10, "")
+        refund=o.create_refund(timezone.now(), 20, "")
 
         self.assertEqual(len(o.refunds.all()), 2)
         self.assertEqual(refund.refund_original, o)
@@ -485,10 +485,10 @@ class API(APITestCase):
         dict_ao=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=f"/api/concepts/{types.eConcept.BankCommissions}/", amount=-1000), status.HTTP_201_CREATED)
         
         # Make two refunds        
-        dict_refund1=tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":100} , status.HTTP_200_OK)
+        dict_refund1=tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":100, "comment": "First refund"} , status.HTTP_200_OK)
         self.assertEqual(dict_refund1["refund_original"],dict_ao["url"])
 
-        dict_refund2=tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":200} , status.HTTP_200_OK)
+        dict_refund2=tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":200, "comment": "Second refund"} , status.HTTP_200_OK)
         self.assertEqual(dict_refund2["refund_original"],dict_ao["url"])
 
         # Get refunds
@@ -497,7 +497,7 @@ class API(APITestCase):
         self.assertEqual(dict_ao["amount"]+sum_refunds, -700)
 
         # Set a too much high refund
-        tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":2000} , status.HTTP_400_BAD_REQUEST)
+        tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":2000, "comment": "Too much"} , status.HTTP_400_BAD_REQUEST)
 
 
     @transaction.atomic
