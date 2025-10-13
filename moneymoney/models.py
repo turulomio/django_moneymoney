@@ -338,27 +338,32 @@ class Accountsoperations(models.Model):
     
     def get_total_refunded_amount(self):
         """Calculates the total amount refunded against this transaction."""
-        # Use an aggregation (Sum) on the reverse relationship (refunds)
-        r=0
-        for refund in self.refunds.all():
-            r+=refund.amount
-        return r
+        # Use a database aggregation (Sum) on the reverse relationship for efficiency
+        total_refunded = self.refunds.aggregate(total=Sum('amount'))['total']
+        return total_refunded or Decimal(0)
 
     @transaction.atomic
     def create_refund(self, datetime, refund_amount, comment):
         """Creates a refund transaction linked to this original sale."""
-        # Create the new refund transaction
         refund_tx = Accountsoperations.objects.create(
             datetime=datetime,
-            accounts=self.accounts,
-            concepts_id=eConcept.CreditCardRefund,
+            accounts=self.accounts, # Use the pre-fetched account object
+            concepts=Concepts.objects.select_related("operationstypes").get(id=eConcept.CreditCardRefund), # query to optimize databases queries
             amount=refund_amount,
-            refund_original=self,
-            comment=comment
+            refund_original=self, # 'self' is the pre-fetched original operation
+            comment=comment,
         )
-        self.save()
 
-        return refund_tx
+        # After creating, fetch the instance again with related objects
+        # to avoid N+1 queries in the serializer.
+        return Accountsoperations.objects.select_related(
+            'accounts', 
+            'concepts__operationstypes',
+            'refund_original__accounts', 
+            'refund_original__concepts__operationstypes',
+            "dividends",
+            "investmentsoperations"
+        ).get(pk=refund_tx.pk)
 
     def clean(self):            
         if self.concepts.operationstypes.id== eOperationType.Income and self.amount<0:
