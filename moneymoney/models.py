@@ -7,7 +7,6 @@ from django.core.validators import MinValueValidator
 from django.db import models, transaction, connection
 from django.db.models import prefetch_related_objects, Case, When, Sum, Value, Subquery, F, Window, Min, Max, DateField, OuterRef, ExpressionWrapper, DurationField, FloatField
 from django.db.models.functions import FirstValue, LastValue, ExtractMonth, ExtractYear, Cast, Extract
-
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone

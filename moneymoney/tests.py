@@ -2,9 +2,10 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import transaction, connection
 from django.test import tag
-from django.utils import timezone
+from django.test.utils import CaptureQueriesContext
+from functools import wraps
 from json import loads
 from logging import getLogger, ERROR
 from moneymoney import models, ios, investing_com, functions, types
@@ -13,7 +14,36 @@ from pydicts import lod, casts, dod
 from request_casting.request_casting import id_from_url
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
+from django.utils import timezone
 from django.contrib.auth.models import Group
+
+
+class assert_max_queries(CaptureQueriesContext):
+    def __init__(self, test_case, max_queries):
+        self.test_case = test_case
+        self.max_queries = max_queries
+        super().__init__(connection)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        super().__exit__(exc_type, exc_value, traceback)
+        if exc_type is not None:
+            return
+
+        num_queries = len(self)
+
+        if num_queries > self.max_queries:
+            total_time = 0
+            strqueries = ""
+            for query in self.captured_queries:
+                total_time += float(query['time'])
+                strqueries += f"[{query['time']}s] {query['sql']}\n\n"
+
+            msg = (
+                f"Queries:\n{strqueries}"
+                f"Exceeded query limit. Executed {num_queries} queries in {total_time:.3f}s, "
+                f"but the limit was {self.max_queries}.\n"
+            )
+            self.test_case.fail(msg)
 
 tag,  dod
 
@@ -134,10 +164,6 @@ class Models(APITestCase):
         io.full_clean()
         io.save()
         self.assertEqual(io.associated_ao, None)
-
-
-        
-
 
     def test_Investmentstransfers(self):
         # Add needed quotes for this test
@@ -484,17 +510,20 @@ class API(APITestCase):
         #Adding an ao
         dict_ao=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=f"/api/concepts/{types.eConcept.BankCommissions}/", amount=-1000), status.HTTP_201_CREATED)
         
-        # Make two refunds        
-        dict_refund1=tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":100, "comment": "First refund"} , status.HTTP_200_OK)
-        self.assertEqual(dict_refund1["refund_original"],dict_ao["url"])
+        # Make two refunds    
+        with assert_max_queries(self, 1):    
+            dict_refund1=tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":100, "comment": "First refund"} , status.HTTP_200_OK)
+            self.assertEqual(dict_refund1["refund_original"],dict_ao["url"])
 
         dict_refund2=tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":200, "comment": "Second refund"} , status.HTTP_200_OK)
         self.assertEqual(dict_refund2["refund_original"],dict_ao["url"])
 
         # Get refunds
-        lod_refunds=tests_helpers.client_get(self, self.client_authorized_1, dict_ao["url"]+"get_refunds/" , status.HTTP_200_OK)
-        sum_refunds=lod.lod_sum(lod_refunds, "amount")
-        self.assertEqual(dict_ao["amount"]+sum_refunds, -700)
+
+        with assert_max_queries(self, 5):
+            lod_refunds=tests_helpers.client_get(self, self.client_authorized_1, dict_ao["url"]+"get_refunds/" , status.HTTP_200_OK)
+            sum_refunds=lod.lod_sum(lod_refunds, "amount")
+            self.assertEqual(dict_ao["amount"]+sum_refunds, -700)
 
         # Set a too much high refund
         tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":2000, "comment": "Too much"} , status.HTTP_400_BAD_REQUEST)
@@ -736,8 +765,9 @@ class API(APITestCase):
         self.assertTrue(models.Investmentsoperations.objects.filter(pk=id_from_url(dict_it["destiny_investmentoperation"])).exists(), "Destiny investment operation should exist")
 
         # Queries all investments transfer for a given investment
-        dict_its=tests_helpers.client_get(self, self.client_authorized_1, f"/api/investmentstransfers/?investments={dict_investment_origin['id']}", status.HTTP_200_OK)
-        self.assertEqual(len(dict_its), 1)
+        with assert_max_queries(self, 4):
+            dict_its=tests_helpers.client_get(self, self.client_authorized_1, f"/api/investmentstransfers/?investments={dict_investment_origin['id']}", status.HTTP_200_OK)
+            self.assertEqual(len(dict_its), 1)
 
         # Converts investment transfer to unifinished transfer setting datetime_destiny to null
         payload_unfinished=dict_it.copy()

@@ -1088,8 +1088,9 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['GET'], name='Get refunds from an expense', url_path="get_refunds", url_name='get_refunds', permission_classes=[permissions.IsAuthenticated])
     @transaction.atomic
     def get_refunds(self, request, pk=None):
-        ao=self.get_object()
-        serializer = serializers.AccountsoperationsSerializer(ao.refunds.all(), many=True, context={'request': request})
+        ao = self.get_object()
+        qs = ao.refunds.select_related("accounts", "concepts", "dividends", "investmentsoperations").all()
+        serializer = serializers.AccountsoperationsSerializer(qs, many=True, context={'request': request})
         return Response(serializer.data)
 
 class AccountstransfersViewSet(viewsets.ModelViewSet):
