@@ -1501,7 +1501,7 @@ class Quotes(models.Model):
             return r
         except:
             return None
-            
+
     @staticmethod
     def get_quotes(lod_):
         """
@@ -1533,11 +1533,50 @@ class Quotes(models.Model):
                     "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": None
                 }
         return r
+    
+    @staticmethod
+    def get_quotes_with_threadpool(lod_):
+        """
+        Gets a massive quote query using a thread pool to parallelize queries.
+        Parameters:
+            - lod_= [{"products_id": 79234, "datetime": ...}, ]
+        To look for we must r[product_id][datetime]
+        """
+        if len (lod_)==0:
+            return {}
+
+        lod_ = lod.lod_remove_duplicates(lod_)
+
+        def fetch_quote(needed_quote):
+            # Each thread needs its own connection to the database.
+            # This ensures that the main connection is not shared across threads.
+            try:
+                qs = Quotes.objects.filter(
+                    products__id=needed_quote["products_id"], datetime__lte=needed_quote["datetime"]
+                ).order_by("-datetime")
+                result = qs.values().first()
+                if result:
+                    result['needed_datetime'] = needed_quote['datetime']
+                    result['needed_products_id'] = needed_quote['products_id']
+                    return result
+                return {"datetime": None, "id": None, "needed_datetime": needed_quote["datetime"], "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": None}
+            finally:
+                connection.close()
+
+        with ThreadPoolExecutor() as executor:
+            results = list(executor.map(fetch_quote, lod_))
+
+        r = {}
+        for d in results:
+            if d["needed_products_id"] not in r:
+                r[d["needed_products_id"]] = {}
+            r[d["needed_products_id"]][d["needed_datetime"]] = d
+        return r
 
 
 
     @staticmethod
-    async def async_get_quotes(lod_):
+    async def async_get_quotes_with_a_methods(lod_):
         """
             An asynchronous version of get_quotes using Django's async ORM.
             This method MUST be called from an async context (e.g., an `async def` view).
@@ -1575,8 +1614,8 @@ class Quotes(models.Model):
             r[d["needed_products_id"]][d["needed_datetime"]] = d
         return r
 
-    
-    
+
+
     @staticmethod
     def get_currency_factor(datetime_, from_, to_ ,  get_quotes_result):
         """

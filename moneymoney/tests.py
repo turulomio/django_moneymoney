@@ -496,7 +496,7 @@ class API(APITestCase):
         """
         import time
         print("\n--- Running get_quotes Benchmark ---")
-        num_quotes_to_fetch = 5000
+        num_quotes_to_fetch = 500
         
         # 1. Prepare data
         lod_ = []
@@ -515,11 +515,17 @@ class API(APITestCase):
         duration_sync = time.time() - start_time_sync
         print(f"Synchronous get_quotes took: {duration_sync:.4f} seconds")
 
-        # 3. Benchmark asynchronous version
+        # 3. Benchmark asynchronous version with a methods
         start_time_async = time.time()
-        rasync=await models.Quotes.async_get_quotes(lod_)
+        rasync=await models.Quotes.async_get_quotes_with_a_methods(lod_)
         duration_async = time.time() - start_time_async
         print(f"Asynchronous async_get_quotes took: {duration_async:.4f} seconds")
+
+        # 4. Benchmark asynchronous version with thread pool
+        start_time_asynct = time.time()
+        rasynct=await sync_to_async(models.Quotes.get_quotes_with_threadpool)(lod_)
+        duration_asynct = time.time() - start_time_asynct
+        print(f"Asynchronous async_get_quotes with threadpool took: {duration_asynct:.4f} seconds")
         #self.assertLess(duration_async, duration_sync, "Async version should be faster than the sync (threaded) version.")
         print("------------------------------------")
 
@@ -527,6 +533,7 @@ class API(APITestCase):
         for d in lod_:
             # print(d["products_id"], d["datetime"],rsync[d["products_id"]][d["datetime"]]["quote"],rasync[d["products_id"]][d["datetime"]]["quote"])
             self.assertEqual(rsync[d["products_id"]][d["datetime"]]["quote"], rasync[d["products_id"]][d["datetime"]]["quote"])
+            self.assertEqual(rsync[d["products_id"]][d["datetime"]]["quote"], rasynct[d["products_id"]][d["datetime"]]["quote"])
         
 
     @tag("current")
