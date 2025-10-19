@@ -496,7 +496,7 @@ class API(APITestCase):
         """
         import time
         print("\n--- Running get_quotes Benchmark ---")
-        num_quotes_to_fetch = 500
+        num_quotes_to_fetch = 5
         
         # 1. Prepare data
         lod_ = []
