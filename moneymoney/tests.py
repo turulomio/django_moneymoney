@@ -547,7 +547,7 @@ class API(APITestCase):
 
         # Products basic_results empty
         p = models.Products.objects.get(pk=79330)
-        self.assertIsNone((p.basic_results())["lastyear"])
+        self.assertIsNone(p.basic_results()["lastyear"])
 
 
         # Products without quotes

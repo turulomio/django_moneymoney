@@ -1272,7 +1272,7 @@ class Products(models.Model):
         def dt_needed_lastyear(products_id):
             return casts.dtaware_year_end(r_lasts[products_id][now]["datetime"].year-1, 'UTC')
         #####
-        
+
         r ={}
         now=timezone.now()
         lod_lasts=[]
@@ -1281,9 +1281,8 @@ class Products(models.Model):
             r[products_id]={}
             #Create lod for last
             lod_lasts.append({"datetime": now, "products_id":products_id})
-        
+
         r_lasts=Quotes.get_quotes(lod_lasts)
-        
         lod_ply=[]#penultimate and last year
         for products_id in list_products_id:
             if r_lasts[products_id][now]["datetime"] is not None:
@@ -1524,9 +1523,9 @@ class Quotes(models.Model):
                 needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
             ).order_by("-datetime")[:1]
             tmplod=qs.values()
+            if not needed_quote["products_id"] in r:
+                r[needed_quote["products_id"]]={}
             if len(tmplod)>0:
-                if not needed_quote["products_id"] in r:
-                    r[needed_quote["products_id"]]={}
                 r[needed_quote["products_id"]][needed_quote["datetime"]]=tmplod[0]
             else:
                 r[needed_quote["products_id"]][needed_quote["datetime"]]={
