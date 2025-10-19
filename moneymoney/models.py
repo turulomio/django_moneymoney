@@ -1551,13 +1551,13 @@ class Quotes(models.Model):
             # Each thread needs its own connection to the database.
             # This ensures that the main connection is not shared across threads.
             try:
-                qs = Quotes.objects.filter(
-                    products__id=needed_quote["products_id"], datetime__lte=needed_quote["datetime"]
+                qs=Quotes.objects.filter(products__id=needed_quote["products_id"], datetime__lte=needed_quote["datetime"])\
+                .annotate(
+                    needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()), 
+                    needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
                 ).order_by("-datetime")
                 result = qs.values().first()
                 if result:
-                    result['needed_datetime'] = needed_quote['datetime']
-                    result['needed_products_id'] = needed_quote['products_id']
                     return result
                 return {"datetime": None, "id": None, "needed_datetime": needed_quote["datetime"], "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": None}
             finally:
