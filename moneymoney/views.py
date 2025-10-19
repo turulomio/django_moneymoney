@@ -1020,7 +1020,8 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
             "associated_transfer__origin__banks", 
             "associated_transfer__destiny__banks", 
             "dividends__investments__accounts", 
-            "investmentsoperations__investments", 
+            "investmentsoperations__investments",
+             
         ).annotate(
             has_refunds=Exists(refunds_subquery)
         )
@@ -1070,9 +1071,13 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
         return JsonResponse( True, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
 
     @action(detail=True, methods=['POST'], name='Create a refund from an expense', url_path="create_refund", url_name='create_refund', permission_classes=[permissions.IsAuthenticated])
-    @transaction.atomic
     def create_refund(self, request, pk=None):
-        ao=self.get_object()
+        # Pre-fetch all relations needed for the 'clean()' method on the new refund object.
+        # 'ao' will become the 'refund_original' on the new instance.
+        ao = models.Accountsoperations.objects.select_related(
+            'concepts__operationstypes', 
+            'accounts',
+        ).get(pk=pk)
         datetime=RequestDtaware(request, "datetime", request.user.profile.zone)
         comment=RequestString(request, "comment")
         refund_amount=RequestDecimal(request,"refund_amount")
@@ -1088,8 +1093,9 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['GET'], name='Get refunds from an expense', url_path="get_refunds", url_name='get_refunds', permission_classes=[permissions.IsAuthenticated])
     @transaction.atomic
     def get_refunds(self, request, pk=None):
-        ao=self.get_object()
-        serializer = serializers.AccountsoperationsSerializer(ao.refunds.all(), many=True, context={'request': request})
+        ao = self.get_object()
+        qs = ao.refunds.select_related("accounts", "concepts", "dividends", "investmentsoperations").all()
+        serializer = serializers.AccountsoperationsSerializer(qs, many=True, context={'request': request})
         return Response(serializer.data)
 
 class AccountstransfersViewSet(viewsets.ModelViewSet):

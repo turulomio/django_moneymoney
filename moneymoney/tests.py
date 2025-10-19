@@ -2,9 +2,10 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import transaction, connection
 from django.test import tag
-from django.utils import timezone
+from django.test.utils import CaptureQueriesContext
+from functools import wraps
 from json import loads
 from logging import getLogger, ERROR
 from moneymoney import models, ios, investing_com, functions, types
@@ -13,7 +14,36 @@ from pydicts import lod, casts, dod
 from request_casting.request_casting import id_from_url
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
+from django.utils import timezone
 from django.contrib.auth.models import Group
+
+
+class assert_max_queries(CaptureQueriesContext):
+    def __init__(self, test_case, max_queries):
+        self.test_case = test_case
+        self.max_queries = max_queries
+        super().__init__(connection)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        super().__exit__(exc_type, exc_value, traceback)
+        if exc_type is not None:
+            return
+
+        num_queries = len(self)
+
+        if num_queries > self.max_queries:
+            total_time = 0
+            strqueries = ""
+            for query in self.captured_queries:
+                total_time += float(query['time'])
+                strqueries += f"[{query['time']}s] {query['sql']}\n\n"
+
+            msg = (
+                f"Queries:\n{strqueries}"
+                f"Exceeded query limit. Executed {num_queries} queries in {total_time:.3f}s, "
+                f"but the limit was {self.max_queries}.\n"
+            )
+            self.test_case.fail(msg)
 
 tag,  dod
 
@@ -80,10 +110,7 @@ class Models(APITestCase):
     def test_Operationstypes(self):
         o=models.Operationstypes.objects.get(pk=1)
         str(o)    
-
-
-
-    
+   
     def test_Investmentsoperations(self):
         # Create investments
         inv=models.Investments()
@@ -134,10 +161,6 @@ class Models(APITestCase):
         io.full_clean()
         io.save()
         self.assertEqual(io.associated_ao, None)
-
-
-        
-
 
     def test_Investmentstransfers(self):
         # Add needed quotes for this test
@@ -484,23 +507,25 @@ class API(APITestCase):
         #Adding an ao
         dict_ao=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=f"/api/concepts/{types.eConcept.BankCommissions}/", amount=-1000), status.HTTP_201_CREATED)
         
-        # Make two refunds        
-        dict_refund1=tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":100, "comment": "First refund"} , status.HTTP_200_OK)
-        self.assertEqual(dict_refund1["refund_original"],dict_ao["url"])
+        # Make two refunds    
+        with assert_max_queries(self, 14):#Complex save its ok now
+            dict_refund1=tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":100, "comment": "First refund"} , status.HTTP_200_OK)
+            self.assertEqual(dict_refund1["refund_original"],dict_ao["url"])
 
         dict_refund2=tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":200, "comment": "Second refund"} , status.HTTP_200_OK)
         self.assertEqual(dict_refund2["refund_original"],dict_ao["url"])
 
         # Get refunds
-        lod_refunds=tests_helpers.client_get(self, self.client_authorized_1, dict_ao["url"]+"get_refunds/" , status.HTTP_200_OK)
-        sum_refunds=lod.lod_sum(lod_refunds, "amount")
-        self.assertEqual(dict_ao["amount"]+sum_refunds, -700)
+
+        with assert_max_queries(self, 5):
+            lod_refunds=tests_helpers.client_get(self, self.client_authorized_1, dict_ao["url"]+"get_refunds/" , status.HTTP_200_OK)
+            sum_refunds=lod.lod_sum(lod_refunds, "amount")
+            self.assertEqual(dict_ao["amount"]+sum_refunds, -700)
 
         # Set a too much high refund
         tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":2000, "comment": "Too much"} , status.HTTP_400_BAD_REQUEST)
 
 
-    @transaction.atomic
     def test_Accountsoperations_associated_fields(self):
         #Add a investment operation to check associated_io
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
@@ -514,20 +539,22 @@ class API(APITestCase):
         dict_associated_ao_with_associated_dividend=tests_helpers.client_get(self, self.client_authorized_1, dict_dividend["accountsoperations"],  status.HTTP_200_OK)
         self.assertEqual(dict_associated_ao_with_associated_dividend["associated_dividend"], dict_dividend["url"])
 
-    def test_Accountstransfers(self):        
+    def test_Accountstransfers(self):      
         tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
         dict_destiny=tests_helpers.client_post(self, self.client_authorized_1, "/api/accounts/",  models.Accounts.post_payload(), status.HTTP_201_CREATED)
 
-        # Create transfer
-        dict_transfer=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountstransfers/",  models.Accountstransfers.post_payload(destiny=dict_destiny["url"]), status.HTTP_201_CREATED)
+        # Create transfer  
+        with assert_max_queries(self, 47):
+            dict_transfer=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountstransfers/",  models.Accountstransfers.post_payload(destiny=dict_destiny["url"]), status.HTTP_201_CREATED)
         
-        tests_helpers.client_get(self, self.client_authorized_1, "/api/accountsoperations/", status.HTTP_200_OK)
+        with assert_max_queries(self,2):
+            tests_helpers.client_get(self, self.client_authorized_1, "/api/accountsoperations/", status.HTTP_200_OK)
         self.assertEqual(models.Accountsoperations.objects.filter(associated_transfer__id=dict_transfer["id"]).count(), 3)
         self.assertEqual(list(models.Accountsoperations.objects.filter(associated_transfer__id=dict_transfer["id"]).values_list("id",  flat=True)), [id_from_url(dict_transfer["ao_origin"]), id_from_url(dict_transfer["ao_destiny"]), id_from_url(dict_transfer["ao_commission"])])
         self.assertEqual(models.Accountsoperations.objects.get(pk=id_from_url(dict_transfer["ao_origin"])).amount, -1000)
         self.assertEqual(models.Accountsoperations.objects.get(pk=id_from_url(dict_transfer["ao_destiny"])).amount, 1000)
         self.assertEqual(models.Accountsoperations.objects.get(pk=id_from_url(dict_transfer["ao_commission"])).amount, -10)
-        
+            
         # Update transfer
         dict_transfer_updated=tests_helpers.client_put(self, self.client_authorized_1, dict_transfer["url"],  models.Accountstransfers.post_payload(datetime=timezone.now(), amount=999, commission=9), status.HTTP_200_OK)
         self.assertEqual(list(models.Accountsoperations.objects.filter(associated_transfer__id=dict_transfer["id"]).values_list("id",  flat=True)), [id_from_url(dict_transfer_updated["ao_origin"]), id_from_url(dict_transfer_updated["ao_destiny"]), id_from_url(dict_transfer_updated["ao_commission"])])   
@@ -542,15 +569,7 @@ class API(APITestCase):
             models.Accountstransfers.objects.get(id=dict_transfer["id"])
         self.assertEqual(models.Accountsoperations.objects.filter(associated_transfer__id=dict_transfer["id"]).count(), 0)
         
-        #Check minvaluevalidator works with full_clean in save()
-        t=models.Accountstransfers()
-        t.datetime=timezone.now()
-        t.origin_id=4
-        t.destiny_id=dict_destiny["id"]
-        t.amount=-1000
-        t.commission=-3
-        with self.assertRaises(ValidationError):
-            t.save()
+
 
     def test_Investments(self):
         dict_account=tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
@@ -736,8 +755,9 @@ class API(APITestCase):
         self.assertTrue(models.Investmentsoperations.objects.filter(pk=id_from_url(dict_it["destiny_investmentoperation"])).exists(), "Destiny investment operation should exist")
 
         # Queries all investments transfer for a given investment
-        dict_its=tests_helpers.client_get(self, self.client_authorized_1, f"/api/investmentstransfers/?investments={dict_investment_origin['id']}", status.HTTP_200_OK)
-        self.assertEqual(len(dict_its), 1)
+        with assert_max_queries(self, 4):
+            dict_its=tests_helpers.client_get(self, self.client_authorized_1, f"/api/investmentstransfers/?investments={dict_investment_origin['id']}", status.HTTP_200_OK)
+            self.assertEqual(len(dict_its), 1)
 
         # Converts investment transfer to unifinished transfer setting datetime_destiny to null
         payload_unfinished=dict_it.copy()

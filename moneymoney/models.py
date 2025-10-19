@@ -7,7 +7,6 @@ from django.core.validators import MinValueValidator
 from django.db import models, transaction, connection
 from django.db.models import prefetch_related_objects, Case, When, Sum, Value, Subquery, F, Window, Min, Max, DateField, OuterRef, ExpressionWrapper, DurationField, FloatField
 from django.db.models.functions import FirstValue, LastValue, ExtractMonth, ExtractYear, Cast, Extract
-
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
@@ -339,27 +338,32 @@ class Accountsoperations(models.Model):
     
     def get_total_refunded_amount(self):
         """Calculates the total amount refunded against this transaction."""
-        # Use an aggregation (Sum) on the reverse relationship (refunds)
-        r=0
-        for refund in self.refunds.all():
-            r+=refund.amount
-        return r
+        # Use a database aggregation (Sum) on the reverse relationship for efficiency
+        total_refunded = self.refunds.aggregate(total=Sum('amount'))['total']
+        return total_refunded or Decimal(0)
 
     @transaction.atomic
     def create_refund(self, datetime, refund_amount, comment):
         """Creates a refund transaction linked to this original sale."""
-        # Create the new refund transaction
         refund_tx = Accountsoperations.objects.create(
             datetime=datetime,
-            accounts=self.accounts,
-            concepts_id=eConcept.CreditCardRefund,
+            accounts=self.accounts, # Use the pre-fetched account object
+            concepts=Concepts.objects.select_related("operationstypes").get(id=eConcept.CreditCardRefund), # query to optimize databases queries
             amount=refund_amount,
-            refund_original=self,
-            comment=comment
+            refund_original=self, # 'self' is the pre-fetched original operation
+            comment=comment,
         )
-        self.save()
 
-        return refund_tx
+        # After creating, fetch the instance again with related objects
+        # to avoid N+1 queries in the serializer.
+        return Accountsoperations.objects.select_related(
+            'accounts', 
+            'concepts__operationstypes',
+            'refund_original__accounts', 
+            'refund_original__concepts__operationstypes',
+            "dividends",
+            "investmentsoperations"
+        ).get(pk=refund_tx.pk)
 
     def clean(self):            
         if self.concepts.operationstypes.id== eOperationType.Income and self.amount<0:
@@ -1866,23 +1870,17 @@ class Accountstransfers(models.Model):
         
         super().save(*args, **kwargs)
         self.ao_origin.associated_transfer=self
-        self.ao_origin.save()
+        self.ao_origin.save(update_fields=["associated_transfer"])
         self.ao_destiny.associated_transfer=self
-        self.ao_destiny.save()
+        self.ao_destiny.save(update_fields=["associated_transfer"])
         if self.ao_commission is not None:
             self.ao_commission.associated_transfer=self
-            self.ao_commission.save()
-        
-#        functions.print_object(self)
-#        functions.print_object(self.ao_origin)
-#        functions.print_object(self.ao_destiny)
-#        functions.print_object(self.ao_commission)
+            self.ao_commission.save(update_fields=["associated_transfer"])
 
     @transaction.atomic
     def delete(self, *args, **kwargs):
         Accountsoperations.objects.filter(associated_transfer=self.id).delete()
         r=super().delete(*args, **kwargs)
-#        print("Deleted",  r)
         return r
         
         
@@ -1896,115 +1894,6 @@ class Accountstransfers(models.Model):
             "commission":commission, 
             "comment":comment, 
         }
-#
-### Class who controls all comments from accountsoperations, investmentsoperations ...
-#class Comment:
-#    def __init__(self):
-#        pass
-#
-#    ##Obtiene el codigo de un comment
-#    def getCode(self, string):
-#        (code, args)=self.get(string)
-#        return code        
-#
-#    def getArgs(self, string):
-#        """
-#            Obtiene los argumentos enteros de un comment
-#        """
-#        (code, args)=self.get(string)
-#        return args
-#
-#    def get(self, string):
-#        """Returns (code,args)"""
-#        string=string
-#        try:
-#            number=eval(f"[{string}]")#old string2list_of integers
-#            if len(number)==1:
-#                code=number[0]
-#                args=[]
-#            else:
-#                code=number[0]
-#                args=number[1:]
-#            return(code, args)
-#        except:
-#            return(None, None)
-#            
-#    ## Function to generate a encoded comment using distinct parameters
-#    ## Encode parameters can be:
-#    ## - eComment.InvestmentOperation, hlcontract
-#    ## - eComment.Dividend, dividend
-#    ## - eComment.AccountTransferOrigin operaccountorigin, operaccountdestiny, operaccountorigincommission
-#    ## - eComment.AccountTransferOriginCommission operaccountorigin, operaccountdestiny, operaccountorigincommission
-#    ## - eComment.AccountTransferDestiny operaccountorigin, operaccountdestiny, operaccountorigincommission
-#    ## - eComment.CreditCardBilling creditcard, operaccount
-#    ## - eComment.CreditCardRefund opercreditcardtorefund
-#    def encode(self, ecomment, *args):
-#        if ecomment==eComment.InvestmentOperation:
-#            return "{},{}".format(eComment.InvestmentOperation, args[0].id)
-#        elif ecomment==eComment.Dividend:
-#            return "{},{}".format(eComment.Dividend, args[0].id)   
-#        elif ecomment==eComment.CreditCardBilling:
-#            return "{},{},{}".format(eComment.CreditCardBilling, args[0].id, args[1].id)      
-#        elif ecomment==eComment.CreditCardRefund:
-#            return "{},{}".format(eComment.CreditCardRefund, args[0].id)        
-#    
-#    def validateLength(self, number, code, args):
-#        if number!=len(args):
-#            print("Comment {} has not enough parameters".format(code))
-#            return False
-#        return True
-#
-#    def decode(self, string):
-#            if string=="":
-#                return ""
-##        try:
-#            (code, args)=self.get(string)
-#            if code==None:
-#                return string
-#
-#            if code==eComment.InvestmentOperation:
-#                io=self.decode_objects(string)
-##                if io.investments.hasSameAccountCurrency():
-#                return _("{}: {} shares. Amount: {}. Comission: {}. Taxes: {}").format(io.investments.name, io.shares, io.shares*io.price,  io.commission, io.taxes)
-##                else:
-##                    return _("{}: {} shares. Amount: {} ({}). Comission: {} ({}). Taxes: {} ({})").format(io.investment.name, io.shares, io.gross(eMoneyCurrency.Product), io.gross(eMoneyCurrency.Account),  io.money_commission(eMoneyCurrency.Product), io.money_commission(eMoneyCurrency.Account),  io.taxes(eMoneyCurrency.Product), io.taxes(eMoneyCurrency.Account))
-#
-#            elif code==eComment.CreditCardRefund:#Devolución de tarjeta
-#                if not self.validateLength(1, code, args): return string
-#                cco=Creditcardsoperations.objects.get(pk=args[0])
-#                money=Currency(cco.amount, cco.creditcards.accounts.currency)
-#                return _("Refund of {} payment of which had an amount of {}").format(casts.dtaware2str(cco.datetime), money)
-##        except:
-##            return _("Error decoding comment {}").format(string)
-#
-#    def decode_objects(self, string):
-#        (code, args)=self.get(string)
-#        if code==None:
-#            return None
-#
-#        if code==eComment.InvestmentOperation:
-#            if not self.validateLength(1, code, args): return None
-#            io=Investmentsoperations.objects.select_related("investments").get(pk=args[0])
-#            return io
-#
-#        elif code==eComment.Dividend:#Comentario de cuenta asociada al dividendo
-#            if not self.validateLength(1, code, args): return None
-#            try:
-#                return Dividends.objects.get(pk=args[0])
-#            except:
-#                return None
-#
-#        elif code==eComment.CreditCardBilling:#Facturaci´on de tarjeta diferida
-#            if not self.validateLength(2, code, args): return string
-#            creditcard=Creditcards.objects.get(pk=args[0])
-#            operaccount=Accountsoperations.objects.get(pk=args[1])
-#            return {"creditcard":creditcard, "operaccount":operaccount}
-#
-#        elif code==eComment.CreditCardRefund:#Devolución de tarjeta
-#            if not self.validateLength(1, code, args): return string
-#            cco=Creditcardsoperations.objects.get(pk=args[0])
-#            money=Currency(cco.amount, cco.creditcards.accounts.currency)
-#            return _("Refund of {} payment of which had an amount of {}").format(casts.dtaware2str(cco.datetime), money)
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
