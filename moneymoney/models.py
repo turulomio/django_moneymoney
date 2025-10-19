@@ -1,5 +1,7 @@
 from datetime import date, timedelta
 from decimal import Decimal
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -1502,20 +1504,16 @@ class Quotes(models.Model):
             return None
             
     @staticmethod
-#    @ptimeit
     def get_quotes(lod_):
         """
             Gets a massive quote query
-            
             Parameters:
                 - lod_= [{"products_id": 79234, "datetime": ...}, ]
-            
             Returns a dictionary {(products_id,datetime): quote, ....} or a lod
-            
         """
         if len (lod_)==0:
             return {}
-            
+
         lod_=lod.lod_remove_duplicates(lod_)
             
         list_of_qs=[]
@@ -1536,27 +1534,54 @@ class Quotes(models.Model):
             if not d["needed_products_id"] in r:
                 r[d["needed_products_id"]]={}
             r[d["needed_products_id"]][d["needed_datetime"]]=d
-            
 
-        ## Union Queries SLOWER
-#        
-#        combined_qs=Quotes.objects.none()
-#        for i in range(len(list_of_qs)):
-#            combined_qs=combined_qs.union(list_of_qs[i])
-#            
-#        r={}
-#        for d in combined_qs.values():    
-#            if not d["needed_products_id"] in r:
-#                r[d["needed_products_id"]]={}
-#            r[d["needed_products_id"]][d["needed_datetime"]]=d
+
+
+    @staticmethod
+    async def async_get_quotes(lod_):
+        """
+            An asynchronous version of get_quotes using Django's async ORM.
+            This method MUST be called from an async context (e.g., an `async def` view).
+            
+            Parameters:
+                - lod_= [{"products_id": 79234, "datetime": ...}, ]
+            Returns a dictionary {(products_id,datetime): quote, ....} or a lod
+        """
+        if not lod_:
+            return {}
+
+        lod_ = lod.lod_remove_duplicates(lod_)
+
+        async def fetch_quote(needed_quote):
+            qs = Quotes.objects.filter(
+                products__id=needed_quote["products_id"],
+                datetime__lte=needed_quote["datetime"]
+            ).annotate(
+                needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()),
+                needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
+            ).order_by("-datetime")
+            return await qs.values().afirst()
+
+        tasks = [fetch_quote(nq) for nq in lod_]
+        results = await asyncio.gather(*tasks)
+
+        r = {}
+        for d in results:
+            if d:
+                if d["needed_products_id"] not in r:
+                    r[d["needed_products_id"]] = {}
+                r[d["needed_products_id"]][d["needed_datetime"]] = d
         
-        #Sets missing queries to None
+        # Sets missing queries to None (this part remains synchronous)
         for needed_quote in lod_:
-            if not needed_quote["products_id"] in r:
-                r[needed_quote["products_id"]]={}
-            if not needed_quote["datetime"] in r[needed_quote["products_id"]]:
-                r[needed_quote["products_id"]][needed_quote["datetime"]]={"datetime":None, "id":None, "quote":None, "needed_datetime":needed_quote["datetime"], "needed_products_id":needed_quote["products_id"]}
-                
+            if needed_quote["products_id"] not in r:
+                r[needed_quote["products_id"]] = {}
+            if needed_quote["datetime"] not in r[needed_quote["products_id"]]:
+                r[needed_quote["products_id"]][needed_quote["datetime"]] = {
+                    "datetime": None, "id": None, "quote": None,
+                    "needed_datetime": needed_quote["datetime"],
+                    "needed_products_id": needed_quote["products_id"]
+                }
         return r
 
     
