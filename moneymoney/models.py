@@ -1509,31 +1509,31 @@ class Quotes(models.Model):
             Gets a massive quote query
             Parameters:
                 - lod_= [{"products_id": 79234, "datetime": ...}, ]
-            Returns a dictionary {(products_id,datetime): quote, ....} or a lod
+            To look for we must r[product_id][datetime]
         """
         if len (lod_)==0:
             return {}
 
         lod_=lod.lod_remove_duplicates(lod_)
-            
-        list_of_qs=[]
+
+        r={}            
         for needed_quote in lod_:
-            list_of_qs.append(Quotes.objects.filter(products__id=needed_quote["products_id"], datetime__lte=needed_quote["datetime"]).annotate(
-            needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()), 
-            needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
-            ).order_by("-datetime")[:1])
-            
-        ## Multiples queries  FASTER
-        combined_qs=[]
-        for qs in list_of_qs:
+            qs=Quotes.objects.filter(products__id=needed_quote["products_id"], datetime__lte=needed_quote["datetime"])\
+            .annotate(
+                needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()), 
+                needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
+            ).order_by("-datetime")[:1]
             tmplod=qs.values()
             if len(tmplod)>0:
-                combined_qs.append(tmplod[0])
-        r={}
-        for d in combined_qs:    
-            if not d["needed_products_id"] in r:
-                r[d["needed_products_id"]]={}
-            r[d["needed_products_id"]][d["needed_datetime"]]=d
+                if not needed_quote["products_id"] in r:
+                    r[needed_quote["products_id"]]={}
+                r[needed_quote["products_id"]][needed_quote["datetime"]]=tmplod[0]
+            else:
+                r[needed_quote["products_id"]][needed_quote["datetime"]]={
+                    "datetime": None, "id": None, "needed_datetime": needed_quote["datetime"],
+                    "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": None
+                }
+        return r
 
 
 
@@ -1545,7 +1545,7 @@ class Quotes(models.Model):
             
             Parameters:
                 - lod_= [{"products_id": 79234, "datetime": ...}, ]
-            Returns a dictionary {(products_id,datetime): quote, ....} or a lod
+            To look for we must r[product_id][datetime]
         """
         if not lod_:
             return {}

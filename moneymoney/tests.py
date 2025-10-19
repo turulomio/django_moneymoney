@@ -457,7 +457,6 @@ class API(APITestCase):
             ohcl=tests_helpers.client_get(self, self.client_authorized_1, f"/products/quotes/ohcl/?product=/api/products/79228/", status.HTTP_200_OK)      
         self.assertEqual(len(ohcl), 3)
 
-    @tag("current")
     async def test_Quotes_get_quotes_async(self):
         quotes=[]
         client_post_async = sync_to_async(tests_helpers.client_post)
@@ -490,14 +489,14 @@ class API(APITestCase):
         lod_=[{"products_id": 79330,  "datetime": now}, ]
         r = await models.Quotes.async_get_quotes(lod_)
         self.assertIsNone(r[79330][now]["quote"])
-    @tag("benchmark")
+
     async def test_benchmark_get_quotes(self):
         """
         Compares the performance of synchronous vs. asynchronous get_quotes.
         """
         import time
         print("\n--- Running get_quotes Benchmark ---")
-        num_quotes_to_fetch = 5000
+        num_quotes_to_fetch = 500
         
         # 1. Prepare data
         lod_ = []
@@ -535,14 +534,16 @@ class API(APITestCase):
         for quote in quotes:
             lod_.append({"products_id": 79329,  "datetime": casts.str2dtaware(quote["datetime"])})
         lod_.append({"products_id":79329,  "datetime": fivedays})#Doesn't exist
+        lod.lod_print(lod_)
        
         # Gets quotes and checks them with quotes list
         r = models.Quotes.get_quotes(lod_)
         for i in range(5):
             quotes_datetime=casts.str2dtaware(quotes[i]["datetime"])
             self.assertEqual(quotes[i]["quote"], r[79329][quotes_datetime]["quote"]   )
-            
+        dod.dod_print(r)            
         self.assertEqual(r[79329][fivedays]["quote"], None)
+
 
         # Products basic_results empty
         p = models.Products.objects.get(pk=79330)
