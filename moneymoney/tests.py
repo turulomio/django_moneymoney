@@ -471,7 +471,7 @@ class API(APITestCase):
         lod_.append({"products_id":79329,  "datetime": fivedays})#Doesn't exist
        
         # Gets quotes and checks them with quotes list
-        r = await models.Quotes.async_get_quotes(lod_)
+        r = await models.Quotes.async_get_quotes_with_a_methods(lod_)
         for i in range(5):
             quotes_datetime=casts.str2dtaware(quotes[i]["datetime"])
             self.assertEqual(quotes[i]["quote"], r[79329][quotes_datetime]["quote"]   )
@@ -487,7 +487,7 @@ class API(APITestCase):
         # Products without quotes
         now=timezone.now()
         lod_=[{"products_id": 79330,  "datetime": now}, ]
-        r = await models.Quotes.async_get_quotes(lod_)
+        r = await models.Quotes.async_get_quotes_with_a_methods(lod_)
         self.assertIsNone(r[79330][now]["quote"])
 
     async def test_benchmark_get_quotes(self):
@@ -519,7 +519,7 @@ class API(APITestCase):
         start_time_async = time.time()
         rasync=await models.Quotes.async_get_quotes_with_a_methods(lod_)
         duration_async = time.time() - start_time_async
-        print(f"Asynchronous async_get_quotes took: {duration_async:.4f} seconds")
+        print(f"Asynchronous async_get_quotes_with_a_methods took: {duration_async:.4f} seconds")
 
         # 4. Benchmark asynchronous version with thread pool
         start_time_asynct = time.time()

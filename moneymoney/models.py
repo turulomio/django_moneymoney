@@ -1521,12 +1521,12 @@ class Quotes(models.Model):
             .annotate(
                 needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()), 
                 needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
-            ).order_by("-datetime")[:1]
-            tmplod=qs.values()
+            ).order_by("-datetime")
+            tmplod=qs.values().first()
             if not needed_quote["products_id"] in r:
                 r[needed_quote["products_id"]]={}
-            if len(tmplod)>0:
-                r[needed_quote["products_id"]][needed_quote["datetime"]]=tmplod[0]
+            if tmplod:
+                r[needed_quote["products_id"]][needed_quote["datetime"]]=tmplod
             else:
                 r[needed_quote["products_id"]][needed_quote["datetime"]]={
                     "datetime": None, "id": None, "needed_datetime": needed_quote["datetime"],
