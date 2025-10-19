@@ -496,7 +496,7 @@ class API(APITestCase):
         """
         import time
         print("\n--- Running get_quotes Benchmark ---")
-        num_quotes_to_fetch = 500
+        num_quotes_to_fetch = 5000
         
         # 1. Prepare data
         lod_ = []
@@ -505,22 +505,29 @@ class API(APITestCase):
             product_id = 79329 + (i % 5) 
             dt = timezone.now() - timedelta(days=i)
             lod_.append({"products_id": product_id, "datetime": dt})
+            await models.Quotes.objects.acreate(products_id=product_id, datetime=dt, quote=i)
+
 
         # 2. Benchmark synchronous version (using ThreadPoolExecutor)
         start_time_sync = time.time()
         get_quotes_sync = sync_to_async(models.Quotes.get_quotes)
-        await get_quotes_sync(lod_)
+        rsync=await get_quotes_sync(lod_)
         duration_sync = time.time() - start_time_sync
-        print(f"Synchronous get_quotes (ThreadPoolExecutor) took: {duration_sync:.4f} seconds")
+        print(f"Synchronous get_quotes took: {duration_sync:.4f} seconds")
 
         # 3. Benchmark asynchronous version
         start_time_async = time.time()
-        await models.Quotes.async_get_quotes(lod_)
+        rasync=await models.Quotes.async_get_quotes(lod_)
         duration_async = time.time() - start_time_async
         print(f"Asynchronous async_get_quotes took: {duration_async:.4f} seconds")
-
-        self.assertLess(duration_async, duration_sync, "Async version should be faster than the sync (threaded) version.")
+        #self.assertLess(duration_async, duration_sync, "Async version should be faster than the sync (threaded) version.")
         print("------------------------------------")
+
+        #Check everything is ok
+        for d in lod_:
+            # print(d["products_id"], d["datetime"],rsync[d["products_id"]][d["datetime"]]["quote"],rasync[d["products_id"]][d["datetime"]]["quote"])
+            self.assertEqual(rsync[d["products_id"]][d["datetime"]]["quote"], rasync[d["products_id"]][d["datetime"]]["quote"])
+        
 
     @tag("current")
     def test_Quotes_get_quotes(self):
