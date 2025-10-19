@@ -1559,28 +1559,20 @@ class Quotes(models.Model):
                 needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()),
                 needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
             ).order_by("-datetime")
-            return await qs.values().afirst()
+            internal_r= await qs.values().afirst()
+            if internal_r is not None:
+                return internal_r
+            else:
+                return     { "datetime": None, "id": None, "needed_datetime": needed_quote  ["datetime"], "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": None }
 
         tasks = [fetch_quote(nq) for nq in lod_]
         results = await asyncio.gather(*tasks)
 
         r = {}
         for d in results:
-            if d:
-                if d["needed_products_id"] not in r:
-                    r[d["needed_products_id"]] = {}
-                r[d["needed_products_id"]][d["needed_datetime"]] = d
-        
-        # Sets missing queries to None (this part remains synchronous)
-        for needed_quote in lod_:
-            if needed_quote["products_id"] not in r:
-                r[needed_quote["products_id"]] = {}
-            if needed_quote["datetime"] not in r[needed_quote["products_id"]]:
-                r[needed_quote["products_id"]][needed_quote["datetime"]] = {
-                    "datetime": None, "id": None, "quote": None,
-                    "needed_datetime": needed_quote["datetime"],
-                    "needed_products_id": needed_quote["products_id"]
-                }
+            if d["needed_products_id"] not in r:
+                r[d["needed_products_id"]] = {}
+            r[d["needed_products_id"]][d["needed_datetime"]] = d
         return r
 
     

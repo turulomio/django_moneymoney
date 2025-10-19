@@ -534,14 +534,12 @@ class API(APITestCase):
         for quote in quotes:
             lod_.append({"products_id": 79329,  "datetime": casts.str2dtaware(quote["datetime"])})
         lod_.append({"products_id":79329,  "datetime": fivedays})#Doesn't exist
-        lod.lod_print(lod_)
        
         # Gets quotes and checks them with quotes list
         r = models.Quotes.get_quotes(lod_)
         for i in range(5):
             quotes_datetime=casts.str2dtaware(quotes[i]["datetime"])
             self.assertEqual(quotes[i]["quote"], r[79329][quotes_datetime]["quote"]   )
-        dod.dod_print(r)            
         self.assertEqual(r[79329][fivedays]["quote"], None)
 
 
