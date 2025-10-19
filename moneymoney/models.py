@@ -1,5 +1,7 @@
 from datetime import date, timedelta
 from decimal import Decimal
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -1270,7 +1272,7 @@ class Products(models.Model):
         def dt_needed_lastyear(products_id):
             return casts.dtaware_year_end(r_lasts[products_id][now]["datetime"].year-1, 'UTC')
         #####
-        
+
         r ={}
         now=timezone.now()
         lod_lasts=[]
@@ -1279,9 +1281,8 @@ class Products(models.Model):
             r[products_id]={}
             #Create lod for last
             lod_lasts.append({"datetime": now, "products_id":products_id})
-        
+
         r_lasts=Quotes.get_quotes(lod_lasts)
-        
         lod_ply=[]#penultimate and last year
         for products_id in list_products_id:
             if r_lasts[products_id][now]["datetime"] is not None:
@@ -1500,67 +1501,121 @@ class Quotes(models.Model):
             return r
         except:
             return None
-            
+
     @staticmethod
-#    @ptimeit
     def get_quotes(lod_):
         """
             Gets a massive quote query
-            
             Parameters:
                 - lod_= [{"products_id": 79234, "datetime": ...}, ]
-            
-            Returns a dictionary {(products_id,datetime): quote, ....} or a lod
-            
+            To look for we must r[product_id][datetime]
         """
         if len (lod_)==0:
             return {}
-            
-        lod_=lod.lod_remove_duplicates(lod_)
-            
-        list_of_qs=[]
-        for needed_quote in lod_:
-            list_of_qs.append(Quotes.objects.filter(products__id=needed_quote["products_id"], datetime__lte=needed_quote["datetime"]).annotate(
-            needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()), 
-            needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
-            ).order_by("-datetime")[:1])
-            
-        ## Multiples queries  FASTER
-        combined_qs=[]
-        for qs in list_of_qs:
-            tmplod=qs.values()
-            if len(tmplod)>0:
-                combined_qs.append(tmplod[0])
-        r={}
-        for d in combined_qs:    
-            if not d["needed_products_id"] in r:
-                r[d["needed_products_id"]]={}
-            r[d["needed_products_id"]][d["needed_datetime"]]=d
-            
 
-        ## Union Queries SLOWER
-#        
-#        combined_qs=Quotes.objects.none()
-#        for i in range(len(list_of_qs)):
-#            combined_qs=combined_qs.union(list_of_qs[i])
-#            
-#        r={}
-#        for d in combined_qs.values():    
-#            if not d["needed_products_id"] in r:
-#                r[d["needed_products_id"]]={}
-#            r[d["needed_products_id"]][d["needed_datetime"]]=d
-        
-        #Sets missing queries to None
+        lod_=lod.lod_remove_duplicates(lod_)
+
+        r={}            
         for needed_quote in lod_:
+            qs=Quotes.objects.filter(products__id=needed_quote["products_id"], datetime__lte=needed_quote["datetime"])\
+            .annotate(
+                needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()), 
+                needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
+            ).order_by("-datetime")
+            tmplod=qs.values().first()
             if not needed_quote["products_id"] in r:
                 r[needed_quote["products_id"]]={}
-            if not needed_quote["datetime"] in r[needed_quote["products_id"]]:
-                r[needed_quote["products_id"]][needed_quote["datetime"]]={"datetime":None, "id":None, "quote":None, "needed_datetime":needed_quote["datetime"], "needed_products_id":needed_quote["products_id"]}
-                
+            if tmplod:
+                r[needed_quote["products_id"]][needed_quote["datetime"]]=tmplod
+            else:
+                r[needed_quote["products_id"]][needed_quote["datetime"]]={
+                    "datetime": None, "id": None, "needed_datetime": needed_quote["datetime"],
+                    "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": None
+                }
+        return r
+    
+    @staticmethod
+    def get_quotes_with_threadpool(lod_):
+        """
+        Gets a massive quote query using a thread pool to parallelize queries.
+        Parameters:
+            - lod_= [{"products_id": 79234, "datetime": ...}, ]
+        To look for we must r[product_id][datetime]
+        """
+        if len (lod_)==0:
+            return {}
+
+        lod_ = lod.lod_remove_duplicates(lod_)
+
+        def fetch_quote(needed_quote):
+            # Each thread needs its own connection to the database.
+            # This ensures that the main connection is not shared across threads.
+            try:
+                qs=Quotes.objects.filter(products__id=needed_quote["products_id"], datetime__lte=needed_quote["datetime"])\
+                .annotate(
+                    needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()), 
+                    needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
+                ).order_by("-datetime")
+                result = qs.values().first()
+                if result:
+                    return result
+                return {"datetime": None, "id": None, "needed_datetime": needed_quote["datetime"], "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": None}
+            finally:
+                connection.close()
+
+        with ThreadPoolExecutor() as executor:
+            results = list(executor.map(fetch_quote, lod_))
+
+        r = {}
+        for d in results:
+            if d["needed_products_id"] not in r:
+                r[d["needed_products_id"]] = {}
+            r[d["needed_products_id"]][d["needed_datetime"]] = d
         return r
 
-    
-    
+
+
+    @staticmethod
+    async def async_get_quotes_with_a_methods(lod_):
+        """
+            An asynchronous version of get_quotes using Django's async ORM.
+            This method MUST be called from an async context (e.g., an `async def` view).
+            
+            Parameters:
+                - lod_= [{"products_id": 79234, "datetime": ...}, ]
+            To look for we must r[product_id][datetime]
+        """
+        if not lod_:
+            return {}
+
+        lod_ = lod.lod_remove_duplicates(lod_)
+
+        async def fetch_quote(needed_quote):
+            qs = Quotes.objects.filter(
+                products__id=needed_quote["products_id"],
+                datetime__lte=needed_quote["datetime"]
+            ).annotate(
+                needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()),
+                needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
+            ).order_by("-datetime")
+            internal_r= await qs.values().afirst()
+            if internal_r is not None:
+                return internal_r
+            else:
+                return     { "datetime": None, "id": None, "needed_datetime": needed_quote  ["datetime"], "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": None }
+
+        tasks = [fetch_quote(nq) for nq in lod_]
+        results = await asyncio.gather(*tasks)
+
+        r = {}
+        for d in results:
+            if d["needed_products_id"] not in r:
+                r[d["needed_products_id"]] = {}
+            r[d["needed_products_id"]][d["needed_datetime"]] = d
+        return r
+
+
+
     @staticmethod
     def get_currency_factor(datetime_, from_, to_ ,  get_quotes_result):
         """

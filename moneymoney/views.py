@@ -2091,8 +2091,12 @@ def ReportEvolutionAssets(request, from_year):
 
 def ReportEvolutionAssetsChart(request):
     def month_results(year, month,  local_currency, local_zone):
-        dt=casts.dtaware_month_end(year, month, local_zone)
-        return dt, models.Assets.pl_total_balance(dt, local_currency, ios.IOSModes.totals_sumtotals)
+        try:
+            dt=casts.dtaware_month_end(year, month, local_zone)
+            result = dt, models.Assets.pl_total_balance(dt, local_currency, ios.IOSModes.totals_sumtotals)
+            return result
+        finally:
+            connection.close()
     #####################
     year_from=RequestInteger(request, "from")
     if year_from==date.today().year:
