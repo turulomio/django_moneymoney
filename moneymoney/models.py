@@ -838,6 +838,9 @@ class Investmentsoperations(models.Model):
         self.full_clean()
         super(Investmentsoperations, self).save(*args, **kwargs) #To generate io and then plio
 
+        # Set its investment to active.
+        self.investments.set_attributes_after_investmentsoperations_crud()
+
         if self.associated_ao and self.associated_ao.id is not None:
             self.associated_ao.delete()
             self.associated_ao = None
@@ -882,11 +885,7 @@ class Investmentsoperations(models.Model):
                 c.accounts=self.investments.accounts
                 c.save()
                 self.associated_ao=c
-
-        
         super(Investmentsoperations, self).save(update_fields=['associated_ao']) #Forces and update to avoid double insert a integrity key error
-
-
 
 class Investmentstransfers(models.Model):
     """
@@ -1067,8 +1066,6 @@ class Orders(models.Model):
         
     def currency_amount(self):
         return Currency(self.price*self.shares*self.investments.products.real_leveraged_multiplier(), self.investments.products.currency)
-
-            
         
     def needs_stop_loss_warning(self):
         if self.shares>0 and self.price>self.investments.products.basic_results()["last"]:
