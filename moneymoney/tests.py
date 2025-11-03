@@ -7,6 +7,8 @@ from asgiref.sync import sync_to_async
 from django.test import tag
 from django.test.utils import CaptureQueriesContext
 from functools import wraps
+from hashlib import md5
+from importlib.resources import files
 from json import loads
 from logging import getLogger, ERROR
 from moneymoney import models, ios, investing_com, functions, types
@@ -112,6 +114,15 @@ class Models(APITestCase):
         o=models.Operationstypes.objects.get(pk=1)
         str(o)    
    
+    def test_FixtureVersion(self):
+        all=models.FixtureVersion.objects.all()
+        fv=all[0]
+        
+        print(fv.name, fv.md5, fv.updated_at)
+        fv=models.FixtureVersion.objects.get(name="All.txt")
+        self.assertEqual(fv.md5, md5(files("django_moneymoney") / "all.txt").hexdigest())
+      
+
     def test_Investmentsoperations(self):
         # Create investments
         inv=models.Investments()

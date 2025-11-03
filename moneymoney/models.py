@@ -21,7 +21,7 @@ from pydicts.currency import Currency
 Decimal
 ptimeit
 
-RANGE_RECOMENDATION_CHOICES =( 
+RANGE_RECOMENDATION_CHOICES =(
     (1, "All"), 
     (2, "SMA 10, 50, 200"), 
     (3, "SMA 100"), 
@@ -321,11 +321,10 @@ class Accountsoperations(models.Model):
             return  _("Billing {} movements of {}").format(len(qs), cc_name)
             
         elif hasattr(self, "dividends"):
-            return _( "From {}. Gross {}. Net {}.".format(
+            return _( "From {}. Gross {}. Net {} .").format(
                 self.dividends.investments.name, 
                 self.dividends.investments.accounts.amount_string(self.dividends.gross), 
                 self.dividends.investments.accounts.amount_string(self.dividends.net))
-            )
         
         elif hasattr(self,  "investmentsoperations"):
             return _("{}: {} shares. Amount: {}. Comission: {}. Taxes: {}").format(
@@ -367,7 +366,7 @@ class Accountsoperations(models.Model):
             "investmentsoperations"
         ).get(pk=refund_tx.pk)
 
-    def clean(self):            
+    def clean(self):
         if self.concepts.operationstypes.id== eOperationType.Income and self.amount<0:
             raise ValidationError(_("Income operations amount must be greater or equal to 0."))
         if self.concepts.operationstypes.id == eOperationType.Expense and self.amount>0:
@@ -743,13 +742,13 @@ class Investments(models.Model):
         queryset = Investments.objects.select_related('accounts').filter(pk__in=ids).order_by(preserved)
         return queryset
         
-    def shares_from_db_investmentsoperations(self):        
+    def shares_from_db_investmentsoperations(self):
         r=Investmentsoperations.objects.filter(investments=self).aggregate(Sum("shares"))["shares__sum"]
         if r is None:
             r=Decimal(0)
         return r
 
-    def set_attributes_after_investmentsoperations_crud(self):      
+    def set_attributes_after_investmentsoperations_crud(self):
 #        print("setting investment attributes")
         # Always activeive after investmentsoperations CRUD
         if self.active is False:
@@ -1512,7 +1511,7 @@ class Quotes(models.Model):
 
         lod_=lod.lod_remove_duplicates(lod_)
 
-        r={}            
+        r={}
         for needed_quote in lod_:
             qs=Quotes.objects.filter(products__id=needed_quote["products_id"], datetime__lte=needed_quote["datetime"])\
             .annotate(
@@ -1525,7 +1524,7 @@ class Quotes(models.Model):
             if tmplod:
                 r[needed_quote["products_id"]][needed_quote["datetime"]]=tmplod
             else:
-                r[needed_quote["products_id"]][needed_quote["datetime"]]={
+                r[needed_quote["products_id"]][needed_quote["datetime"]] = {
                     "datetime": None, "id": None, "needed_datetime": needed_quote["datetime"],
                     "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": None
                 }
@@ -2116,4 +2115,14 @@ class FastOperationsCoverage(models.Model):
 
     class Meta:
         managed = True
-        
+
+class FixtureVersion(models.Model):
+    """
+    Model to store the md5 hash of a fixture to check if it has changed.
+    """
+    name = models.CharField(max_length=255, primary_key=True)
+    md5_hash = models.CharField(max_length=32)
+    updated_at= models.DateTimeField(auto_now=True, blank=False, null=False)
+    class Meta:
+        managed = True
+        db_table = 'fixture_version'
