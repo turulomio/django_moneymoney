@@ -7,16 +7,16 @@ authors = [
 ]
 license = {text = "GPL-3.0"}
 readme = "README.md"
-requires-python = ">=3.11,<4"
+requires-python = ">=3.12,<4"
 dependencies = [
-    "django >=5.2.7",
+    "django >=6.0",
     "django-cors-headers >=4.9.0",
     "djangorestframework >=3.16.1",
-    "drf-spectacular >=0.28.0",
+    "drf-spectacular >=0.29.0",
     "pydicts >=1.1.0",
     "requests >=2.32.5",
     "request-casting >=0.7.0",
-    "psycopg >=3.2.10",
+    "psycopg >=3.3.2",
     "pandas >=2.3.3",
 ]
 
@@ -26,9 +26,9 @@ requires = ["poetry-core>=2.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.dev.dependencies]
-poethepoet = ">=0.37.0"
+poethepoet = ">=0.38.0"
 poetry = ">=2.2.1"
-coverage = ">=7.10.7"
+coverage = ">=7.12.0"
 
 
 [tool.poe.tasks]
