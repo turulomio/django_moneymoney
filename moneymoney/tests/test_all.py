@@ -11,6 +11,7 @@ from json import loads
 from logging import getLogger, ERROR
 from moneymoney import models, ios, investing_com, functions, types
 from moneymoney.reusing import tests_helpers
+from moneymoney.tests import assert_max_queries
 from pydicts import lod, casts, dod
 from request_casting.request_casting import id_from_url
 from rest_framework import status
@@ -19,29 +20,6 @@ from django.utils import timezone
 from django.contrib.auth.models import Group
 
 tag,  dod
-
-js_image_b64="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAIAQMAAAD+wSzIAAAABlBMVEX///+/v7+jQ3Y5AAAADklEQVQI12P4AIX8EAgALgAD/aNpbtEAAAAASUVORK5CYII="
-
-timezone_madrid="Europe/Madrid"
-today=date.today()
-today_year=today.year
-today_month=today.month        
-
-yesterday=date.today()-timedelta(days=1)
-yesterday_year=yesterday.year
-yesterday_month=yesterday.month
-
-dtaware_last_year=casts.dtaware_year_end(today_year-1, timezone_madrid)
-dtaware_now=casts.dtaware_now()
-dtaware_yesterday=dtaware_now-timedelta(days=1)
-
-# Defines report moment for static reports to avoid problems with asserts
-static_year=2024
-static_month=1
-
-# Concepts url
-hurl_concepts_oa=f"http://testserver/api/concepts/{types.eConcept.OpenAccount}/"
-hurl_concepts_fo=f"http://testserver/api/concepts/{types.eConcept.FastInvestmentOperations}/"
 
 
 
@@ -187,11 +165,11 @@ def test_Investmentstransfers(self):
 def test_Stockmarkets(self):
     o=models.Stockmarkets.objects.get(pk=1)
     str(o)
-    o.dtaware_closes(today)
-    o.dtaware_closes_futures(today)
+    o.dtaware_closes(self.today)
+    o.dtaware_closes_futures(self.today)
     o.dtaware_today_closes()
     o.dtaware_today_closes_futures()
-    o.dtaware_starts(today)
+    o.dtaware_starts(self.today)
     o.dtaware_today_starts()
     o.estimated_datetime_for_daily_quote()
     o.estimated_datetime_for_intraday_quote()
@@ -360,7 +338,7 @@ def test_Profile(self):
     self.assertEqual(self.user_authorized_1.profile.favorites.count(), 1)        
 
 def test_ReportAnnual(self):
-    tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/{today_year}/", status.HTTP_200_OK)
+    tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/{self.today_year}/", status.HTTP_200_OK)
     
 def test_ReportAnnualRevaluation(self):
     
@@ -377,21 +355,21 @@ def test_ReportAnnualRevaluation(self):
 def test_ReportAnnualIncome(self):        
     # Adds a dividend to control it only appears in dividends not in dividends+incomes        
     dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)        
-    dict_dividend=tests_helpers.client_post(self, self.client_authorized_1, "/api/dividends/",  models.Dividends.post_payload(datetime=casts.dtaware_month_end(static_year, static_month, timezone_madrid), investments=dict_investment["url"]), status.HTTP_201_CREATED)
-    lod_=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/{static_year}/", status.HTTP_200_OK)
+    dict_dividend=tests_helpers.client_post(self, self.client_authorized_1, "/api/dividends/",  models.Dividends.post_payload(datetime=casts.dtaware_month_end(self.static_year, self.static_month, self.timezone_madrid), investments=dict_investment["url"]), status.HTTP_201_CREATED)
+    lod_=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/{self.static_year}/", status.HTTP_200_OK)
     self.assertEqual(lod_[0]["total"],  dict_dividend["net"])
 
 def test_ReportAnnualIncomeDetails(self):       
     # Adds a dividend to control it only appears in dividends not in dividends+incomes        
     dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)        
     tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(quote=10), status.HTTP_201_CREATED)  
-    tests_helpers.client_post(self, self.client_authorized_1, "/api/dividends/",  models.Dividends.post_payload(datetime=casts.dtaware_month_end(static_year, static_month, timezone_madrid), investments=dict_investment["url"]), status.HTTP_201_CREATED)        
-    dod_=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/details/{static_year}/{static_month}/", status.HTTP_200_OK)
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/dividends/",  models.Dividends.post_payload(datetime=casts.dtaware_month_end(self.static_year, self.static_month, self.timezone_madrid), investments=dict_investment["url"]), status.HTTP_201_CREATED)        
+    dod_=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/details/{self.static_year}/{self.static_month}/", status.HTTP_200_OK)
     self.assertEqual(len(dod_["dividends"]), 1 )
     self.assertEqual(len(dod_["incomes"]), 0 )
 
 def test_ReportAnnualGainsByProductstypes(self):
-    tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/gainsbyproductstypes/{today_year}/", status.HTTP_200_OK)
+    tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/gainsbyproductstypes/{self.today_year}/", status.HTTP_200_OK)
     #lod.lod_print(dict_)
     #TODO All kind of values
 
@@ -819,7 +797,7 @@ def test_IOS(self):
         
         Balance 10€ is 20000€
         
-        today           -1 shares               11€     
+        self.today           -1 shares               11€     
         
         Balance a 11€ =22000€-11=21.989€
         
@@ -834,17 +812,17 @@ def test_IOS(self):
     dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
     
     #Bought last year
-    tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(datetime=dtaware_last_year, quote=9), status.HTTP_201_CREATED)#Last year quote
-    tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(datetime=dtaware_last_year, investments=dict_investment["url"], price=9), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(datetime=self.dtaware_last_year, quote=9), status.HTTP_201_CREATED)#Last year quote
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(datetime=self.dtaware_last_year, investments=dict_investment["url"], price=9), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
 
     #Bouth yesterday
-    tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(datetime=dtaware_yesterday, quote=10), status.HTTP_201_CREATED)#Quote at buy moment
-    tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(datetime=dtaware_yesterday, investments=dict_investment["url"], price=10), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(datetime=self.dtaware_yesterday, quote=10), status.HTTP_201_CREATED)#Quote at buy moment
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(datetime=self.dtaware_yesterday, investments=dict_investment["url"], price=10), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
 
     ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals)
     self.assertEqual(ios_.d_total_io_current(dict_investment["id"])["balance_user"], 20000)
     
-    #Sell today
+    #Sell self.today
     tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"], shares=-1, price=11), status.HTTP_201_CREATED) #Removes one share
     tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(quote=11), status.HTTP_201_CREATED)#Sets quote to price to get currrent_year_gains
     ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals) #Recaulculates IOS
@@ -951,7 +929,7 @@ def test_Alerts(self):
     # Create an expired order
     dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
     tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(products=dict_investment["products"]), status.HTTP_201_CREATED)
-    tests_helpers.client_post(self, self.client_authorized_1,  "/api/orders/", models.Orders.post_payload(investments=dict_investment["url"], expiration=today-timedelta(days=1)), status.HTTP_201_CREATED)
+    tests_helpers.client_post(self, self.client_authorized_1,  "/api/orders/", models.Orders.post_payload(investments=dict_investment["url"], expiration=self.today-timedelta(days=1)), status.HTTP_201_CREATED)
     
     # Create an account inactive with balance
     dict_account=tests_helpers.client_post(self, self.client_authorized_1, "/api/accounts/",  models.Accounts.post_payload(active=False), status.HTTP_201_CREATED)
@@ -1134,13 +1112,13 @@ def test_Products(self):
 
 def test_StrategiesFastOperations(self):
     # Opens account
-    tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_concepts_oa, amount=999999), status.HTTP_201_CREATED)
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=self.hurl_concepts_oa, amount=999999), status.HTTP_201_CREATED)
 
     # Create a FO strategy
     dict_strategy_fos=tests_helpers.client_post(self, self.client_authorized_1, "/api/strategies_fastoperations/",  models.StrategiesFastOperations.post_payload(strategy=models.Strategies.post_payload(name="FOS", type=models.StrategiesTypes.FastOperations), accounts=["http://testserver/api/accounts/4/"]), status.HTTP_201_CREATED)
 
-    tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_concepts_fo, amount=-10, comment="FO"), status.HTTP_201_CREATED)
-    tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=hurl_concepts_fo, amount=1010, comment="FO"), status.HTTP_201_CREATED)
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=self.hurl_concepts_fo, amount=-10, comment="FO"), status.HTTP_201_CREATED)
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=self.hurl_concepts_fo, amount=1010, comment="FO"), status.HTTP_201_CREATED)
 
     # Get FO strategy detailed view
     strategy_detail=tests_helpers.client_get(self, self.client_authorized_1, f"{dict_strategy_fos['url']}detailed/",  status.HTTP_200_OK)

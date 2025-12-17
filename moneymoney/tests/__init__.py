@@ -1,11 +1,12 @@
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient, APITestCase
 from moneymoney.reusing.tests_dinamic_methods import add_method_to_this_class_dinamically
-
-from django.db import transaction, connection
+from moneymoney import types
+from datetime import date, timedelta, datetime
+from django.db import  connection
 from django.test.utils import CaptureQueriesContext
-
 from logging import getLogger, ERROR
+from pydicts import casts
 logger = getLogger('django.request')
 logger.setLevel(ERROR) # This will suppress INFO and WARNING
 
@@ -42,6 +43,30 @@ class MoneyMoneyAPITestCase(APITestCase):
     It sets up fixtures and authenticated clients once for all inheriting test classes.
     """
     fixtures = ["all.json","test_users.json"]
+    js_image_b64="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAIAQMAAAD+wSzIAAAABlBMVEX///+/v7+jQ3Y5AAAADklEQVQI12P4AIX8EAgALgAD/aNpbtEAAAAASUVORK5CYII="
+
+    timezone_madrid="Europe/Madrid"
+    now=datetime.now()
+    today=date.today()
+    today_year=today.year
+    today_month=today.month        
+
+    yesterday=date.today()-timedelta(days=1)
+    yesterday_year=yesterday.year
+    yesterday_month=yesterday.month
+
+    dtaware_last_year=casts.dtaware_year_end(today_year-1, timezone_madrid)
+    dtaware_now=casts.dtaware_now()
+    dtaware_yesterday=dtaware_now-timedelta(days=1)
+
+    # Defines report moment for static reports to avoid problems with asserts
+    static_year=2024
+    static_month=1
+
+    # Concepts url
+    hurl_concepts_oa=f"http://testserver/api/concepts/{types.eConcept.OpenAccount}/"
+    hurl_concepts_fo=f"http://testserver/api/concepts/{types.eConcept.FastInvestmentOperations}/"
+
 
     def __init__(self, *args, **kwargs):
 
