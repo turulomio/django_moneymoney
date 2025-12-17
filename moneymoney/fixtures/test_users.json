@@ -1,0 +1,66 @@
+[
+{
+    "model": "auth.user",
+    "pk": 1,
+    "fields": {
+        "password": "pbkdf2_sha256$1000000$mmgHbu57WEZ58yVIKH6C5k$St9nY5EXGymfDSgEF/WEb4I8rxrb8KEwCJ3ZTa6wJDc=",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "authorized_1",
+        "first_name": "Testing",
+        "last_name": "Testing",
+        "email": "testing@testing.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2025-12-06T06:03:14.490Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 2,
+    "fields": {
+        "password": "pbkdf2_sha256$1000000$4d1wos2fAoDfKtfpA4lrbE$3M6zvnyvyAixe8EffdMTMtxdpsFEn0n0J4uKDRm23qw=",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "authorized_2",
+        "first_name": "Other",
+        "last_name": "Other",
+        "email": "other@other.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2025-12-06T06:03:14.648Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 3,
+    "fields": {
+        "password": "pbkdf2_sha256$1000000$AlDIvcgk7WS1dPgvoC9oNv$h2C4ZKhr+hFPPMvF+dfOou/YVdJbT4gRu7PizIoAe9c=",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "catalog_manager",
+        "first_name": "Catalog",
+        "last_name": "Manager",
+        "email": "catalog_manager@catalog_manager.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2025-12-06T06:03:14.805Z",
+        "groups": [
+            1
+        ],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 1,
+    "fields": {
+        "name": "CatalogManager",
+        "permissions": []
+    }
+}
+]
