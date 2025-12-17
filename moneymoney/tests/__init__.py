@@ -5,6 +5,10 @@ from moneymoney.reusing.tests_dinamic_methods import add_method_to_this_class_di
 from django.db import transaction, connection
 from django.test.utils import CaptureQueriesContext
 
+from logging import getLogger, ERROR
+logger = getLogger('django.request')
+logger.setLevel(ERROR) # This will suppress INFO and WARNING
+
 class assert_max_queries(CaptureQueriesContext):
     def __init__(self, test_case, max_queries):
         self.test_case = test_case
