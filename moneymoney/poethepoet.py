@@ -16,7 +16,8 @@ def reusing():
         download_from_github("turulomio", "reusingcode", "python/decorators.py", "moneymoney/reusing")
         download_from_github("turulomio", "reusingcode", "python/file_functions.py", "moneymoney/reusing")
         download_from_github("turulomio", "reusingcode", "python/github.py", "moneymoney/reusing")
-        download_from_github("turulomio", "django_calories_tracker", "calories_tracker/tests_helpers.py", "moneymoney/reusing")
+        download_from_github("turulomio", "django_calories_tracker", "calories_tracker/tests/tests_helpers.py", "moneymoney/reusing")
+        download_from_github("turulomio", "django_calories_tracker", "calories_tracker/tests/tests_dinamic_methods.py", "moneymoney/reusing")
 
 
 def testserver_e2e():
