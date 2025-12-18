@@ -1877,9 +1877,9 @@ class Accountstransfers(models.Model):
     amount=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
     commission=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
     comment = models.TextField(blank=True, null=False)
-    ao_origin = models.ForeignKey("Accountsoperations", models.DO_NOTHING,  blank=True,  null=True, related_name="ao_origin")
-    ao_destiny = models.ForeignKey("Accountsoperations", models.DO_NOTHING,  blank=True,  null=True, related_name="ao_destiny")
-    ao_commission = models.ForeignKey("Accountsoperations", models.DO_NOTHING,  blank=True,  null=True, related_name="ao_commission")
+    ao_origin = models.ForeignKey("Accountsoperations", models.SET_NULL,  blank=True,  null=True, related_name="ao_origin")
+    ao_destiny = models.ForeignKey("Accountsoperations", models.SET_NULL,  blank=True,  null=True, related_name="ao_destiny")
+    ao_commission = models.ForeignKey("Accountsoperations", models.SET_NULL,  blank=True,  null=True, related_name="ao_commission")
         
     class Meta:
         managed = True
@@ -1892,8 +1892,9 @@ class Accountstransfers(models.Model):
     @transaction.atomic
     def save(self, *args, **kwargs):
         self.full_clean() #Used to apply validations
-        if self.id is not None:
-            Accountsoperations.objects.filter(associated_transfer=self.id).delete()
+
+        if self.id is not None: #Update
+            Accountsoperations.objects.filter(associated_transfer__id=self.id).delete()
         
         self.ao_origin=Accountsoperations()
         self.ao_origin.datetime=self.datetime
@@ -1911,7 +1912,7 @@ class Accountstransfers(models.Model):
         self.ao_destiny.comment=self.comment
         self.ao_destiny.save()
         
-        if self.commission!=0:
+        if self.commission!=0: #Generate always even if amount is 0, delete will be later
             self.ao_commission=Accountsoperations()
             self.ao_commission.datetime=self.datetime
             self.ao_commission.accounts=self.origin
@@ -1919,13 +1920,15 @@ class Accountstransfers(models.Model):
             self.ao_commission.amount=-self.commission
             self.ao_commission.comment=self.comment
             self.ao_commission.save()
-        
+        else:
+            self.ao_commission = None
+
         super().save(*args, **kwargs)
         self.ao_origin.associated_transfer=self
         self.ao_origin.save(update_fields=["associated_transfer"])
         self.ao_destiny.associated_transfer=self
         self.ao_destiny.save(update_fields=["associated_transfer"])
-        if self.ao_commission is not None:
+        if self.commission!=0:
             self.ao_commission.associated_transfer=self
             self.ao_commission.save(update_fields=["associated_transfer"])
 

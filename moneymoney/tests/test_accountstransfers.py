@@ -24,6 +24,8 @@ def test_Accountstransfers(self):
     # Update transfer
     dict_transfer_updated=tests_helpers.client_put(self, self.client_authorized_1, dict_transfer["url"],  models.Accountstransfers.post_payload(datetime=timezone.now(), amount=999, commission=9, destiny=dict_destiny["url"]), status.HTTP_200_OK)
     self.assertEqual(list(models.Accountsoperations.objects.filter(associated_transfer__id=dict_transfer["id"]).values_list("id",  flat=True)), [id_from_url(dict_transfer_updated["ao_origin"]), id_from_url(dict_transfer_updated["ao_destiny"]), id_from_url(dict_transfer_updated["ao_commission"])])   
+    
+    # Check occounts ids changed after update
     self.assertEqual(models.Accountsoperations.objects.filter(pk__in=[id_from_url(dict_transfer["ao_origin"]), id_from_url(dict_transfer["ao_destiny"]), id_from_url(dict_transfer["ao_commission"])]).count(), 0)
     self.assertEqual(models.Accountsoperations.objects.get(pk=id_from_url(dict_transfer_updated["ao_origin"])).amount, -999)
     self.assertEqual(models.Accountsoperations.objects.get(pk=id_from_url(dict_transfer_updated["ao_destiny"])).amount, 999)
@@ -34,3 +36,8 @@ def test_Accountstransfers(self):
     with self.assertRaises(models.Accountstransfers.DoesNotExist):
         models.Accountstransfers.objects.get(id=dict_transfer["id"])
     self.assertEqual(models.Accountsoperations.objects.filter(associated_transfer__id=dict_transfer["id"]).count(), 0)
+
+    # Deleting a commission after create transfer doesn't crash
+    dict_transfer=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountstransfers/",  models.Accountstransfers.post_payload(destiny=dict_destiny["url"]), status.HTTP_201_CREATED)
+    dict_transfer_updated=tests_helpers.client_put(self, self.client_authorized_1, dict_transfer["url"],  models.Accountstransfers.post_payload(datetime=timezone.now(), amount=999, commission=0, destiny=dict_destiny["url"]), status.HTTP_200_OK)
+    self.assertEqual(dict_transfer_updated["ao_commission"], None)
