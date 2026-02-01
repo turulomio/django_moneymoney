@@ -1,18 +1,17 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# Traduction en français de django-moneymoney.
+# Copyright (C) 2025 turulomio
+# Ce fichier est distribué sous la même licence que le paquet django-moneymoney.
+# turulomio <turulomio@yahoo.es>, 2025.
 #
-#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: PACKAGE VERSION\n"
+"Project-Id-Version: django-moneymoney 1.3.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-12 17:45+0000\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
+"POT-Creation-Date: 2026-02-01 07:07+0000\n"
+"PO-Revision-Date: 2025-02-01 10:00+0100\n"
+"Last-Translator: turulomio <turulomio@yahoo.es>\n"
+"Language-Team: French\n"
+"Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -20,606 +19,606 @@ msgstr ""
 
 #: moneymoney/hardcoded_strings.py:2
 msgid "AMEX Stock Exchange"
-msgstr ""
+msgstr "Bourse AMEX"
 
 #: moneymoney/hardcoded_strings.py:3
-msgid "Account"
-msgstr ""
+msgid "Account operation refund"
+msgstr "Remboursement d'opération de compte"
 
 #: moneymoney/hardcoded_strings.py:4
-msgid "Added shares"
-msgstr ""
+msgid "Account"
+msgstr "Compte"
 
 #: moneymoney/hardcoded_strings.py:5
-msgid "Adjustments. Negative"
-msgstr ""
+msgid "Added shares"
+msgstr "Actions ajoutées"
 
 #: moneymoney/hardcoded_strings.py:6
-msgid "Adjustments. Positive"
-msgstr ""
+msgid "Adjustments. Negative"
+msgstr "Ajustements. Négatifs"
 
 #: moneymoney/hardcoded_strings.py:7
-msgid "Amsterdam Stock Exchange"
-msgstr ""
+msgid "Adjustments. Positive"
+msgstr "Ajustements. Positifs"
 
 #: moneymoney/hardcoded_strings.py:8
-msgid "Attendance bonus"
-msgstr ""
+msgid "Amsterdam Stock Exchange"
+msgstr "Bourse d'Amsterdam"
 
 #: moneymoney/hardcoded_strings.py:9
-msgid "Bank commissions"
-msgstr ""
+msgid "Attendance bonus"
+msgstr "Prime de présence"
 
 #: moneymoney/hardcoded_strings.py:10
-msgid "Belgium Stock Exchange"
-msgstr ""
+msgid "Bank commissions"
+msgstr "Commissions bancaires"
 
 #: moneymoney/hardcoded_strings.py:11
-msgid "Bonds. Coupon collection"
-msgstr ""
+msgid "Belgium Stock Exchange"
+msgstr "Bourse de Belgique"
 
 #: moneymoney/hardcoded_strings.py:12
-msgid "Bonds. Running coupon collection"
-msgstr ""
+msgid "Bonds. Coupon collection"
+msgstr "Obligations. Encaissement de coupon"
 
 #: moneymoney/hardcoded_strings.py:13
-msgid "Bonds. Running coupon payment"
-msgstr ""
+msgid "Bonds. Running coupon collection"
+msgstr "Obligations. Encaissement de coupon couru"
 
 #: moneymoney/hardcoded_strings.py:14
-msgid "CFD"
-msgstr ""
+msgid "Bonds. Running coupon payment"
+msgstr "Obligations. Paiement de coupon couru"
 
 #: moneymoney/hardcoded_strings.py:15
-msgid "Cash"
-msgstr ""
+msgid "CFD"
+msgstr "CFD"
 
 #: moneymoney/hardcoded_strings.py:16
-msgid "Credit card billing"
-msgstr ""
+msgid "Cash"
+msgstr "Espèces"
 
 #: moneymoney/hardcoded_strings.py:17
-msgid "Credit card refund"
-msgstr ""
+msgid "Credit card billing"
+msgstr "Facturation carte de crédit"
 
 #: moneymoney/hardcoded_strings.py:18
 msgid "Currency"
-msgstr ""
+msgstr "Devise"
 
 #: moneymoney/hardcoded_strings.py:19
 msgid "Custody commission"
-msgstr ""
+msgstr "Commission de garde"
 
 #: moneymoney/hardcoded_strings.py:20
 msgid "Deposit"
-msgstr ""
+msgstr "Dépôt"
 
 #: moneymoney/hardcoded_strings.py:21
 msgid "Derivative management"
-msgstr ""
+msgstr "Gestion des dérivés"
 
 #: moneymoney/hardcoded_strings.py:22
 msgid "Derivatives. Daily adjustment"
-msgstr ""
+msgstr "Dérivés. Ajustement quotidien"
 
 #: moneymoney/hardcoded_strings.py:23
 msgid "Derivatives. Daily guarantee"
-msgstr ""
+msgstr "Dérivés. Garantie quotidienne"
 
 #: moneymoney/hardcoded_strings.py:24
 msgid "Derivatives. Operation commission"
-msgstr ""
+msgstr "Dérivés. Commission d'opération"
 
 #: moneymoney/hardcoded_strings.py:25
 msgid "Derivatives. Swaps"
-msgstr ""
+msgstr "Dérivés. Swaps"
 
 #: moneymoney/hardcoded_strings.py:26
 msgid "Dividends"
-msgstr ""
+msgstr "Dividendes"
 
 #: moneymoney/hardcoded_strings.py:27
 msgid "Dividends. Sale of rights"
-msgstr ""
+msgstr "Dividendes. Vente de droits"
 
 #: moneymoney/hardcoded_strings.py:28
 msgid "Dublin Stock Exchange"
-msgstr ""
+msgstr "Bourse de Dublin"
 
 #: moneymoney/hardcoded_strings.py:29
 msgid "ETF"
-msgstr ""
+msgstr "ETF"
 
 #: moneymoney/hardcoded_strings.py:30
 msgid "Europe Stock Exchange"
-msgstr ""
+msgstr "Bourse européenne"
 
 #: moneymoney/hardcoded_strings.py:31
 msgid "Expense"
-msgstr ""
+msgstr "Dépense"
 
 #: moneymoney/hardcoded_strings.py:32
 msgid "Fast investments operations"
-msgstr ""
+msgstr "Opérations d'investissement rapides"
 
-#: moneymoney/hardcoded_strings.py:33 moneymoney/models.py:1673
-#: moneymoney/views.py:1929
+#: moneymoney/hardcoded_strings.py:33 moneymoney/models.py:1729
+#: moneymoney/views.py:1935
 msgid "Fast operations"
-msgstr ""
+msgstr "Opérations rapides"
 
 #: moneymoney/hardcoded_strings.py:34
 msgid "Frankfurt Stock Exchange"
-msgstr ""
+msgstr "Bourse de Francfort"
 
 #: moneymoney/hardcoded_strings.py:35
 msgid "Fund"
-msgstr ""
+msgstr "Fonds"
 
 #: moneymoney/hardcoded_strings.py:36
 msgid "Future"
-msgstr ""
+msgstr "Contrat à terme"
 
 #: moneymoney/hardcoded_strings.py:37
 msgid "Gasoline"
-msgstr ""
+msgstr "Essence"
 
 #: moneymoney/hardcoded_strings.py:38
 msgid "Helsinki Stock Exchange"
-msgstr ""
+msgstr "Bourse d'Helsinki"
 
 #: moneymoney/hardcoded_strings.py:39
 msgid "Hong Kong Stock Exchange"
-msgstr ""
+msgstr "Bourse de Hong Kong"
 
 #: moneymoney/hardcoded_strings.py:40
 msgid "Income"
-msgstr ""
+msgstr "Revenu"
 
 #: moneymoney/hardcoded_strings.py:41
 msgid "Index"
-msgstr ""
+msgstr "Indice"
 
 #: moneymoney/hardcoded_strings.py:42
 msgid "Initiating bank account"
-msgstr ""
+msgstr "Initialisation du compte bancaire"
 
 #: moneymoney/hardcoded_strings.py:43
 msgid "Leisure"
-msgstr ""
+msgstr "Loisirs"
 
 #: moneymoney/hardcoded_strings.py:44
 msgid "Leverage x10"
-msgstr ""
+msgstr "Levier x10"
 
 #: moneymoney/hardcoded_strings.py:45
 msgid "Leverage x100"
-msgstr ""
+msgstr "Levier x100"
 
 #: moneymoney/hardcoded_strings.py:46
 msgid "Leverage x1000"
-msgstr ""
+msgstr "Levier x1000"
 
 #: moneymoney/hardcoded_strings.py:47
 msgid "Leverage x2"
-msgstr ""
+msgstr "Levier x2"
 
 #: moneymoney/hardcoded_strings.py:48
 msgid "Leverage x20"
-msgstr ""
+msgstr "Levier x20"
 
 #: moneymoney/hardcoded_strings.py:49
 msgid "Leverage x200"
-msgstr ""
+msgstr "Levier x200"
 
 #: moneymoney/hardcoded_strings.py:50
 msgid "Leverage x25"
-msgstr ""
+msgstr "Levier x25"
 
 #: moneymoney/hardcoded_strings.py:51
 msgid "Leverage x3"
-msgstr ""
+msgstr "Levier x3"
 
 #: moneymoney/hardcoded_strings.py:52
 msgid "Leverage x4"
-msgstr ""
+msgstr "Levier x4"
 
 #: moneymoney/hardcoded_strings.py:53
 msgid "Leverage x5"
-msgstr ""
+msgstr "Levier x5"
 
 #: moneymoney/hardcoded_strings.py:54
 msgid "Leverage x50"
-msgstr ""
+msgstr "Levier x50"
 
 #: moneymoney/hardcoded_strings.py:55
 msgid "Leverage x500"
-msgstr ""
+msgstr "Levier x500"
 
 #: moneymoney/hardcoded_strings.py:56
 msgid "Lisbon Stock Exchange"
-msgstr ""
+msgstr "Bourse de Lisbonne"
 
 #: moneymoney/hardcoded_strings.py:57
 msgid "London Stock Exchange"
-msgstr ""
+msgstr "Bourse de Londres"
 
 #: moneymoney/hardcoded_strings.py:58
 msgid "Luxembourg Stock Exchange"
-msgstr ""
+msgstr "Bourse de Luxembourg"
 
 #: moneymoney/hardcoded_strings.py:59
 msgid "Madrid Stock Exchange"
-msgstr ""
+msgstr "Bourse de Madrid"
 
 #: moneymoney/hardcoded_strings.py:60
 msgid "Milan Stock Exchange"
-msgstr ""
+msgstr "Bourse de Milan"
 
 #: moneymoney/hardcoded_strings.py:61
 msgid "NYSE Stock Exchange"
-msgstr ""
+msgstr "Bourse de New York"
 
 #: moneymoney/hardcoded_strings.py:62
 msgid "Nasdaq Stock Exchange"
-msgstr ""
+msgstr "Bourse Nasdaq"
 
 #: moneymoney/hardcoded_strings.py:63
 msgid "Not listed on official markets"
-msgstr ""
+msgstr "Non coté sur les marchés officiels"
 
 #: moneymoney/hardcoded_strings.py:64
 msgid "Paris Stock Exchange"
-msgstr ""
+msgstr "Bourse de Paris"
 
 #: moneymoney/hardcoded_strings.py:65
 msgid "Paysheet"
-msgstr ""
+msgstr "Fiche de paie"
 
 #: moneymoney/hardcoded_strings.py:66
 msgid "Pension plan"
-msgstr ""
+msgstr "Plan de retraite"
 
 #: moneymoney/hardcoded_strings.py:67
 msgid "Personal Management"
-msgstr ""
+msgstr "Gestion personnelle"
 
 #: moneymoney/hardcoded_strings.py:68
 msgid "Private bond"
-msgstr ""
+msgstr "Obligation privée"
 
 #: moneymoney/hardcoded_strings.py:69
 msgid "Public bond"
-msgstr ""
+msgstr "Obligation publique"
 
 #: moneymoney/hardcoded_strings.py:70
 msgid "Purchase investment product"
-msgstr ""
+msgstr "Achat de produit d'investissement"
 
 #: moneymoney/hardcoded_strings.py:71
 msgid "Purchase of shares"
-msgstr ""
+msgstr "Achat d'actions"
 
 #: moneymoney/hardcoded_strings.py:72
 msgid "Restaurant"
-msgstr ""
+msgstr "Restaurant"
 
 #: moneymoney/hardcoded_strings.py:73
 msgid "Rollover Paid"
-msgstr ""
+msgstr "Rollover payé"
 
 #: moneymoney/hardcoded_strings.py:74
 msgid "Rollover Received"
-msgstr ""
+msgstr "Rollover reçu"
 
 #: moneymoney/hardcoded_strings.py:75
 msgid "Sale investment product"
-msgstr ""
+msgstr "Vente de produit d'investissement"
 
 #: moneymoney/hardcoded_strings.py:76
 msgid "Sale of shares"
-msgstr ""
+msgstr "Vente d'actions"
 
 #: moneymoney/hardcoded_strings.py:77
 msgid "Share"
-msgstr ""
+msgstr "Action"
 
 #: moneymoney/hardcoded_strings.py:78
 msgid "Shares addition"
-msgstr ""
+msgstr "Ajout d'actions"
 
 #: moneymoney/hardcoded_strings.py:79
 msgid "Supermarket"
-msgstr ""
+msgstr "Supermarché"
 
 #: moneymoney/hardcoded_strings.py:80
 msgid "Taxes. Paid"
-msgstr ""
+msgstr "Impôts. Payés"
 
 #: moneymoney/hardcoded_strings.py:81
 msgid "Taxes. Returned"
-msgstr ""
+msgstr "Impôts. Remboursés"
 
 #: moneymoney/hardcoded_strings.py:82
 msgid "Tokyo Stock Exchange"
-msgstr ""
+msgstr "Bourse de Tokyo"
 
 #: moneymoney/hardcoded_strings.py:83
-msgid "Transfer of funds"
-msgstr ""
+msgid "Transfer of funds (obsolete)"
+msgstr "Transfert de fonds (obsolète)"
 
 #: moneymoney/hardcoded_strings.py:84
-msgid "Transfer of shares destiny"
-msgstr ""
+msgid "Transfer of investments. Destiny"
+msgstr "Transfert d'investissements. Destination"
 
 #: moneymoney/hardcoded_strings.py:85
-msgid "Transfer of shares origin"
-msgstr ""
+msgid "Transfer of investments. Origin"
+msgstr "Transfert d'investissements. Origine"
 
 #: moneymoney/hardcoded_strings.py:86
 msgid "Transfer"
-msgstr ""
+msgstr "Transfert"
 
 #: moneymoney/hardcoded_strings.py:87
 msgid "Transfer. Destination"
-msgstr ""
+msgstr "Transfert. Destination"
 
 #: moneymoney/hardcoded_strings.py:88
 msgid "Transfer. Origin"
-msgstr ""
+msgstr "Transfert. Origine"
 
 #: moneymoney/hardcoded_strings.py:89
 msgid "Unknown"
-msgstr ""
+msgstr "Inconnu"
 
 #: moneymoney/hardcoded_strings.py:90
 msgid "Variable leverage"
-msgstr ""
+msgstr "Levier variable"
 
 #: moneymoney/hardcoded_strings.py:91
 msgid "Warrant"
-msgstr ""
+msgstr "Warrant"
 
 #: moneymoney/hardcoded_strings.py:92
 msgid "Without leverage"
-msgstr ""
+msgstr "Sans levier"
 
 #: moneymoney/investing_com.py:100
 msgid "Adding quotes from Investing.com portfolio"
-msgstr ""
+msgstr "Ajout de cotations depuis le portefeuille Investing.com"
 
 #: moneymoney/ios.py:158
 msgid "You need total mode to calculate sum_total_io_current_zerorisk_user"
-msgstr ""
+msgstr "Vous avez besoin du mode total pour calculer sum_total_io_current_zerorisk_user"
 
 #: moneymoney/ios.py:461
 #, python-brace-format
 msgid "IOC merged investment of '{0}'"
-msgstr ""
+msgstr "Investissement fusionné IOC de '{0}'"
 
-#: moneymoney/models.py:298
+#: moneymoney/models.py:299
 #, python-brace-format
 msgid "Transfer to {0}. {1}"
-msgstr ""
+msgstr "Transfert vers {0}. {1}"
 
-#: moneymoney/models.py:300
+#: moneymoney/models.py:301
 #, python-brace-format
 msgid "Transfer from {0}. {1}"
-msgstr ""
+msgstr "Transfert depuis {0}. {1}"
 
-#: moneymoney/models.py:302
+#: moneymoney/models.py:303
 #, python-brace-format
 msgid "Transfer of {0} from {1} to {2}. {3}"
-msgstr ""
+msgstr "Transfert de {0} de {1} à {2}. {3}"
 
-#: moneymoney/models.py:309
+#: moneymoney/models.py:310
 #, python-brace-format
 msgid "Refund of operation at {0} with {1}. {2}"
-msgstr ""
+msgstr "Remboursement de l'opération à {0} avec {1}. {2}"
 
-#: moneymoney/models.py:320
+#: moneymoney/models.py:321
 msgid "Billing {} movements of {}"
-msgstr ""
+msgstr "Facturation de {} mouvements de {}"
 
-#: moneymoney/models.py:323
+#: moneymoney/models.py:324
 msgid "From {}. Gross {}. Net {}."
-msgstr ""
+msgstr "De {}. Brut {}. Net {}."
 
-#: moneymoney/models.py:330
+#: moneymoney/models.py:331
 msgid "{}: {} shares. Amount: {}. Comission: {}. Taxes: {}"
-msgstr ""
+msgstr "{}: {} actions. Montant: {}. Commission: {}. Taxes: {}"
 
-#: moneymoney/models.py:366
+#: moneymoney/models.py:372
 msgid "Income operations amount must be greater or equal to 0."
-msgstr ""
+msgstr "Le montant des opérations de revenus doit être supérieur ou égal à 0."
 
-#: moneymoney/models.py:368
+#: moneymoney/models.py:374
 msgid "Expense operations amount must be less or equal to 0."
-msgstr ""
+msgstr "Le montant des opérations de dépenses doit être inférieur ou égal à 0."
 
-#: moneymoney/models.py:625
+#: moneymoney/models.py:631
 msgid "Taxes and commissions must be equal or greater than zero"
-msgstr ""
+msgstr "Les taxes et commissions doivent être supérieures ou égales à zéro"
 
-#: moneymoney/models.py:792
+#: moneymoney/models.py:798
 #, python-brace-format
 msgid "{0} transfer from '{1}' to '{2}' started at {3}. {4}"
-msgstr ""
+msgstr "Transfert de {0} de '{1}' vers '{2}' commencé à {3}. {4}"
 
-#: moneymoney/models.py:816
+#: moneymoney/models.py:822
 msgid ""
 "Investment operation can't be created because its related product hasn't "
 "quotes."
-msgstr ""
+msgstr "L'opération d'investissement ne peut pas être créée car son produit associé n'a pas de cotations."
 
-#: moneymoney/models.py:948
+#: moneymoney/models.py:953
 msgid "Investment transfer can't be created if products types are not the same"
-msgstr ""
+msgstr "Le transfert d'investissement ne peut pas être créé si les types de produits ne sont pas les mêmes"
 
-#: moneymoney/models.py:951
+#: moneymoney/models.py:956
 msgid "Investment transfer can't be created if investments are the same"
-msgstr ""
+msgstr "Le transfert d'investissement ne peut pas être créé si les investissements sont les mêmes"
 
-#: moneymoney/models.py:954
+#: moneymoney/models.py:959
 msgid "Shares amount can't be null"
-msgstr ""
+msgstr "Le montant des actions ne peut pas être nul"
 
-#: moneymoney/models.py:957
+#: moneymoney/models.py:962
 msgid "Shares amount can't be of the same sign"
-msgstr ""
+msgstr "Le montant des actions ne peut pas être du même signe"
 
-#: moneymoney/models.py:1475
+#: moneymoney/models.py:1477
 #, python-brace-format
 msgid "Error saving '{0}'. Datetime it's in the future"
-msgstr ""
+msgstr "Erreur lors de l'enregistrement de '{0}'. La date et l'heure sont dans le futur"
 
-#: moneymoney/models.py:1479
+#: moneymoney/models.py:1481
 #, python-brace-format
 msgid "Updating '{0}'"
-msgstr ""
+msgstr "Mise à jour de '{0}'"
 
-#: moneymoney/models.py:1482
+#: moneymoney/models.py:1484
 #, python-brace-format
 msgid "Inserting '{0}'"
-msgstr ""
+msgstr "Insertion de '{0}'"
 
-#: moneymoney/models.py:1670
+#: moneymoney/models.py:1726
 msgid "Pairs in same account"
-msgstr ""
+msgstr "Paires dans le même compte"
 
-#: moneymoney/models.py:1671
+#: moneymoney/models.py:1727
 msgid "Product ranges"
-msgstr ""
+msgstr "Gammes de produits"
 
-#: moneymoney/models.py:1672
+#: moneymoney/models.py:1728
 msgid "Generic"
-msgstr ""
+msgstr "Générique"
 
 #: moneymoney/serializers.py:138
 msgid "You can't create a credit card operation with a debit credit card"
-msgstr ""
+msgstr "Vous ne pouvez pas créer une opération de carte de crédit avec une carte de débit"
 
 #: moneymoney/serializers.py:272 moneymoney/serializers.py:295
 msgid ""
 "You must set system parameter to set a system product (True) or a personal "
 "product (False)"
-msgstr ""
+msgstr "Vous devez définir le paramètre système pour définir un produit système (True) ou un produit personnel (False)"
 
 #: moneymoney/serializers.py:287 moneymoney/serializers.py:298
 msgid ""
 "You can't edit a system product if you're not a Catalog Manager (only "
 "developers)"
-msgstr ""
+msgstr "Vous ne pouvez pas modifier un produit système si vous n'êtes pas un gestionnaire de catalogue (développeurs uniquement)"
 
 #: moneymoney/views.py:311
 msgid "Paid or accountsoperations_id can't be None at the same time"
-msgstr ""
+msgstr "Paid ou accountsoperations_id ne peuvent pas être nuls en même temps"
 
 #: moneymoney/views.py:573
 msgid "Fast operations strategy was not found"
-msgstr ""
+msgstr "La stratégie d'opérations rapides n'a pas été trouvée"
 
 #: moneymoney/views.py:594
 msgid "Not developed yet"
-msgstr ""
+msgstr "Pas encore développé"
 
 #: moneymoney/views.py:613
 msgid "Strategy was not found"
-msgstr ""
+msgstr "La stratégie n'a pas été trouvée"
 
 #: moneymoney/views.py:642
 msgid "Generic strategy was not found"
-msgstr ""
+msgstr "La stratégie générique n'a pas été trouvée"
 
 #: moneymoney/views.py:856
 msgid "You must set active parameter"
-msgstr ""
+msgstr "Vous devez définir le paramètre actif"
 
 #: moneymoney/views.py:905
 msgid "Insuficient data"
-msgstr ""
+msgstr "Données insuffisantes"
 
-#: moneymoney/views.py:1086
+#: moneymoney/views.py:1091
 msgid "Can't make a refund with those parameters"
-msgstr ""
+msgstr "Impossible d'effectuer un remboursement avec ces paramètres"
 
-#: moneymoney/views.py:1398
+#: moneymoney/views.py:1404
 msgid "This product hasn't quotes. You need at least one"
-msgstr ""
+msgstr "Ce produit n'a pas de cotations. Vous en avez besoin d'au moins une"
 
-#: moneymoney/views.py:1419
+#: moneymoney/views.py:1425
 msgid ""
 "You can't delete a system product if you're not a Catalog Manager (only "
 "developers)"
-msgstr ""
-
-#: moneymoney/views.py:1726 moneymoney/views.py:1775
-msgid "January"
-msgstr ""
-
-#: moneymoney/views.py:1727 moneymoney/views.py:1776
-msgid "February"
-msgstr ""
-
-#: moneymoney/views.py:1728 moneymoney/views.py:1777
-msgid "March"
-msgstr ""
-
-#: moneymoney/views.py:1729 moneymoney/views.py:1778
-msgid "April"
-msgstr ""
-
-#: moneymoney/views.py:1730 moneymoney/views.py:1779
-msgid "May"
-msgstr ""
-
-#: moneymoney/views.py:1731 moneymoney/views.py:1780
-msgid "June"
-msgstr ""
+msgstr "Vous ne pouvez pas supprimer un produit système si vous n'êtes pas un gestionnaire de catalogue (développeurs uniquement)"
 
 #: moneymoney/views.py:1732 moneymoney/views.py:1781
-msgid "July"
-msgstr ""
+msgid "January"
+msgstr "Janvier"
 
 #: moneymoney/views.py:1733 moneymoney/views.py:1782
-msgid "August"
-msgstr ""
+msgid "February"
+msgstr "Février"
 
 #: moneymoney/views.py:1734 moneymoney/views.py:1783
-msgid "September"
-msgstr ""
+msgid "March"
+msgstr "Mars"
 
 #: moneymoney/views.py:1735 moneymoney/views.py:1784
-msgid "October"
-msgstr ""
+msgid "April"
+msgstr "Avril"
 
 #: moneymoney/views.py:1736 moneymoney/views.py:1785
-msgid "November"
-msgstr ""
+msgid "May"
+msgstr "Mai"
 
 #: moneymoney/views.py:1737 moneymoney/views.py:1786
+msgid "June"
+msgstr "Juin"
+
+#: moneymoney/views.py:1738 moneymoney/views.py:1787
+msgid "July"
+msgstr "Juillet"
+
+#: moneymoney/views.py:1739 moneymoney/views.py:1788
+msgid "August"
+msgstr "Août"
+
+#: moneymoney/views.py:1740 moneymoney/views.py:1789
+msgid "September"
+msgstr "Septembre"
+
+#: moneymoney/views.py:1741 moneymoney/views.py:1790
+msgid "October"
+msgstr "Octobre"
+
+#: moneymoney/views.py:1742 moneymoney/views.py:1791
+msgid "November"
+msgstr "Novembre"
+
+#: moneymoney/views.py:1743 moneymoney/views.py:1792
 msgid "December"
-msgstr ""
+msgstr "Décembre"
 
-#: moneymoney/views.py:1968
+#: moneymoney/views.py:1974
 msgid "You must set year and month parameters"
-msgstr ""
+msgstr "Vous devez définir les paramètres d'année et de mois"
 
-#: moneymoney/views.py:2260
+#: moneymoney/views.py:2270
 msgid "Accounts total balance"
-msgstr ""
+msgstr "Solde total des comptes"
 
-#: moneymoney/views.py:2273
+#: moneymoney/views.py:2283
 msgid "Accounts"
-msgstr ""
+msgstr "Comptes"
 
-#: moneymoney/views.py:2273
+#: moneymoney/views.py:2283
 msgid "Accounts operations"
-msgstr ""
+msgstr "Opérations de comptes"
 
-#: moneymoney/views.py:2273
+#: moneymoney/views.py:2283
 msgid "Banks"
-msgstr ""
+msgstr "Banques"
 
-#: moneymoney/views.py:2273
+#: moneymoney/views.py:2283
 msgid "Concept"
-msgstr ""
+msgstr "Concept"
