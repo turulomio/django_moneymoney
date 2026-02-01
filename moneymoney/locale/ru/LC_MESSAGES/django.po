@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-12 17:45+0000\n"
+"POT-Creation-Date: 2026-02-01 07:07+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -25,63 +25,65 @@ msgid "AMEX Stock Exchange"
 msgstr ""
 
 #: moneymoney/hardcoded_strings.py:3
+#, fuzzy
+#| msgid "Accounts"
+msgid "Account operation refund"
+msgstr "Счета"
+
+#: moneymoney/hardcoded_strings.py:4
 msgid "Account"
 msgstr ""
 
-#: moneymoney/hardcoded_strings.py:4
+#: moneymoney/hardcoded_strings.py:5
 msgid "Added shares"
 msgstr ""
 
-#: moneymoney/hardcoded_strings.py:5
+#: moneymoney/hardcoded_strings.py:6
 msgid "Adjustments. Negative"
 msgstr ""
 
-#: moneymoney/hardcoded_strings.py:6
+#: moneymoney/hardcoded_strings.py:7
 msgid "Adjustments. Positive"
 msgstr ""
 
-#: moneymoney/hardcoded_strings.py:7
+#: moneymoney/hardcoded_strings.py:8
 msgid "Amsterdam Stock Exchange"
 msgstr ""
 
-#: moneymoney/hardcoded_strings.py:8
+#: moneymoney/hardcoded_strings.py:9
 msgid "Attendance bonus"
 msgstr ""
 
-#: moneymoney/hardcoded_strings.py:9
+#: moneymoney/hardcoded_strings.py:10
 msgid "Bank commissions"
 msgstr ""
 
-#: moneymoney/hardcoded_strings.py:10
+#: moneymoney/hardcoded_strings.py:11
 msgid "Belgium Stock Exchange"
 msgstr ""
 
-#: moneymoney/hardcoded_strings.py:11
+#: moneymoney/hardcoded_strings.py:12
 msgid "Bonds. Coupon collection"
 msgstr ""
 
-#: moneymoney/hardcoded_strings.py:12
+#: moneymoney/hardcoded_strings.py:13
 msgid "Bonds. Running coupon collection"
 msgstr ""
 
-#: moneymoney/hardcoded_strings.py:13
+#: moneymoney/hardcoded_strings.py:14
 msgid "Bonds. Running coupon payment"
 msgstr ""
 
-#: moneymoney/hardcoded_strings.py:14
+#: moneymoney/hardcoded_strings.py:15
 msgid "CFD"
 msgstr ""
 
-#: moneymoney/hardcoded_strings.py:15
+#: moneymoney/hardcoded_strings.py:16
 msgid "Cash"
 msgstr ""
 
-#: moneymoney/hardcoded_strings.py:16
-msgid "Credit card billing"
-msgstr ""
-
 #: moneymoney/hardcoded_strings.py:17
-msgid "Credit card refund"
+msgid "Credit card billing"
 msgstr ""
 
 #: moneymoney/hardcoded_strings.py:18
@@ -146,8 +148,8 @@ msgstr ""
 msgid "Fast investments operations"
 msgstr "Инвестиции"
 
-#: moneymoney/hardcoded_strings.py:33 moneymoney/models.py:1673
-#: moneymoney/views.py:1929
+#: moneymoney/hardcoded_strings.py:33 moneymoney/models.py:1729
+#: moneymoney/views.py:1935
 #, fuzzy
 #| msgid "Accounts"
 msgid "Fast operations"
@@ -352,16 +354,20 @@ msgid "Tokyo Stock Exchange"
 msgstr ""
 
 #: moneymoney/hardcoded_strings.py:83
-msgid "Transfer of funds"
+msgid "Transfer of funds (obsolete)"
 msgstr ""
 
 #: moneymoney/hardcoded_strings.py:84
-msgid "Transfer of shares destiny"
-msgstr ""
+#, fuzzy
+#| msgid "Investments"
+msgid "Transfer of investments. Destiny"
+msgstr "Инвестиции"
 
 #: moneymoney/hardcoded_strings.py:85
-msgid "Transfer of shares origin"
-msgstr ""
+#, fuzzy
+#| msgid "Investments"
+msgid "Transfer of investments. Origin"
+msgstr "Инвестиции"
 
 #: moneymoney/hardcoded_strings.py:86
 msgid "Transfer"
@@ -404,101 +410,101 @@ msgstr ""
 msgid "IOC merged investment of '{0}'"
 msgstr ""
 
-#: moneymoney/models.py:298
+#: moneymoney/models.py:299
 #, python-brace-format
 msgid "Transfer to {0}. {1}"
 msgstr ""
 
-#: moneymoney/models.py:300
+#: moneymoney/models.py:301
 #, python-brace-format
 msgid "Transfer from {0}. {1}"
 msgstr ""
 
-#: moneymoney/models.py:302
+#: moneymoney/models.py:303
 #, python-brace-format
 msgid "Transfer of {0} from {1} to {2}. {3}"
 msgstr ""
 
-#: moneymoney/models.py:309
+#: moneymoney/models.py:310
 #, python-brace-format
 msgid "Refund of operation at {0} with {1}. {2}"
 msgstr ""
 
-#: moneymoney/models.py:320
+#: moneymoney/models.py:321
 msgid "Billing {} movements of {}"
 msgstr ""
 
-#: moneymoney/models.py:323
+#: moneymoney/models.py:324
 msgid "From {}. Gross {}. Net {}."
 msgstr ""
 
-#: moneymoney/models.py:330
+#: moneymoney/models.py:331
 msgid "{}: {} shares. Amount: {}. Comission: {}. Taxes: {}"
 msgstr ""
 
-#: moneymoney/models.py:366
+#: moneymoney/models.py:372
 msgid "Income operations amount must be greater or equal to 0."
 msgstr ""
 
-#: moneymoney/models.py:368
+#: moneymoney/models.py:374
 msgid "Expense operations amount must be less or equal to 0."
 msgstr ""
 
-#: moneymoney/models.py:625
+#: moneymoney/models.py:631
 msgid "Taxes and commissions must be equal or greater than zero"
 msgstr ""
 
-#: moneymoney/models.py:792
+#: moneymoney/models.py:798
 #, python-brace-format
 msgid "{0} transfer from '{1}' to '{2}' started at {3}. {4}"
 msgstr ""
 
-#: moneymoney/models.py:816
+#: moneymoney/models.py:822
 msgid ""
 "Investment operation can't be created because its related product hasn't "
 "quotes."
 msgstr ""
 
-#: moneymoney/models.py:948
+#: moneymoney/models.py:953
 msgid "Investment transfer can't be created if products types are not the same"
 msgstr ""
 
-#: moneymoney/models.py:951
+#: moneymoney/models.py:956
 msgid "Investment transfer can't be created if investments are the same"
 msgstr ""
 
-#: moneymoney/models.py:954
+#: moneymoney/models.py:959
 msgid "Shares amount can't be null"
 msgstr ""
 
-#: moneymoney/models.py:957
+#: moneymoney/models.py:962
 msgid "Shares amount can't be of the same sign"
 msgstr ""
 
-#: moneymoney/models.py:1475
+#: moneymoney/models.py:1477
 #, python-brace-format
 msgid "Error saving '{0}'. Datetime it's in the future"
 msgstr ""
 
-#: moneymoney/models.py:1479
+#: moneymoney/models.py:1481
 #, python-brace-format
 msgid "Updating '{0}'"
 msgstr ""
 
-#: moneymoney/models.py:1482
+#: moneymoney/models.py:1484
 #, python-brace-format
 msgid "Inserting '{0}'"
 msgstr ""
 
-#: moneymoney/models.py:1670
+#: moneymoney/models.py:1726
 msgid "Pairs in same account"
 msgstr ""
 
-#: moneymoney/models.py:1671
+#: moneymoney/models.py:1727
 msgid "Product ranges"
 msgstr ""
 
-#: moneymoney/models.py:1672
+#: moneymoney/models.py:1728
 msgid "Generic"
 msgstr ""
 
@@ -548,93 +554,93 @@ msgstr ""
 msgid "Insuficient data"
 msgstr "Инвестиции"
 
-#: moneymoney/views.py:1086
+#: moneymoney/views.py:1091
 msgid "Can't make a refund with those parameters"
 msgstr ""
 
-#: moneymoney/views.py:1398
+#: moneymoney/views.py:1404
 msgid "This product hasn't quotes. You need at least one"
 msgstr ""
 
-#: moneymoney/views.py:1419
+#: moneymoney/views.py:1425
 msgid ""
 "You can't delete a system product if you're not a Catalog Manager (only "
 "developers)"
 msgstr ""
 
-#: moneymoney/views.py:1726 moneymoney/views.py:1775
+#: moneymoney/views.py:1732 moneymoney/views.py:1781
 msgid "January"
 msgstr ""
 
-#: moneymoney/views.py:1727 moneymoney/views.py:1776
+#: moneymoney/views.py:1733 moneymoney/views.py:1782
 msgid "February"
 msgstr ""
 
-#: moneymoney/views.py:1728 moneymoney/views.py:1777
+#: moneymoney/views.py:1734 moneymoney/views.py:1783
 msgid "March"
 msgstr ""
 
-#: moneymoney/views.py:1729 moneymoney/views.py:1778
+#: moneymoney/views.py:1735 moneymoney/views.py:1784
 msgid "April"
 msgstr ""
 
-#: moneymoney/views.py:1730 moneymoney/views.py:1779
+#: moneymoney/views.py:1736 moneymoney/views.py:1785
 msgid "May"
 msgstr ""
 
-#: moneymoney/views.py:1731 moneymoney/views.py:1780
+#: moneymoney/views.py:1737 moneymoney/views.py:1786
 msgid "June"
 msgstr ""
 
-#: moneymoney/views.py:1732 moneymoney/views.py:1781
+#: moneymoney/views.py:1738 moneymoney/views.py:1787
 msgid "July"
 msgstr ""
 
-#: moneymoney/views.py:1733 moneymoney/views.py:1782
+#: moneymoney/views.py:1739 moneymoney/views.py:1788
 msgid "August"
 msgstr ""
 
-#: moneymoney/views.py:1734 moneymoney/views.py:1783
+#: moneymoney/views.py:1740 moneymoney/views.py:1789
 msgid "September"
 msgstr ""
 
-#: moneymoney/views.py:1735 moneymoney/views.py:1784
+#: moneymoney/views.py:1741 moneymoney/views.py:1790
 msgid "October"
 msgstr ""
 
-#: moneymoney/views.py:1736 moneymoney/views.py:1785
+#: moneymoney/views.py:1742 moneymoney/views.py:1791
 msgid "November"
 msgstr ""
 
-#: moneymoney/views.py:1737 moneymoney/views.py:1786
+#: moneymoney/views.py:1743 moneymoney/views.py:1792
 msgid "December"
 msgstr ""
 
-#: moneymoney/views.py:1968
+#: moneymoney/views.py:1974
 msgid "You must set year and month parameters"
 msgstr ""
 
-#: moneymoney/views.py:2260
+#: moneymoney/views.py:2270
 #, fuzzy
 #| msgid "Accounts"
 msgid "Accounts total balance"
 msgstr "Счета"
 
-#: moneymoney/views.py:2273
+#: moneymoney/views.py:2283
 msgid "Accounts"
 msgstr "Счета"
 
-#: moneymoney/views.py:2273
+#: moneymoney/views.py:2283
 #, fuzzy
 #| msgid "Accounts"
 msgid "Accounts operations"
 msgstr "Счета"
 
-#: moneymoney/views.py:2273
+#: moneymoney/views.py:2283
 msgid "Banks"
 msgstr "банки"
 
-#: moneymoney/views.py:2273
+#: moneymoney/views.py:2283
 msgid "Concept"
 msgstr ""
 
