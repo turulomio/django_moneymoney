@@ -894,16 +894,16 @@ class Investmentstransfers(models.Model):
     """
     datetime_origin = models.DateTimeField(blank=False, null=False)
     investments_origin= models.ForeignKey('Investments', models.CASCADE, blank=False, null=False, related_name="origin")
-    shares_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False) #Can be positive and negative
-    price_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
+    shares_origin=models.DecimalField(max_digits=100, decimal_places=6, blank=False, null=False) #Can be positive and negative
+    price_origin=models.DecimalField(max_digits=100, decimal_places=6, blank=False, null=False, validators=[MinValueValidator(Decimal(0))])
     commission_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
     taxes_origin=models.DecimalField(max_digits=100, decimal_places=2, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=0)
     currency_conversion_origin = models.DecimalField(max_digits=30, decimal_places=10, blank=False, null=False, validators=[MinValueValidator(Decimal(0))], default=1)
 
     datetime_destiny = models.DateTimeField(blank=True, null=True, default=None)
     investments_destiny= models.ForeignKey('Investments', models.CASCADE, blank=False, null=False, related_name="destiny")
-    shares_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True) #Can be positive and negative
-    price_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(Decimal(0))])
+    shares_destiny=models.DecimalField(max_digits=100, decimal_places=6, blank=True, null=True) #Can be positive and negative
+    price_destiny=models.DecimalField(max_digits=100, decimal_places=6, blank=True, null=True, validators=[MinValueValidator(Decimal(0))])
     commission_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(Decimal(0))], default=0)
     taxes_destiny=models.DecimalField(max_digits=100, decimal_places=2, blank=True, null=True, validators=[MinValueValidator(Decimal(0))], default=0)
     currency_conversion_destiny  = models.DecimalField(max_digits=30, decimal_places=10, blank=True, null=True, validators=[MinValueValidator(Decimal(0))], default=1)
