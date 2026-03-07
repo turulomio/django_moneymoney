@@ -385,7 +385,6 @@ async def test_benchmark_get_quotes(self):
         # self.assertEqual(rasync[d["products_id"]][d["datetime"]]["quote"], rasynct[d["products_id"]][d["datetime"]]["quote"]) FALLA 
     
 
-@tag("current")
 def test_Quotes_get_quotes(self):
     quotes=[]
     for i in range(5):

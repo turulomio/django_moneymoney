@@ -1019,6 +1019,11 @@ class Investmentstransfers(models.Model):
             destiny_io.associated_it=self
             destiny_io.save()
 
+    @transaction.atomic
+    def delete(self):
+        Investmentsoperations.objects.filter(associated_it=self).delete()
+        super().delete()
+
     def origin_gross_amount(self):
         return Currency(self.price_origin*self.shares_origin*self.investments_origin.products.real_leveraged_multiplier(), self.investments_origin.products.currency)
 
