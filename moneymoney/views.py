@@ -911,7 +911,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "balance_percentage": o.balance_percentage, 
                 "daily_adjustment": o.daily_adjustment, 
                 "selling_price": o.selling_price, 
-                "is_deletable": o.is_deletable(), 
+                "is_deletable": o.is_deletable, 
                 "flag": o.products.stockmarkets.country, 
                 "gains_at_selling_point_investment": o.selling_price*o.products.real_leveraged_multiplier()*plio.d_total_io_current(o.id)["shares"]-plio.d_total_io_current(o.id)["invested_investment"], 
                 "decimals": o.decimals, 
