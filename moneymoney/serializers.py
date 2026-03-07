@@ -88,9 +88,10 @@ class DividendsSerializer(ExceptionHandlingInModelHyperlinkedModelSerializer):
 
 class InvestmentsSerializer(serializers.HyperlinkedModelSerializer):
     fullname = serializers.SerializerMethodField()
+    is_deletable = serializers.BooleanField(read_only=True) # Add this line
     class Meta:
         model = models.Investments
-        fields = ('url', 'id','name', 'active','accounts', 'selling_price', 'products',  'selling_expiration', 'daily_adjustment', 'balance_percentage', 'fullname', 'decimals')
+        fields = ('url', 'id','name', 'active','accounts', 'selling_price', 'products',  'selling_expiration', 'daily_adjustment', 'balance_percentage', 'fullname', 'decimals', 'is_deletable')
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_fullname(self, obj):
