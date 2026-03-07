@@ -29,7 +29,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework import viewsets, permissions, status, serializers as drf_serializers
 from rest_framework.views import APIView
-from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Exists, OuterRef, Q, F # Keep this line
+from django.core.exceptions import ValidationError as DjangoValidationError # Add this line
 from zoneinfo import available_timezones
 from tempfile import TemporaryDirectory
 
@@ -819,6 +820,27 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.InvestmentsSerializer
     permission_classes = [permissions.IsAuthenticated]  
         
+    def get_queryset(self):
+        # Start with the base queryset, including select_related for performance
+        queryset = super().get_queryset()
+
+        # Annotate with a boolean indicating if *any* related object exists
+        # If any of these Exists subqueries return True, the investment is NOT deletable.
+        queryset = queryset.annotate(
+            _is_not_deletable=Exists(models.Investmentsoperations.objects.filter(investments=OuterRef('pk'))) |
+                             Exists(models.Dividends.objects.filter(investments=OuterRef('pk'))) |
+                             Exists(models.Orders.objects.filter(investments=OuterRef('pk'))) |
+                             Exists(models.Investmentstransfers.objects.filter(investments_origin=OuterRef('pk'))) |
+                             Exists(models.Investmentstransfers.objects.filter(investments_destiny=OuterRef('pk'))) |
+                             Exists(models.StrategiesGeneric.objects.filter(investments=OuterRef('pk'))) | # ManyToMany
+                             Exists(models.StrategiesProductsRange.objects.filter(investments=OuterRef('pk'))) | # ManyToMany
+                             Exists(models.FastOperationsCoverage.objects.filter(investments=OuterRef('pk'))) # ForeignKey
+        ).annotate(
+            # Invert the boolean: if it's NOT not-deletable, then it IS deletable
+            is_deletable=~F('_is_not_deletable') 
+        )
+        return queryset
+
     def queryset_for_list_methods(self,request):
         active=RequestBool(request, "active")
         bank_id=RequestInteger(request,"bank")

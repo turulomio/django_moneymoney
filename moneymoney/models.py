@@ -703,16 +703,6 @@ class Investments(models.Model):
             "decimals": decimals, 
         }
 
-    ## Función que devuelve un booleano si una cuenta es borrable, es decir, que no tenga registros dependientes.
-    def is_deletable(self):
-        if (
-                Investmentsoperations.objects.filter(investments_id=self.id).exists() or
-                Dividends.objects.filter(investments_id=self.id).exists() or
-                Orders.objects.filter(investments_id=self.id).exists()
-            ):
-            return False
-        return True
-
     def hasSameAccountCurrency(self):
         """
             Returns a boolean
@@ -1028,6 +1018,11 @@ class Investmentstransfers(models.Model):
             destiny_io.currency_conversion=self.currency_conversion_destiny
             destiny_io.associated_it=self
             destiny_io.save()
+
+    @transaction.atomic
+    def delete(self):
+        Investmentsoperations.objects.filter(associated_it=self).delete()
+        super().delete()
 
     def origin_gross_amount(self):
         return Currency(self.price_origin*self.shares_origin*self.investments_origin.products.real_leveraged_multiplier(), self.investments_origin.products.currency)
