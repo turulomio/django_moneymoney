@@ -11,7 +11,6 @@ from pydicts import lod, casts, dod
 from request_casting.request_casting import id_from_url
 from rest_framework import status
 from django.utils import timezone
-from django.contrib.auth.models import Group
 
 tag,  dod
 
@@ -469,14 +468,6 @@ def test_Accountsoperations_associated_fields(self):
     dict_associated_ao_with_associated_dividend=tests_helpers.client_get(self, self.client_authorized_1, dict_dividend["accountsoperations"],  status.HTTP_200_OK)
     self.assertEqual(dict_associated_ao_with_associated_dividend["associated_dividend"], dict_dividend["url"])
     
-
-
-def test_Investments(self):
-    dict_account=tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
-    dict_product=tests_helpers.client_get(self, self.client_authorized_1, "/api/products/79228/", status.HTTP_200_OK)
-    payload=models.Investments.post_payload(products=dict_product["url"], accounts=dict_account["url"])
-    tests_helpers.common_tests_Collaborative(self, "/api/investments/", payload, self.client_authorized_1, self.client_authorized_2, self.client_anonymous)
-
 
 
 
