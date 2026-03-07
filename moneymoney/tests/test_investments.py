@@ -92,7 +92,6 @@ def test_investment_is_deletable_with_investmentstransfers_origin(self):
     dict_it = tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentstransfers/", it_payload, status.HTTP_201_CREATED)
     self.assertFalse(_get_investment_deletable_status(self, dict_investment_origin["url"]))
     self.assertFalse(_get_investment_deletable_status(self, dict_investment_origin["url"]))
-    print(dict_it)
 
     tests_helpers.client_delete(self, self.client_authorized_1, dict_it["url"], {}, status.HTTP_204_NO_CONTENT)
     tests_helpers.client_get(self, self.client_authorized_1, dict_it["url"], status.HTTP_404_NOT_FOUND)
