@@ -43,6 +43,45 @@ def test_Investments_WithBalance(self):
     # Test without active parameter
     tests_helpers.client_get(self, self.client_authorized_1, "/api/investments/withbalance/", status.HTTP_400_BAD_REQUEST)
 
+def test_Investments_OperationsEvolutionChart(self):
+    # Create investment
+    dict_investment = tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",
+                                                models.Investments.post_payload(name="Investment for chart"),
+                                                status.HTTP_201_CREATED)
+    
+    # Add quotes for the product (79329 is default in post_payload)
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",
+                              models.Quotes.post_payload(products=dict_investment["products"], quote=10),
+                              status.HTTP_201_CREATED)
+
+    # Add investment operation
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/",
+                              models.Investmentsoperations.post_payload(investments=dict_investment["url"], shares=100, price=10),
+                              status.HTTP_201_CREATED)
+
+    # Call operations_evolution_chart
+    chart_data = tests_helpers.client_get(self, self.client_authorized_1, f"{dict_investment['url']}operations_evolution_chart/", status.HTTP_200_OK)
+    
+    # Verify structure
+    self.assertIn("datetimes", chart_data)
+    self.assertIn("invested", chart_data)
+    self.assertIn("balance", chart_data)
+    self.assertIn("gains_dividends", chart_data)
+    self.assertIn("dividends", chart_data)
+    self.assertIn("gains", chart_data)
+    
+    # Verify data length
+    self.assertTrue(len(chart_data["datetimes"]) > 0)
+    self.assertEqual(len(chart_data["datetimes"]), len(chart_data["invested"]))
+    
+    # Test with insufficient data (investment without operations)
+    dict_investment_empty = tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",
+                                                models.Investments.post_payload(name="Empty Investment"),
+                                                status.HTTP_201_CREATED)
+    
+    response = tests_helpers.client_get(self, self.client_authorized_1, f"{dict_investment_empty['url']}operations_evolution_chart/", status.HTTP_200_OK)
+    self.assertEqual(response, "Insuficient data")
+
 # Helper to ensure necessary quotes exist for tests
 def _ensure_quotes_exist_for_deletable_tests(self):
     # Product 79329 is used by default in Investments.post_payload
