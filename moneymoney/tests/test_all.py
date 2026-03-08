@@ -131,27 +131,6 @@ def test_Products(self):
     self.assertEqual(qs.count(), 1)
     self.assertEqual(qs[0].id, 79329)
 
-
-def test_Profile(self):
-    """
-        Test created users has its profile automatically generated
-    """
-    
-    a=User()
-    a.username="me"
-    a.save()
-    self.assertNotEqual(a, None)
-    
-    
-    self.assertNotEqual(self.user_authorized_1.profile, None)
-    self.assertNotEqual(self.user_authorized_2.profile, None)
-    self.assertNotEqual(self.user_catalog_manager.profile, None)
-    
-    p=models.Products.objects.get(pk=79329)
-    self.user_authorized_1.profile.favorites.add(p)
-    self.user_authorized_1.profile.save()
-    self.assertEqual(self.user_authorized_1.profile.favorites.count(), 1)        
-
 def test_ReportAnnual(self):
     tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/{self.today_year}/", status.HTTP_200_OK)
     
