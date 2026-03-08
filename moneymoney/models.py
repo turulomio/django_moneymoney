@@ -1495,7 +1495,7 @@ class Quotes(models.Model):
             return r
         except:
             # print(_("I coudn't get a quote for product '{0}' at '{1}'").format(product_id, datetime_))
-            return 0
+            return None
 
     @staticmethod
     def get_quotes(lod_):
@@ -1526,7 +1526,7 @@ class Quotes(models.Model):
                 r[needed_quote["products_id"]][needed_quote["datetime"]]=tmplod
             else:
                 r[needed_quote["products_id"]][needed_quote["datetime"]]={
-                    "datetime": None, "id": None, "needed_datetime": needed_quote["datetime"],
+                    "datetime": needed_quote["datetime"], "id": needed_quote["products_id"], "needed_datetime": needed_quote["datetime"],
                     "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": 0
                 }
                 # print(_("I coudn't get a quote for product '{0}' at '{1}' assigning a price of 0").format(needed_quote["products_id"], needed_quote["datetime"]))
@@ -1541,6 +1541,8 @@ class Quotes(models.Model):
         To look for we must r[product_id][datetime]
 
         Si no la encuentra deveulve 0
+
+        SOLO USADO EN TESTS
         """
         if len (lod_)==0:
             return {}
@@ -1584,6 +1586,8 @@ class Quotes(models.Model):
             Parameters:
                 - lod_= [{"products_id": 79234, "datetime": ...}, ]
             To look for we must r[product_id][datetime]
+
+            SOLO USADO EN TESTS
         """
         if not lod_:
             return {}
@@ -1651,7 +1655,7 @@ class Quotes(models.Model):
                     return None
                 else:
                     return 1/q
-        print(_("I coudn't find currency factor from '{0}' to '{1}' at '{2}' returning 1 by default").format(from_, to_, datetime_ ))
+        # print(_("I coudn't find currency factor from '{0}' to '{1}' at '{2}' returning 1 by default").format(from_, to_, datetime_ ))
         return 1        
     
 
