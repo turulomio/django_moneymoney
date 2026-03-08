@@ -135,112 +135,40 @@ def test_login_token_management_e2e_false(self):
     self.assertNotEqual(Token.objects.get(user=test_user).key, "testing_e2e_token")
     self.assertEqual(Token.objects.filter(user=test_user).count(), 1)
 
-# def test_access_protected_resource_after_login(self):
-#     """
-#     Test that a user can access a protected resource after successful login.
-#     """
-#     test_username = self.user_authorized_1.username
-#     test_password = "testpassword123"
+def test_access_protected_resource_after_login(self):
+    """
+    Test that a user can access a protected resource after successful login.
+    """
+    test_user=_create_test_user()    # 1. Log in to get a token
+    login_payload = {"username": TEST_USERNAME, "password": TEST_PASSWORD}
+    token_key = tests_helpers.client_post(self, self.client_anonymous, "/login/", login_payload, status.HTTP_200_OK)
 
-#     # 1. Log in to get a token
-#     login_payload = {"username": test_username, "password": test_password}
-#     token_key = tests_helpers.client_post(self, self.client_anonymous, "/login/", login_payload, status.HTTP_200_OK)
+    # 2. Create a new APIClient instance and set credentials
+    authenticated_client = APIClient()
+    authenticated_client.credentials(HTTP_AUTHORIZATION=f'Token {token_key}')
+    authenticated_client.user=test_user #For compatibility of my tests
 
-#     # 2. Create a new APIClient instance and set credentials
-#     authenticated_client = APIClient()
-#     authenticated_client.credentials(HTTP_AUTHORIZATION=f'Token {token_key}')
+    # 3. Try to access a protected resource (e.g., user profile)
+    # Assuming /profile/ is a protected endpoint that requires authentication (from moneymoney/views.py)
+    response = tests_helpers.client_get(self, authenticated_client, "/profile/", status.HTTP_200_OK)
+    self.assertIn("email", response) # Check for a known field in the profile response
 
-#     # 3. Try to access a protected resource (e.g., user profile)
-#     # Assuming /profile/ is a protected endpoint that requires authentication (from moneymoney/views.py)
-#     response = tests_helpers.client_get(self, authenticated_client, "/profile/", status.HTTP_200_OK)
-#     self.assertIn("email", response) # Check for a known field in the profile response
-#     self.assertEqual(response["email"], self.user_authorized_1.email)
+def test_access_protected_resource_after_logout(self):
+    """
+    Test that a user cannot access a protected resource after successful logout.
+    """
+    test_user=_create_test_user()    # 1. Log in to get a token
+    login_payload = {"username": TEST_USERNAME, "password": TEST_PASSWORD}
+    token_key = tests_helpers.client_post(self, self.client_anonymous, "/login/", login_payload, status.HTTP_200_OK)
 
-# def test_access_protected_resource_after_logout(self):
-#     """
-#     Test that a user cannot access a protected resource after successful logout.
-#     """
-#     test_username = self.user_authorized_1.username
-#     test_password = "testpassword123"
+    # 2. Create a new APIClient instance and set credentials
+    authenticated_client = APIClient()
+    authenticated_client.credentials(HTTP_AUTHORIZATION=f'Token {token_key}')
+    authenticated_client.user=test_user #For compatibility of my tests
 
-#     # 1. Log in to get a token
-#     login_payload = {"username": test_username, "password": test_password}
-#     token_key = tests_helpers.client_post(self, self.client_anonymous, "/login/", login_payload, status.HTTP_200_OK)
+    logout_payload = {"key": token_key}
+    response = tests_helpers.client_post(self, authenticated_client, "/logout/", logout_payload, status.HTTP_200_OK)
 
-#     # 2. Create a new APIClient instance and set credentials
-#     authenticated_client = APIClient()
-#     authenticated_client.credentials(HTTP_AUTHORIZATION=f'Token {token_key}')
-
-#     # 3. Log out using the token (using the anonymous client to send the payload)
-#     logout_payload = {"key": token_key}
-#     tests_helpers.client_post(self, self.client_anonymous, "/logout/", logout_payload, status.HTTP_200_OK)
-#     self.assertFalse(Token.objects.filter(key=token_key).exists())
-
-#     # 4. Try to access the protected resource with the now invalidated token using the authenticated client
-#     response = tests_helpers.client_get(self, authenticated_client, "/profile/", status.HTTP_401_UNAUTHORIZED)
-#     self.assertEqual(response, {'detail': 'Invalid token.'})
-
-# @override_settings(E2E_TESTING=False)
-# def test_login_with_existing_token_e2e_false_multiple_times(self):
-#     """
-#     Test that logging in multiple times when E2E_TESTING is False
-#     always results in a new token and invalidates previous ones.
-#     """
-#     test_username = self.user_authorized_1.username
-#     test_password = "testpassword123"
-
-#     # Ensure no token exists initially for this user, or delete it if it does
-#     Token.objects.filter(user=self.user_authorized_1).delete()
-
-#     # First login
-#     payload = {"username": test_username, "password": test_password}
-#     token_key_1 = tests_helpers.client_post(self, self.client_anonymous, "/login/", payload, status.HTTP_200_OK)
-#     self.assertTrue(Token.objects.filter(key=token_key_1, user=self.user_authorized_1).exists())
-#     self.assertEqual(Token.objects.filter(user=self.user_authorized_1).count(), 1)
-
-#     # Second login
-#     token_key_2 = tests_helpers.client_post(self, self.client_anonymous, "/login/", payload, status.HTTP_200_OK)
-#     self.assertTrue(Token.objects.filter(key=token_key_2, user=self.user_authorized_1).exists())
-#     self.assertEqual(Token.objects.filter(user=self.user_authorized_1).count(), 1) # Still only one token
-#     self.assertNotEqual(token_key_1, token_key_2) # New token should be different
-#     self.assertFalse(Token.objects.filter(key=token_key_1).exists()) # Old token should be deleted
-
-#     # Try to use the first token (should fail)
-#     client_with_old_token = APIClient()
-#     client_with_old_token.credentials(HTTP_AUTHORIZATION=f'Token {token_key_1}')
-#     tests_helpers.client_get(self, client_with_old_token, "/profile/", status.HTTP_401_UNAUTHORIZED)
-
-#     # Try to use the second token (should succeed)
-#     client_with_new_token = APIClient()
-#     client_with_new_token.credentials(HTTP_AUTHORIZATION=f'Token {token_key_2}')
-#     tests_helpers.client_get(self, client_with_new_token, "/profile/", status.HTTP_200_OK)
-
-# @override_settings(E2E_TESTING=True)
-# def test_login_with_existing_token_e2e_true_multiple_times(self):
-#     """
-#     Test that logging in multiple times when E2E_TESTING is True
-#     always results in the same "testing_e2e_token".
-#     """    
-#     test_username = self.user_authorized_1.username
-#     test_password = "testpassword123"
-
-#     # Ensure no token exists initially for this user, or delete it if it does
-#     Token.objects.filter(user=self.user_authorized_1).delete()
-
-#     # First login
-#     payload = {"username": test_username, "password": test_password}
-#     token_key_1 = tests_helpers.client_post(self, self.client_anonymous, "/login/", payload, status.HTTP_200_OK)
-#     self.assertEqual(token_key_1, "testing_e2e_token")
-#     self.assertTrue(Token.objects.filter(key="testing_e2e_token", user=self.user_authorized_1).exists())
-#     self.assertEqual(Token.objects.filter(user=self.user_authorized_1).count(), 1)
-
-#     # Second login
-#     token_key_2 = tests_helpers.client_post(self, self.client_anonymous, "/login/", payload, status.HTTP_200_OK)
-#     self.assertEqual(token_key_2, "testing_e2e_token")
-#     self.assertEqual(token_key_1, token_key_2) # Should be the same token
-#     self.assertEqual(Token.objects.filter(user=self.user_authorized_1).count(), 1)
-
-#     # Try to use the token (should succeed)
-#     client_with_token = APIClient()
-#     client_with_token.credentials(HTTP_AUTHORIZATION=f'Token {token_key_1}')
-#     tests_helpers.client_get(self, client_with_token, "/profile/", status.HTTP_200_OK)
+    # 3. Try to access a protected resource (e.g., user profile)
+    # Assuming /profile/ is a protected endpoint that requires authentication (from moneymoney/views.py)
+    response = tests_helpers.client_get(self, authenticated_client, "/profile/", status.HTTP_401_UNAUTHORIZED)
