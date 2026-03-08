@@ -6,12 +6,20 @@ from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
 from moneymoney.reusing import tests_helpers
 
-TEST_USERNAME = "test_user"
-TEST_PASSWORD = "testpassword123"
+TEST_USERNAME = "testuser"
+TEST_PASSWORD = "testuser_password"
+TEST_E2E_USERNAME = "test"
+TEST_E2E_PASSWORD = "test"
 
 def _create_test_user():
     user=User.objects.create(username=TEST_USERNAME)
     user.set_password(TEST_PASSWORD)
+    user.save()
+    return user
+
+def _create_test_e2e_user():
+    user=User.objects.create(username=TEST_E2E_USERNAME)
+    user.set_password(TEST_E2E_PASSWORD)
     user.save()
     return user
 
@@ -95,26 +103,24 @@ def test_failed_logout_missing_token(self):
     response = tests_helpers.client_post(self, self.client_anonymous, "/logout/", logout_payload, status.HTTP_403_FORBIDDEN)
     self.assertEqual(response, "Invalid token")
 
-# @override_settings(E2E_TESTING=True)
-# def test_login_token_management_e2e_true(self):
-#     """
-#     Test token management when E2E_TESTING is True: existing token is updated to "testing_e2e_token".
-#     """
-#     # Ensure no token exists initially for this user, or delete it if it does
-#     Token.objects.filter(user=self.user_authorized_1).delete()
-    
-#     # Create an initial token for the user (this will be updated)
-#     # Note: self.user_authorized_1 is available from MoneyMoneyAPITestCase
-#     initial_token = Token.objects.create(user=self.user_authorized_1, key="old_token_key")
-#     self.assertEqual(Token.objects.get(user=self.user_authorized_1).key, "old_token_key")
+@override_settings(E2E_TESTING=True)
+def test_login_token_management_e2e_true(self):
+    """
+    Test token management when E2E_TESTING is True: existing token is updated to "testing_e2e_token".
+    """
+    test_user=_create_test_e2e_user()
 
-#     payload = {"username": test_username, "password": test_password}
-#     response_key = tests_helpers.client_post(self, self.client_anonymous, "/login/", payload, status.HTTP_200_OK)
-    
-#     self.assertEqual(response_key, "testing_e2e_token")
-#     self.assertEqual(Token.objects.get(user=self.user_authorized_1).key, "testing_e2e_token")
-#     # Ensure no new token was created, but the existing one was updated
-#     self.assertEqual(Token.objects.filter(user=self.user_authorized_1).count(), 1)
+    payload = {"username": TEST_E2E_USERNAME, "password": TEST_E2E_PASSWORD}
+    response_key = tests_helpers.client_post(self, self.client_anonymous, "/login/", payload, status.HTTP_200_OK)
+    self.assertEqual(response_key, "testing_e2e_token")
+    self.assertEqual(Token.objects.get(user=test_user).key, "testing_e2e_token")
+    self.assertEqual(Token.objects.filter(user=test_user).count(), 1)
+
+    # Logins again and continue to be the same and only on token
+    response_key = tests_helpers.client_post(self, self.client_anonymous, "/login/", payload, status.HTTP_200_OK)
+    self.assertEqual(response_key, "testing_e2e_token")
+    self.assertEqual(Token.objects.get(user=test_user).key, "testing_e2e_token")
+    self.assertEqual(Token.objects.filter(user=test_user).count(), 1)
 
 # @override_settings(E2E_TESTING=False)
 # def test_login_token_management_e2e_false(self):

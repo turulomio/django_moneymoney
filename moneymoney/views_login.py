@@ -40,7 +40,7 @@ def login(request):
             return Response("Wrong credentials", status=status.HTTP_401_UNAUTHORIZED)
 
 
-        if settings.E2E_TESTING:        # Allows parallelism
+        if settings.E2E_TESTING and username=="test" and password=="test":        # Allows parallelism using test and then test and always with the same test
             testing_e2e_token_value="testing_e2e_token"
             if Token.objects.filter(user=user).exists():
                 token=Token.objects.get(user=user)
