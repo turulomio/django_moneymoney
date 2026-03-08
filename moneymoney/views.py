@@ -911,7 +911,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                 "balance_percentage": o.balance_percentage, 
                 "daily_adjustment": o.daily_adjustment, 
                 "selling_price": o.selling_price, 
-                "is_deletable": o.is_deletable(), 
+                "is_deletable": o.is_deletable, 
                 "flag": o.products.stockmarkets.country, 
                 "gains_at_selling_point_investment": o.selling_price*o.products.real_leveraged_multiplier()*plio.d_total_io_current(o.id)["shares"]-plio.d_total_io_current(o.id)["invested_investment"], 
                 "decimals": o.decimals, 
@@ -2292,11 +2292,11 @@ def ReportZeroRisk(request):
         "fullname": _("Accounts total balance"), 
         "url": None, 
         "balance_user": models.Accounts.accounts_balance(qs_accounts, timezone.now(), 'EUR')["balance_user_currency"], 
-        "currency": o.products.currency, 
-        "flag": o.products.stockmarkets.country, 
-        "decimals": o.decimals, 
+        "currency": request.user.profile.currency, 
+        "flag": "", 
+        "decimals": 2, 
     })
-    return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
+    return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
 @api_view(['GET', ])
 @permission_classes([permissions.IsAuthenticated, ])
