@@ -28,7 +28,7 @@ def test_ReportEvolutionAssetsChart(self):
     current_year = date.today().year
     
     # Test with current year (last 12 months logic)
-    response = tests_helpers.client_get(self, self.client_authorized_1, f"/reports/evolution_assets_chart/?from={current_year}", status.HTTP_200_OK)
+    response = tests_helpers.client_get(self, self.client_authorized_1, f"/reports/evolutionassets/chart/?from={current_year}", status.HTTP_200_OK)
     
     self.assertTrue(len(response) > 0)
     # Check structure of the first element
@@ -41,5 +41,5 @@ def test_ReportEvolutionAssetsChart(self):
     self.assertIn("zerorisk_user", item)
     
     # Test with a previous year
-    response_past = tests_helpers.client_get(self, self.client_authorized_1, f"/reports/evolution_assets_chart/?from={current_year-1}", status.HTTP_200_OK)
+    response_past = tests_helpers.client_get(self, self.client_authorized_1, f"/reports/evolutionassets/chart/?from={current_year-1}", status.HTTP_200_OK)
     self.assertTrue(len(response_past) > 0)
