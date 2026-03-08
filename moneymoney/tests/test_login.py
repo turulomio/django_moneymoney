@@ -108,7 +108,7 @@ def test_login_token_management_e2e_true(self):
     """
     Test token management when E2E_TESTING is True: existing token is updated to "testing_e2e_token".
     """
-    test_user=_create_test_e2e_user()
+    test_user=_create_test_e2e_user() #No existe por defecto solo cuando se ejecuta poe testserver_e2e
 
     payload = {"username": TEST_E2E_USERNAME, "password": TEST_E2E_PASSWORD}
     response_key = tests_helpers.client_post(self, self.client_anonymous, "/login/", payload, status.HTTP_200_OK)
@@ -122,28 +122,18 @@ def test_login_token_management_e2e_true(self):
     self.assertEqual(Token.objects.get(user=test_user).key, "testing_e2e_token")
     self.assertEqual(Token.objects.filter(user=test_user).count(), 1)
 
-# @override_settings(E2E_TESTING=False)
-# def test_login_token_management_e2e_false(self):
-#     """
-#     Test token management when E2E_TESTING is False: existing token is deleted and a new one is created.
-#     """
-#     # Ensure no token exists initially for this user, or delete it if it does
-#     Token.objects.filter(user=self.user_authorized_1).delete()
+@override_settings(E2E_TESTING=False)
+def test_login_token_management_e2e_false(self):
+    """
+    Test token management when E2E_TESTING is False: existing token is deleted and a new one is created.
+    """
+    test_user=_create_test_e2e_user() #No existe por defecto solo cuando se ejecuta poe testserver_e2e
 
-#     # Create an initial token for the user
-#     # Note: self.user_authorized_1 is available from MoneyMoneyAPITestCase
-#     initial_token = Token.objects.create(user=self.user_authorized_1, key="old_token_key")
-#     self.assertEqual(Token.objects.get(user=self.user_authorized_1).key, "old_token_key")
-
-#     payload = {"username": test_username, "password": test_password}
-#     response_key = tests_helpers.client_post(self, self.client_anonymous, "/login/", payload, status.HTTP_200_OK)
-    
-#     # A new token should have been generated, so its key should be different from the old one
-#     self.assertNotEqual(response_key, "old_token_key")
-#     self.assertTrue(Token.objects.filter(key=response_key, user=self.user_authorized_1).exists())
-#     # Ensure the old token is gone and only one new token exists
-#     self.assertFalse(Token.objects.filter(key="old_token_key").exists())
-#     self.assertEqual(Token.objects.filter(user=self.user_authorized_1).count(), 1)
+    payload = {"username": TEST_E2E_USERNAME, "password": TEST_E2E_PASSWORD}
+    response_key = tests_helpers.client_post(self, self.client_anonymous, "/login/", payload, status.HTTP_200_OK)
+    self.assertNotEqual(response_key, "testing_e2e_token")
+    self.assertNotEqual(Token.objects.get(user=test_user).key, "testing_e2e_token")
+    self.assertEqual(Token.objects.filter(user=test_user).count(), 1)
 
 # def test_access_protected_resource_after_login(self):
 #     """
