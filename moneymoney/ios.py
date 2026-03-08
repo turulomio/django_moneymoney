@@ -659,11 +659,6 @@ class IOS:
             account2user=lf(data["currency_account"], data["currency_user"], c["datetime"])
             quote_at_datetime=lq(data["products_id"], data["dt"])
 
-            if investment2account_at_datetime is None: investment2account_at_datetime=Decimal(0)
-            if account2user_at_datetime is None: account2user_at_datetime=Decimal(0)
-            if account2user is None: account2user=Decimal(0)
-            if quote_at_datetime is None: quote_at_datetime=Decimal(0)
-
             c['investment2account_at_datetime']=investment2account_at_datetime
             c['account2user_at_datetime']=account2user_at_datetime
             c['account2user']=account2user
