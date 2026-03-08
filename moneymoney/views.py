@@ -2292,11 +2292,11 @@ def ReportZeroRisk(request):
         "fullname": _("Accounts total balance"), 
         "url": None, 
         "balance_user": models.Accounts.accounts_balance(qs_accounts, timezone.now(), 'EUR')["balance_user_currency"], 
-        "currency": o.products.currency, 
-        "flag": o.products.stockmarkets.country, 
-        "decimals": o.decimals, 
+        "currency": request.user.profile.currency, 
+        "flag": "", 
+        "decimals": 2, 
     })
-    return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
+    return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
 @api_view(['GET', ])
 @permission_classes([permissions.IsAuthenticated, ])
