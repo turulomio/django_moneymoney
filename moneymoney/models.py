@@ -84,7 +84,7 @@ class Accounts(models.Model):
         return True
 
     ## @return Tuple (balance_account_currency | balance_user_currency)
-    def balance(self, dt,  currency_user):
+    def balance(self, dt, currency_user):
         r={}
         b=Accountsoperations.objects.filter(accounts=self, datetime__lte=dt).select_related("accounts").aggregate(Sum("amount"))["amount__sum"]
         if b is None:
@@ -115,7 +115,7 @@ class Accounts(models.Model):
             r["balance_account_currency"]=None
             r["balance_user_currency"]=Decimal("0")
             for currency in currencies_in_qs:
-                b=Accountsoperations.objects.filter(accounts__in=qs, datetime__lte=dt, accounts__currency=currency).select_related("accounts").aggregate(Sum("amount"))["amount__sum"]
+                b = Accountsoperations.objects.filter(accounts__in=qs, datetime__lte=dt, accounts__currency=currency).select_related("accounts").aggregate(Sum("amount"))["amount__sum"] or Decimal('0')
                 factor=Quotes.get_currency_factor(dt, currency, currency_user, None)
                 r["balance_user_currency"]=r["balance_user_currency"]+b*factor
         return r
@@ -1487,11 +1487,14 @@ class Quotes(models.Model):
         """
             Gets a quote object of a product in a datetime or less.
             Returns and object or None
+
+            Si no lo encuentra deveulve un precio de 0
         """
         try:
             r=Quotes.objects.filter(products__id=product_id, datetime__lte=datetime_).order_by("-datetime")[0]
             return r
         except:
+            # print(_("I coudn't get a quote for product '{0}' at '{1}'").format(product_id, datetime_))
             return None
 
     @staticmethod
@@ -1501,6 +1504,8 @@ class Quotes(models.Model):
             Parameters:
                 - lod_= [{"products_id": 79234, "datetime": ...}, ]
             To look for we must r[product_id][datetime]
+
+            Si no la encuentra devuelve un precio de 0
         """
         if len (lod_)==0:
             return {}
@@ -1521,9 +1526,10 @@ class Quotes(models.Model):
                 r[needed_quote["products_id"]][needed_quote["datetime"]]=tmplod
             else:
                 r[needed_quote["products_id"]][needed_quote["datetime"]]={
-                    "datetime": None, "id": None, "needed_datetime": needed_quote["datetime"],
-                    "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": None
+                    "datetime": needed_quote["datetime"], "id": needed_quote["products_id"], "needed_datetime": needed_quote["datetime"],
+                    "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": 0
                 }
+                # print(_("I coudn't get a quote for product '{0}' at '{1}' assigning a price of 0").format(needed_quote["products_id"], needed_quote["datetime"]))
         return r
     
     @staticmethod
@@ -1533,6 +1539,10 @@ class Quotes(models.Model):
         Parameters:
             - lod_= [{"products_id": 79234, "datetime": ...}, ]
         To look for we must r[product_id][datetime]
+
+        Si no la encuentra deveulve 0
+
+        SOLO USADO EN TESTS
         """
         if len (lod_)==0:
             return {}
@@ -1551,7 +1561,7 @@ class Quotes(models.Model):
                 result = qs.values().first()
                 if result:
                     return result
-                return {"datetime": None, "id": None, "needed_datetime": needed_quote["datetime"], "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": None}
+                return {"datetime": None, "id": None, "needed_datetime": needed_quote["datetime"], "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": 0}
             finally:
                 connection.close()
 
@@ -1576,6 +1586,8 @@ class Quotes(models.Model):
             Parameters:
                 - lod_= [{"products_id": 79234, "datetime": ...}, ]
             To look for we must r[product_id][datetime]
+
+            SOLO USADO EN TESTS
         """
         if not lod_:
             return {}
@@ -1594,7 +1606,7 @@ class Quotes(models.Model):
             if internal_r is not None:
                 return internal_r
             else:
-                return     { "datetime": None, "id": None, "needed_datetime": needed_quote  ["datetime"], "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": None }
+                return     { "datetime": None, "id": None, "needed_datetime": needed_quote  ["datetime"], "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": 0 }
 
         tasks = [fetch_quote(nq) for nq in lod_]
         results = await asyncio.gather(*tasks)
@@ -1615,6 +1627,8 @@ class Quotes(models.Model):
             Params:
                 - get_quotes_result: Dictionary result of Quotes.get_quotes. Poner None para que se calcule3
             Returns and object or None
+
+            Si no lo encuentra deveulve 1
         """
         def get_quote(products_id,  datetime_):
             if get_quotes_result is None:
@@ -1641,9 +1655,8 @@ class Quotes(models.Model):
                     return None
                 else:
                     return 1/q
-        print("NOT FOUND")
-        return None
-        
+        # print(_("I coudn't find currency factor from '{0}' to '{1}' at '{2}' returning 1 by default").format(from_, to_, datetime_ ))
+        return 1        
     
 
     
