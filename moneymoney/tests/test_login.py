@@ -34,67 +34,66 @@ def test_successful_login_and_logout(self):
     self.assertEqual(response, "Logged out")
     self.assertFalse(Token.objects.filter(key=response_key, user=test_user).exists())
 
-# def test_failed_login_invalid_username(self):
-#     """
-#     Test that login fails with an invalid username.
-#     """
-#     test_password = "testpassword123"
-#     payload = {
-#         "username": "nonexistentuser",
-#         "password": test_password,
-#     }
-#     response = tests_helpers.client_post(self, self.client_anonymous, "/login/", payload, status.HTTP_401_UNAUTHORIZED)
-#     self.assertEqual(response, "Wrong credentials")
+def test_failed_login_invalid_username(self):
+    """
+    Test that login fails with an invalid username.
+    """
+    test_user=_create_test_user()
+    payload = {
+        "username": "bad_username",
+        "password": TEST_PASSWORD
+    }
+    response = tests_helpers.client_post(self, self.client_anonymous, "/login/", payload, status.HTTP_401_UNAUTHORIZED)
+    self.assertEqual(response, "Wrong credentials")
 
-# def test_failed_login_invalid_password(self):
-#     """
-#     Test that login fails with an invalid password for an existing user.
-#     """
-#     test_username = self.user_authorized_1.username
-#     payload = {
-#         "username": test_username,
-#         "password": "wrongpassword",
-#     }
-#     response = tests_helpers.client_post(self, self.client_anonymous, "/login/", payload, status.HTTP_401_UNAUTHORIZED)
-#     self.assertEqual(response, "Wrong credentials")
+def test_failed_login_invalid_password(self):
+    """
+    Test that login fails with an invalid password for an existing user.
+    """
+    test_user=_create_test_user()
+    payload = {
+        "username": TEST_USERNAME,
+        "password": "bad_password"
+    }
+    response = tests_helpers.client_post(self, self.client_anonymous, "/login/", payload, status.HTTP_401_UNAUTHORIZED)
+    self.assertEqual(response, "Wrong credentials")
 
-# def test_failed_login_missing_credentials(self):
-#     """
-#     Test that login fails if username or password is missing.
-#     """
-#     test_username = self.user_authorized_1.username
-#     test_password = "testpassword123"
+def test_failed_login_missing_credentials(self):
+    """
+    Test that login fails if username or password is missing.
+    """
+    test_user=_create_test_user()
 
-#     # Missing username
-#     payload_no_username = {
-#         "password": test_password,
-#     }
-#     response = tests_helpers.client_post(self, self.client_anonymous, "/login/", payload_no_username, status.HTTP_401_UNAUTHORIZED)
-#     self.assertEqual(response, "Wrong credentials")
+    # Missing username
+    payload_no_username = {
+        "password": TEST_PASSWORD,
+    }
+    response = tests_helpers.client_post(self, self.client_anonymous, "/login/", payload_no_username, status.HTTP_401_UNAUTHORIZED)
+    self.assertEqual(response, "Wrong credentials")
 
-#     # Missing password
-#     payload_no_password = {
-#         "username": test_username,
-#     }
-#     response = tests_helpers.client_post(self, self.client_anonymous, "/login/", payload_no_password, status.HTTP_401_UNAUTHORIZED)
-#     self.assertEqual(response, "Wrong credentials")
+    # Missing password
+    payload_no_password = {
+        "username": TEST_USERNAME,
+    }
+    response = tests_helpers.client_post(self, self.client_anonymous, "/login/", payload_no_password, status.HTTP_401_UNAUTHORIZED)
+    self.assertEqual(response, "Wrong credentials")
 
 
-# def test_failed_logout_invalid_token(self):
-#     """
-#     Test that logout fails with an invalid or non-existent token.
-#     """
-#     logout_payload = {"key": "invalid_token_123"}
-#     response = tests_helpers.client_post(self, self.client_anonymous, "/logout/", logout_payload, status.HTTP_403_FORBIDDEN)
-#     self.assertEqual(response, "Invalid token")
+def test_failed_logout_invalid_token(self):
+    """
+    Test that logout fails with an invalid or non-existent token.
+    """
+    logout_payload = {"key": "invalid_token_123"}
+    response = tests_helpers.client_post(self, self.client_anonymous, "/logout/", logout_payload, status.HTTP_403_FORBIDDEN)
+    self.assertEqual(response, "Invalid token")
 
-# def test_failed_logout_missing_token(self):
-#     """
-#     Test that logout fails if the token key is missing from the payload.
-#     """
-#     logout_payload = {}
-#     response = tests_helpers.client_post(self, self.client_anonymous, "/logout/", logout_payload, status.HTTP_403_FORBIDDEN)
-#     self.assertEqual(response, "Invalid token")
+def test_failed_logout_missing_token(self):
+    """
+    Test that logout fails if the token key is missing from the payload.
+    """
+    logout_payload = {}
+    response = tests_helpers.client_post(self, self.client_anonymous, "/logout/", logout_payload, status.HTTP_403_FORBIDDEN)
+    self.assertEqual(response, "Invalid token")
 
 # @override_settings(E2E_TESTING=True)
 # def test_login_token_management_e2e_true(self):
