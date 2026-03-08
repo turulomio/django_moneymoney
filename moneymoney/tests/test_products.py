@@ -2,6 +2,29 @@ from rest_framework import status
 from moneymoney import models
 from moneymoney.reusing import tests_helpers
 
+
+def test_Products_models(self):    
+    # qs_distinct_with_investments empty
+    qs=models.Products.qs_distinct_with_investments()
+    self.assertEqual(qs.count(), 0)
+    
+    # qs_distinct_with_investments not empty
+    inv=models.Investments()
+    inv.name="Investment name"
+    inv.active=True
+    inv.accounts_id=4
+    inv.products_id=79329
+    inv.selling_price=0
+    inv.daily_adjustment=False
+    inv.balance_percentage=100
+    inv.save()
+    qs=models.Products.qs_distinct_with_investments()
+    self.assertEqual(qs.count(), 1)
+    self.assertEqual(qs[0].id, 79329)
+
+
+
+
 def test_Products(self):
     # Personal products CRUD
     dict_pp=tests_helpers.client_post(self, self.client_authorized_1, "/api/products/", models.Products.post_personal_payload(), status.HTTP_201_CREATED)

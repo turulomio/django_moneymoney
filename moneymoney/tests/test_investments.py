@@ -2,6 +2,8 @@ from rest_framework import status
 from moneymoney import models
 from moneymoney.reusing import tests_helpers
 from django.utils import timezone
+from datetime import date
+
 
 def test_Investments(self):
     dict_account=tests_helpers.client_get(self, self.client_authorized_1, "/api/accounts/4/", status.HTTP_200_OK)
@@ -231,3 +233,20 @@ def test_investment_is_deletable_with_fast_operations_coverage(self):
 
     tests_helpers.client_delete(self, self.client_authorized_1, dict_foc["url"], {}, status.HTTP_204_NO_CONTENT)
     self.assertTrue(_get_investment_deletable_status(self, dict_investment["url"]))
+    
+def test_InvestmentsChangeSellingPrice(self):
+    dict_investment_1=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
+    dict_investment_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(), status.HTTP_201_CREATED)
+    
+    dict_changed=tests_helpers.client_post(self, self.client_authorized_1, "/investments/changesellingprice/",  {
+        "selling_price":1, 
+        "selling_expiration":date.today(), 
+        "investments":[dict_investment_1["url"], dict_investment_2["url"]]
+    }, status.HTTP_200_OK)
+    assert dict_changed[0]["selling_price"]==1
+    dict_changed=tests_helpers.client_post(self, self.client_authorized_1, "/investments/changesellingprice/",  {
+        "selling_price":0, 
+        "selling_expiration": None, 
+        "investments":[dict_investment_1["url"], dict_investment_2["url"]]
+    }, status.HTTP_200_OK)
+    assert dict_changed[0]["selling_price"]==0
