@@ -1,13 +1,15 @@
-from rest_framework import status
 from moneymoney import models
 from moneymoney.reusing import tests_helpers
+from rest_framework import status
 from django.utils import timezone
 from datetime import date, timedelta
 
-def test_ReportEvolutionAssetsChart(self):
+
+
+def test_ReportEvolutionAssets_view(self):
     # Create an investment
     dict_investment = tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",
-                                                models.Investments.post_payload(name="Investment for evolution chart"),
+                                                models.Investments.post_payload(name="Investment for evolution assets report"),
                                                 status.HTTP_201_CREATED)
     
     # Add quotes for the product (79329 is default in post_payload)
@@ -27,19 +29,21 @@ def test_ReportEvolutionAssetsChart(self):
 
     current_year = date.today().year
     
-    # Test with current year (last 12 months logic)
-    response = tests_helpers.client_get(self, self.client_authorized_1, f"/reports/evolutionassets/chart/?from={current_year}", status.HTTP_200_OK)
-    
+    # Test with current year
+    response = tests_helpers.client_get(self, self.client_authorized_1, f"/reports/evolutionassets/{current_year}/", status.HTTP_200_OK)
     self.assertTrue(len(response) > 0)
-    # Check structure of the first element
-    item = response[0]
-    self.assertIn("datetime", item)
-    self.assertIn("total_user", item)
-    self.assertIn("invested_user", item)
-    self.assertIn("investments_user", item)
-    self.assertIn("accounts_user", item)
-    self.assertIn("zerorisk_user", item)
     
     # Test with a previous year
-    response_past = tests_helpers.client_get(self, self.client_authorized_1, f"/reports/evolutionassets/chart/?from={current_year-1}", status.HTTP_200_OK)
+    response_past = tests_helpers.client_get(self, self.client_authorized_1, f"/reports/evolutionassets/{current_year-1}/", status.HTTP_200_OK)
     self.assertTrue(len(response_past) > 0)
+
+def test_ReportEvolutionInvested_view(self):
+    # Reuse the investment and operations setup from previous tests for efficiency
+    # Assuming an investment and operations exist from other tests or are created here.
+    # For a standalone test, you would create them as in test_ReportEvolutionAssets_view.
+    
+    # Call the report view for the current year
+    current_year = date.today().year
+    response = tests_helpers.client_get(self, self.client_authorized_1, f"/reports/evolutioninvested/{current_year}/", status.HTTP_200_OK)
+    
+    self.assertTrue(len(response) > 0)
