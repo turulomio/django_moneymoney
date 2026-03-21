@@ -1,0 +1,29 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main", "master" ] # Se ejecuta en cada push a las ramas 'main' o 'master'
+
+jobs:
+  build_and_publish:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: . # El contexto de construcción es el directorio actual del repositorio
+        push: true # Indica que la imagen debe ser publicada (pushed)
+        tags: ${{ secrets.DOCKER_USERNAME }}/moneymoney-django:latest # Etiqueta la imagen con tu usuario de Docker Hub y el nombre de la imagen
+        file: ./Dockerfile # Especifica la ruta a tu Dockerfile
