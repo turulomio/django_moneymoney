@@ -321,10 +321,11 @@ class Accountsoperations(models.Model):
             return  _("Billing {} movements of {}").format(len(qs), cc_name)
             
         elif hasattr(self, "dividends"):
-            return _( "From {}. Gross {}. Net {}.".format(
+            return _( "From {}. Gross {}. Net {}. Commission {}").format(
                 self.dividends.investments.name, 
                 self.dividends.investments.accounts.amount_string(self.dividends.gross), 
-                self.dividends.investments.accounts.amount_string(self.dividends.net))
+                self.dividends.investments.accounts.amount_string(self.dividends.net),
+                self.dividends.investments.accounts.amount_string(self.dividends.commission)
             )
         
         elif hasattr(self,  "investmentsoperations"):
@@ -636,7 +637,7 @@ class Dividends(models.Model):
             self.accountsoperations=Accountsoperations()
         self.accountsoperations.datetime=self.datetime
         self.accountsoperations.concepts=self.concepts
-        self.accountsoperations.amount=self.net
+        self.accountsoperations.amount=self.net-self.commission
         self.accountsoperations.comment=""
         self.accountsoperations.accounts=self.investments.accounts
         self.accountsoperations.save()
