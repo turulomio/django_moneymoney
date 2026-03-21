@@ -51,19 +51,19 @@ async def test_Quotes_get_quotes_async(self):
         quotes_datetime=casts.str2dtaware(quotes[i]["datetime"])
         self.assertEqual(quotes[i]["quote"], r[79329][quotes_datetime]["quote"]   )
         
-    self.assertEqual(r[79329][fivedays]["quote"], None)
+    self.assertEqual(r[79329][fivedays]["quote"], 0)
 
     # Products basic_results empty
     p = await models.Products.objects.aget(pk=79330)
     basic_results_async = sync_to_async(p.basic_results)
-    self.assertIsNone((await basic_results_async())["lastyear"])
+    self.assertEqual((await basic_results_async())["lastyear"],0)
 
 
     # Products without quotes
     now=timezone.now()
     lod_=[{"products_id": 79330,  "datetime": now}, ]
     r = await models.Quotes.async_get_quotes_with_a_methods(lod_)
-    self.assertIsNone(r[79330][now]["quote"])
+    self.assertEqual(r[79330][now]["quote"],0)
 
 async def test_benchmark_get_quotes(self):
     """
@@ -129,16 +129,16 @@ def test_Quotes_get_quotes(self):
     for i in range(5):
         quotes_datetime=casts.str2dtaware(quotes[i]["datetime"])
         self.assertEqual(quotes[i]["quote"], r[79329][quotes_datetime]["quote"]   )
-    self.assertEqual(r[79329][fivedays]["quote"], None)
+    self.assertEqual(r[79329][fivedays]["quote"], 0)
 
 
     # Products basic_results empty
     p = models.Products.objects.get(pk=79330)
-    self.assertIsNone(p.basic_results()["lastyear"])
+    self.assertEqual(p.basic_results()["lastyear"],0)
 
 
     # Products without quotes
     now=timezone.now()
     lod_=[{"products_id": 79330,  "datetime": now}, ]
     r = models.Quotes.get_quotes(lod_)
-    self.assertIsNone(r[79330][now]["quote"])
+    self.assertEqual(r[79330][now]["quote"], 0)
