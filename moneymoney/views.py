@@ -57,9 +57,8 @@ class CatalogModelViewSet(viewsets.ModelViewSet):
         return viewsets.ModelViewSet.get_permissions(self)
 
 
-
-@permission_classes([permissions.IsAuthenticated, ])
 @api_view(['GET', ])
+@permission_classes([permissions.IsAuthenticated, ])
 def CatalogManager(request):
     return JsonResponse( request.user.groups.filter(name="CatalogManager").exists(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
