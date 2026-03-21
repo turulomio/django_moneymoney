@@ -3,7 +3,6 @@ from moneymoney import models
 from moneymoney.reusing import tests_helpers
 from django.utils import timezone
 from decimal import Decimal
-from moneymoney import types
 from django.test import tag
 
 @tag("current")
@@ -41,10 +40,13 @@ def test_Dividends(self):
     )
     dict_dividend_1 = tests_helpers.client_post(self, self.client_authorized_1, "/api/dividends/",
                                                 dividend_payload, status.HTTP_201_CREATED)
-    
-    self.assertIsNotNone(dict_dividend_1["id"])
-    self.assertEqual(models.Dividends.objects.count(), 1)
-    self.assertEqual(models.Accountsoperations.objects.count(), initial_ao_count + 1)
+
+    # Check associated operation    
+    self.assertIsNotNone(dict_dividend_1["accountsoperations"])
+    dict_associated_ao=tests_helpers.client_get(self, self.client_authorized_1, dict_dividend_1["accountsoperations"], status.HTTP_200_OK)
+    self.assertEqual(dict_associated_ao["amount"], Decimal('75.00'))
+
+
 
     # Test validation: negative taxes/commissions
     invalid_dividend_payload = models.Dividends.post_payload(
