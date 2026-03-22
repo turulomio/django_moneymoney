@@ -35,7 +35,7 @@ USER appuser
 # Install system dependencies (only runtime ones)
 RUN apt-get update && apt-get install -y \
     libpq-dev \
-    postgresql-plpython3-16 \ # Added as per request, typically a server-side component
+    postgresql-plpython3-16 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy pre-built wheels from the builder stage

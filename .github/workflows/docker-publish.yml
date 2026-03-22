@@ -25,5 +25,5 @@ jobs:
       with:
         context: . # El contexto de construcción es el directorio actual del repositorio
         push: true # Indica que la imagen debe ser publicada (pushed)
-        tags: ${{ secrets.DOCKER_USERNAME }}/moneymoney-django:latest # Etiqueta la imagen con tu usuario de Docker Hub y el nombre de la imagen
+        tags: ${{ secrets.DOCKER_USERNAME }}/django_moneymoney:latest # Etiqueta la imagen con tu usuario de Docker Hub y el nombre de la imagen
         file: ./Dockerfile # Especifica la ruta a tu Dockerfile
