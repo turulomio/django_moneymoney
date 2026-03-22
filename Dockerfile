@@ -1,5 +1,5 @@
 # --- Stage 1: Build dependencies --- 
-FROM python:3.12-slim-buster AS builder
+FROM python:3.12-slim-bookworm AS builder
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
@@ -34,7 +34,7 @@ RUN cat requirements.txt
 RUN pip wheel --no-cache-dir --wheel-dir=/usr/src/app/wheels -r requirements.txt
 
 # --- Stage 2: Final image ---
-FROM python:3.12-slim-buster
+FROM python:3.12-slim-bookworm
 
 # Set the working directory in the container
 WORKDIR /app
@@ -42,7 +42,6 @@ WORKDIR /app
 # Install system dependencies (only runtime ones)
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libpq-dev \
-    postgresql-plpython3-16 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user to run the application
