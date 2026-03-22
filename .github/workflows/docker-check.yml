@@ -1,23 +1,55 @@
 name: Docker Image Check
 
 on:
-  push:
-    branches: [ "main", "230-publish-docker-after-each-commit" ] # Se ejecuta en cada push a estas ramas
-  workflow_dispatch: # Permite ejecutar el workflow manualmente desde la UI de GitHub
+  workflow_run:
+    workflows: ["Docker Image CI"] # Nombre del workflow de publicación (docker-publish.yml)
+    types:
+      - completed # Se ejecuta cuando el workflow de publicación ha terminado
 
 jobs:
   check_api:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }} # Solo si el workflow de publicación fue exitoso
+
+    env:
+      DOCKER_IMAGE_TAG: "" # Variable para almacenar el tag de la imagen
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Build and run Docker Compose services
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Download image tag artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: image-tag
+        github-token: ${{ secrets.GITHUB_TOKEN }} # Necesario para descargar artefactos de otros workflows
+        path: .
+
+    - name: Read image tag
+      run: echo "DOCKER_IMAGE_TAG=$(cat image_tag.txt)" >> $GITHUB_ENV
+
+    - name: Create docker-compose override for testing published image
       run: |
-        # Construye la imagen de la aplicación Django y levanta todos los servicios definidos en docker-compose.yml
-        # Esto usará el Dockerfile en el directorio actual para el servicio 'web'
-        docker-compose up --build -d
+        cat <<EOF > docker-compose.override.yml
+        version: '3.8'
+        services:
+          web:
+            image: ${{ env.DOCKER_IMAGE_TAG }}
+            # Anulamos la instrucción 'build' y los 'volumes' para asegurarnos de que se usa la imagen publicada
+            build: {} # Un mapa vacío anula la instrucción 'build' del docker-compose.yml base
+            volumes: [] # Una lista vacía anula los volúmenes montados del docker-compose.yml base
+EOF
+
+    - name: Run Docker Compose services with published image
+      run: |
+        # Levanta los servicios usando el docker-compose.yml principal y el override
+        docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d
 
     - name: Wait for PostgreSQL to be ready
       run: |
@@ -30,8 +62,8 @@ jobs:
 
     - name: Run Django Migrations
       run: |
-        # Ejecuta las migraciones de Django dentro del contenedor 'web'
-        docker-compose exec web python manage.py migrate
+        # Ejecuta las migraciones de Django dentro del contenedor 'web' (usando la imagen publicada)
+        docker-compose -f docker-compose.yml -f docker-compose.override.yml exec web python manage.py migrate
 
     - name: Wait for Django web service to be ready
       run: |
@@ -50,4 +82,4 @@ jobs:
     - name: Clean up Docker Compose services
       if: always() # Asegura que este paso se ejecute incluso si los pasos anteriores fallan
       run: |
-        docker-compose down --volumes
+        docker-compose -f docker-compose.yml -f docker-compose.override.yml down --volumes

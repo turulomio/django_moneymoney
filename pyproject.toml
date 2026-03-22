@@ -34,7 +34,6 @@ coverage = ">=7.13.4"
 [tool.poe.tasks]
 reusing = { script = "moneymoney.poethepoet:reusing" }
 testserver_e2e = { script = "moneymoney.poethepoet:testserver_e2e" }
-docker = { script = "moneymoney.poethepoet:docker" }
 
 [project.urls]
 homepage = "https://github.com/turulomio/django_moneymoney/"

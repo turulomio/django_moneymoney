@@ -67,8 +67,8 @@ ENV PORT=8000
 # PostgreSQL connection settings
 ENV POSTGRES_DB=xulpymoney
 ENV POSTGRES_USER=postgres
-ENV POSTGRES_PASSWORD=postgres # ¡ADVERTENCIA! No usar en producción. Usar Docker Secrets o variables de entorno seguras.
-ENV POSTGRES_HOST=db # El nombre del servicio de PostgreSQL en docker-compose
+ENV POSTGRES_PASSWORD=postgres 
+ENV POSTGRES_HOST=db 
 ENV POSTGRES_PORT=5432
 
 # Run Gunicorn to serve the Django application
