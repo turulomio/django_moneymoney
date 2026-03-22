@@ -1,5 +1,5 @@
 # --- Stage 1: Build dependencies --- 
-FROM python:3.9-slim-buster AS builder
+FROM python:3.12-slim-buster AS builder
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
@@ -34,7 +34,7 @@ RUN cat requirements.txt
 RUN pip wheel --no-cache-dir --wheel-dir=/usr/src/app/wheels -r requirements.txt
 
 # --- Stage 2: Final image ---
-FROM python:3.9-slim-buster
+FROM python:3.12-slim-buster
 
 # Set the working directory in the container
 WORKDIR /app
