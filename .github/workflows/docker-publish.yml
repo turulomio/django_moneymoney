@@ -2,7 +2,7 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ "main", "master" ] # Se ejecuta en cada push a las ramas 'main' o 'master'
+    branches: [ "main", "230-publish-docker-after-each-commit" ] # Se ejecuta en cada push a las ramas 'main' o 'master'
 
 jobs:
   build_and_publish:

@@ -48,7 +48,7 @@ def docker():
         print("Please set it (e.g., export DOCKER_USERNAME=your_docker_username) or modify the script.")
         return
 
-    image_name = f"{docker_username}/moneymoney-django:latest"
+    image_name = f"{docker_username}/django_moneymoney:latest"
     dockerfile_path = "./Dockerfile"
     context_path = "."
 
