@@ -4,21 +4,27 @@ FROM python:3.9-slim-buster AS builder
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
+ENV POETRY_HOME="/opt/poetry" # Define where Poetry will be installed
+ENV PATH="$POETRY_HOME/bin:$PATH" # Add Poetry's bin directory to PATH
 
 # Set the working directory in the container
 WORKDIR /app
 
 # Install system dependencies required for psycopg2 (if using PostgreSQL)
 # and other potential packages. Adjust as needed.
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     build-essential \
     libpq-dev \
     gcc \
     git \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
-RUN pip install poetry
+# Use the official installer script for robustness
+RUN curl -sSL https://install.python-poetry.org | python -
+# Verify Poetry installation
+RUN poetry --version
 RUN poetry self add poetry-plugin-export
 
 # Copy Poetry configuration files
