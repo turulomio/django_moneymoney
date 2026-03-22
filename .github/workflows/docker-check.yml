@@ -1,0 +1,53 @@
+name: Docker Image Check
+
+on:
+  push:
+    branches: [ "main", "230-publish-docker-after-each-commit" ] # Se ejecuta en cada push a estas ramas
+  workflow_dispatch: # Permite ejecutar el workflow manualmente desde la UI de GitHub
+
+jobs:
+  check_api:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Build and run Docker Compose services
+      run: |
+        # Construye la imagen de la aplicación Django y levanta todos los servicios definidos en docker-compose.yml
+        # Esto usará el Dockerfile en el directorio actual para el servicio 'web'
+        docker-compose up --build -d
+
+    - name: Wait for PostgreSQL to be ready
+      run: |
+        # Espera a que el servicio 'db' (PostgreSQL) esté saludable
+        docker-compose ps
+        until docker-compose exec db pg_isready -U postgres -d xulpymoney; do
+          echo "Waiting for PostgreSQL to become ready..."
+          sleep 2
+        done
+
+    - name: Run Django Migrations
+      run: |
+        # Ejecuta las migraciones de Django dentro del contenedor 'web'
+        docker-compose exec web python manage.py migrate
+
+    - name: Wait for Django web service to be ready
+      run: |
+        # Espera a que el servicio web esté accesible en el puerto 8000
+        # Asume que tienes un endpoint /healthcheck/ en tu aplicación Django.
+        # Si no lo tienes, puedes usar un simple 'sleep 30' o un chequeo de logs.
+        for i in $(seq 1 60); do # Intenta durante 60 segundos
+          if curl -s http://localhost:8000/ > /dev/null; then # Intenta acceder a la raíz de la app
+            echo "Django app is ready!"
+            break
+          fi
+          echo "Waiting for Django app to be ready... ($i/60)"
+          sleep 1
+        done
+
+    - name: Clean up Docker Compose services
+      if: always() # Asegura que este paso se ejecute incluso si los pasos anteriores fallan
+      run: |
+        docker-compose down --volumes
