@@ -35,7 +35,7 @@ jobs:
       run: echo "${{ secrets.DOCKER_USERNAME }}/django_moneymoney:latest" > image_tag.txt
 
     - name: Upload image tag artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4 # Actualizado a la versión v4
       with:
         name: image-tag
         path: image_tag.txt
