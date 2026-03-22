@@ -64,6 +64,12 @@ EXPOSE 8000
 # Define environment variables for Django (adjust as needed)
 ENV DJANGO_SETTINGS_MODULE=moneymoney.settings 
 ENV PORT=8000
+# PostgreSQL connection settings
+ENV POSTGRES_DB=xulpymoney
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_PASSWORD=postgres
+ENV POSTGRES_HOST=localhost
+ENV POSTGRES_PORT=5432
 
 # Run Gunicorn to serve the Django application
 # Replace 'moneymoney.wsgi:application' with the actual path to your WSGI application
