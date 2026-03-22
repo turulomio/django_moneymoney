@@ -39,15 +39,15 @@ FROM python:3.9-slim-buster
 # Set the working directory in the container
 WORKDIR /app
 
-# Create a non-root user to run the application
-RUN adduser --system --group appuser
-USER appuser
-
 # Install system dependencies (only runtime ones)
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libpq-dev \
     postgresql-plpython3-16 \
     && rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user to run the application
+RUN adduser --system --group appuser
+USER appuser
 
 # Copy pre-built wheels from the builder stage
 COPY --from=builder /usr/src/app/wheels /wheels
