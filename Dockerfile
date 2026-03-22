@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y \
 
 # Install Poetry
 RUN pip install poetry
+RUN poetry self add poetry-plugin-export
 
 # Copy Poetry configuration files
 # Ensure pyproject.toml and poetry.lock are in the build context (same directory as Dockerfile)
@@ -27,6 +28,7 @@ COPY pyproject.toml poetry.lock /app/
 # Export dependencies to a requirements.txt file
 # This leverages poetry.lock for exact versions and allows pip to install them.
 RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
+RUN cat requirements.txt
 
 # Install any needed packages specified in requirements.txt
 RUN pip wheel --no-cache-dir --wheel-dir=/usr/src/app/wheels -r requirements.txt
