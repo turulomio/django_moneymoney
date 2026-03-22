@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y \
 
 # Install Poetry
 RUN pip install poetry
+RUN poetry --version 
 RUN poetry self add poetry-plugin-export
 
 # Copy Poetry configuration files
@@ -27,9 +28,8 @@ COPY pyproject.toml poetry.lock /app/
 
 # Export dependencies to a requirements.txt file
 # This leverages poetry.lock for exact versions and allows pip to install them.
-RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
-RUN cat requirements.txt
-
+RUN poetry export -f requirements.txt --output requirements.txt --without-hashes # Generates requirements.txt from poetry.lock
+RUN ls -la
 # Install any needed packages specified in requirements.txt
 RUN pip wheel --no-cache-dir --wheel-dir=/usr/src/app/wheels -r requirements.txt
 
