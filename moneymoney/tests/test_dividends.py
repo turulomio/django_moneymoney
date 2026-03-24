@@ -3,9 +3,7 @@ from moneymoney import models
 from moneymoney.reusing import tests_helpers
 from django.utils import timezone
 from decimal import Decimal
-from django.test import tag
 
-@tag("current")
 def test_Dividends(self):
 
     # Ensure an investment exists for Dividends

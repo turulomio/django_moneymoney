@@ -1640,8 +1640,7 @@ class Quotes(models.Model):
                     return q.quote
             else:
                 return get_quotes_result[products_id][datetime_]["quote"]
-        
-        
+                
         if from_==to_:
             return 1
             
@@ -1650,10 +1649,10 @@ class Quotes(models.Model):
         elif from_== 'USD' and to_== 'EUR':
             q=get_quote(74747, datetime_)
             if q is None:
-                return None
+                return 1
             else:
                 if q==0:
-                    return None
+                    return 1
                 else:
                     return 1/q
         # print(_("I coudn't find currency factor from '{0}' to '{1}' at '{2}' returning 1 by default").format(from_, to_, datetime_ ))
