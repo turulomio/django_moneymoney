@@ -2,10 +2,10 @@ from datetime import date, datetime
 from decimal import Decimal
 from json import dumps
 from logging import debug, error
-from moneymoney import models, types
+from moneymoney import models, types,functions
 from pydicts.percentage import Percentage, percentage_between
 from pydicts.myjsonencoder import MyJSONEncoderDecimalsAsFloat
-from pydicts import lod
+from pydicts import lod, casts
 from django.utils.translation import gettext_lazy as _
 
 
@@ -19,15 +19,441 @@ class IOSTypes:
     from_qs=1
     from_qs_merging_io_current=2
 
-def NoZ(v):
-    """
-        Returns a boolean if v is None or Zero
-    """
-    if v is None or v==0:
-        return True
-    return False
+
+
+class IO:
+    def __init__(self, request):
+        """
+            Entry y products_id pueden variar
+        """
+        self.request=request
+        self._d={}
+
+    def assign_data(self, dt, entry, products_id, currency_account, currency_user):
+        """
+            Assigna data
+            Se puede hacer un override dejando las mismas variables _d["data"] fuera de aquí no se usa nada ni product ni na
+        """
+
+        product=models.Products.objects.get(pk=products_id).select_related("leverages", "productstypes")
+        self._d["data"]={}
+        self._d["data"]["dt"]=dt
+        self._d["data"]["currency_account"]=currency_account
+        self._d["data"]["currency_user"]=currency_user
+        self._d["data"]["currency_product"]=product.currency
+        self._d["data"]["products_id"]=product.id
+        self._d["data"]["products_multiplier"]=product.leverages.multiplier
+        self._d["data"]["productstypes"]=product.productstypes.id
+        self._d["data"]["entry"]=entry
+        quote_last=models.Quotes.get_quote(product.id, dt, self.request)  #~NO se usa products.quote_last ya que dt es vvariable
+
+        lastyeardt=casts.dtaware_year_end(quote_last.datetime.year-1, 'UTC')
+        quote_lastyear=models.Quotes.get_quote(product.id, lastyeardt, self.request)
+        self._d["data"]["basic_results"]={}
+        self._d["data"]["basic_results"]["last"]= quote_last.quote if quote_last is not None else 0
+        self._d["data"]["basic_results"]["lastyear"]=quote_lastyear.quote if quote_lastyear is not None else 0
+
+
+    def process_io(self, io_rows):
+
+        self._d["io"]=io_rows
+        self._d["io_current"]=[]
+        self._d["io_historical"]=[]
+        data=self._d["data"]
+        cur=self._d["io_current"]
+        io=self._d["io"]
+        hist=self._d["io_historical"]
+        ioh_id=0
+
+        for row in io_rows:
+            row["currency_account"]=data["currency_account"]
+            row["currency_product"]=data["currency_product"]
+            row["currency_user"]=data["currency_user"]
+            io.append(row)
+            if len(cur)==0 or functions.have_same_sign(cur[0]["shares"], row["shares"]) is True:
+                cur.append({
+                    "id":row["id"], 
+                    "investments_id":row["investments_id"], 
+                    "datetime":row["datetime"] , 
+                    "shares": row["shares"], 
+                    "price_investment": row["price"], 
+                    "operationstypes_id": row['operationstypes_id'], 
+                    "taxes_account":row["taxes"], 
+                    "commissions_account": row["commission"], 
+                    "investment2account": row["currency_conversion"], 
+                    "currency_account": data["currency_account"], 
+                    "currency_product": data["currency_product"], 
+                    "currency_user":data["currency_user"], 
+                }) 
+            elif functions.have_same_sign(cur[0]["shares"], row["shares"]) is False:
+                rest=row["shares"]
+                ciclos=0
+                while rest!=0:
+                    ciclos=ciclos+1
+                    commissions=0
+                    taxes=0
+                    if ciclos==1:
+                        commissions=row["commission"]+cur[0]["commissions_account"]
+                        taxes=row["taxes"]+cur[0]["taxes_account"]
+
+                    if len(cur)>0:
+                        if abs(cur[0]["shares"])>=abs(rest):
+                            ioh_id=ioh_id+1
+                            hist.append({
+                                "shares":IOS.__set_sign_of_other_number(row["shares"],rest),
+                                "id":ioh_id, 
+                                "investments_id": row["investments_id"], 
+                                "dt_start":cur[0]["datetime"], 
+                                "dt_end":row["datetime"], 
+                                "operationstypes_id": IOS.__operationstypes(rest), 
+                                "commissions_account":commissions, 
+                                "taxes_account":taxes, 
+                                "price_start_investment":cur[0]["price_investment"], 
+                                "price_end_investment":row["price"],
+                                "investment2account_start": cur[0]["investment2account"] , 
+                                "investment2account_end":row["currency_conversion"] , 
+                                "currency_account": data["currency_account"], 
+                                "currency_product": data["currency_product"], 
+                                "currency_user":data["currency_user"], 
+                            })
+                            if rest+cur[0]["shares"]!=0:
+                                cur.insert(0, {
+                                    "id":cur[0]["id"], 
+                                    "investments_id":cur[0]["investments_id"], 
+                                    "datetime":cur[0]["datetime"] , 
+                                    "shares": rest+cur[0]["shares"], 
+                                    "price_investment": cur[0]["price_investment"], 
+                                    "operationstypes_id": cur[0]['operationstypes_id'], 
+                                    "taxes_account":cur[0]["taxes_account"], 
+                                    "commissions_account": cur[0]["commissions_account"], 
+                                    "investment2account": cur[0]["investment2account"], 
+                                    "currency_account": data["currency_account"], 
+                                    "currency_product": data["currency_product"], 
+                                    "currency_user":data["currency_user"], 
+                                }) 
+                                cur.pop(1)
+                            else:
+                                cur.pop(0)
+                            rest=0
+                            break
+                        else:
+                            ioh_id=ioh_id+1
+                            hist.append({
+                                "shares":IOS.__set_sign_of_other_number(row["shares"],cur[0]["shares"]),
+                                "id":ioh_id, 
+                                "investments_id": row["investments_id"], 
+                                "dt_start":cur[0]["datetime"], 
+                                "dt_end":row["datetime"], 
+                                "operationstypes_id": IOS.__operationstypes(row['shares']), 
+                                "commissions_account":commissions, 
+                                "taxes_account":taxes, 
+                                "price_start_investment":cur[0]["price_investment"], 
+                                "price_end_investment":row["price"],
+                                "investment2account_start":cur[0]["investment2account"], 
+                                "investment2account_end":row["currency_conversion"]  , 
+                                "currency_account": data["currency_account"], 
+                                "currency_product": data["currency_product"], 
+                                "currency_user":data["currency_user"], 
+                            })
+
+                            rest=rest+cur[0]["shares"]
+                            rest=IOS.__set_sign_of_other_number(row["shares"],rest)
+                            cur.pop(0)
+                    else:
+                        cur.insert(0, {
+                            "id":row["id"], 
+                            "investments_id":row["investments_id"], 
+                            "datetime":row["datetime"] , 
+                            "shares": rest, 
+                            "price_investment": row["price"], 
+                            "operationstypes_id": row['operationstypes_id'],
+                            "taxes_account":row["taxes"], 
+                            "commissions_account": row["commission"], 
+                            "investment2account": row["currency_conversion"],
+                            "currency_account": data["currency_account"], 
+                            "currency_product": data["currency_product"], 
+                            "currency_user":data["currency_user"], 
+                        }) 
+                        break
+
+    def __realmultiplier(self):
+        if self._d["data"]["productstypes_"] in (12, 13):
+            return self._d["data"]["products_multiplier"] 
+        return 1
+
+
+    def process_calcs(self):
+        """
+            d es el resultado de __calculate_io_lazy
+            dict_with_lf_and_lq puede ser en d o en t segun sea io o ios
+
+            request can be none to nos use cached quotes
+        """
+        def lf(from_, to_, dt):
+            return models.CurrencyPair(from_, to_).get_factor(dt,self.request)
+            
+        def lq(products_id, dt):
+            quote= models.Quotes.get_quote(products_id, dt, self.request)
+            if quote is None:
+                return 0
+            return quote.quote
+            
+        data=self._d["data"]
+        
+        self._d["total_io"]={}
+
+        for o in self._d["io"]:
+            account2user=lf(data["currency_account"], data["currency_user"], o["datetime"])
+            o['investment2account']=o['currency_conversion']
+            o['commission_account']=o['commission']
+            o['taxes_account']=o['taxes']
+            o['gross_investment']=abs(o['shares']*o['price']*data['real_leverages'])
+            o['gross_account']=o['gross_investment']*o['investment2account']
+            o['gross_user']=o['gross_account']*account2user
+            o['account2user']=account2user
+            o['gross_user']=o['gross_account']*account2user
+            if o['shares']>=0:
+                o['net_account']=o['gross_account']+o['commission_account']+o['taxes_account']
+            else:
+                o['net_account']=o['gross_account']-o['commission_account']-o['taxes_account']
+            o['net_user']=o['net_account']*account2user
+            o['net_investment']=o['net_account']/o['investment2account']
+
+        self._d["total_io_current"]={}
+        self._d["total_io_current"]["balance_user"]=0
+        self._d["total_io_current"]["balance_investment"]=0
+        self._d["total_io_current"]["balance_futures_user"]=0
+        self._d["total_io_current"]["gains_gross_user"]=0
+        self._d["total_io_current"]["gains_net_user"]=0
+        self._d["total_io_current"]["shares"]=0
+        self._d["total_io_current"]["average_price_investment"]=0
+        self._d["total_io_current"]["invested_user"]=0
+        self._d["total_io_current"]["invested_investment"]=0
+        sumaproducto=0
+
+        for c in self._d["io_current"]:
+            investment2account_at_datetime=lf(data["currency_product"], data["currency_account"], data["dt"] )
+            account2user_at_datetime=lf(data["currency_account"], data["currency_user"], data["dt"])
+            account2user=lf(data["currency_account"], data["currency_user"], c["datetime"])
+            quote_at_datetime=lq(data["products_id"], data["dt"])
+
+            c['investment2account_at_datetime']=investment2account_at_datetime
+            c['account2user_at_datetime']=account2user_at_datetime
+            c['account2user']=account2user
+            c['price_account']=c['price_investment']*c['investment2account']
+            c['price_user']=c['price_account']*account2user
+            c['taxes_investment']=c['taxes_account']/c['investment2account']#taxes and commissions are in account currency buy we can guess them
+            c['taxes_user']=c['taxes_account']*account2user
+            c['commissions_investment']=c['commissions_account']/c['investment2account']
+            c['commissions_user']=c['commissions_account']*account2user
+            #Si son cfds o futuros el saldo es 0, ya que es un contrato y el saldo todavía está en la cuenta. Sin embargo cuento las perdidas
+            c['balance_investment']=0 if self._d["data"]['productstypes_id'] in (12,13) else abs(c['shares'])*quote_at_datetime*data['real_leverages']
+            c['balance_account']=c['balance_investment']*investment2account_at_datetime
+            c['balance_user']=c['balance_account']*account2user_at_datetime
+            #Aquí calculo con saldo y futuros y cfd
+            if c['shares']>0:
+                c['balance_futures_investment']=c['shares']*quote_at_datetime*data['real_leverages']
+            else:
+                diff=(quote_at_datetime-c['price_investment'])*abs(c['shares'])*data['real_leverages']
+                init_balance=c['price_investment']*abs(c['shares'])*data['real_leverages']
+                c['balance_futures_investment']=init_balance-diff
+            c['balance_futures_account']=c['balance_futures_investment']*investment2account_at_datetime
+            c['balance_futures_user']=c['balance_futures_account']*account2user_at_datetime
+            c['invested_investment']=abs(c['shares']*c['price_investment']*data['real_leverages'])
+            c['invested_account']=c['invested_investment']*c['investment2account']
+            c['invested_user']=c['invested_account']*account2user
+            c['gains_gross_investment']=(quote_at_datetime - c['price_investment'])*c['shares']*data['real_leverages']
+            c['gains_gross_account']=(quote_at_datetime*investment2account_at_datetime - c['price_investment']*c['investment2account'])*c['shares']*data['real_leverages']
+            c['gains_gross_user']=(quote_at_datetime*investment2account_at_datetime*account2user_at_datetime - c['price_investment']*c['investment2account']*account2user)*c['shares']*data['real_leverages']
+            c['gains_net_investment']=c['gains_gross_investment'] -c['taxes_investment'] -c['commissions_investment']
+            c['gains_net_account']=c['gains_gross_account']-c['taxes_account']-c['commissions_account'] 
+            c['gains_net_user']=c['gains_gross_user']-c['taxes_user']-c['commissions_user']
+            c['percentage_total_investment'] = Percentage() if functions.NoZ(c["invested_investment"]) else Percentage(c['gains_gross_investment'], c['invested_investment']) 
+            c['percentage_apr_investment']=Percentage() if functions.NoZ(c["percentage_total_investment"].value) else Percentage(c['percentage_total_investment'].value*365, IOS.__ioc_days(c))
+            c['percentage_annual_investment']=IOS.__ioc_percentage_annual_investment(self._d, c)
+            c['percentage_total_user'] = Percentage() if functions.NoZ(c["invested_user"]) else Percentage(c['gains_gross_user'], c['invested_user']) 
+            c['percentage_apr_user']=Percentage() if functions.NoZ(c["percentage_total_user"].value) else Percentage(c['percentage_total_user'].value*365, IOS.__ioc_days(c))
+            c['percentage_annual_user']=IOS.__ioc_percentage_annual_user(self._d, c)
+            
+            
+            self._d["total_io_current"]["balance_user"]=self._d["total_io_current"]["balance_user"]+c['balance_user']
+            self._d["total_io_current"]["balance_investment"]=self._d["total_io_current"]["balance_investment"]+c['balance_investment']
+            self._d["total_io_current"]["balance_futures_user"]=self._d["total_io_current"]["balance_futures_user"]+c['balance_futures_user']
+            self._d["total_io_current"]["gains_gross_user"]=self._d["total_io_current"]["gains_gross_user"]+c['gains_gross_user']
+            self._d["total_io_current"]["gains_net_user"]=self._d["total_io_current"]["gains_net_user"]+c['gains_net_user']
+            self._d["total_io_current"]["shares"]=self._d["total_io_current"]["shares"]+c['shares']
+            self._d["total_io_current"]["invested_user"]=self._d["total_io_current"]["invested_user"]+c['invested_user']
+            self._d["total_io_current"]["invested_investment"]=self._d["total_io_current"]["invested_investment"]+c['invested_investment']     
+            sumaproducto=sumaproducto+c['shares']*c["price_investment"] 
+        self._d["total_io_current"]["average_price_investment"]=sumaproducto/self._d["total_io_current"]["shares"] if self._d["total_io_current"]["shares"]>0 else 0
+        self._d['total_io_current']['percentage_total_user'] = Percentage() if functions.NoZ(self._d['total_io_current']["invested_user"]) else Percentage(self._d['total_io_current']['gains_gross_user'], self._d['total_io_current']['invested_user']) 
+
+        self._d["total_io_historical"]={}
+        self._d["total_io_historical"]["commissions_account"]=0
+        self._d["total_io_historical"]["gains_net_user"]=0
+
+        for h in self._d["io_historical"]:
+            h['years']=IOS.__ioh_years(h)
+            h['account2user_start']=lf(data["currency_account"], data["currency_user"], h["dt_start"] )
+            h['account2user_end']=lf(data["currency_account"], data["currency_user"], h["dt_end"] )
+            h['gross_start_investment']=0 if h['operationstypes_id'] in (types.eOperationType.TransferSharesOrigin,types.eOperationType.TransferSharesDestiny) else abs(h['shares']*h['price_start_investment']*data['real_leverages'])#Transfer shares 9, 10
+            if h['operationstypes_id'] in (9,10):
+                h['gross_end_investment']=0
+            elif h['shares']<0:#Sell after bought
+                h['gross_end_investment']=abs(h['shares'])*h['price_end_investment']*data['real_leverages']
+            else:
+                diff=(h['price_end_investment']-h['price_start_investment'])*abs(h['shares'])*data['real_leverages']
+                init_balance=h['price_start_investment']*abs(h['shares'])*data['real_leverages']
+                h['gross_end_investment']=init_balance-diff
+            h['gains_gross_investment']=h['gross_end_investment']-h['gross_start_investment']
+            h['gross_start_account']=h['gross_start_investment']*h['investment2account_start']
+            h['gross_start_user']=h['gross_start_account']*h['account2user_start']
+            h['gross_end_account']=h['gross_end_investment']*h['investment2account_end']
+            h['gross_end_user']=h['gross_end_account']*h['account2user_end']
+            h['gains_gross_account']=h['gross_end_account']-h['gross_start_account']
+            h['gains_gross_user']=h['gross_end_user']-h['gross_start_user']
+
+            h['taxes_investment']=h['taxes_account']/h['investment2account_end']#taxes and commissions are in account currency buy we can guess them
+            h['taxes_user']=h['taxes_account']*h['account2user_end']
+            h['commissions_investment']=h['commissions_account']/h['investment2account_end']
+            h['commissions_user']=h['commissions_account']*h['account2user_end']
+            h['gains_net_investment']=h['gains_gross_investment']-h['taxes_investment']-h['commissions_investment']
+            h['gains_net_account']=h['gains_gross_account']-h['taxes_account']-h['commissions_account']
+            h['gains_net_user']=h['gains_gross_user']-h['taxes_user']-h['commissions_user']
+
+            self._d["total_io_historical"]["commissions_account"]=self._d["total_io_historical"]["commissions_account"]+h["commissions_account"]
+            self._d["total_io_historical"]["gains_net_user"]=self._d["total_io_historical"]["gains_net_user"]+h["gains_net_user"]
+
+
+
+
+
+
 
 class IOS:
+    def __init__(self, request):
+        self.t={}
+        self.request=request
+
+    ## lod_investments query ivestments
+    ## lod_ios query investmentsoperations of investments
+
+    def assign_ios(self, dt,  dod_ios, currency_user):
+
+        """
+            Crea el IO y almacena el _d dentro del k, v = entry, _d
+
+            dod_ios es un diccionario que tiene como llave entries
+            Esta llave apunta a un diccionario {products_id: 1, currency_account:2 lod_io=[io1,io2...]}
+
+        """
+
+        # ## Total calculated ios
+        self.t["entries"]=[] #All ids to enter in ios_id
+
+        for entry, dictionary in dod_ios.items():
+
+            self.t["entries"].append(entry)
+            io=IO(self.request)
+            io.assign_data(dt, entry, dictionary["products_id"], dictionary["currency_account"], currency_user)
+            io.process_io(dictionary["lod_io"])
+            io.process_calcs()
+            self.t[str(entry)]=io._d
+
+    def process_calcs(self,mode):
+        t=self._t
+        t["mode"]=mode
+        # Is a key too like ios
+        t["sum_total_io_current"]={}
+        t["sum_total_io_current"]["balance_user"]=0
+        t["sum_total_io_current"]["balance_futures_user"]=0
+        t["sum_total_io_current"]["gains_gross_user"]=0
+        t["sum_total_io_current"]["gains_net_user"]=0
+        t["sum_total_io_current"]["invested_user"]=0
+
+        t["sum_total_io_historical"]={}
+        t["sum_total_io_historical"]["commissions_account"]=0
+        t["sum_total_io_historical"]["gains_net_user"]=0
+
+        for investments_id in t["entries"]:
+            #t[investments_id]=IOS.__calculate_io_finish(t[investments_id],self.request)
+
+            t["sum_total_io_current"]["balance_user"]=t["sum_total_io_current"]["balance_user"]+t[investments_id]["total_io_current"]['balance_user']
+            t["sum_total_io_current"]["balance_futures_user"]=t["sum_total_io_current"]["balance_futures_user"]+t[investments_id]["total_io_current"]['balance_futures_user']
+            t["sum_total_io_current"]["gains_gross_user"]=t["sum_total_io_current"]["gains_gross_user"]+t[investments_id]["total_io_current"]['gains_gross_user']
+            t["sum_total_io_current"]["gains_net_user"]=t["sum_total_io_current"]["gains_net_user"]+t[investments_id]["total_io_current"]['gains_net_user']
+            t["sum_total_io_current"]["invested_user"]=t["sum_total_io_current"]["invested_user"]+t[investments_id]["total_io_current"]['invested_user']
+            t["sum_total_io_historical"]["gains_net_user"]=t["sum_total_io_historical"]["gains_net_user"]+t[investments_id]["total_io_historical"]['gains_net_user']
+            t["sum_total_io_historical"]["commissions_account"]=t["sum_total_io_historical"]["commissions_account"]+t[investments_id]["total_io_historical"]['commissions_account']
+
+            if mode in (IOSModes.totals_sumtotals, IOSModes.sumtotals):
+                del t[investments_id]["io"]
+                del t[investments_id]["io_current"]
+                del t[investments_id]["io_historical"]
+        
+        if mode==IOSModes.sumtotals:
+            return {"sum_total_io_current": t["sum_total_io_current"], "sum_total_io_historical": t["sum_total_io_historical"], "mode":t["mode"]}
+
+    @classmethod
+    def from_qs_investments(cls, dt,  local_currency,  qs_investments,  mode, request):
+        """
+            simulation is a list of dictionary of ios if you want to simulate
+            
+                {'id': 3, 'operationstypes_id': 4, 'investments_id': 2, 'shares': Decimal('1000.000000'), 'taxes': Decimal('0.00'), 'commission': Decimal('0.00'), 'price': Decimal('10.000000'), 'datetime': datetime.datetime(2023, 7, 23, 6, 4, 4, 934773, tzinfo=datetime.timezone.utc), 'comment': '', 'currency_conversion': Decimal('1.0000000000')}
+        """
+#        s=datetime.now()
+        qs_io=models.Investmentsoperations.objects.filter(investments__in=qs_investments, datetime__lte=dt).order_by("datetime").select_related("products", "accounts").values()
+
+        ios=IOS(request)
+        ios.assign_ios(dt, dod_ios, local_currency)
+        t=ios.process_calcs(mode)
+        
+        t=IOS.__calculate_ios_lazy(dt, lod_investments,  lod_,  local_currency)       
+        t=IOS.__calculate_ios_finish(t, mode, request)
+        t["type"]=IOSTypes.from_qs
+
+        #Set entries name
+        if mode in [IOSModes.ios_totals_sumtotals, IOSModes.totals_sumtotals]:
+            for investment in qs_investments:
+                t[str(investment.id)]["data"]["name"]=investment.fullName()
+#        print("IOS FROM QS", datetime.now()-s)
+    
+        return IOS.from_dod(dt, local_currency, dod_ios, mode, request  )
+
+        # def assign_data(self, dt, entry, products_id, currency_account, currency_user):
+    # def assign_ios(self, dt,  dod_ios, currency_user):
+
+
+    @classmethod
+    def from_dod(cls,  dt,  local_currency,  dod_ios,  mode, request):
+        """
+                   dod_ios es un diccionario que tiene como llave entries
+            Esta llave apunta a un diccionario {products_id: 1, currency_account:2 lod_io=[io1,io2...]}
+
+         """
+        ios=IOS(request)
+        ios.assign_ios(dt, dod_ios, local_currency)
+        ios.process_calcs(mode)
+        return ios
+        
+
+    @classmethod
+    def from_ids(cls,  dt,  local_currency,  list_ids,  mode, simulation=[], request=None):
+        """
+            Ids de inverstments
+        """
+        qs_investments=models.Investments.objects.filter(id__in=list_ids)
+        return cls.from_qs(dt, local_currency, qs_investments, mode, simulation, request)
+
+
+    @classmethod
+    def from_all(cls,  dt,  local_currency,  mode, simulation=[], request=None):
+        return cls.from_qs(dt, local_currency, models.Investments.objects.all(), mode, simulation, request)
+    
+
+
+
+class OldIOS:
     """
         Class to operate with Assets.pl_investment_operations result
         La idea es generar una clase IOS usando funciones estáticas en classmethods( from_qs...)
@@ -37,8 +463,10 @@ class IOS:
         
         
         Si necesita añadir algún valor, se puede añadir a los diccionarios y luego hacer un response con ios.t() o lo que sea
+
+        self._t es la totalidad del array que tiene el conjunto de los _d (una inversión) y los sum_total_io_current
     """
-    def __init__(self, t):
+    def __init__(self, t, request=None):
         self._t=t
 
     @staticmethod
@@ -277,51 +705,11 @@ class IOS:
             Returns last investment operation excluding additions
         """
         for o in reversed(self.d_io_current(id)):
-            if o["operationstypes_id"]!=6:# Shares Additions
+            if o["operationstypes_id"]!=types.eOperationType.SharesAdd:# Shares Additions
                 return o
         return None
 
-    @classmethod
-    def from_qs(cls, dt,  local_currency,  qs_investments,  mode, simulation=[]):
-        """
-            simulation is a list of dictionary of ios if you want to simulate
-            
-                {'id': 3, 'operationstypes_id': 4, 'investments_id': 2, 'shares': Decimal('1000.000000'), 'taxes': Decimal('0.00'), 'commission': Decimal('0.00'), 'price': Decimal('10.000000'), 'datetime': datetime.datetime(2023, 7, 23, 6, 4, 4, 934773, tzinfo=datetime.timezone.utc), 'comment': '', 'currency_conversion': Decimal('1.0000000000')}
-        """
-#        s=datetime.now()
-        qs_investments=qs_investments.select_related("products", "products__leverages", "products__productstypes", "accounts")
-        lod_investments=IOS.__qs_investments_to_lod(qs_investments, local_currency)
-        lod_=models.Investmentsoperations.objects.filter(investments__in=qs_investments, datetime__lte=dt).order_by("datetime").values()
-#        print(list(lod_))
-#        print(simulation)
-        lod_=list(lod_)+simulation
-        
-        t=IOS.__calculate_ios_lazy(dt, lod_investments,  lod_,  local_currency)
-        
-        t["r_lazy_quotes"]=IOS.__get_all_quotes(t)
-        
-        t=IOS.__calculate_ios_finish(t, mode)
-        t["type"]=IOSTypes.from_qs
 
-        #Set entries name
-        if mode in [IOSModes.ios_totals_sumtotals, IOSModes.totals_sumtotals]:
-            for investment in qs_investments:
-                t[str(investment.id)]["data"]["name"]=investment.fullName()
-#        print("IOS FROM QS", datetime.now()-s)
-        return cls(t)
-
-    @classmethod
-    def from_ids(cls,  dt,  local_currency,  list_ids,  mode, simulation=[]):
-        """
-            Ids de inverstments
-        """
-        qs_investments=models.Investments.objects.filter(id__in=list_ids)
-        return cls.from_qs(dt, local_currency, qs_investments, mode, simulation)
-
-
-    @classmethod
-    def from_all(cls,  dt,  local_currency,  mode, simulation=[]):
-        return cls.from_qs(dt, local_currency, models.Investments.objects.all(), mode, simulation)
     
     @staticmethod
     def __qs_investments_to_lod(qs, currency_user):
@@ -341,28 +729,7 @@ class IOS:
                 "variable_percentage": i.products.percentage, 
             })
         return r
-#        
-#    @staticmethod
-#    def __qs_investments_to_lod_ios(qs):
-#        """
-#            Converts a list of unsaved investmentsoperations to a lod_ios used in moneymoney_pl
-#        """
-#        r=[]
-#        ids=tuple(qs.values_list('pk',flat=True))
-#        for i, io in enumerate(models.Investmentsoperations.objects.filter(investments_id__in=ids).order_by("datetime")):
-#            r.append({
-#                "id":-i, 
-#                "operationstypes_id": io.operationstypes.id, 
-#                "investments_id": str(io.investments.id), 
-#                "shares": io.shares, 
-#                "taxes": io.taxes, 
-#                "commission": io.commission, 
-#                "price": io.price, 
-#                "datetime": io.datetime, 
-#                "comment": io.comment, 
-#                "currency_conversion":io.currency_conversion
-#            })
-#        return r
+
 
     @classmethod
     def from_qs_merging_io_current(cls, dt,  local_currency,  qs_investments, mode, simulation=[]):
@@ -439,19 +806,8 @@ class IOS:
                 old_ioh["investments_id"]=products_id
                 t[str(products_id)]["io_historical"].append(old_ioh)
                 ##Añado factors y quotes
-                t["lod_lazy_quotes"].append({"products_id":products_id, "datetime": old_ioh["dt_start"]})
-                t["lod_lazy_quotes"].append({"products_id":products_id, "datetime": old_ioh["dt_end"]})
-                if old_ioh["currency_product"]!=old_ioh["currency_account"]:
-                    t["lod_lazy_quotes"].append(get_pair_dictionary(old_ioh["dt_start"], old_ioh["currency_product"], old_ioh["currency_account"]))
-                    t["lod_lazy_quotes"].append(get_pair_dictionary(old_ioh["dt_end"], old_ioh["currency_product"], old_ioh["currency_account"]))
-                if old_ioh["currency_account"]!=old_ioh["currency_user"]:
-                    t["lod_lazy_quotes"].append(get_pair_dictionary(old_ioh["dt_start"], old_ioh["currency_account"], old_ioh["currency_user"]))
-                    t["lod_lazy_quotes"].append(get_pair_dictionary(old_ioh["dt_end"], old_ioh["currency_account"], old_ioh["currency_user"]))
-            t[str(products_id)]["io_historical"]=lod.lod_order_by(t[str(products_id)]["io_historical"], "dt_end")
-            
-        # I make ios_finish after to get old io_historical too in results
-        t["r_lazy_quotes"]=IOS.__get_all_quotes(t)
-        
+        t[str(products_id)]["io_historical"]=lod.lod_order_by(t[str(products_id)]["io_historical"], "dt_end")
+                    
         t=IOS.__calculate_ios_finish(t, mode)
         
         
@@ -466,304 +822,11 @@ class IOS:
 
 
 
-    ## lazy_factors id, dt, from, to
-    ## lazy_quotes product, timestamp
-    @staticmethod
-    def __calculate_io_lazy( dt, data,  io_rows, currency_user):
-        lod_lazy_quotes=[]
-        data["currency_user"]=currency_user
-        data["dt"]=dt
-        data['real_leverages']= IOS.__realmultiplier(data)
-        
-        lod_lazy_quotes.append({"datetime":dt, "products_id":data["products_id"]})
-        if data["currency_product"]!=data["currency_account"]:
-            lod_lazy_quotes.append(get_pair_dictionary(dt, data["currency_product"], data["currency_account"]))
-
-        ioh_id=0
-        io=[]
-        cur=[]
-        hist=[]
-
-        for row in io_rows:
-            row["currency_account"]=data["currency_account"]
-            row["currency_product"]=data["currency_product"]
-            row["currency_user"]=data["currency_user"]
-            if data["currency_account"]!=data["currency_user"]:
-                lod_lazy_quotes.append(get_pair_dictionary(row['datetime'], data["currency_account"], data["currency_user"]))
-            io.append(row)
-            if len(cur)==0 or IOS.__have_same_sign(cur[0]["shares"], row["shares"]) is True:
-                cur.append({
-                    "id":row["id"], 
-                    "investments_id":row["investments_id"], 
-                    "datetime":row["datetime"] , 
-                    "shares": row["shares"], 
-                    "price_investment": row["price"], 
-                    "operationstypes_id": row['operationstypes_id'], 
-                    "taxes_account":row["taxes"], 
-                    "commissions_account": row["commission"], 
-                    "investment2account": row["currency_conversion"], 
-                    "currency_account": data["currency_account"], 
-                    "currency_product": data["currency_product"], 
-                    "currency_user":currency_user, 
-                }) 
-            elif IOS.__have_same_sign(cur[0]["shares"], row["shares"]) is False:
-                rest=row["shares"]
-                ciclos=0
-                while rest!=0:
-                    ciclos=ciclos+1
-                    commissions=0
-                    taxes=0
-                    if ciclos==1:
-                        commissions=row["commission"]+cur[0]["commissions_account"]
-                        taxes=row["taxes"]+cur[0]["taxes_account"]
-
-                    if len(cur)>0:
-                        if abs(cur[0]["shares"])>=abs(rest):
-                            ioh_id=ioh_id+1
-                            hist.append({
-                                "shares":IOS.__set_sign_of_other_number(row["shares"],rest),
-                                "id":ioh_id, 
-                                "investments_id": row["investments_id"], 
-                                "dt_start":cur[0]["datetime"], 
-                                "dt_end":row["datetime"], 
-                                "operationstypes_id": IOS.__operationstypes(rest), 
-                                "commissions_account":commissions, 
-                                "taxes_account":taxes, 
-                                "price_start_investment":cur[0]["price_investment"], 
-                                "price_end_investment":row["price"],
-                                "investment2account_start": cur[0]["investment2account"] , 
-                                "investment2account_end":row["currency_conversion"] , 
-                                "currency_account": data["currency_account"], 
-                                "currency_product": data["currency_product"], 
-                                "currency_user":currency_user, 
-                            })
-                            if rest+cur[0]["shares"]!=0:
-                                cur.insert(0, {
-                                    "id":cur[0]["id"], 
-                                    "investments_id":cur[0]["investments_id"], 
-                                    "datetime":cur[0]["datetime"] , 
-                                    "shares": rest+cur[0]["shares"], 
-                                    "price_investment": cur[0]["price_investment"], 
-                                    "operationstypes_id": cur[0]['operationstypes_id'], 
-                                    "taxes_account":cur[0]["taxes_account"], 
-                                    "commissions_account": cur[0]["commissions_account"], 
-                                    "investment2account": cur[0]["investment2account"], 
-                                    "currency_account": data["currency_account"], 
-                                    "currency_product": data["currency_product"], 
-                                    "currency_user":currency_user, 
-                                }) 
-                                cur.pop(1)
-                            else:
-                                cur.pop(0)
-                            rest=0
-                            break
-                        else:
-                            ioh_id=ioh_id+1
-                            hist.append({
-                                "shares":IOS.__set_sign_of_other_number(row["shares"],cur[0]["shares"]),
-                                "id":ioh_id, 
-                                "investments_id": row["investments_id"], 
-                                "dt_start":cur[0]["datetime"], 
-                                "dt_end":row["datetime"], 
-                                "operationstypes_id": IOS.__operationstypes(row['shares']), 
-                                "commissions_account":commissions, 
-                                "taxes_account":taxes, 
-                                "price_start_investment":cur[0]["price_investment"], 
-                                "price_end_investment":row["price"],
-                                "investment2account_start":cur[0]["investment2account"], 
-                                "investment2account_end":row["currency_conversion"]  , 
-                                "currency_account": data["currency_account"], 
-                                "currency_product": data["currency_product"], 
-                                "currency_user":currency_user, 
-                            })
-
-                            rest=rest+cur[0]["shares"]
-                            rest=IOS.__set_sign_of_other_number(row["shares"],rest)
-                            cur.pop(0)
-                    else:
-                        cur.insert(0, {
-                            "id":row["id"], 
-                            "investments_id":row["investments_id"], 
-                            "datetime":row["datetime"] , 
-                            "shares": rest, 
-                            "price_investment": row["price"], 
-                            "operationstypes_id": row['operationstypes_id'],
-                            "taxes_account":row["taxes"], 
-                            "commissions_account": row["commission"], 
-                            "investment2account": row["currency_conversion"],
-                            "currency_account": data["currency_account"], 
-                            "currency_product": data["currency_product"], 
-                            "currency_user":currency_user, 
-                        }) 
-                        break
-                        
-                        
-            
-            
-                        
-        return { "io": io, "io_current": cur,"io_historical":hist, "data":data, "lod_lazy_quotes": lod_lazy_quotes}
-
-    @staticmethod
-    def __calculate_io_finish(d, r_lazy_quotes):
-        """
-            d es el resultado de __calculate_io_lazy
-            dict_with_lf_and_lq puede ser en d o en t segun sea io o ios
-        """
-        def lf(from_, to_, dt):
-            #Parece que el error es por mal from_, to_
-#            try:
-                return models.Quotes.get_currency_factor(dt,  from_, to_, r_lazy_quotes)
-#            except:
-#                print(dict_with_lf_and_lq["lazy_factors"])
-#                print("No encontrado", (from_,  to_,  dt),  dt.__class__)
-            
-        def lq(products_id, dt):
-            return r_lazy_quotes[products_id][dt]["quote"]
-            
-        data=d["data"]
-        
-        d["total_io"]={}
-
-        for o in d["io"]:
-            account2user=lf(data["currency_account"], data["currency_user"], o["datetime"])
-            o['investment2account']=o['currency_conversion']
-            o['commission_account']=o['commission']
-            o['taxes_account']=o['taxes']
-            o['gross_investment']=abs(o['shares']*o['price']*data['real_leverages'])
-            o['gross_account']=o['gross_investment']*o['investment2account']
-            o['gross_user']=o['gross_account']*account2user
-            o['account2user']=account2user
-            o['gross_user']=o['gross_account']*account2user
-            if o['shares']>=0:
-                o['net_account']=o['gross_account']+o['commission_account']+o['taxes_account']
-            else:
-                o['net_account']=o['gross_account']-o['commission_account']-o['taxes_account']
-            o['net_user']=o['net_account']*account2user
-            o['net_investment']=o['net_account']/o['investment2account']
-
-        d["total_io_current"]={}
-        d["total_io_current"]["balance_user"]=0
-        d["total_io_current"]["balance_investment"]=0
-        d["total_io_current"]["balance_futures_user"]=0
-        d["total_io_current"]["gains_gross_user"]=0
-        d["total_io_current"]["gains_net_user"]=0
-        d["total_io_current"]["shares"]=0
-        d["total_io_current"]["average_price_investment"]=0
-        d["total_io_current"]["invested_user"]=0
-        d["total_io_current"]["invested_investment"]=0
-        sumaproducto=0
-
-        for c in d["io_current"]:
-            investment2account_at_datetime=lf(data["currency_product"], data["currency_account"], data["dt"] )
-            account2user_at_datetime=lf(data["currency_account"], data["currency_user"], data["dt"])
-            account2user=lf(data["currency_account"], data["currency_user"], c["datetime"])
-            quote_at_datetime=lq(data["products_id"], data["dt"])
-
-            c['investment2account_at_datetime']=investment2account_at_datetime
-            c['account2user_at_datetime']=account2user_at_datetime
-            c['account2user']=account2user
-            c['price_account']=c['price_investment']*c['investment2account']
-            c['price_user']=c['price_account']*account2user
-            c['taxes_investment']=c['taxes_account']/c['investment2account']#taxes and commissions are in account currency buy we can guess them
-            c['taxes_user']=c['taxes_account']*account2user
-            c['commissions_investment']=c['commissions_account']/c['investment2account']
-            c['commissions_user']=c['commissions_account']*account2user
-            #Si son cfds o futuros el saldo es 0, ya que es un contrato y el saldo todavía está en la cuenta. Sin embargo cuento las perdidas
-            c['balance_investment']=0 if d["data"]['productstypes_id'] in (12,13) else abs(c['shares'])*quote_at_datetime*data['real_leverages']
-            c['balance_account']=c['balance_investment']*investment2account_at_datetime
-            c['balance_user']=c['balance_account']*account2user_at_datetime
-            #Aquí calculo con saldo y futuros y cfd
-            if c['shares']>0:
-                c['balance_futures_investment']=c['shares']*quote_at_datetime*data['real_leverages']
-            else:
-                diff=(quote_at_datetime-c['price_investment'])*abs(c['shares'])*data['real_leverages']
-                init_balance=c['price_investment']*abs(c['shares'])*data['real_leverages']
-                c['balance_futures_investment']=init_balance-diff
-            c['balance_futures_account']=c['balance_futures_investment']*investment2account_at_datetime
-            c['balance_futures_user']=c['balance_futures_account']*account2user_at_datetime
-            c['invested_investment']=abs(c['shares']*c['price_investment']*data['real_leverages'])
-            c['invested_account']=c['invested_investment']*c['investment2account']
-            c['invested_user']=c['invested_account']*account2user
-            c['gains_gross_investment']=(quote_at_datetime - c['price_investment'])*c['shares']*data['real_leverages']
-            c['gains_gross_account']=(quote_at_datetime*investment2account_at_datetime - c['price_investment']*c['investment2account'])*c['shares']*data['real_leverages']
-            c['gains_gross_user']=(quote_at_datetime*investment2account_at_datetime*account2user_at_datetime - c['price_investment']*c['investment2account']*account2user)*c['shares']*data['real_leverages']
-            c['gains_net_investment']=c['gains_gross_investment'] -c['taxes_investment'] -c['commissions_investment']
-            c['gains_net_account']=c['gains_gross_account']-c['taxes_account']-c['commissions_account'] 
-            c['gains_net_user']=c['gains_gross_user']-c['taxes_user']-c['commissions_user']
-            c['percentage_total_investment'] = Percentage() if NoZ(c["invested_investment"]) else Percentage(c['gains_gross_investment'], c['invested_investment']) 
-            c['percentage_apr_investment']=Percentage() if NoZ(c["percentage_total_investment"].value) else Percentage(c['percentage_total_investment'].value*365, IOS.__ioc_days(c))
-            c['percentage_annual_investment']=IOS.__ioc_percentage_annual_investment(d, c)
-            c['percentage_total_user'] = Percentage() if NoZ(c["invested_user"]) else Percentage(c['gains_gross_user'], c['invested_user']) 
-            c['percentage_apr_user']=Percentage() if NoZ(c["percentage_total_user"].value) else Percentage(c['percentage_total_user'].value*365, IOS.__ioc_days(c))
-            c['percentage_annual_user']=IOS.__ioc_percentage_annual_user(d, c)
-            
-            
-            d["total_io_current"]["balance_user"]=d["total_io_current"]["balance_user"]+c['balance_user']
-            d["total_io_current"]["balance_investment"]=d["total_io_current"]["balance_investment"]+c['balance_investment']
-            d["total_io_current"]["balance_futures_user"]=d["total_io_current"]["balance_futures_user"]+c['balance_futures_user']
-            d["total_io_current"]["gains_gross_user"]=d["total_io_current"]["gains_gross_user"]+c['gains_gross_user']
-            d["total_io_current"]["gains_net_user"]=d["total_io_current"]["gains_net_user"]+c['gains_net_user']
-            d["total_io_current"]["shares"]=d["total_io_current"]["shares"]+c['shares']
-            d["total_io_current"]["invested_user"]=d["total_io_current"]["invested_user"]+c['invested_user']
-            d["total_io_current"]["invested_investment"]=d["total_io_current"]["invested_investment"]+c['invested_investment']     
-            sumaproducto=sumaproducto+c['shares']*c["price_investment"] 
-        d["total_io_current"]["average_price_investment"]=sumaproducto/d["total_io_current"]["shares"] if d["total_io_current"]["shares"]>0 else 0
-        d['total_io_current']['percentage_total_user'] = Percentage() if NoZ(d['total_io_current']["invested_user"]) else Percentage(d['total_io_current']['gains_gross_user'], d['total_io_current']['invested_user']) 
-
-        d["total_io_historical"]={}
-        d["total_io_historical"]["commissions_account"]=0
-        d["total_io_historical"]["gains_net_user"]=0
-
-        for h in d["io_historical"]:
-            h['years']=IOS.__ioh_years(h)
-            h['account2user_start']=lf(data["currency_account"], data["currency_user"], h["dt_start"] )
-            h['account2user_end']=lf(data["currency_account"], data["currency_user"], h["dt_end"] )
-            h['gross_start_investment']=0 if h['operationstypes_id'] in (types.eOperationType.TransferSharesOrigin,types.eOperationType.TransferSharesDestiny) else abs(h['shares']*h['price_start_investment']*data['real_leverages'])#Transfer shares 9, 10
-            if h['operationstypes_id'] in (9,10):
-                h['gross_end_investment']=0
-            elif h['shares']<0:#Sell after bought
-                h['gross_end_investment']=abs(h['shares'])*h['price_end_investment']*data['real_leverages']
-            else:
-                diff=(h['price_end_investment']-h['price_start_investment'])*abs(h['shares'])*data['real_leverages']
-                init_balance=h['price_start_investment']*abs(h['shares'])*data['real_leverages']
-                h['gross_end_investment']=init_balance-diff
-            h['gains_gross_investment']=h['gross_end_investment']-h['gross_start_investment']
-            h['gross_start_account']=h['gross_start_investment']*h['investment2account_start']
-            h['gross_start_user']=h['gross_start_account']*h['account2user_start']
-            h['gross_end_account']=h['gross_end_investment']*h['investment2account_end']
-            h['gross_end_user']=h['gross_end_account']*h['account2user_end']
-            h['gains_gross_account']=h['gross_end_account']-h['gross_start_account']
-            h['gains_gross_user']=h['gross_end_user']-h['gross_start_user']
-
-            h['taxes_investment']=h['taxes_account']/h['investment2account_end']#taxes and commissions are in account currency buy we can guess them
-            h['taxes_user']=h['taxes_account']*h['account2user_end']
-            h['commissions_investment']=h['commissions_account']/h['investment2account_end']
-            h['commissions_user']=h['commissions_account']*h['account2user_end']
-            h['gains_net_investment']=h['gains_gross_investment']-h['taxes_investment']-h['commissions_investment']
-            h['gains_net_account']=h['gains_gross_account']-h['taxes_account']-h['commissions_account']
-            h['gains_net_user']=h['gains_gross_user']-h['taxes_user']-h['commissions_user']
-
-            d["total_io_historical"]["commissions_account"]=d["total_io_historical"]["commissions_account"]+h["commissions_account"]
-            d["total_io_historical"]["gains_net_user"]=d["total_io_historical"]["gains_net_user"]+h["gains_net_user"]
-        return d
 
 
 
 
 
-
-
-    @staticmethod
-    def __realmultiplier(pia):
-        if pia["productstypes_id"] in (12, 13):
-            return pia['multiplier'] 
-        return 1
-
-    @staticmethod
-    def __have_same_sign(a, b):
-        if (a>=0 and b>=0) or (a<0 and b<0):
-           return True 
-        return False
 
     @staticmethod
     def __set_sign_of_other_number (number, number_to_change):
@@ -773,71 +836,6 @@ class IOS:
     def __operationstypes(shares):
         return types.eOperationType.SharesPurchase if shares>=0 else types.eOperationType.SharesSale
 
-    ## lod_investments query ivestments
-    ## lod_ios query investmentsoperations of investments
-    @staticmethod
-    def __calculate_ios_lazy( datetime, lod_investments, lod_ios, currency_user):
-        investments={}
-        ios={}
-
-        for row in lod_investments:
-            investments[str(row["investments_id"])]=row
-            ios[str(row["investments_id"])]=[]
-        for row in lod_ios:
-            ios[str(row["investments_id"])].append(row)
-
-        ## Total calculated ios
-        t={}
-        t["lod_lazy_quotes"]=[]
-        t["entries"]=[] #All ids to enter in ios_id
-
-        for investments_id, investment in investments.items():
-            t["entries"].append(investments_id)
-            d=IOS.__calculate_io_lazy(datetime, investment, ios[investments_id], currency_user)
-            t["lod_lazy_quotes"]+=d["lod_lazy_quotes"]
-            del d["lod_lazy_quotes"]
-            t[str(investments_id)]=d
-        
-        return t
-
-
-    @staticmethod
-    def __calculate_ios_finish(t, mode):
-        t["mode"]=mode
-        # Is a key too like ios
-        t["sum_total_io_current"]={}
-        t["sum_total_io_current"]["balance_user"]=0
-        t["sum_total_io_current"]["balance_futures_user"]=0
-        t["sum_total_io_current"]["gains_gross_user"]=0
-        t["sum_total_io_current"]["gains_net_user"]=0
-        t["sum_total_io_current"]["invested_user"]=0
-
-        t["sum_total_io_historical"]={}
-        t["sum_total_io_historical"]["commissions_account"]=0
-        t["sum_total_io_historical"]["gains_net_user"]=0
-
-        for investments_id in t["entries"]:
-            t[investments_id]=IOS.__calculate_io_finish(t[investments_id], t["r_lazy_quotes"])
-
-            t["sum_total_io_current"]["balance_user"]=t["sum_total_io_current"]["balance_user"]+t[investments_id]["total_io_current"]['balance_user']
-            t["sum_total_io_current"]["balance_futures_user"]=t["sum_total_io_current"]["balance_futures_user"]+t[investments_id]["total_io_current"]['balance_futures_user']
-            t["sum_total_io_current"]["gains_gross_user"]=t["sum_total_io_current"]["gains_gross_user"]+t[investments_id]["total_io_current"]['gains_gross_user']
-            t["sum_total_io_current"]["gains_net_user"]=t["sum_total_io_current"]["gains_net_user"]+t[investments_id]["total_io_current"]['gains_net_user']
-            t["sum_total_io_current"]["invested_user"]=t["sum_total_io_current"]["invested_user"]+t[investments_id]["total_io_current"]['invested_user']
-            t["sum_total_io_historical"]["gains_net_user"]=t["sum_total_io_historical"]["gains_net_user"]+t[investments_id]["total_io_historical"]['gains_net_user']
-            t["sum_total_io_historical"]["commissions_account"]=t["sum_total_io_historical"]["commissions_account"]+t[investments_id]["total_io_historical"]['commissions_account']
-
-            if mode in (IOSModes.totals_sumtotals, IOSModes.sumtotals):
-                del t[investments_id]["io"]
-                del t[investments_id]["io_current"]
-                del t[investments_id]["io_historical"]
-        
-        if mode==IOSModes.sumtotals:
-            return {"sum_total_io_current": t["sum_total_io_current"], "sum_total_io_historical": t["sum_total_io_historical"], "mode":t["mode"]}
-
-        del t["lod_lazy_quotes"]
-        del t["r_lazy_quotes"]
-        return t
         
     def distinct_products_id(self):
         """

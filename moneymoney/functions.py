@@ -152,3 +152,15 @@ def have_different_sign(a, b):
     if (a>0 and b>0) or (a<0 and b<0):
         return False 
     return True
+
+
+def have_same_sign(a, b):
+    return not have_different_sign(a,b)
+
+def NoZ(v):
+    """
+        Returns a boolean if v is None or Zero
+    """
+    if v is None or v==0:
+        return True
+    return False
