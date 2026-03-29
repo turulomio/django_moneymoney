@@ -63,6 +63,10 @@ class CurrencyPair:
                 self.associated_id=pair[2]
 
     def get_factor(self, datetime_,  get_quotes_result=None):
+        return self.get_dictionary(datetime_)["quote"]
+        
+        
+    def get_dictionary(self, datetime_):
         """
             Gets the factor to pass a currency to other in a datetime
             Params:
@@ -70,26 +74,23 @@ class CurrencyPair:
             Returns and object or None
 
             Si no lo encuentra deveulve 1
-        """
-        def get_quote(products_id,  datetime_):
-            if get_quotes_result is None:
-                q=Quotes.get_quote(products_id, datetime_)
-                if q is None or q.quote==0:
-                    return 1
-                else:
-                    return q.quote
-            else:
-                return get_quotes_result[products_id][datetime_]["quote"]
-                
+
+
+        """      
         if self.from_==self.to_:
-            return 1
-            
-        if self.direct_supported==True:
-            return get_quote(self.associated_id, datetime_)
-        elif self.reverse_supported==True:
-            return 1/get_quote(self.associated_id, datetime_)
-        return 1        
+            return {"datetime": datetime_, "quote": 1, "quotes_id": None}
         
+        q=Quotes.get_quote(self.associated_id, datetime_)
+        if q is None or q.quote==0:
+            return {"datetime": datetime_, "quote": 1, "quotes_id": None}
+
+        if self.direct_supported==True:
+            return {"datetime": datetime_, "quote": q.quote, "quotes_id": q.id}
+        elif self.reverse_supported==True:
+            return {"datetime": datetime_, "quote": 1/q.quote, "quotes_id": None}
+        else:
+            return {"datetime": datetime_, "quote": 1, "quotes_id": None}
+
     
 
 
@@ -1542,18 +1543,29 @@ class Quotes(models.Model):
         return request.build_absolute_uri(reverse('quotes-detail', args=(id, )))
     
     @staticmethod
-    def get_quote(product_id, datetime_):
+    def get_quote(product_id, datetime_, request=None):
         """
             Gets a quote object of a product in a datetime or less.
             Returns and object or None
 
             Si no lo encuentra deveulve un precio de 0
+
+
+            Las consultas a quotes son masivas por eso, voy a crear en el middleware un cache en cada request
+            Si el parametro request es pasado se usará si no no
+
+            Tendrá llaves (product_id, datetime )
+
+            El asked datetime es el pasado por parametro y el datetime final es el quote.datetime
         """
+        if (product_id, datetime_) in request.cached_dictionary:
+                return request.cached_dictionary[(product_id, datetime_)]
+
         try:
             r=Quotes.objects.filter(products__id=product_id, datetime__lte=datetime_).order_by("-datetime")[0]
+            request.cached_dictionary[(product_id, datetime_)] = r
             return r
         except:
-            # print(_("I coudn't get a quote for product '{0}' at '{1}'").format(product_id, datetime_))
             return None
 
     @staticmethod

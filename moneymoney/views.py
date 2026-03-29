@@ -1278,25 +1278,15 @@ def Currencies(request):
 
     r=[]
     for a,  b in list(permutations(models.Assets.currencies(), 2)):
-        final_inverted=True
-        can_c=False
-        is_supported=False
-        for (sa, sb, products_id) in models.SUPPORTED_CURRENCIES_PAIRS:
-            if a==sa and b==sb:
-                can_c = True
-                products_id=products_id
-                inverted=False
-                is_supported=True
-                break
-            if a==sb and b==sa:
-                can_c = False
-                products_id=products_id
-                inverted=True
-                is_supported=True
-                break
+        pair=models.CurrencyPair(a,b)
+
+
+        if pair.supported:
+            quote=pair.get_dictionary(timezone.now())
+        
 
         #Search for last quotes
-        qs=models.Quotes.get_quote(products_id=).objects.filter(datetime__lte=timezone.now(), products__id=products_id).order_by("-datetime")
+        qs=models.Quotes.get_quote(products_id=pair.as).objects.filter(datetime__lte=timezone.now(), products__id=products_id).order_by("-datetime")
         quote= qs[0] if qs.exists() else None
         if quote is not None:
             datetime_=quote.datetime
@@ -1311,13 +1301,13 @@ def Currencies(request):
         r.append({
             "from": a, 
             "to": b, 
-            "can_c": can_c, 
-            "can_rud": True if quote_url else False, 
-            "datetime": datetime_, 
-            "quote": price, 
-            "quote_url": quote_url, 
-            "supported": is_supported, 
-            "product_url": product_url, 
+            "supported": pair.supported, 
+            "direct_supported": pair.direct_supported, 
+            "reverse_supported": pair.reverse_supported, 
+            "datetime":quote["datetime"] if pair.supported else None,
+            "quote": quote["price"] if pair.supported else None, 
+            "quote_url": models.Quotes.hurl(request, quote["quotes_id"]) if quote["quotes_id"] else None,
+            "product_url": models.Products.hurl(request, pair.associated_id) if pair.associated_id else None, 
         })
     
     return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
