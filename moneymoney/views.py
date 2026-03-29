@@ -1283,21 +1283,7 @@ def Currencies(request):
 
         if pair.supported:
             quote=pair.get_dictionary(timezone.now())
-        
-
-        #Search for last quotes
-        qs=models.Quotes.get_quote(products_id=pair.as).objects.filter(datetime__lte=timezone.now(), products__id=products_id).order_by("-datetime")
-        quote= qs[0] if qs.exists() else None
-        if quote is not None:
-            datetime_=quote.datetime
-            if final_inverted is False:
-                price=quote.quote
-                quote_url=models.Quotes.hurl(request, quote.id)
-                product_url=models.Products.hurl(request, quote.products.id)
-            else:
-                price=1/quote.quote
-                datetime_=None
-                quote_url=None        
+            
         r.append({
             "from": a, 
             "to": b, 

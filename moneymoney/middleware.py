@@ -1,3 +1,5 @@
+from datetime import timezone
+
 from django.utils.deprecation import MiddlewareMixin
 
 class QuotesCacheMiddleware(MiddlewareMixin):
@@ -12,6 +14,7 @@ class QuotesCacheMiddleware(MiddlewareMixin):
 
     """
     def process_request(self, request):
+        request.start=timezone.now()
         request.cache_quotes = {}
 
     def process_response(self, request, response):

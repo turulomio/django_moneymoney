@@ -62,11 +62,11 @@ class CurrencyPair:
                 self.supported=True
                 self.associated_id=pair[2]
 
-    def get_factor(self, datetime_,  get_quotes_result=None):
-        return self.get_dictionary(datetime_)["quote"]
+    def get_factor(self, datetime_,  request=None):
+        return self.get_dictionary(datetime_, request)["quote"]
         
         
-    def get_dictionary(self, datetime_):
+    def get_dictionary(self, datetime_, request=None):
         """
             Gets the factor to pass a currency to other in a datetime
             Params:
@@ -80,7 +80,7 @@ class CurrencyPair:
         if self.from_==self.to_:
             return {"datetime": datetime_, "quote": 1, "quotes_id": None}
         
-        q=Quotes.get_quote(self.associated_id, datetime_)
+        q=Quotes.get_quote(self.associated_id, datetime_, request)
         if q is None or q.quote==0:
             return {"datetime": datetime_, "quote": 1, "quotes_id": None}
 
@@ -1302,62 +1302,158 @@ class Products(models.Model):
         return Products.objects.filter(investments__id__in=Subquery(qs_investments.values("id"))).distinct()
 
     def fullName(self):
+        """
+        Returns the full name of the product, combining its name and the stock market's name.
+        """
         return "{} ({})".format(self.name, _(self.stockmarkets.name))
-
-    def basic_results(self):
+    
+    def quote_last(self, request=None):
         """
-            Returns a dictionary as defined in basic_results_from_list_of_products_id
-        """
-        if hasattr(self, "_basic_results") is False:
-            br=Products.basic_results_from_list_of_products_id([self.id, ])
-            self._basic_results=br[self.id]
-        return self._basic_results
+        Retrieves the most recent quote for this product.
 
-    @staticmethod
-    def basic_results_from_list_of_products_id(list_products_id):
-        """
-            This is made in two massive steps. One for last  and other for penultimate and lastyear
-            Returns a dictionary that can be queried d[product_id][last|last_datetime|penultimate|penultimate_datetime|lastyear|lastyear_datetime]
-        """
-        def dt_needed_penultimate(products_id):
-            return casts.dtaware_day_end_from_date(r_lasts[products_id][now]["datetime"].date()-timedelta(days=1), 'UTC')#Better utc to assure
-        def dt_needed_lastyear(products_id):
-            return casts.dtaware_year_end(r_lasts[products_id][now]["datetime"].year-1, 'UTC')
-        #####
+        Args:
+            request (HttpRequest, optional): The current HTTP request object.
+                                             If provided, it can be used for request-level caching.
 
-        r ={}
-        now=timezone.now()
-        lod_lasts=[]
-        for products_id in list_products_id:
-            #Initialize dictionary
-            r[products_id]={}
-            #Create lod for last
-            lod_lasts.append({"datetime": now, "products_id":products_id})
+        Returns:
+            Quotes: The latest Quotes object for this product, or None if no quote is found.
+        """
+        dt=request.start if request is not None else timezone.now()
+        return Quotes.get_quote(self.id, dt)
+    
+    def quote_penultimate(self, request=None):
+        """
+        Retrieves the second most recent (penultimate) quote for this product.
 
-        r_lasts=Quotes.get_quotes(lod_lasts)
-        lod_ply=[]#penultimate and last year
-        for products_id in list_products_id:
-            if r_lasts[products_id][now]["datetime"] is not None:
-                lod_ply.append({"datetime": dt_needed_penultimate(products_id), "products_id":products_id})
-                lod_ply.append({"datetime": dt_needed_lastyear(products_id), "products_id":products_id})
-        r_ply=Quotes.get_quotes(lod_ply)
+        Args:
+            request (HttpRequest, optional): The current HTTP request object.
+                                             If provided, it can be used for request-level caching.
+
+        Returns:
+            Quotes: The penultimate Quotes object for this product, or None if not found
+                    or if there's no last quote to base the search on.
+        """
+        lastquote=self.quote_last(request)
+        if lastquote is None:
+            return None
+
+        penultimatedt=casts.dtaware_day_end_from_date(lastquote.datetime.date()-timedelta(days=1), 'UTC')
+        return Quotes.get_quote(self.id, penultimatedt)
+    
+    def quote_lastyear(self, request=None):
+        """
+        Retrieves the quote for this product from approximately one year ago
+        (specifically, the last quote available at the end of the previous year
+        relative to the latest quote's date).
+
+        Args:
+            request (HttpRequest, optional): The current HTTP request object.
+                                             If provided, it can be used for request-level caching.
+
+        Returns:
+            Quotes: The last year's Quotes object for this product, or None if not found
+                    or if there's no last quote to base the search on.
+        """
+        lastquote=self.quote_last(request)
+        if lastquote is None:
+            return None
+        lastyeardt=casts.dtaware_year_end(lastquote.datetime.year-1, 'UTC')
+        return Quotes.get_quote(self.id, lastyeardt)
+
+    def price_last(self,request=None):
+        """
+        Returns the price (quote value) of the most recent quote for this product.
+
+        Args:
+            request (HttpRequest, optional): The current HTTP request object.
+                                             If provided, it can be used for request-level caching.
+
+        Returns:
+            Decimal: The quote price, or Decimal('0') if no quote is found.
+        """
+        return self.quote_last(request).quote if self.quote_last(request) else 0
+
+    def price_penultimate(self,request=None):
+        """
+        Returns the price (quote value) of the second most recent (penultimate) quote for this product.
+
+        Args:
+            request (HttpRequest, optional): The current HTTP request object.
+                                             If provided, it can be used for request-level caching.
+
+        Returns:
+            Decimal: The quote price, or Decimal('0') if no penultimate quote is found.
+        """
+        return self.quote_penultimate(request).quote if self.quote_penultimate(request) else 0
+
+    def price_lastyear(self,request=None):
+        """
+        Returns the price (quote value) of the last year's quote for this product.
+
+        Args:
+            request (HttpRequest, optional): The current HTTP request object.
+                                             If provided, it can be used for request-level caching.
+
+        Returns:
+            Decimal: The quote price, or Decimal('0') if no last year's quote is found.
+        """
+        return self.quote_lastyear(request).quote if self.quote_lastyear(request) else 0
+
+
+    # def basic_results(self):
+    #     """
+    #         Returns a dictionary as defined in basic_results_from_list_of_products_id
+    #     """
+    #     if hasattr(self, "_basic_results") is False:
+    #         br=Products.basic_results_from_list_of_products_id([self.id, ])
+    #         self._basic_results=br[self.id]
+    #     return self._basic_results
+
+    # @staticmethod
+    # def basic_results_from_list_of_products_id(list_products_id):
+    #     """
+    #         This is made in two massive steps. One for last  and other for penultimate and lastyear
+    #         Returns a dictionary that can be queried d[product_id][last|last_datetime|penultimate|penultimate_datetime|lastyear|lastyear_datetime]
+    #     """
+    #     def dt_needed_penultimate(products_id):
+    #         return casts.dtaware_day_end_from_date(r_lasts[products_id][now]["datetime"].date()-timedelta(days=1), 'UTC')#Better utc to assure
+    #     def dt_needed_lastyear(products_id):
+    #         return casts.dtaware_year_end(r_lasts[products_id][now]["datetime"].year-1, 'UTC')
+    #     #####
+
+    #     r ={}
+    #     now=timezone.now()
+    #     lod_lasts=[]
+    #     for products_id in list_products_id:
+    #         #Initialize dictionary
+    #         r[products_id]={}
+    #         #Create lod for last
+    #         lod_lasts.append({"datetime": now, "products_id":products_id})
+
+    #     r_lasts=Quotes.get_quotes(lod_lasts)
+    #     lod_ply=[]#penultimate and last year
+    #     for products_id in list_products_id:
+    #         if r_lasts[products_id][now]["datetime"] is not None:
+    #             lod_ply.append({"datetime": dt_needed_penultimate(products_id), "products_id":products_id})
+    #             lod_ply.append({"datetime": dt_needed_lastyear(products_id), "products_id":products_id})
+    #     r_ply=Quotes.get_quotes(lod_ply)
         
-        #Generate answer
-        for products_id in list_products_id:
-            r[products_id]["last"]=r_lasts[products_id][now]["quote"]
-            r[products_id]["last_datetime"]=r_lasts[products_id][now]["datetime"]
+    #     #Generate answer
+    #     for products_id in list_products_id:
+    #         r[products_id]["last"]=r_lasts[products_id][now]["quote"]
+    #         r[products_id]["last_datetime"]=r_lasts[products_id][now]["datetime"]
 
-            if r[products_id]["last_datetime"] is None:
-                r[products_id]["penultimate"]=None 
-                r[products_id]["penultimate_datetime"]=None
-                r[products_id]["lastyear"]=None
-                r[products_id]["lastyear_datetime"]=None
-            else:
-                r[products_id]["penultimate"]=r_ply[products_id][dt_needed_penultimate(products_id)]["quote"]
-                r[products_id]["penultimate_datetime"]=r_ply[products_id][dt_needed_penultimate(products_id)]["datetime"]
-                r[products_id]["lastyear"]=r_ply[products_id][dt_needed_lastyear(products_id)]["quote"]
-                r[products_id]["lastyear_datetime"]=r_ply[products_id][dt_needed_lastyear(products_id)]["datetime"]
-        return r
+    #         if r[products_id]["last_datetime"] is None:
+    #             r[products_id]["penultimate"]=None 
+    #             r[products_id]["penultimate_datetime"]=None
+    #             r[products_id]["lastyear"]=None
+    #             r[products_id]["lastyear_datetime"]=None
+    #         else:
+    #             r[products_id]["penultimate"]=r_ply[products_id][dt_needed_penultimate(products_id)]["quote"]
+    #             r[products_id]["penultimate_datetime"]=r_ply[products_id][dt_needed_penultimate(products_id)]["datetime"]
+    #             r[products_id]["lastyear"]=r_ply[products_id][dt_needed_lastyear(products_id)]["quote"]
+    #             r[products_id]["lastyear_datetime"]=r_ply[products_id][dt_needed_lastyear(products_id)]["datetime"]
+    #     return r
         
     ## IBEXA es x2 pero esta en el pricio
     ## CFD DAX no está en el precio
@@ -1568,126 +1664,126 @@ class Quotes(models.Model):
         except:
             return None
 
-    @staticmethod
-    def get_quotes(lod_):
-        """
-            Gets a massive quote query
-            Parameters:
-                - lod_= [{"products_id": 79234, "datetime": ...}, ]
-            To look for we must r[product_id][datetime]
+    # @staticmethod
+    # def get_quotes(lod_):
+    #     """
+    #         Gets a massive quote query
+    #         Parameters:
+    #             - lod_= [{"products_id": 79234, "datetime": ...}, ]
+    #         To look for we must r[product_id][datetime]
 
-            Si no la encuentra devuelve un precio de 0
-        """
-        if len (lod_)==0:
-            return {}
+    #         Si no la encuentra devuelve un precio de 0
+    #     """
+    #     if len (lod_)==0:
+    #         return {}
 
-        lod_=lod.lod_remove_duplicates(lod_)
+    #     lod_=lod.lod_remove_duplicates(lod_)
 
-        r={}            
-        for needed_quote in lod_:
-            qs=Quotes.objects.filter(products__id=needed_quote["products_id"], datetime__lte=needed_quote["datetime"])\
-            .annotate(
-                needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()), 
-                needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
-            ).order_by("-datetime")
-            tmplod=qs.values().first()
-            if not needed_quote["products_id"] in r:
-                r[needed_quote["products_id"]]={}
-            if tmplod:
-                r[needed_quote["products_id"]][needed_quote["datetime"]]=tmplod
-            else:
-                r[needed_quote["products_id"]][needed_quote["datetime"]]={
-                    "datetime": needed_quote["datetime"], "id": needed_quote["products_id"], "needed_datetime": needed_quote["datetime"],
-                    "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": 0
-                }
-                # print(_("I coudn't get a quote for product '{0}' at '{1}' assigning a price of 0").format(needed_quote["products_id"], needed_quote["datetime"]))
-        return r
+    #     r={}            
+    #     for needed_quote in lod_:
+    #         qs=Quotes.objects.filter(products__id=needed_quote["products_id"], datetime__lte=needed_quote["datetime"])\
+    #         .annotate(
+    #             needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()), 
+    #             needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
+    #         ).order_by("-datetime")
+    #         tmplod=qs.values().first()
+    #         if not needed_quote["products_id"] in r:
+    #             r[needed_quote["products_id"]]={}
+    #         if tmplod:
+    #             r[needed_quote["products_id"]][needed_quote["datetime"]]=tmplod
+    #         else:
+    #             r[needed_quote["products_id"]][needed_quote["datetime"]]={
+    #                 "datetime": needed_quote["datetime"], "id": needed_quote["products_id"], "needed_datetime": needed_quote["datetime"],
+    #                 "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": 0
+    #             }
+    #             # print(_("I coudn't get a quote for product '{0}' at '{1}' assigning a price of 0").format(needed_quote["products_id"], needed_quote["datetime"]))
+    #     return r
     
-    @staticmethod
-    def get_quotes_with_threadpool(lod_):
-        """
-        Gets a massive quote query using a thread pool to parallelize queries.
-        Parameters:
-            - lod_= [{"products_id": 79234, "datetime": ...}, ]
-        To look for we must r[product_id][datetime]
+    # @staticmethod
+    # def get_quotes_with_threadpool(lod_):
+    #     """
+    #     Gets a massive quote query using a thread pool to parallelize queries.
+    #     Parameters:
+    #         - lod_= [{"products_id": 79234, "datetime": ...}, ]
+    #     To look for we must r[product_id][datetime]
 
-        Si no la encuentra deveulve 0
+    #     Si no la encuentra deveulve 0
 
-        SOLO USADO EN TESTS
-        """
-        if len (lod_)==0:
-            return {}
+    #     SOLO USADO EN TESTS
+    #     """
+    #     if len (lod_)==0:
+    #         return {}
 
-        lod_ = lod.lod_remove_duplicates(lod_)
+    #     lod_ = lod.lod_remove_duplicates(lod_)
 
-        def fetch_quote(needed_quote):
-            # Each thread needs its own connection to the database.
-            # This ensures that the main connection is not shared across threads.
-            try:
-                qs=Quotes.objects.filter(products__id=needed_quote["products_id"], datetime__lte=needed_quote["datetime"])\
-                .annotate(
-                    needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()), 
-                    needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
-                ).order_by("-datetime")
-                result = qs.values().first()
-                if result:
-                    return result
-                return {"datetime": None, "id": None, "needed_datetime": needed_quote["datetime"], "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": 0}
-            finally:
-                connection.close()
+    #     def fetch_quote(needed_quote):
+    #         # Each thread needs its own connection to the database.
+    #         # This ensures that the main connection is not shared across threads.
+    #         try:
+    #             qs=Quotes.objects.filter(products__id=needed_quote["products_id"], datetime__lte=needed_quote["datetime"])\
+    #             .annotate(
+    #                 needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()), 
+    #                 needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
+    #             ).order_by("-datetime")
+    #             result = qs.values().first()
+    #             if result:
+    #                 return result
+    #             return {"datetime": None, "id": None, "needed_datetime": needed_quote["datetime"], "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": 0}
+    #         finally:
+    #             connection.close()
 
-        with ThreadPoolExecutor() as executor:
-            results = list(executor.map(fetch_quote, lod_))
+    #     with ThreadPoolExecutor() as executor:
+    #         results = list(executor.map(fetch_quote, lod_))
 
-        r = {}
-        for d in results:
-            if d["needed_products_id"] not in r:
-                r[d["needed_products_id"]] = {}
-            r[d["needed_products_id"]][d["needed_datetime"]] = d
-        return r
+    #     r = {}
+    #     for d in results:
+    #         if d["needed_products_id"] not in r:
+    #             r[d["needed_products_id"]] = {}
+    #         r[d["needed_products_id"]][d["needed_datetime"]] = d
+    #     return r
 
 
 
-    @staticmethod
-    async def async_get_quotes_with_a_methods(lod_):
-        """
-            An asynchronous version of get_quotes using Django's async ORM.
-            This method MUST be called from an async context (e.g., an `async def` view).
+    # @staticmethod
+    # async def async_get_quotes_with_a_methods(lod_):
+    #     """
+    #         An asynchronous version of get_quotes using Django's async ORM.
+    #         This method MUST be called from an async context (e.g., an `async def` view).
             
-            Parameters:
-                - lod_= [{"products_id": 79234, "datetime": ...}, ]
-            To look for we must r[product_id][datetime]
+    #         Parameters:
+    #             - lod_= [{"products_id": 79234, "datetime": ...}, ]
+    #         To look for we must r[product_id][datetime]
 
-            SOLO USADO EN TESTS
-        """
-        if not lod_:
-            return {}
+    #         SOLO USADO EN TESTS
+    #     """
+    #     if not lod_:
+    #         return {}
 
-        lod_ = lod.lod_remove_duplicates(lod_)
+    #     lod_ = lod.lod_remove_duplicates(lod_)
 
-        async def fetch_quote(needed_quote):
-            qs = Quotes.objects.filter(
-                products__id=needed_quote["products_id"],
-                datetime__lte=needed_quote["datetime"]
-            ).annotate(
-                needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()),
-                needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
-            ).order_by("-datetime")
-            internal_r= await qs.values().afirst()
-            if internal_r is not None:
-                return internal_r
-            else:
-                return     { "datetime": None, "id": None, "needed_datetime": needed_quote  ["datetime"], "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": 0 }
+    #     async def fetch_quote(needed_quote):
+    #         qs = Quotes.objects.filter(
+    #             products__id=needed_quote["products_id"],
+    #             datetime__lte=needed_quote["datetime"]
+    #         ).annotate(
+    #             needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()),
+    #             needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
+    #         ).order_by("-datetime")
+    #         internal_r= await qs.values().afirst()
+    #         if internal_r is not None:
+    #             return internal_r
+    #         else:
+    #             return     { "datetime": None, "id": None, "needed_datetime": needed_quote  ["datetime"], "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": 0 }
 
-        tasks = [fetch_quote(nq) for nq in lod_]
-        results = await asyncio.gather(*tasks)
+    #     tasks = [fetch_quote(nq) for nq in lod_]
+    #     results = await asyncio.gather(*tasks)
 
-        r = {}
-        for d in results:
-            if d["needed_products_id"] not in r:
-                r[d["needed_products_id"]] = {}
-            r[d["needed_products_id"]][d["needed_datetime"]] = d
-        return r
+    #     r = {}
+    #     for d in results:
+    #         if d["needed_products_id"] not in r:
+    #             r[d["needed_products_id"]] = {}
+    #         r[d["needed_products_id"]][d["needed_datetime"]] = d
+    #     return r
 
 
 class Productspairs(models.Model):
