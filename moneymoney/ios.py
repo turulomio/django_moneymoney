@@ -19,7 +19,20 @@ class IOSTypes:
     from_qs=1
     from_qs_merging_io_current=2
 
-
+def investmentoperation_to_iodict(io):
+    return {
+        "id":io["id"],
+        "investments_id":io["investments_id"],
+        "datetime":io["datetime"],
+        "shares":io["shares"],
+        "price":io["price"],
+        "operationstypes_id":io["operationstypes_id"],
+        "taxes":io["taxes"],
+        "commission":io["commission"],
+        "currency_conversion":io["currency_conversion"],
+        "comment":io["comment"],
+    }
+    
 
 class IO:
     def __init__(self, request):
@@ -401,34 +414,21 @@ class IOS:
             
                 {'id': 3, 'operationstypes_id': 4, 'investments_id': 2, 'shares': Decimal('1000.000000'), 'taxes': Decimal('0.00'), 'commission': Decimal('0.00'), 'price': Decimal('10.000000'), 'datetime': datetime.datetime(2023, 7, 23, 6, 4, 4, 934773, tzinfo=datetime.timezone.utc), 'comment': '', 'currency_conversion': Decimal('1.0000000000')}
         """
-#        s=datetime.now()
-        qs_io=models.Investmentsoperations.objects.filter(investments__in=qs_investments, datetime__lte=dt).order_by("datetime").select_related("products", "accounts").values()
+        qs_io=models.Investmentsoperations.objects.filter(investments__in=qs_investments, datetime__lte=dt).order_by("datetime").select_related("products", "accounts")
 
-        ios=IOS(request)
-        ios.assign_ios(dt, dod_ios, local_currency)
-        t=ios.process_calcs(mode)
-        
-        t=IOS.__calculate_ios_lazy(dt, lod_investments,  lod_,  local_currency)       
-        t=IOS.__calculate_ios_finish(t, mode, request)
-        t["type"]=IOSTypes.from_qs
-
-        #Set entries name
-        if mode in [IOSModes.ios_totals_sumtotals, IOSModes.totals_sumtotals]:
-            for investment in qs_investments:
-                t[str(investment.id)]["data"]["name"]=investment.fullName()
-#        print("IOS FROM QS", datetime.now()-s)
-    
+        dod_ios={}
+        for o in qs_io:
+            if o["investments_id"] not in dod_ios:
+                dod_ios[o["investments_id"]]={"products_id":o.products.id, "name":o.investments.fullName(), "currency_account": o.investments.accounts.currency, "lod_io":[investmentoperation_to_iodict(o)]}
+            else:
+                dod_ios[o["investments_id"]]["lod_io"].append(investmentoperation_to_iodict(o))
         return IOS.from_dod(dt, local_currency, dod_ios, mode, request  )
-
-        # def assign_data(self, dt, entry, products_id, currency_account, currency_user):
-    # def assign_ios(self, dt,  dod_ios, currency_user):
-
 
     @classmethod
     def from_dod(cls,  dt,  local_currency,  dod_ios,  mode, request):
         """
                    dod_ios es un diccionario que tiene como llave entries
-            Esta llave apunta a un diccionario {products_id: 1, currency_account:2 lod_io=[io1,io2...]}
+            Esta llave apunta a un diccionario {products_id: 1, currency_account:2, name:name, lod_io=[io1,io2...]}
 
          """
         ios=IOS(request)
@@ -438,17 +438,8 @@ class IOS:
         
 
     @classmethod
-    def from_ids(cls,  dt,  local_currency,  list_ids,  mode, simulation=[], request=None):
-        """
-            Ids de inverstments
-        """
-        qs_investments=models.Investments.objects.filter(id__in=list_ids)
-        return cls.from_qs(dt, local_currency, qs_investments, mode, simulation, request)
-
-
-    @classmethod
     def from_all(cls,  dt,  local_currency,  mode, simulation=[], request=None):
-        return cls.from_qs(dt, local_currency, models.Investments.objects.all(), mode, simulation, request)
+        return cls.from_qs_investments(dt, local_currency, models.Investments.objects.all(), mode, request)
     
 
 
