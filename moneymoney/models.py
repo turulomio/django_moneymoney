@@ -900,7 +900,7 @@ class Investmentsoperations(models.Model):
             return
         
         # Updates asociated ao
-        plio=ios.IOS.from_ids(timezone.now(), "EUR", [self.investments.id, ], 1) #I set EUR to reuse this code but __user values will not be used
+        plio=ios.IOS.from_ids(timezone.now(), "EUR", [self.investments.id, ], 1,request=None) #I set EUR to reuse this code but __user values will not be used
         #Searches io investments operations of the comment
         io=None
         for o in plio.d_io(self.investments.id):

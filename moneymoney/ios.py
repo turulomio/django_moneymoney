@@ -21,16 +21,16 @@ class IOSTypes:
 
 def investmentoperation_to_iodict(io):
     return {
-        "id":io["id"],
-        "investments_id":io["investments_id"],
-        "datetime":io["datetime"],
-        "shares":io["shares"],
-        "price":io["price"],
-        "operationstypes_id":io["operationstypes_id"],
-        "taxes":io["taxes"],
-        "commission":io["commission"],
-        "currency_conversion":io["currency_conversion"],
-        "comment":io["comment"],
+        "id":io.id,
+        "investments_id":io.investments.id,
+        "datetime":io.datetime,
+        "shares":io.shares,
+        "price":io.price,
+        "operationstypes_id":io.operationstypes.id,
+        "taxes":io.taxes,
+        "commission":io.commission,
+        "currency_conversion":io.currency_conversion,
+        "comment":io.comment,
     }
     
 
@@ -48,7 +48,7 @@ class IO:
             Se puede hacer un override dejando las mismas variables _d["data"] fuera de aquí no se usa nada ni product ni na
         """
 
-        product=models.Products.objects.get(pk=products_id).select_related("leverages", "productstypes")
+        product=models.Products.objects.select_related("leverages", "productstypes").get(pk=products_id)
         self._d["data"]={}
         self._d["data"]["dt"]=dt
         self._d["data"]["currency_account"]=currency_account
@@ -59,12 +59,15 @@ class IO:
         self._d["data"]["productstypes"]=product.productstypes.id
         self._d["data"]["entry"]=entry
         quote_last=models.Quotes.get_quote(product.id, dt, self.request)  #~NO se usa products.quote_last ya que dt es vvariable
-
-        lastyeardt=casts.dtaware_year_end(quote_last.datetime.year-1, 'UTC')
-        quote_lastyear=models.Quotes.get_quote(product.id, lastyeardt, self.request)
         self._d["data"]["basic_results"]={}
-        self._d["data"]["basic_results"]["last"]= quote_last.quote if quote_last is not None else 0
-        self._d["data"]["basic_results"]["lastyear"]=quote_lastyear.quote if quote_lastyear is not None else 0
+        if quote_last is None:
+            self._d["data"]["basic_results"]["last"]= 0
+            self._d["data"]["basic_results"]["lastyear"]=0
+        else:
+            lastyeardt=casts.dtaware_year_end(quote_last.datetime.year-1, 'UTC')
+            quote_lastyear=models.Quotes.get_quote(product.id, lastyeardt, self.request)
+            self._d["data"]["basic_results"]["last"]= quote_last.quote if quote_last is not None else 0
+            self._d["data"]["basic_results"]["lastyear"]=quote_lastyear.quote if quote_lastyear is not None else 0
 
 
     def process_io(self, io_rows):
@@ -414,14 +417,14 @@ class IOS:
             
                 {'id': 3, 'operationstypes_id': 4, 'investments_id': 2, 'shares': Decimal('1000.000000'), 'taxes': Decimal('0.00'), 'commission': Decimal('0.00'), 'price': Decimal('10.000000'), 'datetime': datetime.datetime(2023, 7, 23, 6, 4, 4, 934773, tzinfo=datetime.timezone.utc), 'comment': '', 'currency_conversion': Decimal('1.0000000000')}
         """
-        qs_io=models.Investmentsoperations.objects.filter(investments__in=qs_investments, datetime__lte=dt).order_by("datetime").select_related("products", "accounts")
+        qs_io=models.Investmentsoperations.objects.filter(investments__in=qs_investments, datetime__lte=dt).order_by("datetime").select_related("investments__products", "investments__accounts")
 
         dod_ios={}
         for o in qs_io:
-            if o["investments_id"] not in dod_ios:
-                dod_ios[o["investments_id"]]={"products_id":o.products.id, "name":o.investments.fullName(), "currency_account": o.investments.accounts.currency, "lod_io":[investmentoperation_to_iodict(o)]}
+            if o.investments.id not in dod_ios:
+                dod_ios[o.investments.id]={"products_id":o.investments.products.id, "name":o.investments.fullName(), "currency_account": o.investments.accounts.currency, "lod_io":[investmentoperation_to_iodict(o)]}
             else:
-                dod_ios[o["investments_id"]]["lod_io"].append(investmentoperation_to_iodict(o))
+                dod_ios[o.investments.id]["lod_io"].append(investmentoperation_to_iodict(o))
         return IOS.from_dod(dt, local_currency, dod_ios, mode, request  )
 
     @classmethod
@@ -438,8 +441,12 @@ class IOS:
         
 
     @classmethod
-    def from_all(cls,  dt,  local_currency,  mode, simulation=[], request=None):
+    def from_all(cls,  dt,  local_currency,  mode,  request):
         return cls.from_qs_investments(dt, local_currency, models.Investments.objects.all(), mode, request)
+
+    @classmethod
+    def from_ids(cls,  dt,  local_currency, ids,  mode, request):
+        return cls.from_qs_investments(dt, local_currency, models.Investments.objects.filter(id__in=ids), mode, request)
     
 
 

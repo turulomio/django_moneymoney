@@ -1291,7 +1291,7 @@ def Currencies(request):
             "direct_supported": pair.direct_supported, 
             "reverse_supported": pair.reverse_supported, 
             "datetime":quote["datetime"] if pair.supported else None,
-            "quote": quote["price"] if pair.supported else None, 
+            "quote": quote["quote"] if pair.supported else None, 
             "quote_url": models.Quotes.hurl(request, quote["quotes_id"]) if quote["quotes_id"] else None,
             "product_url": models.Products.hurl(request, pair.associated_id) if pair.associated_id else None, 
         })
