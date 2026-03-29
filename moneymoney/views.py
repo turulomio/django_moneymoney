@@ -466,9 +466,9 @@ class OrdersViewSet(viewsets.ModelViewSet):
                 "shares": o.shares, 
                 "price": o.price, 
                 "amount": o.shares*o.price*o.investments.products.real_leveraged_multiplier(), 
-                "percentage_from_price": percentage_between(o.investments.products.basic_results()["last"], o.price),
+                "percentage_from_price": percentage_between(o.investments.products.price_last(request), o.price),
                 "executed": o.executed,  
-                "current_price": o.investments.products.basic_results()["last"], 
+                "current_price": o.investments.products.price_last(request), 
             })
         return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
@@ -1325,8 +1325,8 @@ def ProductsPairs(request):
     if all_args_are_not_none(product_better, product_worse):
         common_quotes=product_better.compare_with(product_worse)
         r={}
-        r["product_a"]={"name":product_better.fullName(), "currency": product_better.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_better.id, ))), "current_price": product_better.basic_results()["last"]}
-        r["product_b"]={"name":product_worse.fullName(), "currency": product_worse.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_worse.id, ))), "current_price": product_worse.basic_results()["last"]}
+        r["product_a"]={"name":product_better.fullName(), "currency": product_better.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_better.id, ))), "current_price": product_better.price_last(request)}
+        r["product_b"]={"name":product_worse.fullName(), "currency": product_worse.currency, "url": request.build_absolute_uri(reverse('products-detail', args=(product_worse.id, ))), "current_price": product_worse.price_last(request)}
         r["data"]=common_quotes
         return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
     return Response({'status': 'details'}, status=status.HTTP_400_BAD_REQUEST)
@@ -1470,12 +1470,12 @@ class ProductsViewSet(viewsets.ModelViewSet):
                 row={}
                 row['id']=p.id
                 row["product"]=p.hurl(request, p.id)
-                row["last_datetime"]=None if p.basic_results()["last"] is None else p.basic_results()["last_datetime"]
-                row["last"]=None if  p.basic_results()["last"] is None else p.basic_results()["last"]
-                row["penultimate_datetime"]=None if  p.basic_results()["penultimate"]  is None else p.basic_results()["penultimate_datetime"]
-                row["penultimate"]=None if  p.basic_results()["penultimate"] is None else p.basic_results()["penultimate"]
-                row["lastyear_datetime"]=None if  p.basic_results()["lastyear"]  is None else p.basic_results()["lastyear_datetime"]
-                row["lastyear"]=None if  p.basic_results()["lastyear"]  is None else p.basic_results()["lastyear"]
+                row["last_datetime"]=None if p.quote_last(request) is None else p.quote_last(request)["datetime"]
+                row["last"]=None if  p.price_last(request) is None else p.price_last()
+                row["penultimate_datetime"]=None if  p.quote_penultimate(request) is None else p.quote_penultimate(request)["datetime"]
+                row["penultimate"]=None if  p.price_penultimate(request) is None else p.price_penultimate(request)
+                row["lastyear_datetime"]=None if  p.quote_lastyear(request)  is None else p.quote_lastyear(request)["datetime"]
+                row["lastyear"]=None if  p.price_lastyear(request)  is None else p.price_lastyear(request)
                 row["percentage_last_year"]=None if row["lastyear"] is None else Percentage(row["last"]-row["lastyear"], row["lastyear"])
                 rows.append(row)
             return JsonResponse( rows,  encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
@@ -2016,14 +2016,14 @@ def ReportDividends(request):
         else:
             dps=estimation.estimation
             date_estimation=estimation.date_estimation
-            percentage=Percentage(dps, inv.products.basic_results()["last"])
+            percentage=Percentage(dps, inv.products.price_last(request))
             estimated=shares*dps*inv.products.real_leveraged_multiplier()
             
         
         d={
             "product": inv.products.hurl(request, inv.products.id), 
             "name":  inv.fullName(), 
-            "current_price": inv.products.basic_results()["last"], 
+            "current_price": inv.products.price_last(request), 
             "dps": dps, 
             "shares": shares, 
             "date_estimation": date_estimation, 

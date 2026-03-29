@@ -210,10 +210,10 @@ class ProductRangeManager:
         #Calculate max_ price and min_price. last price and orders is valorated too 
         max_=self.plio.io_current_highest_price()
         min_=self.plio.io_current_lowest_price()
-        if product.basic_results()["last"]> max_:
-            max_=product.basic_results()["last"]
-        if product.basic_results()["last"]< min_:
-            min_=product.basic_results()["last"]
+        if product.price_last(self.request)> max_:
+            max_=product.price_last(self.request)
+        if product.price_last(self.request)< min_:
+            min_=product.price_last(self.request)
         for o in self.orders:
             if o.investments.products.id==self.product.id:
                 if o.price>max_:
@@ -226,7 +226,7 @@ class ProductRangeManager:
             top_index= self.getTmpIndexOfValue(max_)-additional_ranges-1
             bottom_index= self.getTmpIndexOfValue(min_)+additional_ranges+1
         else: # No investment jet and shows ranges from product current price
-            current_index=self.getTmpIndexOfValue(self.product.basic_results()["last"])
+            current_index=self.getTmpIndexOfValue(self.product.price_last(self.request)
             top_index=current_index-additional_ranges-1
             bottom_index=current_index+additional_ranges+1
         self.arr=self.tmp[top_index:bottom_index]
@@ -304,12 +304,12 @@ class ProductRangeManager:
                 "recomendation_invest": o.setInvestRecomendations(self.method,df),
                 "investments_inside": o.getInvestmentsOperationsInsideJson(self.plio), 
                 "orders_inside": o.getOrdersInsideJson(self.orders), 
-                "current_in_range": o.isInside(self.product.basic_results()["last"]), 
+                "current_in_range": o.isInside(self.product.price_last(self.request)), 
                 "limits": str(o)
             })
         r["product"]={
             "name": o.product.fullName(), 
-            "last": o.product.basic_results()["last"], 
+            "last": o.product.price_last(self.request),
             "currency": o.product.currency, 
         }
         r["dataframe"]=df.replace(to_replace=np.nan, value=None).to_dict('records')#Conviert a None NAN y devuelve dictioanry

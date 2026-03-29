@@ -27,17 +27,6 @@ def NoZ(v):
         return True
     return False
 
-
-def get_pair_dictionary(datetime_,  from_,  to_):
-    """
-        Returns a dictionary to be used to create the lod of get_quotes
-"""
-    pair= models.CurrencyPair(from_, to_)
-    if pair.associated_id is None:
-        print("CANT CONVERT TO GET_QUOTE DICTIONARY",  datetime_,  from_,  to_) 
-        return None
-    return {"products_id":pair.associated_id,  "datetime":datetime_}
-
 class IOS:
     """
         Class to operate with Assets.pl_investment_operations result
@@ -783,21 +772,6 @@ class IOS:
     @staticmethod
     def __operationstypes(shares):
         return types.eOperationType.SharesPurchase if shares>=0 else types.eOperationType.SharesSale
-
-    @staticmethod
-    def __get_all_quotes( t):       
-        """
-            Makes Three queries 2 for basic_results 1 for the rest. I thin It's not necesary to join in 2. They are different
-        """
-        products_ids=set()
-        for entry in t["entries"]:
-            products_ids.add(t[str(entry)]["data"]["products_id"])
-        products_ids=list(products_ids)
-        r_basic_results=models.Products.basic_results_from_list_of_products_id(products_ids)
-        for entry in t["entries"]:
-            t[entry]["data"]["basic_results"]=r_basic_results[int(t[entry]["data"]["products_id"])]
-            
-        return models.Quotes.get_quotes(t["lod_lazy_quotes"])
 
     ## lod_investments query ivestments
     ## lod_ios query investmentsoperations of investments
