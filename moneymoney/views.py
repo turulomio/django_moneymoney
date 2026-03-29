@@ -1275,44 +1275,39 @@ def Currencies(request):
         Function REturns a list of used currencies, last change and if it's supported
         a/b=factor a=factor b. EUR/USD= 1.09 => 1 EUR =1.09 USD
     """
-    supported=[
-        ("EUR", "USD", 74747),
-    ]
+
     r=[]
     for a,  b in list(permutations(models.Assets.currencies(), 2)):
-        final_product_id=None
         final_inverted=True
         can_c=False
         is_supported=False
-        for (sa, sb, products_id) in supported:
+        for (sa, sb, products_id) in models.SUPPORTED_CURRENCIES_PAIRS:
             if a==sa and b==sb:
                 can_c = True
-                final_product_id=products_id
-                final_inverted=False
+                products_id=products_id
+                inverted=False
                 is_supported=True
                 break
             if a==sb and b==sa:
                 can_c = False
-                final_product_id=products_id
-                final_inverted=True
+                products_id=products_id
+                inverted=True
                 is_supported=True
                 break
-        price=None
-        datetime_=None
-        quote_url=None
-        product_url=None
-        if final_product_id is not None:
-            qs=models.Quotes.objects.filter(datetime__lte=timezone.now(), products__id=products_id).order_by("-datetime")
-            quote= qs[0] if qs.exists() else None
-            if quote is not None:
-                datetime_=quote.datetime
-                if final_inverted is False:
-                    price=quote.quote
-                    quote_url=models.Quotes.hurl(request, quote.id)
-                    product_url=models.Products.hurl(request, quote.products.id)
-                else:
-                    price=1/quote.quote
-        
+
+        #Search for last quotes
+        qs=models.Quotes.get_quote(products_id=).objects.filter(datetime__lte=timezone.now(), products__id=products_id).order_by("-datetime")
+        quote= qs[0] if qs.exists() else None
+        if quote is not None:
+            datetime_=quote.datetime
+            if final_inverted is False:
+                price=quote.quote
+                quote_url=models.Quotes.hurl(request, quote.id)
+                product_url=models.Products.hurl(request, quote.products.id)
+            else:
+                price=1/quote.quote
+                datetime_=None
+                quote_url=None        
         r.append({
             "from": a, 
             "to": b, 

@@ -27,6 +27,17 @@ def NoZ(v):
         return True
     return False
 
+
+def get_pair_dictionary(datetime_,  from_,  to_):
+    """
+        Returns a dictionary to be used to create the lod of get_quotes
+"""
+    pair= models.CurrencyPair(from_, to_)
+    if pair.associated_id is None:
+        print("CANT CONVERT TO GET_QUOTE DICTIONARY",  datetime_,  from_,  to_) 
+        return None
+    return {"products_id":pair.associated_id,  "datetime":datetime_}
+
 class IOS:
     """
         Class to operate with Assets.pl_investment_operations result
@@ -442,11 +453,11 @@ class IOS:
                 t["lod_lazy_quotes"].append({"products_id":products_id, "datetime": old_ioh["dt_start"]})
                 t["lod_lazy_quotes"].append({"products_id":products_id, "datetime": old_ioh["dt_end"]})
                 if old_ioh["currency_product"]!=old_ioh["currency_account"]:
-                    t["lod_lazy_quotes"].append(models.Quotes.get_quote_dictionary_for_currency_factor(old_ioh["dt_start"], old_ioh["currency_product"], old_ioh["currency_account"]))
-                    t["lod_lazy_quotes"].append(models.Quotes.get_quote_dictionary_for_currency_factor(old_ioh["dt_end"], old_ioh["currency_product"], old_ioh["currency_account"]))
+                    t["lod_lazy_quotes"].append(get_pair_dictionary(old_ioh["dt_start"], old_ioh["currency_product"], old_ioh["currency_account"]))
+                    t["lod_lazy_quotes"].append(get_pair_dictionary(old_ioh["dt_end"], old_ioh["currency_product"], old_ioh["currency_account"]))
                 if old_ioh["currency_account"]!=old_ioh["currency_user"]:
-                    t["lod_lazy_quotes"].append(models.Quotes.get_quote_dictionary_for_currency_factor(old_ioh["dt_start"], old_ioh["currency_account"], old_ioh["currency_user"]))
-                    t["lod_lazy_quotes"].append(models.Quotes.get_quote_dictionary_for_currency_factor(old_ioh["dt_end"], old_ioh["currency_account"], old_ioh["currency_user"]))
+                    t["lod_lazy_quotes"].append(get_pair_dictionary(old_ioh["dt_start"], old_ioh["currency_account"], old_ioh["currency_user"]))
+                    t["lod_lazy_quotes"].append(get_pair_dictionary(old_ioh["dt_end"], old_ioh["currency_account"], old_ioh["currency_user"]))
             t[str(products_id)]["io_historical"]=lod.lod_order_by(t[str(products_id)]["io_historical"], "dt_end")
             
         # I make ios_finish after to get old io_historical too in results
@@ -477,7 +488,7 @@ class IOS:
         
         lod_lazy_quotes.append({"datetime":dt, "products_id":data["products_id"]})
         if data["currency_product"]!=data["currency_account"]:
-            lod_lazy_quotes.append(models.Quotes.get_quote_dictionary_for_currency_factor(dt, data["currency_product"], data["currency_account"]))
+            lod_lazy_quotes.append(get_pair_dictionary(dt, data["currency_product"], data["currency_account"]))
 
         ioh_id=0
         io=[]
@@ -489,7 +500,7 @@ class IOS:
             row["currency_product"]=data["currency_product"]
             row["currency_user"]=data["currency_user"]
             if data["currency_account"]!=data["currency_user"]:
-                lod_lazy_quotes.append(models.Quotes.get_quote_dictionary_for_currency_factor(row['datetime'], data["currency_account"], data["currency_user"]))
+                lod_lazy_quotes.append(get_pair_dictionary(row['datetime'], data["currency_account"], data["currency_user"]))
             io.append(row)
             if len(cur)==0 or IOS.__have_same_sign(cur[0]["shares"], row["shares"]) is True:
                 cur.append({

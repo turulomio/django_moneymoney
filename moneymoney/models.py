@@ -17,6 +17,7 @@ from moneymoney.reusing.decorators import ptimeit
 from moneymoney.types import eConcept, eProductType, eOperationType
 from pydicts import lod_ymv, casts, lod
 from pydicts.currency import Currency
+from functools import cached_property
 
 Decimal
 ptimeit
@@ -33,6 +34,63 @@ RANGE_RECOMENDATION_CHOICES =(
     (9, "SMA 5"), 
     (10, "HMA 10"), 
 )
+
+class CurrencyPair:
+    def __init__(self, from_, to_):
+        self.from_=from_
+        self.to_=to_
+
+        self.SUPPORTED=[
+            ("EUR", "USD", 74747),
+            ("XAU", "EUR", 81747),
+            ("XAU", "USD", 81757),
+        ]
+
+        self.direct_supported=False
+        self.reverse_supported=False
+        self.supported=False
+        self.associated_id=None # Products Id asociado al par
+        for pair in self.SUPPORTED:
+            if pair[0]==self.from_ and pair[1]==self.to_:
+                self.direct_supported=True
+                self.reverse_supported=False
+                self.supported=True
+                self.associated_id=pair[2]
+            elif pair[1]==self.from_ and pair[0]==self.to_:
+                self.direct_supported=False
+                self.reverse_supported=True
+                self.supported=True
+                self.associated_id=pair[2]
+
+    def get_factor(self, datetime_,  get_quotes_result=None):
+        """
+            Gets the factor to pass a currency to other in a datetime
+            Params:
+                - get_quotes_result: Dictionary result of Quotes.get_quotes. Poner None para que se calcule3
+            Returns and object or None
+
+            Si no lo encuentra deveulve 1
+        """
+        def get_quote(products_id,  datetime_):
+            if get_quotes_result is None:
+                q=Quotes.get_quote(products_id, datetime_)
+                if q is None or q.quote==0:
+                    return 1
+                else:
+                    return q.quote
+            else:
+                return get_quotes_result[products_id][datetime_]["quote"]
+                
+        if self.from_==self.to_:
+            return 1
+            
+        if self.direct_supported==True:
+            return get_quote(self.associated_id, datetime_)
+        elif self.reverse_supported==True:
+            return 1/get_quote(self.associated_id, datetime_)
+        return 1        
+        
+    
 
 
 
@@ -1619,82 +1677,6 @@ class Quotes(models.Model):
             r[d["needed_products_id"]][d["needed_datetime"]] = d
         return r
 
-
-
-    @staticmethod
-    def get_currency_factor(datetime_, from_, to_ ,  get_quotes_result):
-        """
-            Gets the factor to pass a currency to other in a datetime
-            Params:
-                - get_quotes_result: Dictionary result of Quotes.get_quotes. Poner None para que se calcule3
-            Returns and object or None
-
-            Si no lo encuentra deveulve 1
-        """
-        def get_quote(products_id,  datetime_):
-            if get_quotes_result is None:
-                q=Quotes.get_quote(products_id, datetime_)
-                if q is None:
-                    return None
-                else:
-                    return q.quote
-            else:
-                return get_quotes_result[products_id][datetime_]["quote"]
-                
-        if from_==to_:
-            return 1
-            
-        if from_== 'EUR' and to_== 'USD':
-            return get_quote(74747, datetime_)
-        elif from_== 'USD' and to_== 'EUR':
-            q=get_quote(74747, datetime_)
-            if q is None:
-                return 1
-            else:
-                if q==0:
-                    return 1
-                else:
-                    return 1/q
-        # print(_("I coudn't find currency factor from '{0}' to '{1}' at '{2}' returning 1 by default").format(from_, to_, datetime_ ))
-        return 1        
-    
-
-    
-    @staticmethod
-    def get_quote_dictionary_for_currency_factor(datetime_,  from_,  to_):
-        """
-            Returns a dictionary to be used to create the lod of get_quotes
-    """
-        if (from_== 'EUR' and  to_=='USD') or  (from_=="USD" and  to_=="EUR"):
-            return {"products_id":74747,  "datetime":datetime_}
-        print("CANT CONVERT TO GET_QUOTE DICTIONARY",  datetime_,  from_,  to_) 
-#    
-#        r_quotes=Quotes.get_quotes(lod_quotes)
-#        
-#        r_factors={}
-#        for needed_factor in lod_:
-#            #Initialize dictionary
-#            if not needed_factor["from_"] in r_factors:
-#                r_factors[needed_factor["from_"]]={}
-#                if not needed_factor["to_"] in r_factors[needed_factor["from_"]]:
-#                    r_factors[needed_factor["from_"]][needed_factor["to_"]]={}
-#                
-#            # Assign values
-#            if (needed_factor["from_"]== needed_factor["to_"]):
-#                r_factors[needed_factor["from_"]][needed_factor["to_"]][needed_factor["datetime"]]=1
-#                
-#            elif (needed_factor["from_"]== 'EUR' and  needed_factor["to_"]== 'USD'):
-#                r_factors["EUR"]["USD"][needed_factor["datetime"]]=r_quotes[74747][needed_factor["datetime"]]["quote"]
-#                
-#            elif (needed_factor["from_"]== 'USD' and  needed_factor["to_"]== 'EUR'):
-#                if r_quotes[74747][needed_factor["datetime"]]["quote"] is None:
-#                    r_factors["USD"]["EUR"][needed_factor["datetime"]]=None
-#                else:
-#                    r_factors["USD"]["EUR"][needed_factor["datetime"]]=1/r_quotes[74747][needed_factor["datetime"]]["quote"]
-#            
-#            else:
-#                print("MASSIVE FACTOR NOT FOUND",  needed_factor)
-#        return r_factors
 
 class Productspairs(models.Model):
     name = models.CharField(max_length=200, blank=False, null=False)

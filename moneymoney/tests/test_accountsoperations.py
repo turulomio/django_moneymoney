@@ -51,7 +51,6 @@ def test_accountsoperations_refunds(self):
     # Set a too much high refund
     tests_helpers.client_post(self, self.client_authorized_1, dict_ao["url"]+"create_refund/", {"datetime": timezone.now(), "refund_amount":2000, "comment": "Too much"} , status.HTTP_400_BAD_REQUEST)
 
-@tag("current")
 def test_accountsoperations_different_currency(self):
     # Creates a new account with USD
     account_usd=models.Accounts.objects.create(name="New account", banks_id=3, active=True, decimals=2, currency="USD")
