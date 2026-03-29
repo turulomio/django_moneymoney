@@ -417,7 +417,8 @@ class IOS:
             
                 {'id': 3, 'operationstypes_id': 4, 'investments_id': 2, 'shares': Decimal('1000.000000'), 'taxes': Decimal('0.00'), 'commission': Decimal('0.00'), 'price': Decimal('10.000000'), 'datetime': datetime.datetime(2023, 7, 23, 6, 4, 4, 934773, tzinfo=datetime.timezone.utc), 'comment': '', 'currency_conversion': Decimal('1.0000000000')}
         """
-        qs_io=models.Investmentsoperations.objects.filter(investments__in=qs_investments, datetime__lte=dt).order_by("datetime").select_related("investments__products", "investments__accounts")
+        ids=functions.qs_to_ids(qs_investments)
+        qs_io=models.Investmentsoperations.objects.filter(investments__in=ids, datetime__lte=dt).order_by("datetime").select_related("investments__products", "investments__accounts")
 
         dod_ios={}
         for o in qs_io:
@@ -446,6 +447,8 @@ class IOS:
 
     @classmethod
     def from_ids(cls,  dt,  local_currency, ids,  mode, request):
+
+        print(ids)
         return cls.from_qs_investments(dt, local_currency, models.Investments.objects.filter(id__in=ids), mode, request)
     
 

@@ -3,7 +3,8 @@ from moneymoney.reusing import tests_helpers
 from rest_framework import status
 from django.utils import timezone
 from moneymoney import ios
-
+from django.test import tag
+@tag("current")
 def test_IOS(self):
     """
         31/12           1000 shares         9€          9000€

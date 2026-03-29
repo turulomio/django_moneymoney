@@ -1,10 +1,9 @@
-from django.test import tag
+
 from rest_framework import status
 from moneymoney import models
 from moneymoney.reusing import tests_helpers
 from django.utils import timezone
 
-@tag("current")
 def test_Currencies(self):
     # Runs currencies with empty data
     lod_empty_currencies=tests_helpers.client_get(self, self.client_authorized_1, "/currencies/", status.HTTP_200_OK)
