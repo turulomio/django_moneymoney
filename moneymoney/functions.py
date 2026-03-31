@@ -149,13 +149,18 @@ def have_different_sign(a, b):
     """
         Si algun valor es 0 o los dos devuelve True
     """
-    if (a>0 and b>0) or (a<0 and b<0):
+    if (a>=0 and b>=0) or (a<0 and b<0):
         return False 
     return True
 
 
 def have_same_sign(a, b):
-    return not have_different_sign(a,b)
+    """
+        Si algun valor es 0 o los dos devuelve False
+    """
+    if (a>=0 and b>=0) or (a<0 and b<0):
+        return True 
+    return False
 
 def NoZ(v):
     """
@@ -164,3 +169,7 @@ def NoZ(v):
     if v is None or v==0:
         return True
     return False
+
+
+def set_sign_of_other_number (number, number_to_change):
+    return abs(number_to_change) if number>=0 else -abs(number_to_change)

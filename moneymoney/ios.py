@@ -41,7 +41,19 @@ class IO:
         """
         self.request=request
         self._d={}
-
+    
+    
+    def ioc_days(self, ioc):
+        days=(date.today()-ioc["datetime"].date()).days
+        if days==0:
+            return 1
+        return days
+    
+    def realmultiplier(self):
+        if self._d["data"]["productstypes_id"] in (12, 13):
+            return self._d["data"]["products_multiplier"]
+        return 1
+    
     def assign_data(self, dt, entry, products_id, currency_account, currency_user):
         """
             Assigna data
@@ -56,7 +68,8 @@ class IO:
         self._d["data"]["currency_product"]=product.currency
         self._d["data"]["products_id"]=product.id
         self._d["data"]["products_multiplier"]=product.leverages.multiplier
-        self._d["data"]["productstypes"]=product.productstypes.id
+        self._d["data"]["productstypes_id"]=product.productstypes.id
+        self._d["data"]["real_leverages"]=self.realmultiplier()
         self._d["data"]["entry"]=entry
         quote_last=models.Quotes.get_quote(product.id, dt, self.request)  #~NO se usa products.quote_last ya que dt es vvariable
         self._d["data"]["basic_results"]={}
@@ -72,13 +85,10 @@ class IO:
 
     def process_io(self, io_rows):
 
-        self._d["io"]=io_rows
-        self._d["io_current"]=[]
-        self._d["io_historical"]=[]
         data=self._d["data"]
-        cur=self._d["io_current"]
-        io=self._d["io"]
-        hist=self._d["io_historical"]
+        io=[]
+        cur=[]
+        hist=[]
         ioh_id=0
 
         for row in io_rows:
@@ -87,6 +97,9 @@ class IO:
             row["currency_user"]=data["currency_user"]
             io.append(row)
             if len(cur)==0 or functions.have_same_sign(cur[0]["shares"], row["shares"]) is True:
+                if len(cur)>0:
+                    print(cur[0]["shares"], row["shares"])
+                print(len(cur), row["shares"])
                 cur.append({
                     "id":row["id"], 
                     "investments_id":row["investments_id"], 
@@ -116,7 +129,7 @@ class IO:
                         if abs(cur[0]["shares"])>=abs(rest):
                             ioh_id=ioh_id+1
                             hist.append({
-                                "shares":IOS.__set_sign_of_other_number(row["shares"],rest),
+                                "shares":functions.set_sign_of_other_number(row["shares"],rest),
                                 "id":ioh_id, 
                                 "investments_id": row["investments_id"], 
                                 "dt_start":cur[0]["datetime"], 
@@ -155,7 +168,7 @@ class IO:
                         else:
                             ioh_id=ioh_id+1
                             hist.append({
-                                "shares":IOS.__set_sign_of_other_number(row["shares"],cur[0]["shares"]),
+                                "shares": functions.set_sign_of_other_number(row["shares"],cur[0]["shares"]),
                                 "id":ioh_id, 
                                 "investments_id": row["investments_id"], 
                                 "dt_start":cur[0]["datetime"], 
@@ -173,7 +186,7 @@ class IO:
                             })
 
                             rest=rest+cur[0]["shares"]
-                            rest=IOS.__set_sign_of_other_number(row["shares"],rest)
+                            rest=functions.set_sign_of_other_number(row["shares"],rest)
                             cur.pop(0)
                     else:
                         cur.insert(0, {
@@ -192,11 +205,9 @@ class IO:
                         }) 
                         break
 
-    def __realmultiplier(self):
-        if self._d["data"]["productstypes_"] in (12, 13):
-            return self._d["data"]["products_multiplier"] 
-        return 1
-
+        self._d["io"]=io_rows
+        self._d["io_current"]=cur
+        self._d["io_historical"]=hist
 
     def process_calcs(self):
         """
@@ -521,12 +532,7 @@ class OldIOS:
             return Percentage()
         return percentage_between(self.d_basic_results(id)["last"], selling_price)
         
-    @staticmethod
-    def __ioc_days(ioc):
-        days=(date.today()-ioc["datetime"].date()).days
-        if days==0:
-            return 1
-        return days
+
     @staticmethod
     def __ioh_years(ioh):
         return round(Decimal((ioh["dt_end"]-ioh["dt_start"]).days/365), 2)
@@ -676,7 +682,7 @@ class OldIOS:
         self.sum_total_io_current()["current_year_gains_account"]=sum_total_account
         self.sum_total_io_current()["current_year_gains_user"]=sum_total_user
             
-                
+
 
     def io_current_highest_price(self):
         """
@@ -828,10 +834,6 @@ class OldIOS:
 
 
 
-
-    @staticmethod
-    def __set_sign_of_other_number (number, number_to_change):
-        return abs(number_to_change) if number>=0 else -abs(number_to_change)
 
     @staticmethod
     def __operationstypes(shares):
