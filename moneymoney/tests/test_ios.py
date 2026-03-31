@@ -34,7 +34,7 @@ def test_IOS(self):
     tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(datetime=self.dtaware_yesterday, quote=10), status.HTTP_201_CREATED)#Quote at buy moment
     tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(datetime=self.dtaware_yesterday, investments=dict_investment["url"], price=10), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
 
-    ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals)
+    ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals, request=None)
     self.assertEqual(ios_.d_total_io_current(dict_investment["id"])["balance_user"], 20000)
     
     #Sell self.today

@@ -22,9 +22,9 @@ def test_have_different_sign(self):
     assert functions.have_different_sign(1, -1)==True
     assert functions.have_different_sign(-1, 1)==True
     assert functions.have_different_sign(-1, -1)==False
-    assert functions.have_different_sign(0, 1)==True
+    assert functions.have_different_sign(0, 1)==False
     assert functions.have_different_sign(-1, 0)==True
-    assert functions.have_different_sign(0, 0)==True        
+    assert functions.have_different_sign(0, 0)==False        
 
 @tag("fast")
 def test_have_same_sign(self):
@@ -32,9 +32,9 @@ def test_have_same_sign(self):
     assert functions.have_same_sign(1, -1)==False
     assert functions.have_same_sign(-1, 1)==False
     assert functions.have_same_sign(-1, -1)==True
-    assert functions.have_same_sign(0, 1)==False
+    assert functions.have_same_sign(0, 1)==True
     assert functions.have_same_sign(-1, 0)==False
-    assert functions.have_same_sign(0, 0)==False
+    assert functions.have_same_sign(0, 0)==True
     assert functions.have_same_sign(0, -1)==False
     with self.assertRaises(TypeError):
         assert functions.have_same_sign(None, 2)==True

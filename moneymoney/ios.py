@@ -54,6 +54,47 @@ class IO:
             return self._d["data"]["products_multiplier"]
         return 1
     
+    
+    def ioc_percentage_annual_investment(self, ioc):
+        """
+        Public method ioc is a io_current dictionary
+        """
+        basic_results=self._d["data"]["basic_results"]
+        if ioc["datetime"].year==date.today().year:
+            lastyear=ioc["price_investment"] #Product value, self.money_price(type) not needed.
+        else:
+            lastyear=basic_results["lastyear"]
+        if basic_results["lastyear"] is None or lastyear is None:
+            return Percentage()
+
+        if ioc["shares"]>0:
+            return Percentage(basic_results["last"]-Decimal(lastyear), lastyear)
+        else:
+            return Percentage(-(basic_results["last"]-Decimal(lastyear)), lastyear)
+            
+    
+    def ioc_percentage_annual_user(self, ioc):
+        """
+        Public method ioc is a io_current dictionary
+            o['investment2account']=o['currency_conversion']
+        """
+        basic_results=self._d["data"]["basic_results"]
+        if ioc["datetime"].year==date.today().year:
+            lastyear=ioc["price_user"] 
+            if lastyear is None:
+                return Percentage()
+        else:
+            if basic_results["lastyear"] is None:
+                return Percentage()
+            lastyear=basic_results["lastyear"]*ioc["investment2account"]*ioc["account2user"]
+
+        last=basic_results["last"]*ioc["investment2account"]*ioc["account2user"]
+
+        if ioc["shares"]>0:
+            return Percentage(last-Decimal(lastyear), lastyear)
+        else:
+            return Percentage(-(last-Decimal(lastyear)), lastyear)
+
     def assign_data(self, dt, entry, products_id, currency_account, currency_user):
         """
             Assigna data
@@ -296,11 +337,11 @@ class IO:
             c['gains_net_account']=c['gains_gross_account']-c['taxes_account']-c['commissions_account'] 
             c['gains_net_user']=c['gains_gross_user']-c['taxes_user']-c['commissions_user']
             c['percentage_total_investment'] = Percentage() if functions.NoZ(c["invested_investment"]) else Percentage(c['gains_gross_investment'], c['invested_investment']) 
-            c['percentage_apr_investment']=Percentage() if functions.NoZ(c["percentage_total_investment"].value) else Percentage(c['percentage_total_investment'].value*365, IOS.__ioc_days(c))
-            c['percentage_annual_investment']=IOS.__ioc_percentage_annual_investment(self._d, c)
+            c['percentage_apr_investment']=Percentage() if functions.NoZ(c["percentage_total_investment"].value) else Percentage(c['percentage_total_investment'].value*365, self.ioc_days(c))
+            c['percentage_annual_investment']=self.ioc_percentage_annual_investment(c)
             c['percentage_total_user'] = Percentage() if functions.NoZ(c["invested_user"]) else Percentage(c['gains_gross_user'], c['invested_user']) 
-            c['percentage_apr_user']=Percentage() if functions.NoZ(c["percentage_total_user"].value) else Percentage(c['percentage_total_user'].value*365, IOS.__ioc_days(c))
-            c['percentage_annual_user']=IOS.__ioc_percentage_annual_user(self._d, c)
+            c['percentage_apr_user']=Percentage() if functions.NoZ(c["percentage_total_user"].value) else Percentage(c['percentage_total_user'].value*365, self.ioc_days(c))
+            c['percentage_annual_user']=self.ioc_percentage_annual_user(c)
             
             
             self._d["total_io_current"]["balance_user"]=self._d["total_io_current"]["balance_user"]+c['balance_user']
@@ -362,6 +403,47 @@ class IOS:
         self.t={}
         self.request=request
 
+
+
+    def d_io(self, id_):
+        return self.t[str(id_)]["io"]
+
+    def d_io_current(self, id_):
+        return self.t[str(id_)]["io_current"]
+
+    def d_io_historical(self, id_):
+        return self.t[str(id_)]["io_historical"]
+
+
+    def d_total_io(self, id_):
+        return self.t[str(id_)]["total_io"]
+
+    def d_total_io_current(self, id_):
+        return self.t[str(id_)]["total_io_current"]
+
+    def d_total_io_historical(self, id_):
+        return self.t[str(id_)]["total_io_historical"]
+
+    def sum_total_io_current(self):
+        return self.t["sum_total_io_current"]
+
+    def sum_total_io_historical(self):
+        return self.t["sum_total_io_historical"]
+
+    def sum_total_io_current_zerorisk_user(self):
+        """
+            Returns a decimal with zerorisk 
+        """
+        if IOSModes.sumtotals==self.mode():
+            error( _("You need total mode to calculate sum_total_io_current_zerorisk_user"))
+            return
+        
+        r=Decimal(0)
+        for investments_id in self.entries():
+            if self.d_data(investments_id)["variable_percentage"]==0:
+                r=r+self.d_total_io_current(investments_id)["balance_user"]
+        return r
+
     ## lod_investments query ivestments
     ## lod_ios query investmentsoperations of investments
 
@@ -380,7 +462,7 @@ class IOS:
 
         for entry, dictionary in dod_ios.items():
 
-            self.t["entries"].append(entry)
+            self.t["entries"].append(str(entry))
             io=IO(self.request)
             io.assign_data(dt, entry, dictionary["products_id"], dictionary["currency_account"], currency_user)
             io.process_io(dictionary["lod_io"])
@@ -388,38 +470,37 @@ class IOS:
             self.t[str(entry)]=io._d
 
     def process_calcs(self,mode):
-        t=self._t
-        t["mode"]=mode
+        self.t["mode"]=mode
         # Is a key too like ios
-        t["sum_total_io_current"]={}
-        t["sum_total_io_current"]["balance_user"]=0
-        t["sum_total_io_current"]["balance_futures_user"]=0
-        t["sum_total_io_current"]["gains_gross_user"]=0
-        t["sum_total_io_current"]["gains_net_user"]=0
-        t["sum_total_io_current"]["invested_user"]=0
+        self.t["sum_total_io_current"]={}
+        self.t["sum_total_io_current"]["balance_user"]=0
+        self.t["sum_total_io_current"]["balance_futures_user"]=0
+        self.t["sum_total_io_current"]["gains_gross_user"]=0
+        self.t["sum_total_io_current"]["gains_net_user"]=0
+        self.t["sum_total_io_current"]["invested_user"]=0
 
-        t["sum_total_io_historical"]={}
-        t["sum_total_io_historical"]["commissions_account"]=0
-        t["sum_total_io_historical"]["gains_net_user"]=0
+        self.t["sum_total_io_historical"]={}
+        self.t["sum_total_io_historical"]["commissions_account"]=0
+        self.t["sum_total_io_historical"]["gains_net_user"]=0
 
-        for investments_id in t["entries"]:
-            #t[investments_id]=IOS.__calculate_io_finish(t[investments_id],self.request)
+        for investments_id in self.t["entries"]:
+            #self.t[investments_id]=IOS.__calculate_io_finish(self.t[investments_id],self.request)
 
-            t["sum_total_io_current"]["balance_user"]=t["sum_total_io_current"]["balance_user"]+t[investments_id]["total_io_current"]['balance_user']
-            t["sum_total_io_current"]["balance_futures_user"]=t["sum_total_io_current"]["balance_futures_user"]+t[investments_id]["total_io_current"]['balance_futures_user']
-            t["sum_total_io_current"]["gains_gross_user"]=t["sum_total_io_current"]["gains_gross_user"]+t[investments_id]["total_io_current"]['gains_gross_user']
-            t["sum_total_io_current"]["gains_net_user"]=t["sum_total_io_current"]["gains_net_user"]+t[investments_id]["total_io_current"]['gains_net_user']
-            t["sum_total_io_current"]["invested_user"]=t["sum_total_io_current"]["invested_user"]+t[investments_id]["total_io_current"]['invested_user']
-            t["sum_total_io_historical"]["gains_net_user"]=t["sum_total_io_historical"]["gains_net_user"]+t[investments_id]["total_io_historical"]['gains_net_user']
-            t["sum_total_io_historical"]["commissions_account"]=t["sum_total_io_historical"]["commissions_account"]+t[investments_id]["total_io_historical"]['commissions_account']
+            self.t["sum_total_io_current"]["balance_user"]=self.t["sum_total_io_current"]["balance_user"]+self.t[investments_id]["total_io_current"]['balance_user']
+            self.t["sum_total_io_current"]["balance_futures_user"]=self.t["sum_total_io_current"]["balance_futures_user"]+self.t[investments_id]["total_io_current"]['balance_futures_user']
+            self.t["sum_total_io_current"]["gains_gross_user"]=self.t["sum_total_io_current"]["gains_gross_user"]+self.t[investments_id]["total_io_current"]['gains_gross_user']
+            self.t["sum_total_io_current"]["gains_net_user"]=self.t["sum_total_io_current"]["gains_net_user"]+self.t[investments_id]["total_io_current"]['gains_net_user']
+            self.t["sum_total_io_current"]["invested_user"]=self.t["sum_total_io_current"]["invested_user"]+self.t[investments_id]["total_io_current"]['invested_user']
+            self.t["sum_total_io_historical"]["gains_net_user"]=self.t["sum_total_io_historical"]["gains_net_user"]+self.t[investments_id]["total_io_historical"]['gains_net_user']
+            self.t["sum_total_io_historical"]["commissions_account"]=self.t["sum_total_io_historical"]["commissions_account"]+self.t[investments_id]["total_io_historical"]['commissions_account']
 
             if mode in (IOSModes.totals_sumtotals, IOSModes.sumtotals):
-                del t[investments_id]["io"]
-                del t[investments_id]["io_current"]
-                del t[investments_id]["io_historical"]
+                del self.t[investments_id]["io"]
+                del self.t[investments_id]["io_current"]
+                del self.t[investments_id]["io_historical"]
         
         if mode==IOSModes.sumtotals:
-            return {"sum_total_io_current": t["sum_total_io_current"], "sum_total_io_historical": t["sum_total_io_historical"], "mode":t["mode"]}
+            return {"sum_total_io_current": self.t["sum_total_io_current"], "sum_total_io_historical": self.t["sum_total_io_historical"], "mode":self.t["mode"]}
 
     @classmethod
     def from_qs_investments(cls, dt,  local_currency,  qs_investments,  mode, request):
@@ -481,46 +562,7 @@ class OldIOS:
     def __init__(self, t, request=None):
         self._t=t
 
-    @staticmethod
-    def __ioc_percentage_annual_investment(d, ioc):
-        """
-        Public method ioc is a io_current dictionary
-        """
-        basic_results=d["data"]["basic_results"]
-        if ioc["datetime"].year==date.today().year:
-            lastyear=ioc["price_investment"] #Product value, self.money_price(type) not needed.
-        else:
-            lastyear=basic_results["lastyear"]
-        if basic_results["lastyear"] is None or lastyear is None:
-            return Percentage()
 
-        if ioc["shares"]>0:
-            return Percentage(basic_results["last"]-Decimal(lastyear), lastyear)
-        else:
-            return Percentage(-(basic_results["last"]-Decimal(lastyear)), lastyear)
-            
-    @staticmethod
-    def __ioc_percentage_annual_user(d, ioc):
-        """
-        Public method ioc is a io_current dictionary
-            o['investment2account']=o['currency_conversion']
-        """
-        basic_results=d["data"]["basic_results"]
-        if ioc["datetime"].year==date.today().year:
-            lastyear=ioc["price_user"] 
-            if lastyear is None:
-                return Percentage()
-        else:
-            if basic_results["lastyear"] is None:
-                return Percentage()
-            lastyear=basic_results["lastyear"]*ioc["investment2account"]*ioc["account2user"]
-
-        last=basic_results["last"]*ioc["investment2account"]*ioc["account2user"]
-
-        if ioc["shares"]>0:
-            return Percentage(last-Decimal(lastyear), lastyear)
-        else:
-            return Percentage(-(last-Decimal(lastyear)), lastyear)
 
     def ioc_percentage_sellingpoint(self, ioc, selling_price):
         if selling_price is None or selling_price==0:
@@ -561,43 +603,8 @@ class OldIOS:
     def d_basic_results(self, id_):
         return self._t[str(id_)]["data"]["basic_results"]
 
-    def d_io(self, id_):
-        return self._t[str(id_)]["io"]
 
-    def d_io_current(self, id_):
-        return self._t[str(id_)]["io_current"]
 
-    def d_io_historical(self, id_):
-        return self._t[str(id_)]["io_historical"]
-
-    def d_total_io(self, id_):
-        return self._t[str(id_)]["total_io"]
-
-    def d_total_io_current(self, id_):
-        return self._t[str(id_)]["total_io_current"]
-
-    def d_total_io_historical(self, id_):
-        return self._t[str(id_)]["total_io_historical"]
-
-    def sum_total_io_current(self):
-        return self._t["sum_total_io_current"]
-
-    def sum_total_io_historical(self):
-        return self._t["sum_total_io_historical"]
-
-    def sum_total_io_current_zerorisk_user(self):
-        """
-            Returns a decimal with zerorisk 
-        """
-        if IOSModes.sumtotals==self.mode():
-            error( _("You need total mode to calculate sum_total_io_current_zerorisk_user"))
-            return
-        
-        r=Decimal(0)
-        for investments_id in self.entries():
-            if self.d_data(investments_id)["variable_percentage"]==0:
-                r=r+self.d_total_io_current(investments_id)["balance_user"]
-        return r
 
     def investment(self, id_):
         return models.Investments.objects.get(pk=id_)
