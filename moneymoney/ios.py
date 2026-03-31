@@ -777,25 +777,37 @@ class IOS:
         #lod_io=lod_io#+simulation
 
         #Generating new_t
-        t=IOS.__calculate_ios_lazy(dt, lod_data,  lod_io,  local_currency)
+        dod_ios={} #TODO con lod_data y lod_io
+        for o in lod_io:
+            if str(o["investments_id"]) not in dod_ios:
+                dod_ios[str(o["investments_id"])]={"products_id":data_investments_id["products_id"], "name": products[data_investments_id["products_id"]]["name"], "currency_account": products[data_investments_id["products_id"]]["currency_account"], "lod_io":[o]}
+            else:
+                dod_ios[str(o["investments_id"])]["lod_io"].append(o)
+
+
+
+
+
+        ios=IOS(request)
+        ios.assign_ios(dt, dod_ios, local_currency)
 
         #Now I have to add io_historical before merging 
         for investments_id in old_ios.entries():
             products_id=old_ios.d_data(investments_id)["products_id"]
             for old_ioh in old_ios.d_io_historical(investments_id):
                 old_ioh["investments_id"]=products_id
-                t[str(products_id)]["io_historical"].append(old_ioh)
+                ios.t[str(products_id)]["io_historical"].append(old_ioh)
                 ##Añado factors y quotes
-        t[str(products_id)]["io_historical"]=lod.lod_order_by(t[str(products_id)]["io_historical"], "dt_end")
+        ios.t[str(products_id)]["io_historical"]=lod.lod_order_by(ios.t[str(products_id)]["io_historical"], "dt_end")
                     
-        t=IOS.__calculate_ios_finish(t, mode)
+        ios.process_calcs(mode)
         
         
         #Set entries name for product, iterating all investments. Redundant but simpler
         if mode in [IOSModes.ios_totals_sumtotals, IOSModes.totals_sumtotals]:
             for old_investment in qs_investments:
-                t[str(old_investment.products.id)]["data"]["name"]=_("IOC merged investment of '{0}'").format( old_investment.products.fullName()) 
-                t[str(old_investment.products.id)]["data"]["investments_id"]=investments_id_in_each_product[str(old_investment.products.id)]
+                ios.t[str(old_investment.products.id)]["data"]["name"]=_("IOC merged investment of '{0}'").format( old_investment.products.fullName()) 
+                ios.t[str(old_investment.products.id)]["data"]["investments_id"]=investments_id_in_each_product[str(old_investment.products.id)]
                 debug("IOS FROM QS MERGING ", datetime.now()-s)
-        return cls(t)
+        return ios
 
