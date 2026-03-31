@@ -521,14 +521,14 @@ class StrategiesViewSet(viewsets.ModelViewSet):
                 sum_dividends_net_user=0
 
             elif strategy.type==models.StrategiesTypes.Generic:                
-                plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.strategiesgeneric.investments.all(), 1)
+                plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.strategiesgeneric.investments.all(), 1, request)
                 invested=plio.sum_total_io_current()["invested_user"]
                 gains_current_net_user=plio.sum_total_io_current()["gains_net_user"]
                 gains_historical_net_user=plio.io_historical_sum_between_dt(strategy.dt_from, strategy.dt_to_for_comparations(),  "gains_net_user")
                 lod_dividends_net_user=models.Dividends.lod_ym_netgains_dividends(request, ids=functions.qs_to_ids(strategy.strategiesgeneric.investments.all()),  dt_from=strategy.dt_from, dt_to=strategy.dt_to_for_comparations())
                 sum_dividends_net_user=lod.lod_sum(lod_dividends_net_user, "total")
             elif strategy.type==models.StrategiesTypes.Ranges:                
-                plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.strategiesproductsrange.investments.all(), 1)
+                plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.strategiesproductsrange.investments.all(), 1, request)
                 invested=plio.sum_total_io_current()["invested_user"]
                 gains_current_net_user=plio.sum_total_io_current()["gains_net_user"]
                 gains_historical_net_user=plio.io_historical_sum_between_dt(strategy.dt_from, strategy.dt_to_for_comparations(),  "gains_net_user")
@@ -608,7 +608,7 @@ class StrategiesProductsRangeViewSet(viewsets.ModelViewSet):
     def detailed(self, request, pk=None): 
         strategy=self.get_object()
         if strategy is not None:
-            ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals)
+            ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals,request)
             return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
         return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
     
@@ -637,7 +637,7 @@ class StrategiesGenericViewSet(viewsets.ModelViewSet):
     def detailed(self, request, pk=None): 
         strategy=self.get_object()
         if strategy is not None:
-            ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals)
+            ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals, request)
             return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
         return Response({'status': _('Generic strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
     
@@ -728,7 +728,7 @@ class InvestmentsClasses(APIView):
         accounts_balance=models.Accounts.accounts_balance(models.Accounts.objects.filter(active=True), timezone.now(), 'EUR')["balance_user_currency"]
         qs_investments_active=models.Investments.objects.filter(active=True).select_related("products","products__productstypes","accounts","products__leverages")
 
-        plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, qs_investments_active,  1)
+        plio=ios.IOS.from_qs_investments(timezone.now(), request.user.profile.currency, qs_investments_active,  1,self.request)
 
         d={}
         d["by_leverage"]=json_classes_by_leverage()
@@ -790,7 +790,7 @@ class Alerts(APIView):
         # Get all investments status
         r["investments_inactive_with_balance"]=[]
         qs=models.Investments.objects.filter(active=False)
-        plio_inactive=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, qs,  2)
+        plio_inactive=ios.IOS.from_qs_investments(timezone.now(), request.user.profile.currency, qs,  2,self.request)
         for id in plio_inactive.entries():
             plio=plio_inactive.d(id)
             if plio["total_io_current"]["balance_investment"]!=0:
@@ -877,7 +877,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
             return Response(_('You must set active parameter'), status=status.HTTP_400_BAD_REQUEST)
             
         qs_investments=self.queryset_for_list_methods(request).select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages")
-        plio=ios.IOS.from_qs(timezone.now(), 'EUR', qs_investments,  mode=2)
+        plio=ios.IOS.from_qs_investments(timezone.now(), 'EUR', qs_investments, mode=2, request=request)
         r=[]
         for o in qs_investments:
             percentage_invested=None if plio.d_total_io_current(o.id)["invested_user"]==0 else  plio.d_total_io_current(o.id)["gains_gross_user"]/plio.d_total_io_current(o.id)["invested_user"]
@@ -921,7 +921,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"], name='Investments operations evolution chart', url_path="operations_evolution_chart", url_name='operations_evolution_chart', permission_classes=[permissions.IsAuthenticated])
     def operations_evolution_chart(self, request, pk=None):
         investment=self.get_object()
-        plio=ios.IOS.from_ids(timezone.now(), request.user.profile.currency, [investment.id, ], 1)
+        plio=ios.IOS.from_ids(timezone.now(), request.user.profile.currency, [investment.id, ], 1, request)
         if len(plio.d_io(investment.id))==0:
             return JsonResponse( _("Insuficient data") , encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
         
@@ -945,7 +945,7 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
         gains=[]
         
         for i, dt in enumerate(datetimes_list):
-            plio_dt=ios.IOS.from_ids( dt, request.user.profile.currency, [investment.id, ], 2)
+            plio_dt=ios.IOS.from_ids( dt, request.user.profile.currency, [investment.id, ], 2,request)
             #Calculate dividends in datetime
             dividend_net=0
             for dividend in qs_dividends:
@@ -1223,24 +1223,24 @@ class IOS(APIView):
         if classmethod_str=="from_ids":
             ids=RequestListOfIntegers(request, "investments")
             if all_args_are_not_none( ids, dt, mode, simulation):
-                ios_=ios.IOS.from_ids( dt,  request.user.profile.currency,  ids,  mode, simulation)
+                ios_=ios.IOS.from_ids( dt,  request.user.profile.currency,  ids,  mode, request)
                 if addition_current_year_gains:
                     ios_.io_current_addition_current_year_gains()
                 return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
         elif classmethod_str=="from_all":
-                ios_=ios.IOS.from_all( dt,  request.user.profile.currency,  mode, simulation)
+                ios_=ios.IOS.from_all( dt,  request.user.profile.currency,  mode, request)
                 if addition_current_year_gains:
                     ios_.io_current_addition_current_year_gains()
                 return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
         elif classmethod_str=="from_all_merging_io_current":
-                ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.all(),   mode, simulation)
+                ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.all(),   mode, request)
                 if addition_current_year_gains:
                     ios_.io_current_addition_current_year_gains()
                 return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
         elif classmethod_str=="from_ids_merging_io_current":
             ids=RequestListOfIntegers(request, "investments")
             if all_args_are_not_none( ids, dt, mode, simulation):
-                ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.filter(id__in=ids),   mode, simulation)
+                ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.filter(id__in=ids),   mode, request)
                 if addition_current_year_gains:
                     ios_.io_current_addition_current_year_gains()
                 return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
@@ -1692,7 +1692,7 @@ def ReportAnnualRevaluation(request ):
     investments=models.Investments.objects.filter(active=True).select_related("accounts","products")
     if only_zero is True:
         investments=investments.filter(products__percentage=0)
-    ios_=ios.IOS.from_qs( timezone.now(), request.user.profile.currency, investments, 1)
+    ios_=ios.IOS.from_qs_investments( timezone.now(), request.user.profile.currency, investments, 1,request)
     ios_.io_current_addition_current_year_gains()
     for inv in ios_.qs_investments():
         for o in ios_.d_io_current(inv.id):
@@ -1763,7 +1763,7 @@ def ReportAnnualIncome(request, year):
     dt_year_from=casts.dtaware_year_start(year, request.user.profile.zone)
     dt_year_to=casts.dtaware_year_end(year, request.user.profile.zone)
     
-    plio=ios.IOS.from_all( dt_year_to, request.user.profile.currency, 1)
+    plio=ios.IOS.from_all( dt_year_to, request.user.profile.currency, 1,request)
     d_dividends=lod.lod2dod(models.Dividends.lod_ym_netgains_dividends(request, dt_from=dt_year_from, dt_to=dt_year_to), "year")
     d_incomes=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Income, year=year, exclude_dividends=True), "year")
     d_expenses=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Expense, year=year, exclude_dividends=True), "year")
@@ -1866,7 +1866,7 @@ def ReportAnnualIncomeDetails(request, year, month):
         dt_year_month=casts.dtaware_month_end(year, month, local_zone)
         ioh_id=0#To avoid vue.js warnings
         
-        plio=ios.IOS.from_all( dt_year_month, request.user.profile.currency, 1)
+        plio=ios.IOS.from_all( dt_year_month, request.user.profile.currency, 1, request)
         for investment in plio.qs_investments():
             for ioh in plio.d_io_historical(investment.id):
                 if ioh["dt_end"].year==year and ioh["dt_end"].month==month:
@@ -1906,7 +1906,7 @@ def ReportAnnualGainsByProductstypes(request, year):
         dict_dividends_by_producttype[dividend.investments.products.productstypes.id]["gross"]+=dividend.gross
         dict_dividends_by_producttype[dividend.investments.products.productstypes.id]["net"]+=dividend.net
 
-    plio=ios.IOS.from_all( dt_to, request.user.profile.currency, ios.IOSModes.ios_totals_sumtotals)
+    plio=ios.IOS.from_all( dt_to, request.user.profile.currency, ios.IOSModes.ios_totals_sumtotals, request)
     l=[]
     for pt in productstypes:
         gains_net=plio.io_historical_sum_between_dt(dt_from, dt_to, "gains_net_user", pt.id)
@@ -2059,7 +2059,7 @@ def ReportEvolutionAssets(request, from_year):
     for year in range(from_year, date.today().year+1): 
         dt_from=casts.dtaware_year_start(year, request.user.profile.zone)
         dt_to=casts.dtaware_year_end(year, request.user.profile.zone)
-        plio=ios.IOS.from_all( dt_to, request.user.profile.currency, 1)
+        plio=ios.IOS.from_all( dt_to, request.user.profile.currency, 1, request)
         dividends=d_dividends[year]["total"]
         incomes=d_incomes[year]["total"]-dividends
         expenses=d_expenses[year]["total"]
@@ -2138,7 +2138,7 @@ def ReportEvolutionInvested(request, from_year):
     for year in range(from_year, date.today().year+1): 
         dt_from=casts.dtaware_year_start(year, request.user.profile.zone)
         dt_to=casts.dtaware_year_end(year, request.user.profile.zone)
-        plio=ios.IOS.from_qs( dt_to, request.user.profile.currency, qs, 1)
+        plio=ios.IOS.from_qs_investments( dt_to, request.user.profile.currency, qs, 1, request)
 
         d={}
         d['year']=year
@@ -2166,7 +2166,7 @@ def ReportsInvestmentsLastOperation(request):
     method=RequestInteger(request, "method", 0)
     investments=models.Investments.objects.filter(active=True).select_related("accounts", "products", "products__stockmarkets")
     if method==0: #Separated investments
-        ios_=ios.IOS.from_qs( timezone.now(), request.user.profile.currency, investments, 1)
+        ios_=ios.IOS.from_qs_investments( timezone.now(), request.user.profile.currency, investments, 1,request)
         for investment in investments:
             ioc_last=ios_.io_current_last_operation_excluding_additions(investment.id)
             if ioc_last is None:
@@ -2178,7 +2178,7 @@ def ReportsInvestmentsLastOperation(request):
             ios_.d_data(investment.id)["percentage_invested"]= ioc_last["percentage_total_user"]
             ios_.d_data(investment.id)["percentage_sellingpoint"]=ios_.total_io_current_percentage_sellingpoint(investment.id, investment.selling_price).value
     elif method==1:#Merginc current operations
-        ios_=ios.IOS.from_qs_merging_io_current( timezone.now(), request.user.profile.currency, investments, 1)
+        ios_=ios.IOS.from_qs_merging_io_current( timezone.now(), request.user.profile.currency, investments, 1, request)
         for virtual_investment_product_id in ios_.entries(): #Products_id entries
             ioc_last=ios_.io_current_last_operation_excluding_additions(virtual_investment_product_id)            
             if ioc_last is None:
@@ -2197,7 +2197,7 @@ def ReportsInvestmentsLastOperation(request):
 def ReportCurrentInvestmentsOperations(request):
     ld=[]
     investments=models.Investments.objects.filter(active=True).select_related("accounts","products")
-    plio=ios.IOS.from_qs( timezone.now(), request.user.profile.currency, investments, 1)
+    plio=ios.IOS.from_qs_investments( timezone.now(), request.user.profile.currency, investments, 1, request)
     
     for inv in plio.qs_investments():
         for o in plio.d_io_current(inv.id):
@@ -2211,7 +2211,7 @@ def ReportCurrentInvestmentsOperations(request):
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportRanking(request):
     qs_investments=models.Investments.objects.all().select_related("products", "products__stockmarkets")
-    ios_=ios.IOS.from_qs_merging_io_current( timezone.now(), request.user.profile.currency, qs_investments,  mode=ios.IOSModes.ios_totals_sumtotals)
+    ios_=ios.IOS.from_qs_merging_io_current( timezone.now(), request.user.profile.currency, qs_investments,  mode=ios.IOSModes.ios_totals_sumtotals, request=request)
     dividends=lod.lod2dod(models.Dividends.objects.all().values("investments__products__id").annotate(sum=Sum('net')), "investments__products__id")
     
     #Ranking generation
@@ -2242,7 +2242,7 @@ def ReportRanking(request):
 @permission_classes([permissions.IsAuthenticated, ])
 def ReportZeroRisk(request):
     qs=models.Investments.objects.filter(active=True, products__percentage=0).select_related("accounts",  "products", "products__productstypes","products__stockmarkets",  "products__leverages")
-    plio=ios.IOS.from_qs(timezone.now(),  'EUR',  qs,  mode=ios.IOSModes.totals_sumtotals)        
+    plio=ios.IOS.from_qs_investments(timezone.now(),  'EUR',  qs,  mode=ios.IOSModes.totals_sumtotals, request=request)        
     r=[]
     for o in qs:
         r.append({

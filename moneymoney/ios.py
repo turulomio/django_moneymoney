@@ -42,6 +42,11 @@ class IO:
         self.request=request
         self._d={}
     
+
+    def operationstypes(self,shares):
+        return types.eOperationType.SharesPurchase if shares>=0 else types.eOperationType.SharesSale
+
+
     
     def ioc_days(self, ioc):
         days=(date.today()-ioc["datetime"].date()).days
@@ -175,7 +180,7 @@ class IO:
                                 "investments_id": row["investments_id"], 
                                 "dt_start":cur[0]["datetime"], 
                                 "dt_end":row["datetime"], 
-                                "operationstypes_id": IOS.__operationstypes(rest), 
+                                "operationstypes_id": self.operationstypes(rest), 
                                 "commissions_account":commissions, 
                                 "taxes_account":taxes, 
                                 "price_start_investment":cur[0]["price_investment"], 
@@ -214,7 +219,7 @@ class IO:
                                 "investments_id": row["investments_id"], 
                                 "dt_start":cur[0]["datetime"], 
                                 "dt_end":row["datetime"], 
-                                "operationstypes_id": IOS.__operationstypes(row['shares']), 
+                                "operationstypes_id": self.operationstypes(row['shares']), 
                                 "commissions_account":commissions, 
                                 "taxes_account":taxes, 
                                 "price_start_investment":cur[0]["price_investment"], 
@@ -403,7 +408,11 @@ class IOS:
         self.t={}
         self.request=request
 
-
+    def mode(self):
+        return self.t["mode"]
+        
+    def entries(self):
+        return self.t["entries"]
 
     def d_io(self, id_):
         return self.t[str(id_)]["io"]
@@ -444,123 +453,7 @@ class IOS:
                 r=r+self.d_total_io_current(investments_id)["balance_user"]
         return r
 
-    ## lod_investments query ivestments
-    ## lod_ios query investmentsoperations of investments
 
-    def assign_ios(self, dt,  dod_ios, currency_user):
-
-        """
-            Crea el IO y almacena el _d dentro del k, v = entry, _d
-
-            dod_ios es un diccionario que tiene como llave entries
-            Esta llave apunta a un diccionario {products_id: 1, currency_account:2 lod_io=[io1,io2...]}
-
-        """
-
-        # ## Total calculated ios
-        self.t["entries"]=[] #All ids to enter in ios_id
-
-        for entry, dictionary in dod_ios.items():
-
-            self.t["entries"].append(str(entry))
-            io=IO(self.request)
-            io.assign_data(dt, entry, dictionary["products_id"], dictionary["currency_account"], currency_user)
-            io.process_io(dictionary["lod_io"])
-            io.process_calcs()
-            self.t[str(entry)]=io._d
-
-    def process_calcs(self,mode):
-        self.t["mode"]=mode
-        # Is a key too like ios
-        self.t["sum_total_io_current"]={}
-        self.t["sum_total_io_current"]["balance_user"]=0
-        self.t["sum_total_io_current"]["balance_futures_user"]=0
-        self.t["sum_total_io_current"]["gains_gross_user"]=0
-        self.t["sum_total_io_current"]["gains_net_user"]=0
-        self.t["sum_total_io_current"]["invested_user"]=0
-
-        self.t["sum_total_io_historical"]={}
-        self.t["sum_total_io_historical"]["commissions_account"]=0
-        self.t["sum_total_io_historical"]["gains_net_user"]=0
-
-        for investments_id in self.t["entries"]:
-            #self.t[investments_id]=IOS.__calculate_io_finish(self.t[investments_id],self.request)
-
-            self.t["sum_total_io_current"]["balance_user"]=self.t["sum_total_io_current"]["balance_user"]+self.t[investments_id]["total_io_current"]['balance_user']
-            self.t["sum_total_io_current"]["balance_futures_user"]=self.t["sum_total_io_current"]["balance_futures_user"]+self.t[investments_id]["total_io_current"]['balance_futures_user']
-            self.t["sum_total_io_current"]["gains_gross_user"]=self.t["sum_total_io_current"]["gains_gross_user"]+self.t[investments_id]["total_io_current"]['gains_gross_user']
-            self.t["sum_total_io_current"]["gains_net_user"]=self.t["sum_total_io_current"]["gains_net_user"]+self.t[investments_id]["total_io_current"]['gains_net_user']
-            self.t["sum_total_io_current"]["invested_user"]=self.t["sum_total_io_current"]["invested_user"]+self.t[investments_id]["total_io_current"]['invested_user']
-            self.t["sum_total_io_historical"]["gains_net_user"]=self.t["sum_total_io_historical"]["gains_net_user"]+self.t[investments_id]["total_io_historical"]['gains_net_user']
-            self.t["sum_total_io_historical"]["commissions_account"]=self.t["sum_total_io_historical"]["commissions_account"]+self.t[investments_id]["total_io_historical"]['commissions_account']
-
-            if mode in (IOSModes.totals_sumtotals, IOSModes.sumtotals):
-                del self.t[investments_id]["io"]
-                del self.t[investments_id]["io_current"]
-                del self.t[investments_id]["io_historical"]
-        
-        if mode==IOSModes.sumtotals:
-            return {"sum_total_io_current": self.t["sum_total_io_current"], "sum_total_io_historical": self.t["sum_total_io_historical"], "mode":self.t["mode"]}
-
-    @classmethod
-    def from_qs_investments(cls, dt,  local_currency,  qs_investments,  mode, request):
-        """
-            simulation is a list of dictionary of ios if you want to simulate
-            
-                {'id': 3, 'operationstypes_id': 4, 'investments_id': 2, 'shares': Decimal('1000.000000'), 'taxes': Decimal('0.00'), 'commission': Decimal('0.00'), 'price': Decimal('10.000000'), 'datetime': datetime.datetime(2023, 7, 23, 6, 4, 4, 934773, tzinfo=datetime.timezone.utc), 'comment': '', 'currency_conversion': Decimal('1.0000000000')}
-        """
-        ids=functions.qs_to_ids(qs_investments)
-        qs_io=models.Investmentsoperations.objects.filter(investments__in=ids, datetime__lte=dt).order_by("datetime").select_related("investments__products", "investments__accounts")
-
-        dod_ios={}
-        for o in qs_io:
-            if o.investments.id not in dod_ios:
-                dod_ios[o.investments.id]={"products_id":o.investments.products.id, "name":o.investments.fullName(), "currency_account": o.investments.accounts.currency, "lod_io":[investmentoperation_to_iodict(o)]}
-            else:
-                dod_ios[o.investments.id]["lod_io"].append(investmentoperation_to_iodict(o))
-        return IOS.from_dod(dt, local_currency, dod_ios, mode, request  )
-
-    @classmethod
-    def from_dod(cls,  dt,  local_currency,  dod_ios,  mode, request):
-        """
-                   dod_ios es un diccionario que tiene como llave entries
-            Esta llave apunta a un diccionario {products_id: 1, currency_account:2, name:name, lod_io=[io1,io2...]}
-
-         """
-        ios=IOS(request)
-        ios.assign_ios(dt, dod_ios, local_currency)
-        ios.process_calcs(mode)
-        return ios
-        
-
-    @classmethod
-    def from_all(cls,  dt,  local_currency,  mode,  request):
-        return cls.from_qs_investments(dt, local_currency, models.Investments.objects.all(), mode, request)
-
-    @classmethod
-    def from_ids(cls,  dt,  local_currency, ids,  mode, request):
-
-        print(ids)
-        return cls.from_qs_investments(dt, local_currency, models.Investments.objects.filter(id__in=ids), mode, request)
-    
-
-
-
-class OldIOS:
-    """
-        Class to operate with Assets.pl_investment_operations result
-        La idea es generar una clase IOS usando funciones estáticas en classmethods( from_qs...)
-        Estas classmethods devuelven objetos IOS
-        
-        Es decir se encapsula todo
-        
-        
-        Si necesita añadir algún valor, se puede añadir a los diccionarios y luego hacer un response con ios.t() o lo que sea
-
-        self._t es la totalidad del array que tiene el conjunto de los _d (una inversión) y los sum_total_io_current
-    """
-    def __init__(self, t, request=None):
-        self._t=t
 
 
 
@@ -579,11 +472,7 @@ class OldIOS:
     def __ioh_years(ioh):
         return round(Decimal((ioh["dt_end"]-ioh["dt_start"]).days/365), 2)
     
-    def mode(self):
-        return self._t["mode"]
-        
-    def entries(self):
-        return self._t["entries"]
+
         
     def qs_investments(self):
         return models.Investments.objects.filter(id__in = self.entries()).select_related("accounts")
@@ -724,29 +613,109 @@ class OldIOS:
         return None
 
 
-    
-    @staticmethod
-    def __qs_investments_to_lod(qs, currency_user):
-        """
-            Converts a qs to a lod investments used in moneymoney_pl
-        """
-        r=[]
-        for i in qs:
-            r.append({
-                "products_id": i.products.id, 
-                "investments_id": str(i.id), 
-                "multiplier": i.products.leverages.multiplier, 
-                "currency_account": i.accounts.currency, 
-                "currency_product": i.products.currency, 
-                "currency_user": currency_user, 
-                "productstypes_id": i.products.productstypes.id, 
-                "variable_percentage": i.products.percentage, 
-            })
-        return r
 
+
+    ## lod_investments query ivestments
+    ## lod_ios query investmentsoperations of investments
+
+    def assign_ios(self, dt,  dod_ios, currency_user):
+
+        """
+            Crea el IO y almacena el _d dentro del k, v = entry, _d
+
+            dod_ios es un diccionario que tiene como llave entries
+            Esta llave apunta a un diccionario {products_id: 1, currency_account:2 lod_io=[io1,io2...]}
+
+        """
+
+        # ## Total calculated ios
+        self.t["entries"]=[] #All ids to enter in ios_id
+
+        for entry, dictionary in dod_ios.items():
+
+            self.t["entries"].append(str(entry))
+            io=IO(self.request)
+            io.assign_data(dt, entry, dictionary["products_id"], dictionary["currency_account"], currency_user)
+            io.process_io(dictionary["lod_io"])
+            io.process_calcs()
+            self.t[str(entry)]=io._d
+
+    def process_calcs(self,mode):
+        self.t["mode"]=mode
+        # Is a key too like ios
+        self.t["sum_total_io_current"]={}
+        self.t["sum_total_io_current"]["balance_user"]=0
+        self.t["sum_total_io_current"]["balance_futures_user"]=0
+        self.t["sum_total_io_current"]["gains_gross_user"]=0
+        self.t["sum_total_io_current"]["gains_net_user"]=0
+        self.t["sum_total_io_current"]["invested_user"]=0
+
+        self.t["sum_total_io_historical"]={}
+        self.t["sum_total_io_historical"]["commissions_account"]=0
+        self.t["sum_total_io_historical"]["gains_net_user"]=0
+
+        for investments_id in self.t["entries"]:
+            #self.t[investments_id]=IOS.__calculate_io_finish(self.t[investments_id],self.request)
+
+            self.t["sum_total_io_current"]["balance_user"]=self.t["sum_total_io_current"]["balance_user"]+self.t[investments_id]["total_io_current"]['balance_user']
+            self.t["sum_total_io_current"]["balance_futures_user"]=self.t["sum_total_io_current"]["balance_futures_user"]+self.t[investments_id]["total_io_current"]['balance_futures_user']
+            self.t["sum_total_io_current"]["gains_gross_user"]=self.t["sum_total_io_current"]["gains_gross_user"]+self.t[investments_id]["total_io_current"]['gains_gross_user']
+            self.t["sum_total_io_current"]["gains_net_user"]=self.t["sum_total_io_current"]["gains_net_user"]+self.t[investments_id]["total_io_current"]['gains_net_user']
+            self.t["sum_total_io_current"]["invested_user"]=self.t["sum_total_io_current"]["invested_user"]+self.t[investments_id]["total_io_current"]['invested_user']
+            self.t["sum_total_io_historical"]["gains_net_user"]=self.t["sum_total_io_historical"]["gains_net_user"]+self.t[investments_id]["total_io_historical"]['gains_net_user']
+            self.t["sum_total_io_historical"]["commissions_account"]=self.t["sum_total_io_historical"]["commissions_account"]+self.t[investments_id]["total_io_historical"]['commissions_account']
+
+            if mode in (IOSModes.totals_sumtotals, IOSModes.sumtotals):
+                del self.t[investments_id]["io"]
+                del self.t[investments_id]["io_current"]
+                del self.t[investments_id]["io_historical"]
+        
+        if mode==IOSModes.sumtotals:
+            return {"sum_total_io_current": self.t["sum_total_io_current"], "sum_total_io_historical": self.t["sum_total_io_historical"], "mode":self.t["mode"]}
 
     @classmethod
-    def from_qs_merging_io_current(cls, dt,  local_currency,  qs_investments, mode, simulation=[]):
+    def from_qs_investments(cls, dt,  local_currency,  qs_investments,  mode, request):
+        """
+            simulation is a list of dictionary of ios if you want to simulate
+            
+                {'id': 3, 'operationstypes_id': 4, 'investments_id': 2, 'shares': Decimal('1000.000000'), 'taxes': Decimal('0.00'), 'commission': Decimal('0.00'), 'price': Decimal('10.000000'), 'datetime': datetime.datetime(2023, 7, 23, 6, 4, 4, 934773, tzinfo=datetime.timezone.utc), 'comment': '', 'currency_conversion': Decimal('1.0000000000')}
+        """
+        ids=functions.qs_to_ids(qs_investments)
+        qs_io=models.Investmentsoperations.objects.filter(investments__in=ids, datetime__lte=dt).order_by("datetime").select_related("investments__products", "investments__accounts")
+
+        dod_ios={}
+        for o in qs_io:
+            if o.investments.id not in dod_ios:
+                dod_ios[o.investments.id]={"products_id":o.investments.products.id, "name":o.investments.fullName(), "currency_account": o.investments.accounts.currency, "lod_io":[investmentoperation_to_iodict(o)]}
+            else:
+                dod_ios[o.investments.id]["lod_io"].append(investmentoperation_to_iodict(o))
+        return IOS.from_dod(dt, local_currency, dod_ios, mode, request  )
+
+    @classmethod
+    def from_dod(cls,  dt,  local_currency,  dod_ios,  mode, request):
+        """
+                   dod_ios es un diccionario que tiene como llave entries
+            Esta llave apunta a un diccionario {products_id: 1, currency_account:2, name:name, lod_io=[io1,io2...]}
+
+         """
+        ios=IOS(request)
+        ios.assign_ios(dt, dod_ios, local_currency)
+        ios.process_calcs(mode)
+        return ios
+        
+
+    @classmethod
+    def from_all(cls,  dt,  local_currency,  mode,  request):
+        return cls.from_qs_investments(dt, local_currency, models.Investments.objects.all(), mode, request)
+
+    @classmethod
+    def from_ids(cls,  dt,  local_currency, ids,  mode, request):
+
+        print(ids)
+        return cls.from_qs_investments(dt, local_currency, models.Investments.objects.filter(id__in=ids), mode, request)
+    
+    @classmethod
+    def from_qs_merging_io_current(cls, dt,  local_currency,  qs_investments, mode, request):
         """
             Return a plio merging in same virtual (negative) id all investments in qs with same product
             only io_current and io_historical
@@ -756,7 +725,7 @@ class OldIOS:
         """
 
         s=datetime.now()
-        old_ios=cls.from_qs(dt, local_currency, qs_investments, IOSModes.ios_totals_sumtotals)#Must have ios, although result can be other mode
+        old_ios=cls.from_qs_investments(dt, local_currency, qs_investments, IOSModes.ios_totals_sumtotals,request)#Must have ios, although result can be other mode
         
         # Sets a dictionary with key products_id and values all investments_id of this products to set at the end
         investments_id_in_each_product={}
@@ -808,7 +777,7 @@ class OldIOS:
         lod_io=lod.lod_order_by(lod_io, "datetime")
 #        print(lod_io)
 #        print(simulation)
-        lod_io=lod_io+simulation
+        #lod_io=lod_io#+simulation
 
         #Generating new_t
         t=IOS.__calculate_ios_lazy(dt, lod_data,  lod_io,  local_currency)
@@ -833,25 +802,3 @@ class OldIOS:
                 debug("IOS FROM QS MERGING ", datetime.now()-s)
         return cls(t)
 
-
-
-
-
-
-
-
-
-
-    @staticmethod
-    def __operationstypes(shares):
-        return types.eOperationType.SharesPurchase if shares>=0 else types.eOperationType.SharesSale
-
-        
-    def distinct_products_id(self):
-        """
-            Returns all distinct data.products_id from al entries
-        """
-        products=set()#Son los ids del ios_
-        for entry in self.entries():
-            products.add(entry["data"]["products_id"])
-        return list(products)

@@ -40,7 +40,7 @@ def test_IOS(self):
     #Sell self.today
     tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"], shares=-1, price=11), status.HTTP_201_CREATED) #Removes one share
     tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(quote=11), status.HTTP_201_CREATED)#Sets quote to price to get currrent_year_gains
-    ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals) #Recaulculates IOS
+    ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals, request=None) #Recaulculates IOS
     self.assertEqual(ios_.d_total_io_current(dict_investment["id"])["balance_user"], 21989)
     
     #Get zerorisk balance
@@ -65,7 +65,7 @@ def test_IOS(self):
             'currency_conversion': 1, 
         }, 
     ]
-    ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals, simulation) #Makes simulation
+    ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals, simulation, request=None) #Makes simulation
 
     #IOS.from_merging_io_current
     ## Adding a new investment and new investmentsoperations with same product

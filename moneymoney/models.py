@@ -150,8 +150,8 @@ class Accounts(models.Model):
             r["balance_account_currency"]=Decimal('0')
         else:
             r["balance_account_currency"]=b
-        factor=Quotes.get_currency_factor(dt, self.currency, currency_user, None)
-        r["balance_user_currency"]=r["balance_account_currency"]*factor
+        pair=CurrencyPair(self.currency,currency_user)
+        r["balance_user_currency"]=r["balance_account_currency"]*pair.get_factor(dt)
         return r
 
     @staticmethod
@@ -168,15 +168,15 @@ class Accounts(models.Model):
                 r["balance_account_currency"]=Decimal('0')
             else:
                 r["balance_account_currency"]=b
-            factor=Quotes.get_currency_factor(dt, currencies_in_qs[0], currency_user, None)
-            r["balance_user_currency"]=r["balance_account_currency"]*factor
+            pair=CurrencyPair(currencies_in_qs[0], currency_user)
+            r["balance_user_currency"]=r["balance_account_currency"]*pair.get_factor(dt)
         else:
             r["balance_account_currency"]=None
             r["balance_user_currency"]=Decimal("0")
             for currency in currencies_in_qs:
                 b = Accountsoperations.objects.filter(accounts__in=qs, datetime__lte=dt, accounts__currency=currency).select_related("accounts").aggregate(Sum("amount"))["amount__sum"] or Decimal('0')
-                factor=Quotes.get_currency_factor(dt, currency, currency_user, None)
-                r["balance_user_currency"]=r["balance_user_currency"]+b*factor
+                pair=CurrencyPair(currency, currency_user)
+                r["balance_user_currency"]=r["balance_user_currency"]+b*pair.get_factor(dt)
         return r
 
                 
@@ -2003,11 +2003,8 @@ class Assets:
         """
             Makes a money conversion from a currency to other in a moment
         """
-        factor=Quotes.get_currency_factor(dt, from_, to_, None)
-        if factor is None:
-            return None
-        else:
-            return amount*factor
+        pair=CurrencyPair(from_, to_)
+        return amount*pair.get_factor(dt)
 
         
     @staticmethod
@@ -2018,7 +2015,7 @@ class Assets:
         """
         accounts_user= Accounts.accounts_balance(Accounts.objects.all(), dt, local_currency)["balance_user_currency"]
        
-        plio=ios.IOS.from_all(dt,  local_currency,  mode)
+        plio=ios.IOS.from_all(dt,  local_currency,  mode, request=None)
 
         r= { 
             "accounts_user": accounts_user, 

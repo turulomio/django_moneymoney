@@ -191,7 +191,7 @@ class ProductRangeManager:
         self.percentage_up=Percentage(percentage_up, 100)
         self.method=recomendation_methods
         
-        self.plio=ios.IOS.from_qs( timezone.now(), request.user.profile.currency, self.qs_investments,  1)
+        self.plio=ios.IOS.from_qs_investments( timezone.now(), request.user.profile.currency, self.qs_investments,  1,request)
 
         self.orders=models.Orders.objects.select_related("investments", "investments__accounts","investments__products","investments__products__leverages","investments__products__productstypes")\
             .filter(investments__in=self.qs_investments, executed=None)\
@@ -226,7 +226,7 @@ class ProductRangeManager:
             top_index= self.getTmpIndexOfValue(max_)-additional_ranges-1
             bottom_index= self.getTmpIndexOfValue(min_)+additional_ranges+1
         else: # No investment jet and shows ranges from product current price
-            current_index=self.getTmpIndexOfValue(self.product.price_last(self.request)
+            current_index=self.getTmpIndexOfValue(self.product.price_last(self.request))
             top_index=current_index-additional_ranges-1
             bottom_index=current_index+additional_ranges+1
         self.arr=self.tmp[top_index:bottom_index]
