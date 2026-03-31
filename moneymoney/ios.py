@@ -143,9 +143,6 @@ class IO:
             row["currency_user"]=data["currency_user"]
             io.append(row)
             if len(cur)==0 or functions.have_same_sign(cur[0]["shares"], row["shares"]) is True:
-                if len(cur)>0:
-                    print(cur[0]["shares"], row["shares"])
-                print(len(cur), row["shares"])
                 cur.append({
                     "id":row["id"], 
                     "investments_id":row["investments_id"], 
