@@ -1470,11 +1470,11 @@ class ProductsViewSet(viewsets.ModelViewSet):
                 row={}
                 row['id']=p.id
                 row["product"]=p.hurl(request, p.id)
-                row["last_datetime"]=None if p.quote_last(request) is None else p.quote_last(request)["datetime"]
+                row["last_datetime"]=None if p.quote_last(request) is None else p.quote_last(request).datetime
                 row["last"]=None if  p.price_last(request) is None else p.price_last()
-                row["penultimate_datetime"]=None if  p.quote_penultimate(request) is None else p.quote_penultimate(request)["datetime"]
+                row["penultimate_datetime"]=None if  p.quote_penultimate(request) is None else p.quote_penultimate(request).datetime
                 row["penultimate"]=None if  p.price_penultimate(request) is None else p.price_penultimate(request)
-                row["lastyear_datetime"]=None if  p.quote_lastyear(request)  is None else p.quote_lastyear(request)["datetime"]
+                row["lastyear_datetime"]=None if  p.quote_lastyear(request)  is None else p.quote_lastyear(request).datetime
                 row["lastyear"]=None if  p.price_lastyear(request)  is None else p.price_lastyear(request)
                 row["percentage_last_year"]=None if row["lastyear"] is None else Percentage(row["last"]-row["lastyear"], row["lastyear"])
                 rows.append(row)

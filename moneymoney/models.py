@@ -1318,7 +1318,7 @@ class Products(models.Model):
         Returns:
             Quotes: The latest Quotes object for this product, or None if no quote is found.
         """
-        dt=request.start if request is not None else timezone.now()
+        dt = request.start if request is not None and hasattr(request, 'start') else timezone.now()
         return Quotes.get_quote(self.id, dt)
     
     def quote_penultimate(self, request=None):
