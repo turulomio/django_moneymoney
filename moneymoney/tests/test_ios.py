@@ -28,11 +28,11 @@ def test_IOS(self):
     
     #Bought last year
     tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(datetime=self.dtaware_last_year, quote=9), status.HTTP_201_CREATED)#Last year quote
-    tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(datetime=self.dtaware_last_year, investments=dict_investment["url"], price=9), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(datetime=self.dtaware_last_year, investments=dict_investment["url"], price=9, shares=1000), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
 
-    #Bouth yesterday
+    #Bougth yesterday
     tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(datetime=self.dtaware_yesterday, quote=10), status.HTTP_201_CREATED)#Quote at buy moment
-    tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(datetime=self.dtaware_yesterday, investments=dict_investment["url"], price=10), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(datetime=self.dtaware_yesterday, investments=dict_investment["url"], price=10, shares=1000), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
 
     ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals, request=None)
     self.assertEqual(ios_.d_total_io_current(dict_investment["id"])["balance_user"], 20000)
@@ -65,13 +65,13 @@ def test_IOS(self):
             'currency_conversion': 1, 
         }, 
     ]
-    ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals, simulation, request=None) #Makes simulation
+    ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals, request=None) #Makes simulation
 
     #IOS.from_merging_io_current
     ## Adding a new investment and new investmentsoperations with same product
     dict_investment_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
     tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment_2["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
-    ios_merged=ios.IOS.from_qs_merging_io_current(timezone.now(), 'EUR', models.Investments.objects.all(), ios.IOSModes.ios_totals_sumtotals)
+    ios_merged=ios.IOS.from_qs_merging_io_current(timezone.now(), 'EUR', models.Investments.objects.all(), ios.IOSModes.ios_totals_sumtotals, request=None)
     self.assertEqual(ios_merged.entries(),  ['79329'])
     
 

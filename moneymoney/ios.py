@@ -100,6 +100,11 @@ class IO:
         else:
             return Percentage(-(last-Decimal(lastyear)), lastyear)
 
+
+    def ioh_years(self,ioh):
+        return round(Decimal((ioh["dt_end"]-ioh["dt_start"]).days/365), 2)
+    
+
     def assign_data(self, dt, entry, products_id, currency_account, currency_user):
         """
             Assigna data
@@ -117,6 +122,7 @@ class IO:
         self._d["data"]["productstypes_id"]=product.productstypes.id
         self._d["data"]["real_leverages"]=self.realmultiplier()
         self._d["data"]["entry"]=entry
+        self._d["data"]["products_percentage"]=product.percentage
         quote_last=models.Quotes.get_quote(product.id, dt, self.request)  #~NO se usa products.quote_last ya que dt es vvariable
         self._d["data"]["basic_results"]={}
         if quote_last is None:
@@ -127,6 +133,7 @@ class IO:
             quote_lastyear=models.Quotes.get_quote(product.id, lastyeardt, self.request)
             self._d["data"]["basic_results"]["last"]= quote_last.quote if quote_last is not None else 0
             self._d["data"]["basic_results"]["lastyear"]=quote_lastyear.quote if quote_lastyear is not None else 0
+            self._d["data"]["basic_results"]["lastyear_datetime"]=lastyeardt
 
 
     def process_io(self, io_rows):
@@ -363,7 +370,7 @@ class IO:
         self._d["total_io_historical"]["gains_net_user"]=0
 
         for h in self._d["io_historical"]:
-            h['years']=IOS.__ioh_years(h)
+            h['years']=self.ioh_years(h)
             h['account2user_start']=lf(data["currency_account"], data["currency_user"], h["dt_start"] )
             h['account2user_end']=lf(data["currency_account"], data["currency_user"], h["dt_end"] )
             h['gross_start_investment']=0 if h['operationstypes_id'] in (types.eOperationType.TransferSharesOrigin,types.eOperationType.TransferSharesDestiny) else abs(h['shares']*h['price_start_investment']*data['real_leverages'])#Transfer shares 9, 10
@@ -446,7 +453,7 @@ class IOS:
         
         r=Decimal(0)
         for investments_id in self.entries():
-            if self.d_data(investments_id)["variable_percentage"]==0:
+            if self.d_data(investments_id)["products_percentage"]==0:
                 r=r+self.d_total_io_current(investments_id)["balance_user"]
         return r
 
@@ -464,39 +471,29 @@ class IOS:
             return Percentage()
         return percentage_between(self.d_basic_results(id)["last"], selling_price)
         
-
-    @staticmethod
-    def __ioh_years(ioh):
-        return round(Decimal((ioh["dt_end"]-ioh["dt_start"]).days/365), 2)
-    
-
-        
     def qs_investments(self):
         return models.Investments.objects.filter(id__in = self.entries()).select_related("accounts")
         
     def d(self, id_):
-        return self._t[str(id_)]
+        return self.t[str(id_)]
         
     def t(self):
-        return self._t
+        return self.t
         
     def type(self):
-        return self._t["type"]
+        return self.t["type"]
         
     def d_data(self, id_):
-        return self._t[str(id_)]["data"]
+        return self.t[str(id_)]["data"]
 
     def d_basic_results(self, id_):
-        return self._t[str(id_)]["data"]["basic_results"]
-
-
-
+        return self.t[str(id_)]["data"]["basic_results"]
 
     def investment(self, id_):
         return models.Investments.objects.get(pk=id_)
         
     def dumps(self):
-        return dumps(self._t,  indent=4,  cls=MyJSONEncoderDecimalsAsFloat )
+        return dumps(self.t,  indent=4,  cls=MyJSONEncoderDecimalsAsFloat )
         
     def print_dumps(self):
         print(self.dumps())
@@ -707,8 +704,6 @@ class IOS:
 
     @classmethod
     def from_ids(cls,  dt,  local_currency, ids,  mode, request):
-
-        print(ids)
         return cls.from_qs_investments(dt, local_currency, models.Investments.objects.filter(id__in=ids), mode, request)
     
     @classmethod
@@ -741,7 +736,7 @@ class IOS:
                 "name": f"Merging product {d['products_id']}", 
                 "products_id": d["products_id"], 
                 "investments_id": d["products_id"], 
-                "multiplier": d["multiplier"], 
+                "products_multiplier": d["products_multiplier"], 
                 "currency_account": d["currency_account"], 
                 "currency_product": d["currency_product"], 
                 "currency_user": local_currency, 
