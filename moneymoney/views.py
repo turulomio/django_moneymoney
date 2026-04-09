@@ -521,14 +521,14 @@ class StrategiesViewSet(viewsets.ModelViewSet):
                 sum_dividends_net_user=0
 
             elif strategy.type==models.StrategiesTypes.Generic:                
-                plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.strategiesgeneric.investments.all(), 1, request)
+                plio=ios.IOS.from_qs_investments(timezone.now(), request.user.profile.currency, strategy.strategiesgeneric.investments.all(), 1, request)
                 invested=plio.sum_total_io_current()["invested_user"]
                 gains_current_net_user=plio.sum_total_io_current()["gains_net_user"]
                 gains_historical_net_user=plio.io_historical_sum_between_dt(strategy.dt_from, strategy.dt_to_for_comparations(),  "gains_net_user")
                 lod_dividends_net_user=models.Dividends.lod_ym_netgains_dividends(request, ids=functions.qs_to_ids(strategy.strategiesgeneric.investments.all()),  dt_from=strategy.dt_from, dt_to=strategy.dt_to_for_comparations())
                 sum_dividends_net_user=lod.lod_sum(lod_dividends_net_user, "total")
             elif strategy.type==models.StrategiesTypes.Ranges:                
-                plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, strategy.strategiesproductsrange.investments.all(), 1, request)
+                plio=ios.IOS.from_qs_investments(timezone.now(), request.user.profile.currency, strategy.strategiesproductsrange.investments.all(), 1, request)
                 invested=plio.sum_total_io_current()["invested_user"]
                 gains_current_net_user=plio.sum_total_io_current()["gains_net_user"]
                 gains_historical_net_user=plio.io_historical_sum_between_dt(strategy.dt_from, strategy.dt_to_for_comparations(),  "gains_net_user")
@@ -609,7 +609,7 @@ class StrategiesProductsRangeViewSet(viewsets.ModelViewSet):
         strategy=self.get_object()
         if strategy is not None:
             ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals,request)
-            return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
+            return JsonResponse( ios_.t, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
         return Response({'status': _('Strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
     
 
@@ -638,7 +638,7 @@ class StrategiesGenericViewSet(viewsets.ModelViewSet):
         strategy=self.get_object()
         if strategy is not None:
             ios_=ios.IOS.from_qs_merging_io_current(timezone.now(), request.user.profile.currency, strategy.investments.all(), ios.IOSModes.ios_totals_sumtotals, request)
-            return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
+            return JsonResponse( ios_.t, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,  safe=False)
         return Response({'status': _('Generic strategy was not found')}, status=status.HTTP_404_NOT_FOUND)
     
     def destroy(self, request, *args, **kwargs):
@@ -1226,24 +1226,24 @@ class IOS(APIView):
                 ios_=ios.IOS.from_ids( dt,  request.user.profile.currency,  ids,  mode, request)
                 if addition_current_year_gains:
                     ios_.io_current_addition_current_year_gains()
-                return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+                return JsonResponse( ios_.t, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
         elif classmethod_str=="from_all":
                 ios_=ios.IOS.from_all( dt,  request.user.profile.currency,  mode, request)
                 if addition_current_year_gains:
                     ios_.io_current_addition_current_year_gains()
-                return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+                return JsonResponse( ios_.t, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
         elif classmethod_str=="from_all_merging_io_current":
                 ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.all(),   mode, request)
                 if addition_current_year_gains:
                     ios_.io_current_addition_current_year_gains()
-                return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+                return JsonResponse( ios_.t, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
         elif classmethod_str=="from_ids_merging_io_current":
             ids=RequestListOfIntegers(request, "investments")
             if all_args_are_not_none( ids, dt, mode, simulation):
                 ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.filter(id__in=ids),   mode, request)
                 if addition_current_year_gains:
                     ios_.io_current_addition_current_year_gains()
-                return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+                return JsonResponse( ios_.t, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
         return Response({'status': "classmethod_str wasn't found'"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -2190,7 +2190,7 @@ def ReportsInvestmentsLastOperation(request):
             ios_.d_data(virtual_investment_product_id)["percentage_last"]= ios_.d_total_io_current(virtual_investment_product_id)['percentage_total_user']
             ios_.d_data(virtual_investment_product_id)["percentage_invested"]= ioc_last["percentage_total_user"]
             ios_.d_data(virtual_investment_product_id)["percentage_sellingpoint"]=None
-    return JsonResponse( ios_.t(), encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+    return JsonResponse( ios_.t, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
@@ -2236,7 +2236,7 @@ def ReportRanking(request):
     lod_ranking=lod.lod_order_by(lod_ranking, "total", reverse=True)
     for i,  d_rank in enumerate(lod_ranking):
         ios_.d_data(d_rank["products_id"])["ranking"]=i+1
-    return JsonResponse(ios_._t, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
+    return JsonResponse(ios_.t, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
 
 @api_view(['GET', ])    
 @permission_classes([permissions.IsAuthenticated, ])
