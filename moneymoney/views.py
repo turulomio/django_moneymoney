@@ -921,7 +921,8 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"], name='Investments operations evolution chart', url_path="operations_evolution_chart", url_name='operations_evolution_chart', permission_classes=[permissions.IsAuthenticated])
     def operations_evolution_chart(self, request, pk=None):
         investment=self.get_object()
-        plio=ios.IOS.from_ids(timezone.now(), request.user.profile.currency, [investment.id, ], 1, request)
+        print(investment)
+        plio=ios.IOS.from_ids(timezone.now(), request.user.profile.currency, [investment.id, ], ios.IOSModes.ios_totals_sumtotals, request)
         if len(plio.d_io(investment.id))==0:
             return JsonResponse( _("Insuficient data") , encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
         
@@ -945,7 +946,8 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
         gains=[]
         
         for i, dt in enumerate(datetimes_list):
-            plio_dt=ios.IOS.from_ids( dt, request.user.profile.currency, [investment.id, ], 2,request)
+            print(investment.id, dt)
+            plio_dt=ios.IOS.from_ids( dt, request.user.profile.currency, [investment.id, ], mode=ios.IOSModes.ios_totals_sumtotals, request=request)
             #Calculate dividends in datetime
             dividend_net=0
             for dividend in qs_dividends:
@@ -953,6 +955,8 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                     dividend_net=dividend_net+dividend.net
     
             #Append data of that datetime
+            from pydicts import dod
+            dod.dod_print(plio_dt.t)
             invested.append(plio_dt.d_total_io_current(investment.id)["invested_user"])
             balance.append(plio_dt.d_total_io_current(investment.id)["balance_futures_user"])
             gains_dividends.append(plio_dt.d_total_io_historical(investment.id)["gains_net_user"]+dividend_net)

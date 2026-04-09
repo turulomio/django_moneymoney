@@ -699,6 +699,9 @@ class IOS:
                    dod_ios es un diccionario que tiene como llave entries
             Esta llave apunta a un diccionario {products_id: 1, currency_account:2, name:name, lod_io=[io1,io2...]}
 
+
+            OJO si en dos_ios no hay io de una inversion no aparecerán
+
          """
         ios=IOS(request)
         ios.assign_ios(dt, dod_ios, local_currency)
@@ -801,7 +804,9 @@ class IOS:
                 old_ioh["investments_id"]=products_id
                 ios.t[str(products_id)]["io_historical"].append(old_ioh)
                 ##Añado factors y quotes
-        ios.t[str(products_id)]["io_historical"]=lod.lod_order_by(ios.t[str(products_id)]["io_historical"], "dt_end")
+        
+        for p_id in ios.entries():
+            ios.t[str(p_id)]["io_historical"]=lod.lod_order_by(ios.t[str(p_id)]["io_historical"], "dt_end")
                     
         ios.process_calcs(mode)
         
@@ -809,8 +814,8 @@ class IOS:
         #Set entries name for product, iterating all investments. Redundant but simpler
         if mode in [IOSModes.ios_totals_sumtotals, IOSModes.totals_sumtotals]:
             for old_investment in qs_investments:
-                ios.t[str(old_investment.products.id)]["data"]["name"]=_("IOC merged investment of '{0}'").format( old_investment.products.fullName()) 
-                ios.t[str(old_investment.products.id)]["data"]["investments_id"]=investments_id_in_each_product[str(old_investment.products.id)]
-                debug("IOS FROM QS MERGING ", datetime.now()-s)
+                if str(old_investment.products.id) in ios.entries():
+                    ios.t[str(old_investment.products.id)]["data"]["name"]=_("IOC merged investment of '{0}'").format( old_investment.products.fullName()) 
+                    ios.t[str(old_investment.products.id)]["data"]["investments_id"]=investments_id_in_each_product[str(old_investment.products.id)]
+                    debug("IOS FROM QS MERGING ", datetime.now()-s)
         return ios
-
