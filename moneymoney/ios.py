@@ -8,7 +8,112 @@ from pydicts.myjsonencoder import MyJSONEncoderDecimalsAsFloat
 from pydicts import lod, casts
 from django.utils.translation import gettext_lazy as _
 
+"""
+{   '17': {   'data': {   'basic_results': {   'last': Decimal('10.000000'),
+                                               'last_datetime': datetime.datetime(2026, 4, 10, 8, 21, 18, 699436, tzinfo=datetime.timezone.utc),
+                                               'lastyear': 0,
+                                               'lastyear_datetime': datetime.datetime(2025, 12, 31, 23, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC')),
+                                               'penultimate': 0,
+                                               'penultimate_datetime': datetime.datetime(2026, 4, 9, 23, 59, 59, 999999, tzinfo=zoneinfo.ZoneInfo(key='UTC'))},
+                          'currency_account': 'EUR',
+                          'currency_product': 'EUR',
+                          'currency_user': 'EUR',
+                          'dt': datetime.datetime(2026, 4, 10, 8, 21, 18, 739288, tzinfo=datetime.timezone.utc),
+                          'entry': '17',
+                          'products_id': 79329,
+                          'products_multiplier': Decimal('1.00'),
+                          'products_percentage': 100,
+                          'productstypes_id': 3,
+                          'real_leverages': 1},
+              'io': [   {   'account2user': 1,
+                            'comment': '',
+                            'commission': Decimal('0.00'),
+                            'commission_account': Decimal('0.00'),
+                            'currency_account': 'EUR',
+                            'currency_conversion': Decimal('1.0000000000'),
+                            'currency_product': 'EUR',
+                            'currency_user': 'EUR',
+                            'datetime': datetime.datetime(2026, 4, 10, 8, 21, 7, 570196, tzinfo=datetime.timezone.utc),
+                            'gross_account': Decimal('1000.0000000000000000000000'),
+                            'gross_investment': Decimal('1000.000000000000'),
+                            'gross_user': Decimal('1000.0000000000000000000000'),
+                            'id': 10,
+                            'investment2account': Decimal('1.0000000000'),
+                            'investments_id': 17,
+                            'net_account': Decimal('1000.0000000000000000000000'),
+                            'net_investment': Decimal('1000.000000000000'),
+                            'net_user': Decimal('1000.0000000000000000000000'),
+                            'operationstypes_id': 4,
+                            'price': Decimal('10.000000'),
+                            'shares': Decimal('100.000000'),
+                            'taxes': Decimal('0.00'),
+                            'taxes_account': Decimal('0.00')}],
+              'io_current': [   {   'account2user': 1,
+                                    'account2user_at_datetime': 1,
+                                    'balance_account': Decimal('1000.000000000000'),
+                                    'balance_futures_account': Decimal('1000.000000000000'),
+                                    'balance_futures_investment': Decimal('1000.000000000000'),
+                                    'balance_futures_user': Decimal('1000.000000000000'),
+                                    'balance_investment': Decimal('1000.000000000000'),
+                                    'balance_user': Decimal('1000.000000000000'),
+                                    'commissions_account': Decimal('0.00'),
+                                    'commissions_investment': Decimal('0E+8'),
+                                    'commissions_user': Decimal('0.00'),
+                                    'currency_account': 'EUR',
+                                    'currency_product': 'EUR',
+                                    'currency_user': 'EUR',
+                                    'datetime': datetime.datetime(2026, 4, 10, 8, 21, 7, 570196, tzinfo=datetime.timezone.utc),
+                                    'gains_gross_account': Decimal('0E-22'),
+                                    'gains_gross_investment': Decimal('0E-12'),
+                                    'gains_gross_user': Decimal('0E-22'),
+                                    'gains_net_account': Decimal('0E-22'),
+                                    'gains_net_investment': Decimal('0E-12'),
+                                    'gains_net_user': Decimal('0E-22'),
+                                    'id': 10,
+                                    'invested_account': Decimal('1000.0000000000000000000000'),
+                                    'invested_investment': Decimal('1000.000000000000'),
+                                    'invested_user': Decimal('1000.0000000000000000000000'),
+                                    'investment2account': Decimal('1.0000000000'),
+                                    'investment2account_at_datetime': 1,
+                                    'investments_id': 17,
+                                    'operationstypes_id': 4,
+                                    'percentage_annual_investment': 0.00 %,
+                                    'percentage_annual_user': 0.00 %,
+                                    'percentage_apr_investment': None %,
+                                    'percentage_apr_user': None %,
+                                    'percentage_total_investment': 0.00 %,
+                                    'percentage_total_user': 0.00 %,
+                                    'price_account': Decimal('10.0000000000000000'),
+                                    'price_investment': Decimal('10.000000'),
+                                    'price_user': Decimal('10.0000000000000000'),
+                                    'shares': Decimal('100.000000'),
+                                    'taxes_account': Decimal('0.00'),
+                                    'taxes_investment': Decimal('0E+8'),
+                                    'taxes_user': Decimal('0.00')}],
+              'io_historical': [],
+              'total_io': {},
+              'total_io_current': {   'average_price_investment': Decimal('10.000000'),
+                                      'balance_futures_user': Decimal('1000.000000000000'),
+                                      'balance_investment': Decimal('1000.000000000000'),
+                                      'balance_user': Decimal('1000.000000000000'),
+                                      'gains_gross_user': Decimal('0E-22'),
+                                      'gains_net_user': Decimal('0E-22'),
+                                      'invested_investment': Decimal('1000.000000000000'),
+                                      'invested_user': Decimal('1000.0000000000000000000000'),
+                                      'percentage_total_user': 0.00 %,
+                                      'shares': Decimal('100.000000')},
+              'total_io_historical': {   'commissions_account': 0,
+                                         'gains_net_user': 0}},
+    'entries': ['17'],
+    'mode': 1,
+    'sum_total_io_current': {   'balance_futures_user': Decimal('1000.000000000000'),
+                                'balance_user': Decimal('1000.000000000000'),
+                                'gains_gross_user': Decimal('0E-22'),
+                                'gains_net_user': Decimal('0E-22'),
+                                'invested_user': Decimal('1000.0000000000000000000000')},
+    'sum_total_io_historical': {'commissions_account': 0, 'gains_net_user': 0}}
 
+"""
 class IOSModes:
     sumtotals=3 #Shows only sumtotals
     totals_sumtotals=2 #Shows totals and sumtotals
@@ -678,28 +783,30 @@ class IOS:
             return {"sum_total_io_current": self.t["sum_total_io_current"], "sum_total_io_historical": self.t["sum_total_io_historical"], "mode":self.t["mode"]}
 
     @classmethod
+    def qs_investments2dod(cls, dt, qs_investments):
+        dod_ios = {}
+        for investment in qs_investments.select_related("products", "accounts"):
+            dod_ios[str(investment.id)] = {
+                "products_id": investment.products.id, 
+                "name": investment.fullName(), 
+                "currency_account": investment.accounts.currency, 
+                "lod_io": []
+            }
+
+        qs_io = models.Investmentsoperations.objects.filter(investments__in=qs_investments, datetime__lte=dt).order_by("datetime").select_related("investments__products", "investments__accounts")
+        for o in qs_io:
+            dod_ios[str(o.investments.id)]["lod_io"].append(investmentoperation_to_iodict(o))
+        return dod_ios
+
+    @classmethod
     def from_qs_investments(cls, dt,  local_currency,  qs_investments,  mode, request):
         """
             simulation is a list of dictionary of ios if you want to simulate
             
                 {'id': 3, 'operationstypes_id': 4, 'investments_id': 2, 'shares': Decimal('1000.000000'), 'taxes': Decimal('0.00'), 'commission': Decimal('0.00'), 'price': Decimal('10.000000'), 'datetime': datetime.datetime(2023, 7, 23, 6, 4, 4, 934773, tzinfo=datetime.timezone.utc), 'comment': '', 'currency_conversion': Decimal('1.0000000000')}
         """
-        dod_ios={}
-        for investment in qs_investments.select_related("products", "accounts"):
-            dod_ios[str(investment.id)]={
-                "products_id":investment.products.id, 
-                "name": investment.fullName(), 
-                "currency_account": investment.accounts.currency, 
-                "lod_io":[]
-            }
-
-
-        #ids=functions.qs_to_ids(qs_investments)
-        qs_io=models.Investmentsoperations.objects.filter(investments__in=qs_investments, datetime__lte=dt).order_by("datetime").select_related("investments__products", "investments__accounts")
-
-        for o in qs_io:
-            dod_ios[str(o.investments.id)]["lod_io"].append(investmentoperation_to_iodict(o))
-        return IOS.from_dod(dt, local_currency, dod_ios, mode, request  )
+        dod_ios = cls.qs_investments2dod(dt, qs_investments)
+        return cls.from_dod(dt, local_currency, dod_ios, mode, request)
 
     @classmethod
     def from_dod(cls,  dt,  local_currency, dod_ios,  mode, request):
@@ -712,18 +819,18 @@ class IOS:
             OJO si en dos_ios no hay io de una inversion no aparecerán
 
          """
-        ios=IOS(request)
+        ios = IOS(request)
         ios.assign_ios(dt, dod_ios, local_currency)
         ios.process_calcs(mode)
         return ios
         
 
     @classmethod
-    def from_all(cls,  dt,  local_currency,  mode,  request):
+    def from_all(cls, dt, local_currency, mode, request):
         return cls.from_qs_investments(dt, local_currency, models.Investments.objects.all(), mode, request)
 
     @classmethod
-    def from_ids(cls,  dt,  local_currency, ids,  mode, request):
+    def from_ids(cls, dt, local_currency, ids, mode, request):
         return cls.from_qs_investments(dt, local_currency, models.Investments.objects.filter(id__in=ids), mode, request)
     
     @classmethod
