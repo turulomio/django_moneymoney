@@ -1226,8 +1226,15 @@ class IOS(APIView):
     #    print(dt, mode, simulation)
         if classmethod_str=="from_ids":
             ids=RequestListOfIntegers(request, "investments")
-            if all_args_are_not_none( ids, dt, mode, simulation):
+            if all_args_are_not_none( ids, dt, mode):
                 ios_=ios.IOS.from_ids( dt,  request.user.profile.currency,  ids,  mode, request)
+                if addition_current_year_gains:
+                    ios_.io_current_addition_current_year_gains()
+                return JsonResponse( ios_.t, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+        elif classmethod_str=="from_ids_with_simulation":
+            ids=RequestListOfIntegers(request, "investments")
+            if all_args_are_not_none( ids, dt, mode, simulation):
+                ios_=ios.IOS.from_qs_investments_with_simulation( dt,  request.user.profile.currency, models.Investments.objects.filter(id__in=ids),  mode, request, simulation)
                 if addition_current_year_gains:
                     ios_.io_current_addition_current_year_gains()
                 return JsonResponse( ios_.t, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)

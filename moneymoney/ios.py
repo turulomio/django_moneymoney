@@ -8,6 +8,30 @@ from pydicts.myjsonencoder import MyJSONEncoderDecimalsAsFloat
 from pydicts import lod, casts
 from django.utils.translation import gettext_lazy as _
 
+
+
+
+
+"""
+{   '42': {   'currency_account': 'EUR',
+              'lod_io': [   {   'comment': '',
+                                'commission': Decimal('0.00'),
+                                'currency_conversion': Decimal('1.0000000000'),
+                                'datetime': datetime.datetime(2026, 4, 10, 10, 8, 15, 224394, tzinfo=datetime.timezone.utc),
+                                'id': 31,
+                                'investments_id': 42,
+                                'operationstypes_id': 4,
+                                'price': Decimal('10.000000'),
+                                'shares': Decimal('1000.000000'),
+                                'taxes': Decimal('0.00')}],
+              'name': 'Investment for testing (Cash)',
+              'products_id': 79329}}
+"""
+
+
+
+
+
 """
 {   '17': {   'data': {   'basic_results': {   'last': Decimal('10.000000'),
                                                'last_datetime': datetime.datetime(2026, 4, 10, 8, 21, 18, 699436, tzinfo=datetime.timezone.utc),
@@ -112,8 +136,8 @@ from django.utils.translation import gettext_lazy as _
                                 'gains_net_user': Decimal('0E-22'),
                                 'invested_user': Decimal('1000.0000000000000000000000')},
     'sum_total_io_historical': {'commissions_account': 0, 'gains_net_user': 0}}
-
 """
+
 class IOSModes:
     sumtotals=3 #Shows only sumtotals
     totals_sumtotals=2 #Shows totals and sumtotals
@@ -799,13 +823,34 @@ class IOS:
         return dod_ios
 
     @classmethod
+    def add_iodict_to_dod(cls, dod_ios, simulation):
+        if not simulation:
+            return dod_ios
+        
+        for sim_io in simulation:
+            inv_id = str(sim_io["investments_id"])
+            if inv_id in dod_ios:
+                dod_ios[inv_id]["lod_io"].append(sim_io)
+                
+        for key in dod_ios:
+            dod_ios[key]["lod_io"].sort(key=lambda k: k['datetime'])
+            
+        return dod_ios
+
+    @classmethod
     def from_qs_investments(cls, dt,  local_currency,  qs_investments,  mode, request):
+        dod_ios = cls.qs_investments2dod(dt, qs_investments)
+        return cls.from_dod(dt, local_currency, dod_ios, mode, request)
+
+    @classmethod
+    def from_qs_investments_with_simulation(cls, dt, local_currency, qs_investments, mode, request, simulation):
         """
             simulation is a list of dictionary of ios if you want to simulate
             
                 {'id': 3, 'operationstypes_id': 4, 'investments_id': 2, 'shares': Decimal('1000.000000'), 'taxes': Decimal('0.00'), 'commission': Decimal('0.00'), 'price': Decimal('10.000000'), 'datetime': datetime.datetime(2023, 7, 23, 6, 4, 4, 934773, tzinfo=datetime.timezone.utc), 'comment': '', 'currency_conversion': Decimal('1.0000000000')}
         """
         dod_ios = cls.qs_investments2dod(dt, qs_investments)
+        dod_ios = cls.add_iodict_to_dod(dod_ios, simulation)
         return cls.from_dod(dt, local_currency, dod_ios, mode, request)
 
     @classmethod
