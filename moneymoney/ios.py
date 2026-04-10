@@ -642,6 +642,8 @@ class IOS:
             io.process_calcs()
             self.t[str(entry)]=io._d
 
+            
+
     def process_calcs(self,mode):
         self.t["mode"]=mode
         # Is a key too like ios
@@ -682,21 +684,28 @@ class IOS:
             
                 {'id': 3, 'operationstypes_id': 4, 'investments_id': 2, 'shares': Decimal('1000.000000'), 'taxes': Decimal('0.00'), 'commission': Decimal('0.00'), 'price': Decimal('10.000000'), 'datetime': datetime.datetime(2023, 7, 23, 6, 4, 4, 934773, tzinfo=datetime.timezone.utc), 'comment': '', 'currency_conversion': Decimal('1.0000000000')}
         """
-        ids=functions.qs_to_ids(qs_investments)
-        qs_io=models.Investmentsoperations.objects.filter(investments__in=ids, datetime__lte=dt).order_by("datetime").select_related("investments__products", "investments__accounts")
-
         dod_ios={}
+        for investment in qs_investments.select_related("products", "accounts"):
+            dod_ios[str(investment.id)]={
+                "products_id":investment.products.id, 
+                "name": investment.fullName(), 
+                "currency_account": investment.accounts.currency, 
+                "lod_io":[]
+            }
+
+
+        #ids=functions.qs_to_ids(qs_investments)
+        qs_io=models.Investmentsoperations.objects.filter(investments__in=qs_investments, datetime__lte=dt).order_by("datetime").select_related("investments__products", "investments__accounts")
+
         for o in qs_io:
-            if o.investments.id not in dod_ios:
-                dod_ios[o.investments.id]={"products_id":o.investments.products.id, "name":o.investments.fullName(), "currency_account": o.investments.accounts.currency, "lod_io":[investmentoperation_to_iodict(o)]}
-            else:
-                dod_ios[o.investments.id]["lod_io"].append(investmentoperation_to_iodict(o))
+            dod_ios[str(o.investments.id)]["lod_io"].append(investmentoperation_to_iodict(o))
         return IOS.from_dod(dt, local_currency, dod_ios, mode, request  )
 
     @classmethod
-    def from_dod(cls,  dt,  local_currency,  dod_ios,  mode, request):
+    def from_dod(cls,  dt,  local_currency, dod_ios,  mode, request):
         """
-                   dod_ios es un diccionario que tiene como llave entries
+            dod_data es en dod con llave entry y valor el contenido de IO.assign_data
+            dod_ios es un diccionario que tiene como llave entries
             Esta llave apunta a un diccionario {products_id: 1, currency_account:2, name:name, lod_io=[io1,io2...]}
 
 
