@@ -1598,17 +1598,19 @@ class Quotes(models.Model):
             El asked datetime es el pasado por parametro y el datetime final es el quote.datetime
         """
 
-        if request is not None and hasattr(request, 'cache_quotes'):
-            if (product_id, datetime_) in request.cache_quotes:
-                request.quotes_hit_count += 1
-                request.quotes_request_count += 1
-                return request.cache_quotes[(product_id, datetime_)]
-            request.quotes_request_count += 1
+        req = getattr(request, '_request', request) if request else None
+
+        if req is not None and hasattr(req, 'cache_quotes'):
+            if (product_id, datetime_) in req.cache_quotes:
+                req.quotes_hit_count += 1
+                req.quotes_request_count += 1
+                return req.cache_quotes[(product_id, datetime_)]
+            req.quotes_request_count += 1
 
         try:
             r=Quotes.objects.filter(products__id=product_id, datetime__lte=datetime_).order_by("-datetime")[0]
-            if request is not None and hasattr(request, 'cache_quotes'):
-                request.cache_quotes[(product_id, datetime_)] = r
+            if req is not None and hasattr(req, 'cache_quotes'):
+                req.cache_quotes[(product_id, datetime_)] = r
             return r
         except:
             return None

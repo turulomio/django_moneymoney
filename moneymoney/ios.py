@@ -920,6 +920,9 @@ class IOS:
         ios = IOS(request)
         ios.assign_ios(dt, dod_ios, local_currency)
         ios.process_calcs(mode)
+        req = getattr(request, '_request', request) if request else None
+        if req and hasattr(req, "quotes_hit_count") and hasattr(req, "quotes_request_count"):
+            print (f"{req.quotes_hit_count}/{req.quotes_request_count}")
         return ios
         
 
