@@ -142,6 +142,14 @@ if environ.get('GITHUB_WORKFLOW'):
     }
 CONCURRENCY_DB_CONNECTIONS_BY_USER=8
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'moneymoney_cache',
+        'MAX_ENTRIES': 100000, # Aumentamos drásticamente el límite por defecto de 300
+    }
+}
+
 ## Locale paths in source distribution
 LOCALE_PATHS = (
     BASE_DIR+ '/moneymoney/locale/',
@@ -196,4 +204,3 @@ CURRENCIES=currencies_odod()
 CURRENCIES_CHOICES=[]
 for k,  v in CURRENCIES.items():
     CURRENCIES_CHOICES.append((k, v["name"]))
-

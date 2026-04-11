@@ -1611,7 +1611,7 @@ class Quotes(models.Model):
                 return req.cache_quotes[(product_id, datetime_)]
             req.quotes_request_count += 1
 
-        is_old = datetime_ < timezone.now() - timedelta(days=30)
+        is_old = datetime_ < timezone.now() - timedelta(days=1)
         cache_key = f"quote_{product_id}_{datetime_.timestamp()}" if is_old else None
 
         if is_old:

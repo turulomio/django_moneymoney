@@ -5,6 +5,7 @@ from django.utils import timezone
 from datetime import timedelta
 from pydicts import casts
 from asgiref.sync import sync_to_async
+from django.core.cache import cache
 
 
 def test_Quotes_model(self):
@@ -32,3 +33,49 @@ def test_Quotes_ohcl(self):
         ohcl=tests_helpers.client_get(self, self.client_authorized_1, f"/products/quotes/ohcl/?product=/api/products/79228/", status.HTTP_200_OK)      
     self.assertEqual(len(ohcl), 3)
 
+def test_Quotes_cache(self):
+    # Limpiamos la caché del servidor para tener un entorno predecible
+    cache.clear()
+
+    # Creamos un producto de prueba
+    dict_pp = tests_helpers.client_post(self, self.client_authorized_1, "/api/products/", models.Products.post_personal_payload(name="Test Cache Product"), status.HTTP_201_CREATED)
+    product_id = dict_pp["id"]
+    
+    # Creamos una cotización con más de 1 día de antigüedad para forzar el uso de la caché del servidor (is_old=True)
+    old_dt = timezone.now() - timedelta(days=5)
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/", models.Quotes.post_payload(products=dict_pp["url"], quote=10, datetime=old_dt), status.HTTP_201_CREATED)
+
+    # Mock para simular el request con los atributos generados por el middleware QuotesCacheMiddleware
+    class MockRequest:
+        def __init__(self):
+            self.start = timezone.now()
+            self.quotes_request_count = 0
+            self.quotes_hit_count = 0
+            self.quotes_server_cache_hit_count = 0
+            self.cache_quotes = {}
+
+    # 1. Primera petición: Debería ir a la base de datos (L1 y L2 están vacíos)
+    req1 = MockRequest()
+    with self.assertNumQueries(1):
+        q1 = models.Quotes.get_quote(product_id, old_dt, req1)
+    self.assertIsNotNone(q1)
+    self.assertEqual(req1.quotes_request_count, 1)
+    self.assertEqual(req1.quotes_hit_count, 0)
+    self.assertEqual(req1.quotes_server_cache_hit_count, 0)
+
+    # 2. Segunda petición usando el MISMO request: Debería golpear la caché de la petición (L1)
+    with self.assertNumQueries(0):
+        q2 = models.Quotes.get_quote(product_id, old_dt, req1)
+    self.assertEqual(q1, q2)
+    self.assertEqual(req1.quotes_request_count, 2)
+    self.assertEqual(req1.quotes_hit_count, 1)
+    self.assertEqual(req1.quotes_server_cache_hit_count, 0)
+
+    # 3. Tercera petición con un NUEVO request: L1 está vacío, pero debería golpear la caché del servidor (L2)
+    req2 = MockRequest()
+    with self.assertNumQueries(0):
+        q3 = models.Quotes.get_quote(product_id, old_dt, req2)
+    self.assertEqual(q1.id, q3.id)
+    self.assertEqual(req2.quotes_request_count, 1)
+    self.assertEqual(req2.quotes_hit_count, 0)
+    self.assertEqual(req2.quotes_server_cache_hit_count, 1)
