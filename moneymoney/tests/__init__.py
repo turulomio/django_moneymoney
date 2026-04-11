@@ -5,6 +5,7 @@ from moneymoney import types
 from datetime import date, timedelta, datetime
 from django.db import  connection
 from django.test.utils import CaptureQueriesContext
+from django.core.cache import cache
 from logging import getLogger, ERROR
 from pydicts import casts
 logger = getLogger('django.request')
@@ -72,6 +73,13 @@ class MoneyMoneyAPITestCase(APITestCase):
 
         super().__init__(*args, **kwargs )   
         # add_methodtypes_to_this_object_dinamically(self)
+
+    def setUp(self):
+        """
+        Limpia la caché del servidor antes de cada test para evitar fugas de estado.
+        """
+        super().setUp()
+        cache.clear()
 
     @classmethod
     def setUpClass(cls):

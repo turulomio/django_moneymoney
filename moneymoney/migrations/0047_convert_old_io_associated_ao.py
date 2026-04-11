@@ -12,7 +12,7 @@ def update_associated_account_operation(io, apps):
     Concepts=apps.get_model('moneymoney', 'Concepts')
     if io.associated_ao is not None:
         io.associated_ao.delete()
-    plio=ios.IOS.from_ids(timezone.now(), "EUR", [io.investments.id, ], 1)
+    plio=ios.IOS.from_ids(timezone.now(), "EUR", [io.investments.id, ], 1, request=None)
     #Searches io investments operations of the comment
     io_in_plio=None
     for o in plio.d_io(io.investments.id):
