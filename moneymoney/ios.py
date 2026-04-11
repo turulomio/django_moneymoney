@@ -234,13 +234,13 @@ class IO:
         return round(Decimal((ioh["dt_end"]-ioh["dt_start"]).days/365), 2)
     
 
-    def assign_data(self, dt, entry, products_id, currency_account, currency_user):
+    def assign_data(self, dt, entry, product, currency_account, currency_user):
         """
             Assigna data
             Se puede hacer un override dejando las mismas variables _d["data"] fuera de aquí no se usa nada ni product ni na
         """
 
-        product=models.Products.objects.select_related("leverages", "productstypes").get(pk=products_id)
+        # product=models.Products.objects.select_related("leverages", "productstypes").get(pk=products_id)
         self._d["data"]={}
         self._d["data"]["dt"]=dt
         self._d["data"]["currency_account"]=currency_account
@@ -811,7 +811,7 @@ class IOS:
 
             self.t["entries"].append(str(entry))
             io=IO(self.request)
-            io.assign_data(dt, entry, dictionary["products_id"], dictionary["currency_account"], currency_user)
+            io.assign_data(dt, entry, dictionary["product"], dictionary["currency_account"], currency_user)
             io.process_io(dictionary["lod_io"])
             io.process_calcs()
             self.t[str(entry)]=io._d
@@ -858,15 +858,15 @@ class IOS:
         their related operations up to the specified datetime `dt`.
         """
         dod_ios = {}
-        for investment in qs_investments.select_related("products", "accounts"):
+        for investment in qs_investments.select_related("products", "accounts", "products__productstypes", "products__leverages"):
             dod_ios[str(investment.id)] = {
-                "products_id": investment.products.id, 
+                "product":investment.products,#Object
                 "name": investment.fullName(), 
                 "currency_account": investment.accounts.currency, 
                 "lod_io": []
             }
 
-        qs_io = models.Investmentsoperations.objects.filter(investments__in=qs_investments, datetime__lte=dt).order_by("datetime").select_related("investments__products", "investments__accounts")
+        qs_io = models.Investmentsoperations.objects.filter(investments__in=qs_investments, datetime__lte=dt).order_by("datetime").select_related("investments__products", "investments__accounts", "operationstypes")
         for o in qs_io:
             dod_ios[str(o.investments.id)]["lod_io"].append(investmentoperation_to_iodict(o))
         return dod_ios
@@ -922,7 +922,7 @@ class IOS:
         ios.process_calcs(mode)
         req = getattr(request, '_request', request) if request else None
         if req and hasattr(req, "quotes_hit_count") and hasattr(req, "quotes_request_count"):
-            print (f"{req.quotes_hit_count}/{req.quotes_request_count}")
+            print (f"Quotes request cache: {req.quotes_hit_count}/{req.quotes_request_count}")
         return ios
         
 
@@ -966,12 +966,14 @@ class IOS:
     def _merge_old_ios(cls, dt, local_currency, qs_investments, mode, request, old_ios, s, simulation=None):
         
         # Sets a dictionary with key products_id and values all investments_id of this products to set at the end
+        products_dict={}
         investments_id_in_each_product={}
         for inv in qs_investments:
             if inv.products_id in investments_id_in_each_product:
                 investments_id_in_each_product[str(inv.products.id)].append(inv.id)
             else:#Not set yet
                 investments_id_in_each_product[str(inv.products.id)]=[inv.id, ]
+            products_dict[str(inv.products.id)]=inv.products
             
         
         # Preparing lod_data 
@@ -1013,7 +1015,7 @@ class IOS:
         dod_ios={} #TODO con lod_data y lod_io
         for p_id, p in products.items():
             dod_ios[str(p_id)] = {
-                "products_id": p["products_id"], 
+                "product": products_dict[str(p_id)],
                 "name": p["name"], 
                 "currency_account": p["currency_account"], 
                 "lod_io": []

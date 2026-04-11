@@ -797,12 +797,12 @@ class Alerts(APIView):
                 r["investments_inactive_with_balance"].append(plio)
 
         # Get all unfinished investments transfers
-        qs=models.Investmentstransfers.objects.filter(datetime_destiny__isnull=True)
+        qs=models.Investmentstransfers.objects.filter(datetime_destiny__isnull=True).prefetch_related('investmentsoperations_set')
 
         serializer = serializers.InvestmentstransfersSerializer(qs, many=True, context={'request': request})
         r["investments_transfers_unfinished"]=serializer.data
 
-        functions.show_queries_function()
+        functions.show_queries_function(False)
         return JsonResponse(r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
 class Timezones(APIView):
@@ -1125,7 +1125,7 @@ class AccountstransfersViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]  
 
 class InvestmentstransfersViewSet(viewsets.ModelViewSet):
-    queryset = models.Investmentstransfers.objects.all()
+    queryset = models.Investmentstransfers.objects.all().prefetch_related('investmentsoperations_set')
     serializer_class = serializers.InvestmentstransfersSerializer
     permission_classes = [permissions.IsAuthenticated]
 

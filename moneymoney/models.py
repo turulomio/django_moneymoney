@@ -1020,16 +1020,16 @@ class Investmentstransfers(models.Model):
     
 
     def origin_investmentoperation(self):
-        try:
-            return Investmentsoperations.objects.get(associated_it=self, operationstypes_id=eOperationType.TransferSharesOrigin)
-        except:
-            return None
+        for io in self.investmentsoperations_set.all():
+            if io.operationstypes_id == eOperationType.TransferSharesOrigin:
+                return io
+        return None
     
     def destiny_investmentoperation(self):
-        try:
-            return Investmentsoperations.objects.get(associated_it=self, operationstypes_id=eOperationType.TransferSharesDestiny)
-        except:
-            return None 
+        for io in self.investmentsoperations_set.all():
+            if io.operationstypes_id == eOperationType.TransferSharesDestiny:
+                return io
+        return None
         
     def finished(self):
         """
