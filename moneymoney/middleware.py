@@ -1,6 +1,9 @@
 from django.utils import timezone
 from django.utils.deprecation import MiddlewareMixin
 
+from django_moneymoney import settings
+from moneymoney import functions
+
 class QuotesCacheMiddleware(MiddlewareMixin):
     """
     Middleware para implementar un caché a nivel de petición para las cotizaciones (Quotes)
@@ -26,4 +29,9 @@ class QuotesCacheMiddleware(MiddlewareMixin):
         #     print("Request request count:", request.quotes_request_count)
         # if hasattr(request, 'start'):
         #     print("Request time:", timezone.now()-request.start)
+        if settings.DEBUG:
+            print (f"Quotes request cache: {request.quotes_hit_count}/{request.quotes_request_count}")
+            functions.show_queries_function(True)
+            print(f"View took {timezone.now()-request.start}")
+        
         return response

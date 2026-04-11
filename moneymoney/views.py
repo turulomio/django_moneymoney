@@ -801,8 +801,6 @@ class Alerts(APIView):
 
         serializer = serializers.InvestmentstransfersSerializer(qs, many=True, context={'request': request})
         r["investments_transfers_unfinished"]=serializer.data
-
-        functions.show_queries_function(False)
         return JsonResponse(r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
 class Timezones(APIView):
@@ -1073,7 +1071,6 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
             for d in serializer.data:
                 d["balance"]=initial_balance+d["amount"]
                 initial_balance+=d["amount"]
-            functions.show_queries_function()
             return Response(serializer.data)
         elif all_args_are_not_none(concept, year, month):
             queryset=queryset.filter(concepts=concept, datetime__year=year, datetime__month=month)
@@ -1943,6 +1940,7 @@ def ReportAnnualGainsByProductstypes(request, year):
             "gains_net": d_fast_operations[0]["total"] if len(d_fast_operations)>0 else 0, 
             "dividends_net": 0, 
     })
+    functions.show_queries_function()
     return JsonResponse( l, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
 @api_view(['GET', ])    
@@ -2095,10 +2093,10 @@ def ReportEvolutionAssets(request, from_year):
 @permission_classes([permissions.IsAuthenticated, ])
 
 def ReportEvolutionAssetsChart(request):
-    def month_results(year, month,  local_currency, local_zone):
+    def month_results(year, month,  request):
         try:
-            dt=casts.dtaware_month_end(year, month, local_zone)
-            result = dt, models.Assets.pl_total_balance(dt, local_currency, ios.IOSModes.totals_sumtotals)
+            dt=casts.dtaware_month_end(year, month, request.user.profile.zone)
+            result = dt, models.Assets.pl_total_balance(dt, request.user.profile.currency, ios.IOSModes.totals_sumtotals,request)
             return result
         finally:
             connection.close()
@@ -2116,7 +2114,7 @@ def ReportEvolutionAssetsChart(request):
     # HA MEJORADO UNOS 5 segundos de 10 segundos a 3 para 12 meses
     with ThreadPoolExecutor(max_workers=settings.CONCURRENCY_DB_CONNECTIONS_BY_USER) as executor:
         for year,  month in list_months:    
-            futures.append(executor.submit(month_results, year, month, request.user.profile.currency,  request.user.profile.zone))
+            futures.append(executor.submit(month_results, year, month, request))
 
     for future in futures:
         dt, total=future.result()
