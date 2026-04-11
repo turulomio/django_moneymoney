@@ -1721,11 +1721,11 @@ def ReportAnnualRevaluation(request ):
 
 def ReportAnnual(request, year):
     def month_results(month, month_name, local_currency):
-        return month, month_name, models.Assets.pl_total_balance(casts.dtaware_month_end(year, month, request.user.profile.zone), local_currency)
+        return month, month_name, models.Assets.pl_total_balance(casts.dtaware_month_end(year, month, request.user.profile.zone), local_currency, request=request)
     #####################
     
     dtaware_last_year=casts.dtaware_year_end(year-1, request.user.profile.zone)
-    last_year=models.Assets.pl_total_balance(dtaware_last_year, request.user.profile.currency)
+    last_year=models.Assets.pl_total_balance(dtaware_last_year, request.user.profile.currency, request=request)
     list_=[]
     futures=[]
     
@@ -1940,7 +1940,6 @@ def ReportAnnualGainsByProductstypes(request, year):
             "gains_net": d_fast_operations[0]["total"] if len(d_fast_operations)>0 else 0, 
             "dividends_net": 0, 
     })
-    functions.show_queries_function()
     return JsonResponse( l, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
 @api_view(['GET', ])    
@@ -2053,7 +2052,7 @@ def ReportDividends(request):
 def ReportEvolutionAssets(request, from_year):
     tb={}
     for year in range(from_year-1, date.today().year+1):
-        tb[year]=models.Assets.pl_total_balance(casts.dtaware_month_end(year, 12, request.user.profile.zone), request.user.profile.currency)
+        tb[year]=models.Assets.pl_total_balance(casts.dtaware_month_end(year, 12, request.user.profile.zone), request.user.profile.currency, request=request)
         
     d_incomes=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Income, exclude_dividends=True), "year")
     d_expenses=lod.lod2dod(models.Assets.lod_ym_balance_user_by_operationstypes(request, eOperationType.Expense, exclude_dividends=True), "year")

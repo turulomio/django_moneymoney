@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction, connection
 from django.db.models import prefetch_related_objects, Case, When, Sum, Value, Subquery, F, Window, Min, Max, DateField, OuterRef, ExpressionWrapper, DurationField, FloatField
+from django.core.cache import cache
 from django.db.models.functions import FirstValue, LastValue, ExtractMonth, ExtractYear, Cast, Extract
 from django.urls import reverse
 from django.utils.translation import gettext as _
@@ -155,7 +156,7 @@ class Accounts(models.Model):
         return r
 
     @staticmethod
-    def accounts_balance(qs, dt, currency_user):
+    def accounts_balance(qs, dt, currency_user, request=None):
         """
             qs. Queryset Accounts
             balance_account_currency can be calculated if all accounts in qs has the same currency
@@ -169,14 +170,14 @@ class Accounts(models.Model):
             else:
                 r["balance_account_currency"]=b
             pair=CurrencyPair(currencies_in_qs[0], currency_user)
-            r["balance_user_currency"]=r["balance_account_currency"]*pair.get_factor(dt)
+            r["balance_user_currency"]=r["balance_account_currency"]*pair.get_factor(dt, request)
         else:
             r["balance_account_currency"]=None
             r["balance_user_currency"]=Decimal("0")
             for currency in currencies_in_qs:
                 b = Accountsoperations.objects.filter(accounts__in=qs, datetime__lte=dt, accounts__currency=currency).select_related("accounts").aggregate(Sum("amount"))["amount__sum"] or Decimal('0')
                 pair=CurrencyPair(currency, currency_user)
-                r["balance_user_currency"]=r["balance_user_currency"]+b*pair.get_factor(dt)
+                r["balance_user_currency"]=r["balance_user_currency"]+b*pair.get_factor(dt, request)
         return r
 
                 
@@ -1316,8 +1317,9 @@ class Products(models.Model):
         Returns:
             Quotes: The latest Quotes object for this product, or None if no quote is found.
         """
-        dt = request.start if request is not None and hasattr(request, 'start') else timezone.now()
-        return Quotes.get_quote(self.id, dt)
+        req = getattr(request, '_request', request) if request else None
+        dt = req.start if req is not None and hasattr(req, 'start') else timezone.now()
+        return Quotes.get_quote(self.id, dt, req)
     
     def quote_penultimate(self, request=None):
         """
@@ -1331,12 +1333,13 @@ class Products(models.Model):
             Quotes: The penultimate Quotes object for this product, or None if not found
                     or if there's no last quote to base the search on.
         """
-        lastquote=self.quote_last(request)
+        req = getattr(request, '_request', request) if request else None
+        lastquote=self.quote_last(req)
         if lastquote is None:
             return None
 
         penultimatedt=casts.dtaware_day_end_from_date(lastquote.datetime.date()-timedelta(days=1), 'UTC')
-        return Quotes.get_quote(self.id, penultimatedt)
+        return Quotes.get_quote(self.id, penultimatedt, req)
     
     def quote_lastyear(self, request=None):
         """
@@ -1352,11 +1355,12 @@ class Products(models.Model):
             Quotes: The last year's Quotes object for this product, or None if not found
                     or if there's no last quote to base the search on.
         """
-        lastquote=self.quote_last(request)
+        req = getattr(request, '_request', request) if request else None
+        lastquote=self.quote_last(req)
         if lastquote is None:
             return None
         lastyeardt=casts.dtaware_year_end(lastquote.datetime.year-1, 'UTC')
-        return Quotes.get_quote(self.id, lastyeardt)
+        return Quotes.get_quote(self.id, lastyeardt, req)
 
     def price_last(self,request=None):
         """
@@ -1607,12 +1611,30 @@ class Quotes(models.Model):
                 return req.cache_quotes[(product_id, datetime_)]
             req.quotes_request_count += 1
 
+        is_old = datetime_ < timezone.now() - timedelta(days=30)
+        cache_key = f"quote_{product_id}_{datetime_.timestamp()}" if is_old else None
+
+        if is_old:
+            cached_val = cache.get(cache_key, "NOT_FOUND")
+            if cached_val != "NOT_FOUND":
+                if req is not None and hasattr(req, 'cache_quotes'):
+                    req.cache_quotes[(product_id, datetime_)] = cached_val
+                    if hasattr(req, 'quotes_server_cache_hit_count'):
+                        req.quotes_server_cache_hit_count += 1
+                return cached_val
+
         try:
-            r=Quotes.objects.filter(products__id=product_id, datetime__lte=datetime_).order_by("-datetime")[0]
+            r=Quotes.objects.filter(products__id=product_id, datetime__lte=datetime_).select_related("products").order_by("-datetime")[0]
             if req is not None and hasattr(req, 'cache_quotes'):
                 req.cache_quotes[(product_id, datetime_)] = r
+            if is_old:
+                cache.set(cache_key, r, timeout=60*60*24*30) # Se cachea 30 días
             return r
-        except:
+        except IndexError:
+            if req is not None and hasattr(req, 'cache_quotes'):
+                req.cache_quotes[(product_id, datetime_)] = None
+            if is_old:
+                cache.set(cache_key, None, timeout=60*60*24*30) # También cacheamos los None para evitar consultas repetidas
             return None
 
 class Productspairs(models.Model):
@@ -2018,9 +2040,9 @@ class Assets:
             Returns a dict with the following keys:
             {'accounts_user': 0, 'investments_user': 0, 'total_user': 0, 'investments_invested_user': 0}
         """
-        accounts_user= Accounts.accounts_balance(Accounts.objects.all(), dt, local_currency)["balance_user_currency"]
+        accounts_user= Accounts.accounts_balance(Accounts.objects.all(), dt, local_currency, request)["balance_user_currency"]
        
-        plio=ios.IOS.from_all(dt,  local_currency,  mode, request)
+        plio=ios.IOS.from_all(dt,  local_currency,  mode, request=request)
 
         r= { 
             "accounts_user": accounts_user, 

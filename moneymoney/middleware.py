@@ -19,6 +19,7 @@ class QuotesCacheMiddleware(MiddlewareMixin):
         request.start=timezone.now()
         request.quotes_request_count=0
         request.quotes_hit_count=0
+        request.quotes_server_cache_hit_count=0
         request.cache_quotes = {}
 
     def process_response(self, request, response):
@@ -30,7 +31,7 @@ class QuotesCacheMiddleware(MiddlewareMixin):
         # if hasattr(request, 'start'):
         #     print("Request time:", timezone.now()-request.start)
         if settings.DEBUG:
-            print (f"Quotes request cache: {request.quotes_hit_count}/{request.quotes_request_count}")
+            print (f"Quotes request cache: {request.quotes_hit_count}/{request.quotes_request_count} (Server cache hits: {getattr(request, 'quotes_server_cache_hit_count', 0)})")
             functions.show_queries_function(True)
             print(f"View took {timezone.now()-request.start}")
         
