@@ -984,10 +984,7 @@ class IOS:
                 "currency_product": d["currency_product"], 
                 "currency_user": local_currency, 
                 "productstypes_id": d["productstypes_id"], 
-            }
-                
-        lod_data=lod.dod2lod(products)
-        
+            }        
 
         #preparing lod_investments
         

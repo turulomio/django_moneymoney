@@ -1208,7 +1208,7 @@ class IOS(APIView):
         mode=RequestInteger(request, "mode", ios.IOSModes.ios_totals_sumtotals)
         
         #Preparing simulation
-        simulation=request.data["simulation"] if request.data["simulation"] else []
+        simulation=request.data.get("simulation") or []
         
         for s in simulation:
             if s["datetime"].__class__==str: #When comes from a post

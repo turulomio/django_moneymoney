@@ -5,25 +5,26 @@ from decimal import Decimal
 from django.utils import timezone
 from moneymoney import ios
 from django.test import tag
+
+def _setup_ios_api_test_data(self):
+    """Helper to setup basic investment data and return an investment dictionary."""
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(quote=10), status.HTTP_201_CREATED)
+    dict_inv1 = tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(name="Inv1"), status.HTTP_201_CREATED)
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(investments=dict_inv1["url"], shares=1000, price=10), status.HTTP_201_CREATED)
+    return dict_inv1
+
 @tag("current")
-def test_IOS(self):
+def test_ios_internal_calculations(self):
     """
-        31/12           1000 shares         9€          9000€
-        yesterday    1000 shares        10€         10000€ 
-        
-        Balance 10€ is 20000€
-        
-        self.today           -1 shares               11€     
-        
-        Balance a 11€ =22000€-11=21.989€
-        
-        Gains current year [0] = 999*11 - 999*9=1998
-        Gains current year [1] = 1000*10 - 1000*9=1000
-        
-        Sum gains current year= 2998
-        
-        
-    
+    Tests the inner calculations of the IOS Python class.
+    31/12           1000 shares         9€          9000€
+    yesterday       1000 shares        10€         10000€ 
+    Balance 10€ is 20000€
+    self.today      -1 shares          11€     
+    Balance a 11€ = 22000€ - 11 = 21.989€
+    Gains current year [0] = 999*11 - 999*9 = 1998
+    Gains current year [1] = 1000*10 - 1000*9 = 1000
+    Sum gains current year = 2998
     """
     dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
     
@@ -51,113 +52,127 @@ def test_IOS(self):
     ios_.io_current_addition_current_year_gains()
     self.assertEqual(ios_.sum_total_io_current()["current_year_gains_user"], 2998)
     
-    #IOS.simulation
-    simulation=[
-        {
-            'id': -1, 
-            'operationstypes_id': 4, 
-            'investments_id': dict_investment["id"], 
-            'shares': -1, 
-            'taxes': 0, 
-            'commission': 0, 
-            'price': 10, 
-            'datetime': timezone.now(), 
-            'comment': 'Simulation', 
-            'currency_conversion': 1, 
-        }, 
-    ]
-    ios_=ios.IOS.from_ids_with_simulation( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals, request=None, simulation=simulation) #Makes simulation
-    self.assertEqual(ios_.d_total_io_current(dict_investment["id"])["balance_user"], Decimal("21978"))
-
-
-
-
-    #IOS.from_merging_io_current
-    ## Adding a new investment and new investmentsoperations with same product
-    dict_investment_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
-    tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment_2["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
-    ios_merged=ios.IOS.from_qs_merging_io_current(timezone.now(), 'EUR', models.Investments.objects.all(), ios.IOSModes.ios_totals_sumtotals, request=None)
-    self.assertEqual(ios_merged.entries(),  ['79329'])
-    
-
-
-def test_IOS_with_client(self):
-    #IOS.from_ids
-    tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(), status.HTTP_201_CREATED)
-    dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
-    
-    tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(investments=dict_investment["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
-    
-    #Get IOS_ids of first
-    dict_ios_ids_pp={
-        "datetime":timezone.now(), 
-        "classmethod_str":"from_ids", 
-        "investments": [dict_investment["id"], ], 
-        "mode":ios.IOSModes.ios_totals_sumtotals, 
-        "currency": "EUR", 
-        "simulation":[], 
+def test_ios_api_from_ids(self):
+    dict_inv1 = _setup_ios_api_test_data(self)
+    payload = {
+        "datetime": timezone.now(),
+        "classmethod_str": "from_ids",
+        "investments": [dict_inv1["id"]],
+        "mode": ios.IOSModes.ios_totals_sumtotals,
+        "currency": "EUR"
     }
-    dict_ios_ids_1=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_pp, status.HTTP_200_OK)
-    first_entry=dict_ios_ids_1["entries"][0]
-    self.assertEqual(dict_ios_ids_1[first_entry]["total_io_current"]["balance_user"], 10000)
-    tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(dict_investment["url"], shares=-1, price=20), status.HTTP_201_CREATED) #Removes one share
+    res = tests_helpers.client_post(self, self.client_authorized_1, "/ios/", payload, status.HTTP_200_OK)
+    entry = str(dict_inv1["id"])
     
-    dict_ios_ids_2=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_pp, status.HTTP_200_OK)
-    self.assertEqual(dict_ios_ids_2[first_entry]["total_io_current"]["balance_user"], 9990)
-    
-    #IOS.simulation
-    simulation=[
-        {
-            'id': -1, 
-            'operationstypes_id': 4, 
-            'investments_id': dict_investment["id"], 
-            'shares': -1, 
-            'taxes': 0, 
-            'commission': 0, 
-            'price': 10, 
-            'datetime': timezone.now(), 
-            'comment': 'Simulation', 
-            'currency_conversion': 1, 
-        }, 
-    ]
-    dict_ios_ids_pp["simulation"]=simulation
-    dict_ios_ids_pp["classmethod_str"]="from_ids_with_simulation"
-    dict_ios_ids_simulation=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_pp, status.HTTP_200_OK)
-    self.assertEqual(dict_ios_ids_simulation[first_entry]["total_io_current"]["balance_user"], 9980)
-    
-    #IOS.from_merging_io_current
-    ## Adding a new investment and new investmentsoperations with same product
-    dict_investment_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(), status.HTTP_201_CREATED)
-    tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(investments=dict_investment_2["url"]), status.HTTP_201_CREATED)#Al actualizar ao asociada ejecuta otro plio
-    
-    dict_ios_ids_merging_pp={
-        "datetime":timezone.now(), 
-        "classmethod_str":"from_ids_merging_io_current", 
-        "investments": [dict_investment["id"], dict_investment_2["id"] ], 
-        "mode":ios.IOSModes.ios_totals_sumtotals, 
-        "currency": "EUR", 
-        "simulation":[], 
-    }
-    dict_ios_ids_merging=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_merging_pp, status.HTTP_200_OK)
-    self.assertEqual(dict_ios_ids_merging["79329"]["total_io_current"]["balance_user"], 19990)
-    
-    #IOS.from_merging_io_current simulation
-    simulation=[
-        {
-            'id': -1, 
-            'operationstypes_id': 4, 
-            'investments_id': 79329,  
-            'shares': -1, 
-            'taxes': 0, 
-            'commission': 0, 
-            'price': 10, 
-            'datetime': timezone.now(), 
-            'comment': 'Simulation', 
-            'currency_conversion': 1, 
-        }, 
-    ]
-    dict_ios_ids_merging_pp["simulation"]=simulation
-    dict_ios_ids_merging_pp["classmethod_str"]="from_ids_merging_io_current_with_simulation"
-    dict_ios_ids_simulation=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_merging_pp, status.HTTP_200_OK)
-    self.assertEqual(dict_ios_ids_simulation["79329"]["total_io_current"]["balance_user"], 19980)
+    self.assertIn(entry, res["entries"])
+    self.assertEqual(res[entry]["total_io_current"]["balance_user"], 10000)
 
+def test_ios_api_from_ids_with_simulation(self):
+    dict_inv1 = _setup_ios_api_test_data(self)
+    payload = {
+        "datetime": timezone.now(),
+        "classmethod_str": "from_ids_with_simulation",
+        "investments": [dict_inv1["id"]],
+        "mode": ios.IOSModes.ios_totals_sumtotals,
+        "currency": "EUR",
+        "simulation": [{
+            'id': -1,
+            'operationstypes_id': 4,
+            'investments_id': dict_inv1["id"],
+            'shares': -100,
+            'taxes': 0,
+            'commission': 0,
+            'price': 10,
+            'datetime': timezone.now(),
+            'comment': 'Simulation',
+            'currency_conversion': 1,
+        }]
+    }
+    res = tests_helpers.client_post(self, self.client_authorized_1, "/ios/", payload, status.HTTP_200_OK)
+    entry = str(dict_inv1["id"])
+    
+    # Original balance = 10000. Simulated sold 100 shares @ 10 -> balance should be 9000
+    self.assertEqual(res[entry]["total_io_current"]["balance_user"], 9000)
+
+def test_ios_api_from_all(self):
+    dict_inv1 = _setup_ios_api_test_data(self)
+    payload = {
+        "datetime": timezone.now(),
+        "classmethod_str": "from_all",
+        "investments": [],
+        "mode": ios.IOSModes.ios_totals_sumtotals,
+        "currency": "EUR"
+    }
+    res = tests_helpers.client_post(self, self.client_authorized_1, "/ios/", payload, status.HTTP_200_OK)
+    entry = str(dict_inv1["id"])
+    
+    self.assertIn(entry, res["entries"])
+    self.assertEqual(res[entry]["total_io_current"]["balance_user"], 10000)
+
+def test_ios_api_from_all_merging_io_current(self):
+    dict_inv1 = _setup_ios_api_test_data(self)
+    dict_inv2 = tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(name="Inv2"), status.HTTP_201_CREATED)
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(investments=dict_inv2["url"], shares=500, price=10), status.HTTP_201_CREATED)
+
+    payload = {
+        "datetime": timezone.now(),
+        "classmethod_str": "from_all_merging_io_current",
+        "investments": [],
+        "mode": ios.IOSModes.ios_totals_sumtotals,
+        "currency": "EUR"
+    }
+    res = tests_helpers.client_post(self, self.client_authorized_1, "/ios/", payload, status.HTTP_200_OK)
+    
+    # Assuming both use default product 79329
+    merged_entry = "79329"
+    self.assertIn(merged_entry, res["entries"])
+    self.assertEqual(res[merged_entry]["total_io_current"]["balance_user"], 15000)
+
+def test_ios_api_from_ids_merging_io_current(self):
+    dict_inv1 = _setup_ios_api_test_data(self)
+    dict_inv2 = tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(name="Inv2"), status.HTTP_201_CREATED)
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(investments=dict_inv2["url"], shares=500, price=10), status.HTTP_201_CREATED)
+
+    payload = {
+        "datetime": timezone.now(),
+        "classmethod_str": "from_ids_merging_io_current",
+        "investments": [dict_inv1["id"], dict_inv2["id"]],
+        "mode": ios.IOSModes.ios_totals_sumtotals,
+        "currency": "EUR"
+    }
+    res = tests_helpers.client_post(self, self.client_authorized_1, "/ios/", payload, status.HTTP_200_OK)
+    
+    merged_entry = "79329"
+    self.assertIn(merged_entry, res["entries"])
+    self.assertEqual(res[merged_entry]["total_io_current"]["balance_user"], 15000)
+
+def test_ios_api_from_ids_merging_io_current_with_simulation(self):
+    dict_inv1 = _setup_ios_api_test_data(self)
+    dict_inv2 = tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(name="Inv2"), status.HTTP_201_CREATED)
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(investments=dict_inv2["url"], shares=500, price=10), status.HTTP_201_CREATED)
+
+    payload = {
+        "datetime": timezone.now(),
+        "classmethod_str": "from_ids_merging_io_current_with_simulation",
+        "investments": [dict_inv1["id"], dict_inv2["id"]],
+        "mode": ios.IOSModes.ios_totals_sumtotals,
+        "currency": "EUR",
+        "simulation": [{
+            'id': -1,
+            'operationstypes_id': 4,
+            'investments_id': 79329,  # Target the product ID directly since operations are merged
+            'shares': -500,
+            'taxes': 0,
+            'commission': 0,
+            'price': 10,
+            'datetime': timezone.now(),
+            'comment': 'Simulation',
+            'currency_conversion': 1,
+        }]
+    }
+    res = tests_helpers.client_post(self, self.client_authorized_1, "/ios/", payload, status.HTTP_200_OK)
+    
+    merged_entry = "79329"
+    self.assertIn(merged_entry, res["entries"])
+    # Original combined balance = 15000. Simulated sold 500 shares @ 10 -> balance should be 10000
+    self.assertEqual(res[merged_entry]["total_io_current"]["balance_user"], 10000)
