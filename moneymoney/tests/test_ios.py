@@ -1,6 +1,7 @@
 from moneymoney import models
 from moneymoney.reusing import tests_helpers
 from rest_framework import status
+from decimal import Decimal
 from django.utils import timezone
 from moneymoney import ios
 from django.test import tag
@@ -65,7 +66,11 @@ def test_IOS(self):
             'currency_conversion': 1, 
         }, 
     ]
-    ios_=ios.IOS.from_ids( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals, request=None) #Makes simulation
+    ios_=ios.IOS.from_ids_with_simulation( timezone.now(),  'EUR',  [dict_investment["id"]],  ios.IOSModes.ios_totals_sumtotals, request=None, simulation=simulation) #Makes simulation
+    self.assertEqual(ios_.d_total_io_current(dict_investment["id"])["balance_user"], Decimal("21978"))
+
+
+
 
     #IOS.from_merging_io_current
     ## Adding a new investment and new investmentsoperations with same product
@@ -116,6 +121,7 @@ def test_IOS_with_client(self):
         }, 
     ]
     dict_ios_ids_pp["simulation"]=simulation
+    dict_ios_ids_pp["classmethod_str"]="from_ids_with_simulation"
     dict_ios_ids_simulation=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_pp, status.HTTP_200_OK)
     self.assertEqual(dict_ios_ids_simulation[first_entry]["total_io_current"]["balance_user"], 9980)
     
@@ -151,6 +157,7 @@ def test_IOS_with_client(self):
         }, 
     ]
     dict_ios_ids_merging_pp["simulation"]=simulation
+    dict_ios_ids_merging_pp["classmethod_str"]="from_ids_merging_io_current_with_simulation"
     dict_ios_ids_simulation=tests_helpers.client_post(self, self.client_authorized_1, "/ios/", dict_ios_ids_merging_pp, status.HTTP_200_OK)
     self.assertEqual(dict_ios_ids_simulation["79329"]["total_io_current"]["balance_user"], 19980)
 

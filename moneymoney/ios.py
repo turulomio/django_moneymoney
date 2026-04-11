@@ -936,6 +936,16 @@ class IOS:
         return cls.from_qs_investments_with_simulation(dt, local_currency, models.Investments.objects.filter(id__in=ids), mode, request, simulation)
 
     @classmethod
+    def from_ids_merging_io_current_with_simulation(cls, dt, local_currency, ids, mode, request, simulation):
+        return cls.from_qs_merging_io_current_with_simulation(dt, local_currency, models.Investments.objects.filter(id__in=ids), mode, request, simulation)
+
+    @classmethod
+    def from_qs_merging_io_current_with_simulation(cls, dt,  local_currency,  qs_investments, mode, request, simulation):
+        s=datetime.now()
+        old_ios=cls.from_qs_investments(dt, local_currency, qs_investments, IOSModes.ios_totals_sumtotals, request)
+        return cls._merge_old_ios(dt, local_currency, qs_investments, mode, request, old_ios, s, simulation)
+
+    @classmethod
     def from_qs_merging_io_current(cls, dt,  local_currency,  qs_investments, mode, request):
         """
             Return a plio merging in same virtual (negative) id all investments in qs with same product
@@ -947,6 +957,10 @@ class IOS:
 
         s=datetime.now()
         old_ios=cls.from_qs_investments(dt, local_currency, qs_investments, IOSModes.ios_totals_sumtotals,request)#Must have ios, although result can be other mode
+        return cls._merge_old_ios(dt, local_currency, qs_investments, mode, request, old_ios, s)
+
+    @classmethod
+    def _merge_old_ios(cls, dt, local_currency, qs_investments, mode, request, old_ios, s, simulation=None):
         
         # Sets a dictionary with key products_id and values all investments_id of this products to set at the end
         investments_id_in_each_product={}
@@ -996,21 +1010,19 @@ class IOS:
                     "currency_conversion": o["investment2account"], 
                 })
         lod_io=lod.lod_order_by(lod_io, "datetime")
-#        print(lod_io)
-#        print(simulation)
-        #lod_io=lod_io#+simulation
-
-        #Generating new_t
         dod_ios={} #TODO con lod_data y lod_io
+        for p_id, p in products.items():
+            dod_ios[str(p_id)] = {
+                "products_id": p["products_id"], 
+                "name": p["name"], 
+                "currency_account": p["currency_account"], 
+                "lod_io": []
+            }
+            
         for o in lod_io:
-            if str(o["investments_id"]) not in dod_ios:
-                dod_ios[str(o["investments_id"])]={"products_id":data_investments_id["products_id"], "name": products[data_investments_id["products_id"]]["name"], "currency_account": products[data_investments_id["products_id"]]["currency_account"], "lod_io":[o]}
-            else:
-                dod_ios[str(o["investments_id"])]["lod_io"].append(o)
+            dod_ios[str(o["investments_id"])]["lod_io"].append(o)
 
-
-
-
+        dod_ios = cls.add_iodict_to_dod(dod_ios, simulation)
 
         ios=IOS(request)
         ios.assign_ios(dt, dod_ios, local_currency)

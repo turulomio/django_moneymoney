@@ -20,8 +20,3 @@ def test_Currencies(self):
     # Runs currencies with usd account and eur as user
     lod_currencies=tests_helpers.client_get(self, self.client_authorized_1, "/currencies/", status.HTTP_200_OK)
     self.assertEqual(len(lod_currencies), 2)
-
-
-    
-    from pydicts import lod
-    lod.lod_print(lod_currencies)

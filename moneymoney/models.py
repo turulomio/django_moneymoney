@@ -800,8 +800,6 @@ class Investments(models.Model):
         return r
 
     def set_attributes_after_investmentsoperations_crud(self):      
-#        print("setting investment attributes")
-        # Always activeive after investmentsoperations CRUD
         if self.active is False:
             self.active=True
         # Changes selling expiration after investmentsoperations CRUD y 0 shares

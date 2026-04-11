@@ -123,7 +123,6 @@ class ProductRange():
             #     else: #number_sma_over_price=1 and o.id%4!=0
             #         o.recomendation_invest=False
         elif method==10: #HMA 10     
-            # print(df["close"].iloc[-1] , df["HMA10"].iloc[-1],df["close"].iloc[-1] >= df["HMA10"].iloc[-1])  
             # df.loc['2025-07-03']
             return self.value >= df["HMA10"].iloc[-1]
 

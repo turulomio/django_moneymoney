@@ -921,7 +921,6 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"], name='Investments operations evolution chart', url_path="operations_evolution_chart", url_name='operations_evolution_chart', permission_classes=[permissions.IsAuthenticated])
     def operations_evolution_chart(self, request, pk=None):
         investment=self.get_object()
-        print(investment)
         plio=ios.IOS.from_ids(timezone.now(), request.user.profile.currency, [investment.id, ], ios.IOSModes.ios_totals_sumtotals, request)
         if len(plio.d_io(investment.id))==0:
             return JsonResponse( _("Insuficient data") , encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
@@ -946,7 +945,6 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
         gains=[]
         
         for i, dt in enumerate(datetimes_list):
-            print(investment.id, dt)
             plio_dt=ios.IOS.from_ids( dt, request.user.profile.currency, [investment.id, ], mode=ios.IOSModes.ios_totals_sumtotals, request=request)
             #Calculate dividends in datetime
             dividend_net=0
@@ -955,8 +953,6 @@ class InvestmentsViewSet(viewsets.ModelViewSet):
                     dividend_net=dividend_net+dividend.net
     
             #Append data of that datetime
-            from pydicts import dod
-            dod.dod_print(plio_dt.t)
             invested.append(plio_dt.d_total_io_current(investment.id)["invested_user"])
             balance.append(plio_dt.d_total_io_current(investment.id)["balance_futures_user"])
             gains_dividends.append(plio_dt.d_total_io_historical(investment.id)["gains_net_user"]+dividend_net)
@@ -1223,7 +1219,6 @@ class IOS(APIView):
                 s["price"]=Decimal(s["price"])
                 s["currency_conversion"]=Decimal(s["currency_conversion"])
 
-    #    print(dt, mode, simulation)
         if classmethod_str=="from_ids":
             ids=RequestListOfIntegers(request, "investments")
             if all_args_are_not_none( ids, dt, mode):
@@ -1234,7 +1229,7 @@ class IOS(APIView):
         elif classmethod_str=="from_ids_with_simulation":
             ids=RequestListOfIntegers(request, "investments")
             if all_args_are_not_none( ids, dt, mode, simulation):
-                ios_=ios.IOS.from_qs_investments_with_simulation( dt,  request.user.profile.currency, models.Investments.objects.filter(id__in=ids),  mode, request, simulation)
+                ios_=ios.IOS.from_ids_with_simulation( dt,  request.user.profile.currency, models.Investments.objects.filter(id__in=ids),  mode, request, simulation)
                 if addition_current_year_gains:
                     ios_.io_current_addition_current_year_gains()
                 return JsonResponse( ios_.t, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
@@ -1252,6 +1247,13 @@ class IOS(APIView):
             ids=RequestListOfIntegers(request, "investments")
             if all_args_are_not_none( ids, dt, mode, simulation):
                 ios_=ios.IOS.from_qs_merging_io_current( dt,  request.user.profile.currency, models.Investments.objects.filter(id__in=ids),   mode, request)
+                if addition_current_year_gains:
+                    ios_.io_current_addition_current_year_gains()
+                return JsonResponse( ios_.t, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+        elif classmethod_str=="from_ids_merging_io_current_with_simulation":
+            ids=RequestListOfIntegers(request, "investments")
+            if all_args_are_not_none( ids, dt, mode, simulation):
+                ios_=ios.IOS.from_ids_merging_io_current_with_simulation( dt,  request.user.profile.currency, ids, mode, request, simulation)
                 if addition_current_year_gains:
                     ios_.io_current_addition_current_year_gains()
                 return JsonResponse( ios_.t, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
