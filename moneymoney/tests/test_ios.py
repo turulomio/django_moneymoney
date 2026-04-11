@@ -133,6 +133,9 @@ def test_ios_api_from_ids_merging_io_current(self):
     dict_inv2 = tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(name="Inv2"), status.HTTP_201_CREATED)
     tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(investments=dict_inv2["url"], shares=500, price=10), status.HTTP_201_CREATED)
 
+    # Sell 100 shares from Inv1 to generate a historical operation
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/investmentsoperations/", models.Investmentsoperations.post_payload(investments=dict_inv1["url"], shares=-100, price=15, datetime=timezone.now()), status.HTTP_201_CREATED)
+
     payload = {
         "datetime": timezone.now(),
         "classmethod_str": "from_ids_merging_io_current",
@@ -144,7 +147,11 @@ def test_ios_api_from_ids_merging_io_current(self):
     
     merged_entry = "79329"
     self.assertIn(merged_entry, res["entries"])
-    self.assertEqual(res[merged_entry]["total_io_current"]["balance_user"], 15000)
+    
+    # Original Inv1: 1000, sold 100 -> 900. Inv2: 500. Total = 1400 @ price 10 = 14000.
+    self.assertEqual(res[merged_entry]["total_io_current"]["balance_user"], 14000)
+    self.assertEqual(len(res[merged_entry]["io_historical"]), 1)
+    self.assertEqual(res[merged_entry]["total_io_historical"]["gains_net_user"], 500)
 
 def test_ios_api_from_ids_merging_io_current_with_simulation(self):
     dict_inv1 = _setup_ios_api_test_data(self)

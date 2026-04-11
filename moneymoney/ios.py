@@ -1030,6 +1030,8 @@ class IOS:
             for old_ioh in old_ios.d_io_historical(investments_id):
                 old_ioh["investments_id"]=products_id
                 ios.t[str(products_id)]["io_historical"].append(old_ioh)
+                ios.t[str(products_id)]["total_io_historical"]["commissions_account"] += old_ioh["commissions_account"]
+                ios.t[str(products_id)]["total_io_historical"]["gains_net_user"] += old_ioh["gains_net_user"]
                 ##Añado factors y quotes
         
         for p_id in ios.entries():
