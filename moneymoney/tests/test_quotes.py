@@ -5,6 +5,7 @@ from django.utils import timezone
 from datetime import timedelta
 from pydicts import casts
 from asgiref.sync import sync_to_async
+import time
 from django.core.cache import cache
 
 
@@ -79,3 +80,69 @@ def test_Quotes_cache(self):
     self.assertEqual(req2.quotes_request_count, 1)
     self.assertEqual(req2.quotes_hit_count, 0)
     self.assertEqual(req2.quotes_server_cache_hit_count, 1)
+
+def test_Quotes_cache_benchmark(self):
+    """
+    Benchmark para medir la diferencia de rendimiento entre:
+    1. Sin Caché (consultas directas a la base de datos)
+    2. Caché L2 (Caché del servidor / Redis / LocMem)
+    3. Caché L1 (Memoria de la petición actual dict de Python)
+    """
+    cache.clear()
+    product_ids = []
+    old_dt = timezone.now() - timedelta(days=10)
+    
+    # Setup: Creamos 5 productos y 5 cotizaciones antiguas
+    for i in range(5):
+        dict_pp = tests_helpers.client_post(self, self.client_authorized_1, "/api/products/", models.Products.post_personal_payload(name=f"Bench Product {i}"), status.HTTP_201_CREATED)
+        product_ids.append(dict_pp["id"])
+        tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/", models.Quotes.post_payload(products=dict_pp["url"], quote=10+i, datetime=old_dt), status.HTTP_201_CREATED)
+
+    iterations = 200 # 200 iteraciones * 5 productos = 1000 consultas por escenario
+    
+    # 1. Escenario A: Sin Caché (Forzamos borrar L2 en cada iteración para forzar la lectura de DB)
+    start_time = time.perf_counter()
+    for _ in range(iterations):
+        for pid in product_ids:
+            cache.clear()
+            models.Quotes.get_quote(pid, old_dt, None)
+    time_no_cache = max(time.perf_counter() - start_time, 0.0001)
+
+    # 2. Escenario B: Sólo Caché L2 (Servidor LocMem)
+    cache.clear()
+    start_time = time.perf_counter()
+    for _ in range(iterations):
+        for pid in product_ids:
+            models.Quotes.get_quote(pid, old_dt, None)
+    time_l2_cache = max(time.perf_counter() - start_time, 0.0001)
+
+    # 3. Escenario C: Caché L1 (Request) + L2
+    cache.clear()
+    class MockRequest:
+        def __init__(self):
+            self.start = timezone.now()
+            self.quotes_request_count = 0
+            self.quotes_hit_count = 0
+            self.quotes_server_cache_hit_count = 0
+            self.cache_quotes = {}
+    
+    req = MockRequest()
+    start_time = time.perf_counter()
+    for _ in range(iterations):
+        for pid in product_ids:
+            models.Quotes.get_quote(pid, old_dt, req)
+    time_l1_cache = max(time.perf_counter() - start_time, 0.0001)
+
+    print("\n" + "="*60)
+    print("📊 RESULTADOS DEL BENCHMARK DE CACHÉ DE QUOTES 📊")
+    print("="*60)
+    print(f"Total de consultas simuladas por escenario: {iterations * len(product_ids)}")
+    print(f"🔴 Sin Caché (Sólo DB): {time_no_cache:.4f} segundos")
+    print(f"🟡 Caché L2 (Servidor) : {time_l2_cache:.4f} segundos (x{time_no_cache/time_l2_cache:.2f} más rápido que DB)")
+    print(f"🟢 Caché L1 (Request)  : {time_l1_cache:.4f} segundos (x{time_no_cache/time_l1_cache:.2f} más rápido que DB)")
+    print(f"🚀 Ventaja L1 vs L2    : L1 es x{time_l2_cache/time_l1_cache:.2f} más rápido que L2")
+    print("="*60 + "\n")
+
+    # Comprobaciones para asegurar que la jerarquía de caché de hecho mejora el rendimiento
+    self.assertTrue(time_l2_cache < time_no_cache, "La caché L2 debería ser más rápida que la base de datos")
+    self.assertTrue(time_l1_cache < time_l2_cache, "La caché L1 (diccionario en memoria) debería ser más rápida que L2")
