@@ -545,6 +545,16 @@ class IO:
 
 
 class IOS:
+    """
+    Investment Operations System (IOS).
+    
+    This class is responsible for calculating, aggregating, and storing the financial data 
+    of investments based on their operations (purchases, sales, additions, etc.). 
+    It computes current balances, historical gains, taxes, commissions, and performance 
+    percentages, taking into account currency conversions and leverages.
+    
+    The calculated data is stored in the `self.t` dictionary.
+    """
     def __init__(self, request):
         self.t={}
         self.request=request
@@ -582,7 +592,11 @@ class IOS:
 
     def sum_total_io_current_zerorisk_user(self):
         """
-            Returns a decimal with zerorisk 
+        Calculates and returns the total user balance for investments that have zero risk
+        (products with a risk percentage of 0).
+        
+        Returns:
+            Decimal: The total zero-risk balance in the user's currency.
         """
         if IOSModes.sumtotals==self.mode():
             error( _("You need total mode to calculate sum_total_io_current_zerorisk_user"))
@@ -609,6 +623,9 @@ class IOS:
         return percentage_between(self.d_basic_results(id)["last"], selling_price)
         
     def qs_investments(self):
+        """
+        Returns a Django QuerySet of the investments present in the current IOS instance.
+        """
         return models.Investments.objects.filter(id__in = self.entries()).select_related("accounts")
         
     def d(self, id_):
@@ -656,6 +673,18 @@ class IOS:
         
         
     def io_historical_sum_between_dt(self, dt_from, dt_to,  key, productstypes_id=None):
+        """
+        Calculates the sum of a specific key from historical operations within a given date range.
+        
+        Args:
+            dt_from (datetime): Start of the date range.
+            dt_to (datetime): End of the date range.
+            key (str): The dictionary key to sum (e.g., 'gains_net_user').
+            productstypes_id (int, optional): Filter by product type ID.
+            
+        Returns:
+            Decimal/float: The accumulated sum.
+        """
         r=0
         for investments_id in self.entries():
             for ioh in self.d_io_historical(investments_id):
@@ -668,6 +697,17 @@ class IOS:
         return r
 
     def io_sum_between_dt(self, dt_from, dt_to, key):
+        """
+        Calculates the subtracted sum of a specific key from all operations within a given date range.
+        
+        Args:
+            dt_from (datetime): Start of the date range.
+            dt_to (datetime): End of the date range.
+            key (str): The dictionary key to sum (e.g., 'commission_account').
+            
+        Returns:
+            Decimal/float: The accumulated sum (negated).
+        """
         r=0
         for investments_id in self.entries():
             for o in self.d_io(investments_id):
@@ -677,11 +717,14 @@ class IOS:
         
     def io_current_addition_current_year_gains(self):
         """
-            Calculates current_year_gains of all entries and adds them to d_io_current
-            Returns a Decimal with the gains of this investment operation
-                - If io is newer than last year datetime. Returns gains from bought datetime
-                - If not returns gains from last year datetime
-            
+        Calculates current year gains for all entries and adds them to `d_io_current`.
+        
+        - If the operation is newer than the last year's datetime, it calculates gains 
+          from the purchase price.
+        - Otherwise, it calculates gains from the last year's closing price.
+        
+        Updates the internal dictionaries with keys:
+        `current_year_gains_investment`, `current_year_gains_account`, and `current_year_gains_user`.
         """
         sum_total_investment=Decimal(0)
         sum_total_account=Decimal(0)
@@ -752,11 +795,13 @@ class IOS:
     def assign_ios(self, dt,  dod_ios, currency_user):
 
         """
-            Crea el IO y almacena el _d dentro del k, v = entry, _d
-
-            dod_ios es un diccionario que tiene como llave entries
-            Esta llave apunta a un diccionario {products_id: 1, currency_account:2 lod_io=[io1,io2...]}
-
+        Assigns operations from a Dictionary of Dictionaries (dod_ios) to individual IO 
+        instances, processes them, and stores the results in the IOS dictionary `self.t`.
+        
+        Args:
+            dt (datetime): The target datetime for evaluation.
+            dod_ios (dict): Dictionary mapping entry IDs to their data and operations.
+            currency_user (str): The user's local currency.
         """
 
         # ## Total calculated ios
@@ -808,6 +853,10 @@ class IOS:
 
     @classmethod
     def qs_investments2dod(cls, dt, qs_investments):
+        """
+        Converts a QuerySet of investments into a Dictionary of Dictionaries (DoD) containing 
+        their related operations up to the specified datetime `dt`.
+        """
         dod_ios = {}
         for investment in qs_investments.select_related("products", "accounts"):
             dod_ios[str(investment.id)] = {
@@ -839,6 +888,9 @@ class IOS:
 
     @classmethod
     def from_qs_investments(cls, dt,  local_currency,  qs_investments,  mode, request):
+        """
+        Creates an IOS instance from a QuerySet of investments up to a target datetime.
+        """
         dod_ios = cls.qs_investments2dod(dt, qs_investments)
         return cls.from_dod(dt, local_currency, dod_ios, mode, request)
 
@@ -856,13 +908,14 @@ class IOS:
     @classmethod
     def from_dod(cls,  dt,  local_currency, dod_ios,  mode, request):
         """
-            dod_data es en dod con llave entry y valor el contenido de IO.assign_data
-            dod_ios es un diccionario que tiene como llave entries
-            Esta llave apunta a un diccionario {products_id: 1, currency_account:2, name:name, lod_io=[io1,io2...]}
-
-
-            OJO si en dos_ios no hay io de una inversion no aparecerán
-
+        Creates an IOS instance directly from a Dictionary of Dictionaries (dod_ios).
+        
+        Args:
+            dt (datetime): Target datetime.
+            local_currency (str): User's local currency.
+            dod_ios (dict): Pre-structured dictionary mapping entry IDs to operations.
+            mode (int): Evaluation mode (from IOSModes).
+            request: The HTTP request object.
          """
         ios = IOS(request)
         ios.assign_ios(dt, dod_ios, local_currency)
@@ -878,6 +931,10 @@ class IOS:
     def from_ids(cls, dt, local_currency, ids, mode, request):
         return cls.from_qs_investments(dt, local_currency, models.Investments.objects.filter(id__in=ids), mode, request)
     
+    @classmethod
+    def from_ids_with_simulation(cls, dt, local_currency, ids, mode, request, simulation):
+        return cls.from_qs_investments_with_simulation(dt, local_currency, models.Investments.objects.filter(id__in=ids), mode, request, simulation)
+
     @classmethod
     def from_qs_merging_io_current(cls, dt,  local_currency,  qs_investments, mode, request):
         """
