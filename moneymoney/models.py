@@ -586,7 +586,36 @@ class Creditcards(models.Model):
         self.full_clean()        
         super(Creditcards, self).save(*args, **kwargs) #To generate io and then plio
 
+    @transaction.atomic
+    def pay(self,cco_ids, dt_payment ):
+        """
+            Makes a payment 
+        """
+        if not self.deferred:
+            raise ValidationError(_("You can't make a payment if the credit card is not deferred."))
 
+
+        qs_cco=Creditcardsoperations.objects.all().filter(pk__in=(cco_ids))
+        sumamount=0
+        for o in qs_cco:
+            sumamount=sumamount+o.amount
+        
+        c=Accountsoperations()
+        c.datetime=dt_payment
+        c.concepts_id=eConcept.CreditCardBilling
+        c.amount=sumamount
+        c.accounts=self.accounts
+        c.comment=""
+        c.save()
+
+        #Modifica el registro y lo pone como paid y la datetime de pago y añade la opercuenta
+        for o in qs_cco:
+            o.paid_datetime=dt_payment
+            o.paid=True
+            o.accountsoperations_id=c.id
+            o.save()
+
+        return c
 
 class Creditcardsoperations(models.Model):
     concepts = models.ForeignKey(Concepts, models.DO_NOTHING)
@@ -595,7 +624,7 @@ class Creditcardsoperations(models.Model):
     creditcards = models.ForeignKey(Creditcards, models.DO_NOTHING)
     paid = models.BooleanField()
     paid_datetime = models.DateTimeField(blank=True, null=True)
-    accountsoperations= models.ForeignKey(Accountsoperations, models.DO_NOTHING, null=True,  related_name="paid_accountsoperations")
+    accountsoperations= models.ForeignKey(Accountsoperations, models.DO_NOTHING, null=True, blank=True,  related_name="paid_accountsoperations")
     datetime = models.DateTimeField(blank=True, null=True)
 
     class Meta:
@@ -610,7 +639,7 @@ class Creditcardsoperations(models.Model):
         comment="CCO Comment", 
         datetime=timezone.now(), 
         paid=False, 
-        paid_datetime=None
+        paid_datetime=None,
     ):
         return {
             "concepts":concepts, 
@@ -630,6 +659,8 @@ class Creditcardsoperations(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()        
         super(Creditcardsoperations, self).save(*args, **kwargs) #To generate io and then plio
+
+
 
 
 class Dividends(models.Model):

@@ -275,26 +275,8 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
         cco_ids=RequestListOfIntegers(request, "cco")
         
         if dt_payment is not None and cco_ids is not None:
-            qs_cco=models.Creditcardsoperations.objects.all().filter(pk__in=(cco_ids))
-            sumamount=0
-            for o in qs_cco:
-                sumamount=sumamount+o.amount
-            
-            c=models.Accountsoperations()
-            c.datetime=dt_payment
-            c.concepts=models.Concepts.objects.get(pk=eConcept.CreditCardBilling)
-            c.amount=sumamount
-            c.accounts=creditcard.accounts
-            c.comment=""
-            c.save()
-
-            #Modifica el registro y lo pone como paid y la datetime de pago y añade la opercuenta
-            for o in qs_cco:
-                o.paid_datetime=dt_payment
-                o.paid=True
-                o.accountsoperations_id=c.id
-                o.save()
-            serializer = serializers.AccountsoperationsSerializer(c, many=False, context={'request': request})
+            ao=creditcard.pay(cco_ids, dt_payment)
+            serializer = serializers.AccountsoperationsSerializer(ao, many=False, context={'request': request})
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(status=status.HTTP_400_BAD_REQUEST)
     

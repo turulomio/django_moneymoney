@@ -123,18 +123,13 @@ class CreditcardsSerializer(ExceptionHandlingInModelHyperlinkedModelSerializer):
         
 
 
-class CreditcardsoperationsSerializer(serializers.HyperlinkedModelSerializer):
+class CreditcardsoperationsSerializer(ExceptionHandlingInModelHyperlinkedModelSerializer):
     currency = serializers.SerializerMethodField()
     
     class Meta:
         model = models.Creditcardsoperations
         fields = ('url', 'id', 'datetime', 'concepts', 'amount','comment','creditcards', 'paid','paid_datetime', 'currency')
-        
-    def validate(self, data):
-        if data["creditcards"].deferred is False:
-            raise serializers.ValidationError(_("You can't create a credit card operation with a debit credit card"))
-        return serializers.HyperlinkedModelSerializer.validate(self, data)
-        
+
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):
         return  obj.creditcards.accounts.currency
