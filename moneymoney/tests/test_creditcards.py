@@ -67,7 +67,7 @@ def test_Creditcards_Payments(self):
     # Payment undo
     tests_helpers.client_post(self, self.client_authorized_1, f"{dict_ao_payment['url']}creditcard_payment_undo/",  {}, status.HTTP_200_OK)
 
-    # Payment undo of an not billing credit card account operation
+    # Payment undo of an not billing credit card account operation. Bad Request
     dict_ao_not_billing=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=f"/api/concepts/{types.eConcept.BankCommissions}/", amount=-1000), status.HTTP_201_CREATED)
     tests_helpers.client_post(self, self.client_authorized_1, f"{dict_ao_not_billing['url']}creditcard_payment_undo/",  {}, status.HTTP_400_BAD_REQUEST)
 
