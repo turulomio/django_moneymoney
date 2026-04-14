@@ -1062,13 +1062,15 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-    @action(detail=True, methods=['POST'], name='Refund all cco paid in an ao', url_path="ccpaymentrefund", url_name='ccpaymentrefund', permission_classes=[permissions.IsAuthenticated])
+    @action(detail=True, methods=['POST'], name='Refund all cco paid in an ao', url_path="creditcard_payment_undo", url_name='creditcard_payment_undo', permission_classes=[permissions.IsAuthenticated])
     @transaction.atomic
-    def ccpaymentrefund(self, request, pk=None):
+    def creditcard_payment_undo(self, request, pk=None):
         ao=self.get_object()
-        models.Creditcardsoperations.objects.filter(accountsoperations_id=ao.id).update(paid_datetime=None,  paid=False, accountsoperations_id=None)
-        ao.delete() #Must be at the end due to middle queries
-        return JsonResponse( True, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
+        try:
+            ao.creditcard_payment_undo()
+        except DjangoValidationError as e:
+            return Response(e.message, status=status.HTTP_400_BAD_REQUEST)
+        return Response(True)
 
     @action(detail=True, methods=['POST'], name='Create a refund from an expense', url_path="create_refund", url_name='create_refund', permission_classes=[permissions.IsAuthenticated])
     def create_refund(self, request, pk=None):
