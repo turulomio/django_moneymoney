@@ -116,29 +116,20 @@ class ConceptsSerializer(serializers.HyperlinkedModelSerializer):
     def get_localname(self, obj):
         return  _(obj.name)
 
-class CreditcardsSerializer(serializers.HyperlinkedModelSerializer):
+class CreditcardsSerializer(ExceptionHandlingInModelHyperlinkedModelSerializer):
     class Meta:
         model = models.Creditcards
         fields = ('url', 'id', 'name',  'number', 'accounts', 'maximumbalance', 'deferred', 'active')
         
-    def update(self, instance, validated_data):
-        # Deferred field can't be updated
-        if 'deferred' in validated_data and instance.deferred!=validated_data['deferred']:
-            raise ValidationError({'deferred': 'This field cannot be updated'})
-        return serializers.HyperlinkedModelSerializer.update(self, instance, validated_data)
 
-class CreditcardsoperationsSerializer(serializers.HyperlinkedModelSerializer):
+
+class CreditcardsoperationsSerializer(ExceptionHandlingInModelHyperlinkedModelSerializer):
     currency = serializers.SerializerMethodField()
     
     class Meta:
         model = models.Creditcardsoperations
         fields = ('url', 'id', 'datetime', 'concepts', 'amount','comment','creditcards', 'paid','paid_datetime', 'currency')
-        
-    def validate(self, data):
-        if data["creditcards"].deferred is False:
-            raise serializers.ValidationError(_("You can't create a credit card operation with a debit credit card"))
-        return serializers.HyperlinkedModelSerializer.validate(self, data)
-        
+
     @extend_schema_field(OpenApiTypes.STR)
     def get_currency(self, obj):
         return  obj.creditcards.accounts.currency

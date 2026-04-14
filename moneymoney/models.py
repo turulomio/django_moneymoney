@@ -1,27 +1,22 @@
 from datetime import date, timedelta
 from decimal import Decimal
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
-from django.db import models, transaction, connection
-from django.db.models import prefetch_related_objects, Case, When, Sum, Value, Subquery, F, Window, Min, Max, DateField, OuterRef, ExpressionWrapper, DurationField, FloatField
+from django.db import models, transaction
+from django.db.models import Case, When, Sum, Subquery, F, Window, Min, Max, DateField, OuterRef, ExpressionWrapper, DurationField, FloatField
 from django.core.cache import cache
 from django.db.models.functions import FirstValue, LastValue, ExtractMonth, ExtractYear, Cast, Extract
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
 from moneymoney import ios, functions
-from moneymoney.reusing.decorators import ptimeit
 from moneymoney.types import eConcept, eProductType, eOperationType
-from pydicts import lod_ymv, casts, lod
+from pydicts import lod_ymv, casts
 from pydicts.currency import Currency
-from functools import cached_property
 
-Decimal
-ptimeit
+
 
 RANGE_RECOMENDATION_CHOICES =( 
     (1, "All"), 
@@ -427,6 +422,16 @@ class Accountsoperations(models.Model):
             "dividends",
             "investmentsoperations"
         ).get(pk=refund_tx.pk)
+    
+
+    def creditcard_payment_undo(self):
+        
+        if self.concepts_id!=eConcept.CreditCardBilling:
+            raise ValidationError(_("This account operation is not a credit card billing, so it can't be undone."))
+        
+        Creditcardsoperations.objects.filter(accountsoperations_id=self.id).update(paid_datetime=None,  paid=False, accountsoperations_id=None)
+        self.delete() #Must be at the end due to middle queries
+
 
     def clean(self):            
         if self.concepts.operationstypes.id== eOperationType.Income and self.amount<0:
@@ -575,6 +580,48 @@ class Creditcards(models.Model):
             "number": number, 
         }
 
+    def clean(self):
+        if self.pk:  # Si la instancia ya existe (es una actualización)
+            original_instance = Creditcards.objects.get(pk=self.pk)
+            if original_instance.deferred != self.deferred:
+                raise ValidationError({'deferred': _('This field cannot be updated after creation.')})
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        self.full_clean()        
+        super(Creditcards, self).save(*args, **kwargs) #To generate io and then plio
+
+    @transaction.atomic
+    def pay(self,cco_ids, dt_payment ):
+        """
+            Makes a payment 
+        """
+        if not self.deferred:
+            raise ValidationError(_("You can't make a payment if the credit card is not deferred."))
+
+
+        qs_cco=Creditcardsoperations.objects.all().filter(pk__in=(cco_ids))
+        sumamount=0
+        for o in qs_cco:
+            sumamount=sumamount+o.amount
+        
+        c=Accountsoperations()
+        c.datetime=dt_payment
+        c.concepts_id=eConcept.CreditCardBilling
+        c.amount=sumamount
+        c.accounts=self.accounts
+        c.comment=""
+        c.save()
+
+        #Modifica el registro y lo pone como paid y la datetime de pago y añade la opercuenta
+        for o in qs_cco:
+            o.paid_datetime=dt_payment
+            o.paid=True
+            o.accountsoperations_id=c.id
+            o.save()
+
+        return c
+
 class Creditcardsoperations(models.Model):
     concepts = models.ForeignKey(Concepts, models.DO_NOTHING)
     amount = models.DecimalField(max_digits=100, decimal_places=2)
@@ -582,7 +629,7 @@ class Creditcardsoperations(models.Model):
     creditcards = models.ForeignKey(Creditcards, models.DO_NOTHING)
     paid = models.BooleanField()
     paid_datetime = models.DateTimeField(blank=True, null=True)
-    accountsoperations= models.ForeignKey(Accountsoperations, models.DO_NOTHING, null=True,  related_name="paid_accountsoperations")
+    accountsoperations= models.ForeignKey(Accountsoperations, models.DO_NOTHING, null=True, blank=True,  related_name="paid_accountsoperations")
     datetime = models.DateTimeField(blank=True, null=True)
 
     class Meta:
@@ -597,7 +644,7 @@ class Creditcardsoperations(models.Model):
         comment="CCO Comment", 
         datetime=timezone.now(), 
         paid=False, 
-        paid_datetime=None
+        paid_datetime=None,
     ):
         return {
             "concepts":concepts, 
@@ -608,6 +655,23 @@ class Creditcardsoperations(models.Model):
             "paid": paid, 
             "paid_datetime": paid_datetime, 
         }
+
+    def clean(self):
+        if not self.creditcards.deferred:
+            raise ValidationError(_("You can't create a credit card operation if the credit card is not deferred. Just create a normal account operation."))
+        
+        # Validation: accountsoperations must be null if not paid, and not null if paid
+        if not self.paid and self.accountsoperations is not None:
+            raise ValidationError({'accountsoperations': _("An accounts operation cannot be associated with an unpaid credit card operation.")})
+        if self.paid and self.accountsoperations is None:
+            raise ValidationError({'accountsoperations': _("A paid credit card operation must have an associated accounts operation.")})
+        
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        self.full_clean()        
+        super(Creditcardsoperations, self).save(*args, **kwargs) #To generate io and then plio
+
+
 
 
 class Dividends(models.Model):

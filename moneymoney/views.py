@@ -275,26 +275,8 @@ class CreditcardsViewSet(viewsets.ModelViewSet):
         cco_ids=RequestListOfIntegers(request, "cco")
         
         if dt_payment is not None and cco_ids is not None:
-            qs_cco=models.Creditcardsoperations.objects.all().filter(pk__in=(cco_ids))
-            sumamount=0
-            for o in qs_cco:
-                sumamount=sumamount+o.amount
-            
-            c=models.Accountsoperations()
-            c.datetime=dt_payment
-            c.concepts=models.Concepts.objects.get(pk=eConcept.CreditCardBilling)
-            c.amount=sumamount
-            c.accounts=creditcard.accounts
-            c.comment=""
-            c.save()
-
-            #Modifica el registro y lo pone como paid y la datetime de pago y añade la opercuenta
-            for o in qs_cco:
-                o.paid_datetime=dt_payment
-                o.paid=True
-                o.accountsoperations_id=c.id
-                o.save()
-            serializer = serializers.AccountsoperationsSerializer(c, many=False, context={'request': request})
+            ao=creditcard.pay(cco_ids, dt_payment)
+            serializer = serializers.AccountsoperationsSerializer(ao, many=False, context={'request': request})
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
@@ -1080,13 +1062,15 @@ class AccountsoperationsViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-    @action(detail=True, methods=['POST'], name='Refund all cco paid in an ao', url_path="ccpaymentrefund", url_name='ccpaymentrefund', permission_classes=[permissions.IsAuthenticated])
+    @action(detail=True, methods=['POST'], name='Refund all cco paid in an ao', url_path="creditcard_payment_undo", url_name='creditcard_payment_undo', permission_classes=[permissions.IsAuthenticated])
     @transaction.atomic
-    def ccpaymentrefund(self, request, pk=None):
+    def creditcard_payment_undo(self, request, pk=None):
         ao=self.get_object()
-        models.Creditcardsoperations.objects.filter(accountsoperations_id=ao.id).update(paid_datetime=None,  paid=False, accountsoperations_id=None)
-        ao.delete() #Must be at the end due to middle queries
-        return JsonResponse( True, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat,     safe=False)
+        try:
+            ao.creditcard_payment_undo()
+        except DjangoValidationError as e:
+            return Response(e.message, status=status.HTTP_400_BAD_REQUEST)
+        return Response(True)
 
     @action(detail=True, methods=['POST'], name='Create a refund from an expense', url_path="create_refund", url_name='create_refund', permission_classes=[permissions.IsAuthenticated])
     def create_refund(self, request, pk=None):
@@ -1823,6 +1807,7 @@ def ReportAnnualIncomeDetails(request, year, month):
         r=[]
         i=0
         for currency in models.Accounts.currencies(): #Iterate over currencies
+            pair=models.CurrencyPair(currency, local_currency)
             qs_ao=models.Accountsoperations.objects.filter(concepts__operationstypes__id=operationstypes_id, datetime__year=year, datetime__month=month,  accounts__currency=currency).values(
                 "datetime", 
                 "concepts", 
@@ -1833,15 +1818,16 @@ def ReportAnnualIncomeDetails(request, year, month):
             # Excludes dividends from Accountsoperations to avoid count the in incomes and in dividend
             qs_ao=qs_ao.exclude(concepts__id__in=eConcept.dividends())
             
+
             for o in qs_ao:
                 i-=1
                 r.append({
                     "id":i, 
                     "datetime": o["datetime"], 
                     "concepts": models.Concepts.hurl(request, o["concepts"]), 
-                    "amount":o["amount"]* models.Quotes.get_currency_factor(o["datetime"], currency, local_currency , None), 
+                    "amount":o["amount"]* pair.get_factor(o["datetime"], request), 
                     "nice_comment":f"[AO] {o['comment']}", 
-                    "currency": currency, 
+                    "currency": local_currency, #local currency becouse is converted in amount
                     "accounts": models.Accounts.hurl(request, o["accounts"]), 
                 })
             
@@ -1859,9 +1845,9 @@ def ReportAnnualIncomeDetails(request, year, month):
                     "id":i, 
                     "datetime": o["datetime"], 
                     "concepts": models.Concepts.hurl(request, o["concepts"]), 
-                    "amount":o["amount"]* models.Quotes.get_currency_factor(o["datetime"], currency, local_currency, None ), 
+                    "amount":o["amount"]* pair.get_factor(o["datetime"], request), 
                     "nice_comment":f"[CCO] {o['comment']}", 
-                    "currency": currency, 
+                    "currency": local_currency, #local currency becouse is converted in amount
                     "accounts": models.Accounts.hurl(request, o["creditcards__accounts"]), 
                 })
                 

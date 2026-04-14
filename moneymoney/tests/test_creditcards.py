@@ -1,5 +1,5 @@
 from rest_framework import status
-from moneymoney import models
+from moneymoney import models, types
 from moneymoney.reusing import tests_helpers
 from django.utils import timezone
 
@@ -57,12 +57,21 @@ def test_Creditcards_Payments(self):
     dict_cco_2=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"]), status.HTTP_201_CREATED)
     dict_cco_3=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"]), status.HTTP_201_CREATED)
     tests_helpers.client_post(self, self.client_authorized_1, f"{dict_cc['url']}pay/",  {"dt_payment":timezone.now(), "cco":[dict_cco_1["id"], ]}, status.HTTP_200_OK)
-    tests_helpers.client_post(self, self.client_authorized_1, f"{dict_cc['url']}pay/",  {"dt_payment":timezone.now(), "cco":[dict_cco_2["id"], dict_cco_3["id"] ]}, status.HTTP_200_OK)
+    dict_ao_payment=tests_helpers.client_post(self, self.client_authorized_1, f"{dict_cc['url']}pay/",  {"dt_payment":timezone.now(), "cco":[dict_cco_2["id"], dict_cco_3["id"] ]}, status.HTTP_200_OK)
     
     #We list payments
     dict_payments=tests_helpers.client_get(self, self.client_authorized_1, f"{dict_cc['url']}payments/", status.HTTP_200_OK)
     self.assertTrue(dict_payments[0]["count"], 1)
     self.assertTrue(dict_payments[1]["count"], 2)
+
+    # Payment undo
+    tests_helpers.client_post(self, self.client_authorized_1, f"{dict_ao_payment['url']}creditcard_payment_undo/",  {}, status.HTTP_200_OK)
+
+    # Payment undo of an not billing credit card account operation. Bad Request
+    dict_ao_not_billing=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=f"/api/concepts/{types.eConcept.BankCommissions}/", amount=-1000), status.HTTP_201_CREATED)
+    tests_helpers.client_post(self, self.client_authorized_1, f"{dict_ao_not_billing['url']}creditcard_payment_undo/",  {}, status.HTTP_400_BAD_REQUEST)
+
+
     
 def test_Creditcards_OperationsWithBalance(self):
     # Create a deferred credit card
