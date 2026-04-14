@@ -575,6 +575,19 @@ class Creditcards(models.Model):
             "number": number, 
         }
 
+    def clean(self):
+        if self.pk:  # Si la instancia ya existe (es una actualización)
+            original_instance = Creditcards.objects.get(pk=self.pk)
+            if original_instance.deferred != self.deferred:
+                raise ValidationError({'deferred': _('This field cannot be updated after creation.')})
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        self.full_clean()        
+        super(Creditcards, self).save(*args, **kwargs) #To generate io and then plio
+
+
+
 class Creditcardsoperations(models.Model):
     concepts = models.ForeignKey(Concepts, models.DO_NOTHING)
     amount = models.DecimalField(max_digits=100, decimal_places=2)
@@ -608,6 +621,15 @@ class Creditcardsoperations(models.Model):
             "paid": paid, 
             "paid_datetime": paid_datetime, 
         }
+
+    def clean(self):
+        if not self.creditcards.deferred:
+            raise ValidationError(_("You can't create a credit card operation if the credit card is not deferred. Just create a normal account operation."))
+        
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        self.full_clean()        
+        super(Creditcardsoperations, self).save(*args, **kwargs) #To generate io and then plio
 
 
 class Dividends(models.Model):

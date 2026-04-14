@@ -30,7 +30,7 @@ class QuotesCacheMiddleware(MiddlewareMixin):
         #     print("Request request count:", request.quotes_request_count)
         # if hasattr(request, 'start'):
         #     print("Request time:", timezone.now()-request.start)
-        if settings.DEBUG:
+        if settings.DEBUG and settings.TESTING==False and settings.E2E_TESTING==False:
             print (f"Quotes request cache: {request.quotes_hit_count}/{request.quotes_request_count} (Server cache hits: {getattr(request, 'quotes_server_cache_hit_count', 0)})")
             functions.show_queries_function(True)
             print(f"View took {timezone.now()-request.start}")

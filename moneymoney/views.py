@@ -1823,6 +1823,7 @@ def ReportAnnualIncomeDetails(request, year, month):
         r=[]
         i=0
         for currency in models.Accounts.currencies(): #Iterate over currencies
+            pair=models.CurrencyPair(currency, local_currency)
             qs_ao=models.Accountsoperations.objects.filter(concepts__operationstypes__id=operationstypes_id, datetime__year=year, datetime__month=month,  accounts__currency=currency).values(
                 "datetime", 
                 "concepts", 
@@ -1833,15 +1834,16 @@ def ReportAnnualIncomeDetails(request, year, month):
             # Excludes dividends from Accountsoperations to avoid count the in incomes and in dividend
             qs_ao=qs_ao.exclude(concepts__id__in=eConcept.dividends())
             
+
             for o in qs_ao:
                 i-=1
                 r.append({
                     "id":i, 
                     "datetime": o["datetime"], 
                     "concepts": models.Concepts.hurl(request, o["concepts"]), 
-                    "amount":o["amount"]* models.Quotes.get_currency_factor(o["datetime"], currency, local_currency , None), 
+                    "amount":o["amount"]* pair.get_factor(o["datetime"], request), 
                     "nice_comment":f"[AO] {o['comment']}", 
-                    "currency": currency, 
+                    "currency": local_currency, #local currency becouse is converted in amount
                     "accounts": models.Accounts.hurl(request, o["accounts"]), 
                 })
             
@@ -1859,9 +1861,9 @@ def ReportAnnualIncomeDetails(request, year, month):
                     "id":i, 
                     "datetime": o["datetime"], 
                     "concepts": models.Concepts.hurl(request, o["concepts"]), 
-                    "amount":o["amount"]* models.Quotes.get_currency_factor(o["datetime"], currency, local_currency, None ), 
+                    "amount":o["amount"]* pair.get_factor(o["datetime"], request), 
                     "nice_comment":f"[CCO] {o['comment']}", 
-                    "currency": currency, 
+                    "currency": local_currency, #local currency becouse is converted in amount
                     "accounts": models.Accounts.hurl(request, o["creditcards__accounts"]), 
                 })
                 
