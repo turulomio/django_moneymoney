@@ -1276,7 +1276,7 @@ def Currencies(request):
 
 
         if pair.supported:
-            quote=pair.get_dictionary(timezone.now())
+            quote=pair.get_dictionary(timezone.now()) #Dictionary with quote values
             
         r.append({
             "from": a, 

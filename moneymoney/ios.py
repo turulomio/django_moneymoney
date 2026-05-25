@@ -256,21 +256,27 @@ class IO:
         self._d["data"]["basic_results"]={}
         if quote_last is None:
             self._d["data"]["basic_results"]["last"]= 0
+            self._d["data"]["basic_results"]["last_datetime"]=None
             self._d["data"]["basic_results"]["lastyear"]=0
+            self._d["data"]["basic_results"]["lastyear_datetime"]=None
+            self._d["data"]["basic_results"]["penultimate"]=0
+            self._d["data"]["basic_results"]["penultimate_datetime"]=None
         else:
             lastyeardt=casts.dtaware_year_end(quote_last.datetime.year-1, 'UTC')
             quote_lastyear=models.Quotes.get_quote(product.id, lastyeardt, self.request)
             penultimatedt=casts.dtaware_day_end_from_date(quote_last.datetime.date()-timedelta(days=1), 'UTC')
             quote_penultimate=models.Quotes.get_quote(product.id, penultimatedt, self.request)
 
-            self._d["data"]["basic_results"]["last"]= quote_last.quote if quote_last is not None else 0
+            self._d["data"]["basic_results"]["last"]= quote_last.quote
             self._d["data"]["basic_results"]["last_datetime"]=quote_last.datetime
 
             self._d["data"]["basic_results"]["penultimate"]=quote_penultimate.quote if quote_penultimate is not None else 0
-            self._d["data"]["basic_results"]["penultimate_datetime"]=penultimatedt
+            self._d["data"]["basic_results"]["penultimate_datetime"]=penultimatedt if quote_penultimate is not None else None
+
 
             self._d["data"]["basic_results"]["lastyear"]=quote_lastyear.quote if quote_lastyear is not None else 0
-            self._d["data"]["basic_results"]["lastyear_datetime"]=lastyeardt
+            self._d["data"]["basic_results"]["lastyear_datetime"]=lastyeardt if quote_lastyear is not None else None
+
 
 
     def process_io(self, io_rows):
