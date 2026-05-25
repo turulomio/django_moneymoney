@@ -1286,7 +1286,7 @@ def Currencies(request):
             "reverse_supported": pair.reverse_supported, 
             "datetime":quote["datetime"] if pair.supported else None,
             "quote": quote["quote"] if pair.supported else None, 
-            "quote_url": models.Quotes.hurl(request, quote["quotes_id"]) if quote["quotes_id"] else None,
+            "quote_url": models.Quotes.hurl(request, pair.get_dictionary()["quotes_id"]) if pair.get_dictionary()["quotes_id"] else None,
             "product_url": models.Products.hurl(request, pair.associated_id) if pair.associated_id else None, 
         })
     
