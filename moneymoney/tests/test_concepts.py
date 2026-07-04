@@ -52,25 +52,27 @@ def test_ConceptsReport(self):
     r_final = tests_helpers.client_get(self, self.client_authorized_1, f"/reports/concepts/?year={date.today().year}&month={date.today().month}", status.HTTP_200_OK)
     self.assertEqual(len(r_final["positive"]), 1, "Positive concepts count should remain 1.")
     self.assertEqual(len(r_final["negative"]), 1, "Should be one negative concept after adding an expense.")
-    self.assertEqual(r_final["negative"][0]["total"], negative_amount, "The total of the negative concept should match the expense amount.")
+    self.assertEqual(Decimal(str(r_final["negative"][0]["total"])), negative_amount, "The total of the negative concept should match the expense amount.")
 
     
 def test_Concepts_DataTransfer(self):
-    # New personal concept
-    dict_concept_from=tests_helpers.client_post(self, self.client_authorized_1, "/api/concepts/", models.Concepts.post_payload(name="Concept from"), status.HTTP_201_CREATED)
+    # New personal concepts for expense and income
+    dict_concept_from_expense = tests_helpers.client_post(self, self.client_authorized_1, "/api/concepts/", models.Concepts.post_payload(name="Concept From Expense", operationstypes="/api/operationstypes/1/"), status.HTTP_201_CREATED)
+    dict_concept_from_income = tests_helpers.client_post(self, self.client_authorized_1, "/api/concepts/", models.Concepts.post_payload(name="Concept From Income", operationstypes="/api/operationstypes/2/"), status.HTTP_201_CREATED)
     
     # We create an accounts operations, creditcardsoperations and dividends with this new concept
-    dict_ao=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=dict_concept_from["url"], amount=-1000), status.HTTP_201_CREATED)
+    dict_ao=tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=dict_concept_from_expense["url"], amount=-1000), status.HTTP_201_CREATED)
     dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(), status.HTTP_201_CREATED)
-    dict_cco=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"], concepts=dict_concept_from["url"]), status.HTTP_201_CREATED)
+    dict_cco=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"], concepts=dict_concept_from_expense["url"], amount=-50), status.HTTP_201_CREATED)
     dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(accounts=dict_ao["accounts"]), status.HTTP_201_CREATED)
-    dict_dividend=tests_helpers.client_post(self, self.client_authorized_1, "/api/dividends/",  models.Dividends.post_payload(investments=dict_investment["url"], concepts=dict_concept_from["url"]), status.HTTP_201_CREATED)
+    dict_dividend=tests_helpers.client_post(self, self.client_authorized_1, "/api/dividends/",  models.Dividends.post_payload(investments=dict_investment["url"], concepts=dict_concept_from_income["url"]), status.HTTP_201_CREATED)
     
     # We create a new personal concepto to transfer to
     dict_concept_to=tests_helpers.client_post(self, self.client_authorized_1, "/api/concepts/", models.Concepts.post_payload(name="Concept to"), status.HTTP_201_CREATED)
     
     # We transfer data from concept_from to concept_to
-    tests_helpers.client_post(self, self.client_authorized_1, f"{dict_concept_from['url']}data_transfer/", {"to": dict_concept_to["url"]}, status.HTTP_200_OK)
+    tests_helpers.client_post(self, self.client_authorized_1, f"{dict_concept_from_expense['url']}data_transfer/", {"to": dict_concept_to["url"]}, status.HTTP_200_OK)
+    tests_helpers.client_post(self, self.client_authorized_1, f"{dict_concept_from_income['url']}data_transfer/", {"to": dict_concept_to["url"]}, status.HTTP_200_OK)
     
     # We check that concepts have been changed
     dict_ao_after=tests_helpers.client_get(self, self.client_authorized_1, dict_ao["url"]  , status.HTTP_200_OK)
@@ -81,7 +83,7 @@ def test_Concepts_DataTransfer(self):
     self.assertEqual(dict_dividend_after["concepts"], dict_concept_to["url"])
     
     # Bad request
-    tests_helpers.client_post(self, self.client_authorized_1, f"{dict_concept_from['url']}data_transfer/", {}, status.HTTP_400_BAD_REQUEST)
+    tests_helpers.client_post(self, self.client_authorized_1, f"{dict_concept_from_expense['url']}data_transfer/", {}, status.HTTP_400_BAD_REQUEST)
 
 def test_Concepts_HistoricalData(self):
     # We create an accounts operations, creditcardsoperations and dividends with this new concept        

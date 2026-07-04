@@ -1974,7 +1974,7 @@ def ReportConcepts(request):
         datetime__month=month, datetime__year=year,
         concepts__operationstypes__id__in=[eOperationType.Income, eOperationType.Expense]
     ).values("concepts__id").annotate(sum=Sum('amount'))
-    month_ao_sum = lod.lod_aggregate_sum(list(ao_qs) + list(cco_qs), "concepts__id", "sum")
+    month_ao_sum = lod.lod_aggregate_sum(list(ao_qs) + list(cco_qs), "sum")
     total_month_positives=lod.lod_sum_positives(month_ao_sum, "sum")
     total_month_negatives=lod.lod_sum_negatives(month_ao_sum, "sum")
     dict_concepts=models.Concepts.dictionary()
