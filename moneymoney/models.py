@@ -752,7 +752,7 @@ class Dividends(models.Model):
 
 
     def clean(self):
-        if self.commission <0 or self.taxes<0:
+        if self.commission < 0 or self.taxes < 0:
             raise ValidationError(_("Taxes and commissions must be equal or greater than zero"))
         
     @transaction.atomic
