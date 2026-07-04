@@ -1965,8 +1965,16 @@ def ReportConcepts(request):
     r["positive"]=[]
     r["negative"]=[]
     
-    month_ao_sum=list(models.Accountsoperations.objects.filter(datetime__month=month,datetime__year=year, concepts__operationstypes__id__in=[eOperationType.Income, eOperationType.Expense]).select_related("operationstypes").values("concepts__id").order_by("concepts_id").annotate(sum=Sum('amount')))+\
-        list(models.Creditcardsoperations.objects.filter(datetime__month=month,datetime__year=year, concepts__operationstypes__id__in=[eOperationType.Income, eOperationType.Expense]).select_related("operationstypes").values("concepts__id").order_by("concepts_id").annotate(sum=Sum('amount')))
+    # Querysets for both models
+    ao_qs = models.Accountsoperations.objects.filter(
+        datetime__month=month, datetime__year=year,
+        concepts__operationstypes__id__in=[eOperationType.Income, eOperationType.Expense]
+    ).values("concepts__id").annotate(sum=Sum('amount'))
+    cco_qs = models.Creditcardsoperations.objects.filter(
+        datetime__month=month, datetime__year=year,
+        concepts__operationstypes__id__in=[eOperationType.Income, eOperationType.Expense]
+    ).values("concepts__id").annotate(sum=Sum('amount'))
+    month_ao_sum = lod.lod_aggregate_sum(list(ao_qs) + list(cco_qs), "concepts__id", "sum")
     total_month_positives=lod.lod_sum_positives(month_ao_sum, "sum")
     total_month_negatives=lod.lod_sum_negatives(month_ao_sum, "sum")
     dict_concepts=models.Concepts.dictionary()

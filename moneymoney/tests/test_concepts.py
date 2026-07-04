@@ -1,5 +1,6 @@
 from datetime import date
 from rest_framework import status
+from decimal import Decimal
 from moneymoney import models
 from moneymoney.reusing import tests_helpers
 from pydicts import lod
@@ -8,19 +9,51 @@ from pydicts import lod
 def test_Concepts(self):
     # Action used empty
     r=tests_helpers.client_get(self, self.client_authorized_1,  "/api/concepts/used/", status.HTTP_200_OK)
-    self.assertEqual(lod.lod_sum(r, "used"), 0)
+    self.assertEqual(lod.lod_sum(r, "used"), 0, "Initially, no concept should be in use.")
 
+    # Create an operation using a concept
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(), status.HTTP_201_CREATED)
 
+    # Check 'used' action again
+    r_after = tests_helpers.client_get(self, self.client_authorized_1, "/api/concepts/used/", status.HTTP_200_OK)
+    self.assertGreater(lod.lod_sum(r_after, "used"), 0, "After creating an operation, at least one concept should be marked as used.")
 
 
     
 def test_ConceptsReport(self):
-    #test empty
-    tests_helpers.client_get(self, self.client_authorized_1, f"/reports/concepts/?year={date.today().year}&month={date.today().month}", status.HTTP_200_OK)
-    #test value
-    tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(), status.HTTP_201_CREATED)
-    r=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/concepts/?year={date.today().year}&month={date.today().month}", status.HTTP_200_OK)
-    self.assertEqual(len(r["positive"]), 1)
+    # 1. Test with no data
+    r_empty = tests_helpers.client_get(self, self.client_authorized_1, f"/reports/concepts/?year={date.today().year}&month={date.today().month}", status.HTTP_200_OK)
+    self.assertEqual(len(r_empty["positive"]), 0, "Positive concepts report should be empty initially.")
+    self.assertEqual(len(r_empty["negative"]), 0, "Negative concepts report should be empty initially.")
+
+    # 2. Test with a single positive AccountsOperation
+    ao_amount = Decimal('150.75')
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(amount=ao_amount), status.HTTP_201_CREATED)
+    r_ao = tests_helpers.client_get(self, self.client_authorized_1, f"/reports/concepts/?year={date.today().year}&month={date.today().month}", status.HTTP_200_OK)
+    self.assertEqual(len(r_ao["positive"]), 1, "Should be one positive concept after one AO.")
+    self.assertEqual(r_ao["positive"][0]["total"], ao_amount, "The total should match the AO amount.")
+
+    # 3. Test with a positive CreditCardsOperation for the SAME concept
+    # This should not create a new entry but update the existing one.
+    cco_amount = Decimal('50.25')
+    dict_cc = tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(), status.HTTP_201_CREATED)
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"], amount=cco_amount), status.HTTP_201_CREATED)
+    
+    r_combined = tests_helpers.client_get(self, self.client_authorized_1, f"/reports/concepts/?year={date.today().year}&month={date.today().month}", status.HTTP_200_OK)
+    self.assertEqual(len(r_combined["positive"]), 1, "Should not have duplicate concepts after adding a CCO for the same concept.")
+    self.assertEqual(r_combined["positive"][0]["total"], ao_amount + cco_amount, "The total should be the sum of AO and CCO amounts.")
+    self.assertEqual(len(r_combined["negative"]), 0, "Negative concepts report should still be empty.")
+
+    # 4. Test with a negative operation to populate the 'negative' list
+    negative_amount = Decimal('-99.99')
+    dict_concept_expense = tests_helpers.client_post(self, self.client_authorized_1, "/api/concepts/", models.Concepts.post_payload(name="Expense Concept", operationstypes="/api/operationstypes/1/"), status.HTTP_201_CREATED)
+    tests_helpers.client_post(self, self.client_authorized_1, "/api/accountsoperations/",  models.Accountsoperations.post_payload(concepts=dict_concept_expense["url"], amount=negative_amount), status.HTTP_201_CREATED)
+
+    r_final = tests_helpers.client_get(self, self.client_authorized_1, f"/reports/concepts/?year={date.today().year}&month={date.today().month}", status.HTTP_200_OK)
+    self.assertEqual(len(r_final["positive"]), 1, "Positive concepts count should remain 1.")
+    self.assertEqual(len(r_final["negative"]), 1, "Should be one negative concept after adding an expense.")
+    self.assertEqual(r_final["negative"][0]["total"], negative_amount, "The total of the negative concept should match the expense amount.")
+
     
 def test_Concepts_DataTransfer(self):
     # New personal concept
@@ -31,6 +64,7 @@ def test_Concepts_DataTransfer(self):
     dict_cc=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcards/",  models.Creditcards.post_payload(), status.HTTP_201_CREATED)
     dict_cco=tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/",  models.Creditcardsoperations.post_payload(creditcards=dict_cc["url"], concepts=dict_concept_from["url"]), status.HTTP_201_CREATED)
     dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/",  models.Investments.post_payload(accounts=dict_ao["accounts"]), status.HTTP_201_CREATED)
+    dict_dividend=tests_helpers.client_post(self, self.client_authorized_1, "/api/dividends/",  models.Dividends.post_payload(investments=dict_investment["url"], concepts=dict_concept_from["url"]), status.HTTP_201_CREATED)
     
     # We create a new personal concepto to transfer to
     dict_concept_to=tests_helpers.client_post(self, self.client_authorized_1, "/api/concepts/", models.Concepts.post_payload(name="Concept to"), status.HTTP_201_CREATED)
@@ -43,6 +77,8 @@ def test_Concepts_DataTransfer(self):
     self.assertEqual(dict_ao_after["concepts"], dict_concept_to["url"])
     dict_cco_after=tests_helpers.client_get(self, self.client_authorized_1, dict_cco["url"]  , status.HTTP_200_OK)
     self.assertEqual(dict_cco_after["concepts"], dict_concept_to["url"])
+    dict_dividend_after=tests_helpers.client_get(self, self.client_authorized_1, dict_dividend["url"]  , status.HTTP_200_OK)
+    self.assertEqual(dict_dividend_after["concepts"], dict_concept_to["url"])
     
     # Bad request
     tests_helpers.client_post(self, self.client_authorized_1, f"{dict_concept_from['url']}data_transfer/", {}, status.HTTP_400_BAD_REQUEST)
