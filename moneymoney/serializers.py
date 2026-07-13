@@ -619,7 +619,7 @@ class ProductsStrategiesSerializer(serializers.HyperlinkedModelSerializer):
         return  _(obj.name)
 
 
-class SplitsSerializer(serializers.HyperlinkedModelSerializer):
+class SplitsSerializer(ExceptionHandlingInModelHyperlinkedModelSerializer):
     class Meta:
         model = models.Splits
         fields = ('url', 'id', 'datetime', 'products', 'before', 'after', 'comment')
