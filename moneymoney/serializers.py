@@ -617,3 +617,9 @@ class ProductsStrategiesSerializer(serializers.HyperlinkedModelSerializer):
     @extend_schema_field(OpenApiTypes.STR)
     def get_localname(self, obj):
         return  _(obj.name)
+
+
+class SplitsSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = models.Splits
+        fields = ('url', 'id', 'datetime', 'products', 'before', 'after', 'comment')

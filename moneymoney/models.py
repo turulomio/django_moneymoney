@@ -1734,6 +1734,100 @@ class Splits(models.Model):
         managed = True
         db_table = 'splits'
 
+    def clean(self):
+        super().clean()
+        if self.before is not None and self.before <= 0:
+            raise ValidationError({'before': _('Before must be greater than zero.')})
+        if self.after is not None and self.after <= 0:
+            raise ValidationError({'after': _('After must be greater than zero.')})
+
+    def apply_adjustments(self):
+        if self.before <= 0 or self.after <= 0:
+            return
+        
+        factor = Decimal(self.after) / Decimal(self.before)
+
+        # 1. Adjust Quotes before the split datetime
+        Quotes.objects.filter(products=self.products, datetime__lt=self.datetime).update(
+            quote=F('quote') / factor
+        )
+
+        # 2. Adjust Investmentsoperations before the split datetime
+        Investmentsoperations.objects.filter(investments__products=self.products, datetime__lt=self.datetime).update(
+            shares=F('shares') * factor,
+            price=F('price') / factor
+        )
+
+        # 3. Adjust Investments selling_price
+        Investments.objects.filter(products=self.products).update(
+            selling_price=F('selling_price') / factor
+        )
+
+        # 4. Adjust Dividends.dps before the split datetime
+        Dividends.objects.filter(investments__products=self.products, datetime__lt=self.datetime).update(
+            dps=F('dps') / factor
+        )
+
+        # Refresh investments metadata
+        for inv in Investments.objects.filter(products=self.products):
+            inv.set_attributes_after_investmentsoperations_crud()
+
+        # Clear Django cache
+        cache.clear()
+
+    def revert_adjustments(self):
+        if self.before <= 0 or self.after <= 0:
+            return
+
+        factor = Decimal(self.after) / Decimal(self.before)
+
+        # 1. Revert Quotes before the split datetime
+        Quotes.objects.filter(products=self.products, datetime__lt=self.datetime).update(
+            quote=F('quote') * factor
+        )
+
+        # 2. Revert Investmentsoperations before the split datetime
+        Investmentsoperations.objects.filter(investments__products=self.products, datetime__lt=self.datetime).update(
+            shares=F('shares') / factor,
+            price=F('price') * factor
+        )
+
+        # 3. Revert Investments selling_price
+        Investments.objects.filter(products=self.products).update(
+            selling_price=F('selling_price') * factor
+        )
+
+        # 4. Revert Dividends.dps before the split datetime
+        Dividends.objects.filter(investments__products=self.products, datetime__lt=self.datetime).update(
+            dps=F('dps') * factor
+        )
+
+        # Refresh investments metadata
+        for inv in Investments.objects.filter(products=self.products):
+            inv.set_attributes_after_investmentsoperations_crud()
+
+        # Clear Django cache
+        cache.clear()
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        
+        if self.pk is not None:
+            try:
+                orig = Splits.objects.get(pk=self.pk)
+                orig.revert_adjustments()
+            except Splits.DoesNotExist:
+                pass
+
+        super().save(*args, **kwargs)
+        self.apply_adjustments()
+
+    @transaction.atomic
+    def delete(self, *args, **kwargs):
+        self.revert_adjustments()
+        super().delete(*args, **kwargs)
+
 
 class StrategiesTypes(models.IntegerChoices):
     PairsInSameAccount = 1, _('Pairs in same account')

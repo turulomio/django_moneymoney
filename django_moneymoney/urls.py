@@ -35,6 +35,7 @@ router.register(r'strategies_productsrange', money_views.StrategiesProductsRange
 router.register(r'strategies_generic', money_views.StrategiesGenericViewSet)
 router.register(r'strategies', money_views.StrategiesViewSet)
 router.register(r'stockmarkets', money_views.StockmarketsViewSet)
+router.register(r'splits', money_views.SplitsViewSet)
 
 urlpatterns=[
     path('api/', include(router.urls)),
