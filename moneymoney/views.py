@@ -2327,3 +2327,21 @@ class ProductsStrategiesViewSet(CatalogModelViewSet):
     queryset = models.ProductsStrategies.objects.all()
     serializer_class = serializers.ProductsStrategiesSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+
+class SplitsViewSet(viewsets.ModelViewSet):
+    queryset = models.Splits.objects.all().select_related("products")
+    serializer_class = serializers.SplitsSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='product', description='Filter by product', required=False, type=OpenApiTypes.URI), 
+        ],
+    )
+    def list(self, request):
+        product=RequestUrl(self.request, "product", models.Products)
+        if product is not None:
+            self.queryset=self.queryset.filter(products=product)
+        serializer = serializers.SplitsSerializer(self.queryset, many=True, context={'request': request})
+        return Response(serializer.data)
