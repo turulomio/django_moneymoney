@@ -199,6 +199,34 @@ def test_Splits_integration_flow(self):
     self.assertAlmostEqual(est1.estimation, Decimal('12.000000'))
     self.assertAlmostEqual(est2.estimation, Decimal('30.000000'))
 
+    # Assert list_without_splits returns original values
+    quotes_without = models.Quotes.list_without_splits()
+    q1_w = next(item for item in quotes_without if item['id'] == quote1.id)
+    self.assertAlmostEqual(q1_w['quote'], Decimal('120.000000'))
+
+    ops_without = models.Investmentsoperations.list_without_splits()
+    op1_w = next(item for item in ops_without if item['id'] == op1.id)
+    self.assertAlmostEqual(op1_w['shares'], Decimal('12.000000'))
+    self.assertAlmostEqual(op1_w['price'], Decimal('120.000000'))
+
+    orders_without = models.Orders.list_without_splits()
+    order1_w = next(item for item in orders_without if item['id'] == order1.id)
+    self.assertAlmostEqual(order1_w['shares'], Decimal('12.000000'))
+    self.assertAlmostEqual(order1_w['price'], Decimal('120.000000'))
+
+    dps_without = models.Dps.list_without_splits()
+    dps1_w = next(item for item in dps_without if item['id'] == dps1.id)
+    self.assertAlmostEqual(dps1_w['gross'], Decimal('12.000000'))
+
+    est_without = models.EstimationsDps.list_without_splits()
+    est1_w = next(item for item in est_without if item['id'] == est1.id)
+    self.assertAlmostEqual(est1_w['estimation'], Decimal('24.000000'))
+
+    banks_without = models.Banks.list_without_splits()
+    self.assertIsInstance(banks_without, list)
+    self.assertGreater(len(banks_without), 0)
+    self.assertIsInstance(banks_without[0], dict)
+
     # 4. Update the split to a 3-for-1 split (Before=1, After=3)
     split.after = 3
     split.save()

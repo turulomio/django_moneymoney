@@ -60,6 +60,19 @@ Because models use different date types:
 
 ---
 
-## 5. Performance & Caching
-- The project implements L1 (Request-level) and L2 (Server-level) caching for Quotes, speeding up queries up to 200x over direct database lookups.
 - Avoid bypassing ORM querysets directly when updating unless necessary, but make sure to call `cache.clear()` when altering quotes/splits historical data.
+
+---
+
+## 6. Listing without Splits (`list_without_splits`)
+All models in `moneymoney/models.py` have a classmethod `list_without_splits(cls)` which returns a list of dictionaries representing all database entries as if splits had never occurred.
+- For models unaffected by splits, it returns all records directly converted to standard Python dictionaries.
+- For models affected by splits (`Quotes`, `Investmentsoperations`, `Investments`, `Dividends`, `Orders`, `Dps`, `EstimationsDps`), it determines all split factors that affect each item based on product and date/datetime ranges, and applies the reverse calculations to the values before returning them.
+
+---
+
+## 7. AI Assistant Guidelines & Rules
+- **Documentation Maintenance**: Every time a codebase edit is made, the AI assistant **MUST** update:
+  - The documentation / docstrings of the modified methods/classes.
+  - The project's main [README.md](file:///home/worky/Proyectos/django_moneymoney/README.md).
+  - This [GEMINI.md](file:///home/worky/Proyectos/django_moneymoney/GEMINI.md) file, to keep the project knowledge and design history completely fresh and accurate.

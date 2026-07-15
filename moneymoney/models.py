@@ -2255,4 +2255,89 @@ class FastOperationsCoverage(models.Model):
 
     class Meta:
         managed = True
+
+
+def list_without_splits(cls):
+    queryset = cls.objects.all()
+    results = list(queryset.values())
+    
+    affected_classes = {
+        'Quotes': ('products_id', 'datetime', ['quote'], 'div'),
+        'Investmentsoperations': ('investments__products_id', 'datetime', ['shares', 'price'], 'op'),
+        'Investments': ('products_id', None, ['selling_price'], 'div'),
+        'Dividends': ('investments__products_id', 'datetime', ['dps'], 'div'),
+        'Orders': ('investments__products_id', 'date', ['shares', 'price'], 'op'),
+        'Dps': ('products_id', 'date', ['gross'], 'div'),
+        'EstimationsDps': ('products_id', 'date_estimation', ['estimation'], 'div'),
+    }
+    
+    class_name = cls.__name__
+    if class_name in affected_classes:
+        product_field, date_field, adjust_fields, operation_type = affected_classes[class_name]
+        
+        from decimal import Decimal
+        from moneymoney.models import Splits
+        
+        splits = list(Splits.objects.all())
+        
+        for item in results:
+            prod_id = None
+            if product_field == 'products_id':
+                prod_id = item.get('products_id')
+            elif product_field == 'investments__products_id':
+                inv_id = item.get('investments_id')
+                if inv_id:
+                    from moneymoney.models import Investments
+                    inv = Investments.objects.filter(id=inv_id).select_related('products').first()
+                    if inv:
+                        prod_id = inv.products_id
+                        
+            if prod_id is None:
+                continue
+                
+            record_date = None
+            if date_field:
+                record_date = item.get(date_field)
+                
+            combined_factor = Decimal('1.0')
+            for split in splits:
+                if split.products_id == prod_id:
+                    is_after = False
+                    if record_date is None:
+                        is_after = True
+                    else:
+                        import datetime
+                        split_dt = split.datetime
+                        if isinstance(record_date, datetime.datetime):
+                            if timezone.is_aware(record_date):
+                                if not timezone.is_aware(split_dt):
+                                    split_dt = timezone.make_aware(split_dt)
+                            else:
+                                if timezone.is_aware(split_dt):
+                                    split_dt = timezone.make_naive(split_dt)
+                            is_after = record_date < split_dt
+                        elif isinstance(record_date, datetime.date):
+                            is_after = record_date < split_dt.date()
+                            
+                    if is_after:
+                        factor = Decimal(split.after) / Decimal(split.before)
+                        combined_factor *= factor
+                        
+            if combined_factor != Decimal('1.0'):
+                for field in adjust_fields:
+                    if item.get(field) is not None:
+                        val = Decimal(str(item[field]))
+                        if operation_type == 'div':
+                            item[field] = val * combined_factor
+                        elif operation_type == 'op':
+                            if field == 'shares':
+                                item[field] = val / combined_factor
+                            elif field == 'price':
+                                item[field] = val * combined_factor
+                                
+    return results
+
+for name, obj in list(globals().items()):
+    if isinstance(obj, type) and issubclass(obj, models.Model) and obj is not models.Model:
+        setattr(obj, 'list_without_splits', classmethod(list_without_splits))
         
