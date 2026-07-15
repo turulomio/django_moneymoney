@@ -1,8 +1,6 @@
 # 💰 Django MoneyMoney
 
 [![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fturulomio%2Fdjango_moneymoney%2Fbadge%3Fref%3Dmain&style=flat)](https://actions-badge.atrox.dev/turulomio/django_moneymoney/goto?ref=main)
-[![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/)
-[![Django Version](https://img.shields.io/badge/django-4.2%20%7C%205.0-green.svg)](https://www.djangoproject.com/)
 
 Django MoneyMoney is a powerful, high-performance financial management backend built with **Django** and **Django REST Framework (DRF)**. It tracks and analyzes bank accounts, investment operations, dividends, orders, and credit card expenses across multiple currencies.
 
