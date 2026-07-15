@@ -1768,6 +1768,22 @@ class Splits(models.Model):
             dps=F('dps') / factor
         )
 
+        # 5. Adjust Orders before the split datetime
+        Orders.objects.filter(investments__products=self.products, date__lt=self.datetime.date()).update(
+            shares=F('shares') * factor,
+            price=F('price') / factor
+        )
+
+        # 6. Adjust Dps before the split datetime
+        Dps.objects.filter(products=self.products, date__lt=self.datetime.date()).update(
+            gross=F('gross') / factor
+        )
+
+        # 7. Adjust EstimationsDps before the split datetime
+        EstimationsDps.objects.filter(products=self.products, date_estimation__lt=self.datetime.date()).update(
+            estimation=F('estimation') / factor
+        )
+
         # Refresh investments metadata
         for inv in Investments.objects.filter(products=self.products):
             inv.set_attributes_after_investmentsoperations_crud()
@@ -1800,6 +1816,22 @@ class Splits(models.Model):
         # 4. Revert Dividends.dps before the split datetime
         Dividends.objects.filter(investments__products=self.products, datetime__lt=self.datetime).update(
             dps=F('dps') * factor
+        )
+
+        # 5. Revert Orders before the split datetime
+        Orders.objects.filter(investments__products=self.products, date__lt=self.datetime.date()).update(
+            shares=F('shares') / factor,
+            price=F('price') * factor
+        )
+
+        # 6. Revert Dps before the split datetime
+        Dps.objects.filter(products=self.products, date__lt=self.datetime.date()).update(
+            gross=F('gross') * factor
+        )
+
+        # 7. Revert EstimationsDps before the split datetime
+        EstimationsDps.objects.filter(products=self.products, date_estimation__lt=self.datetime.date()).update(
+            estimation=F('estimation') * factor
         )
 
         # Refresh investments metadata

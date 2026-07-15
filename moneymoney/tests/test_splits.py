@@ -103,6 +103,54 @@ def test_Splits_integration_flow(self):
         currency_conversion=Decimal('1.000000')
     )
 
+    # Create Order 1 (15 days ago, should be affected by split 4 days ago)
+    order1 = models.Orders.objects.create(
+        date=dt_15_days_ago.date(),
+        shares=Decimal('12.000000'),
+        price=Decimal('120.000000'),
+        investments=investment
+    )
+
+    # Create Order 2 (3 days ago, should NOT be affected)
+    order2 = models.Orders.objects.create(
+        date=dt_3_days_ago.date(),
+        shares=Decimal('5.000000'),
+        price=Decimal('115.000000'),
+        investments=investment
+    )
+
+    # Create Dps 1 (15 days ago, should be affected)
+    dps1 = models.Dps.objects.create(
+        date=dt_15_days_ago.date(),
+        gross=Decimal('12.000000'),
+        products=product,
+        paydate=dt_15_days_ago.date()
+    )
+
+    # Create Dps 2 (3 days ago, should NOT be affected)
+    dps2 = models.Dps.objects.create(
+        date=dt_3_days_ago.date(),
+        gross=Decimal('15.000000'),
+        products=product,
+        paydate=dt_3_days_ago.date()
+    )
+
+    # Create EstimationsDps 1 (15 days ago, should be affected)
+    est1 = models.EstimationsDps.objects.create(
+        year=dt_15_days_ago.year - 1,
+        products=product,
+        estimation=Decimal('24.000000'),
+        date_estimation=dt_15_days_ago.date()
+    )
+
+    # Create EstimationsDps 2 (3 days ago, should NOT be affected)
+    est2 = models.EstimationsDps.objects.create(
+        year=dt_3_days_ago.year,
+        products=product,
+        estimation=Decimal('30.000000'),
+        date_estimation=dt_3_days_ago.date()
+    )
+
     # 2. Apply a 2-for-1 split (Before=1, After=2) 4 days ago
     dt_split = now - timedelta(days=4)
     split = models.Splits.objects.create(
@@ -134,6 +182,23 @@ def test_Splits_integration_flow(self):
     dividend.refresh_from_db()
     self.assertAlmostEqual(dividend.dps, Decimal('6.000000'))
 
+    order1.refresh_from_db()
+    order2.refresh_from_db()
+    self.assertAlmostEqual(order1.shares, Decimal('24.000000'))
+    self.assertAlmostEqual(order1.price, Decimal('60.000000'))
+    self.assertAlmostEqual(order2.shares, Decimal('5.000000'))
+    self.assertAlmostEqual(order2.price, Decimal('115.000000'))
+
+    dps1.refresh_from_db()
+    dps2.refresh_from_db()
+    self.assertAlmostEqual(dps1.gross, Decimal('6.000000'))
+    self.assertAlmostEqual(dps2.gross, Decimal('15.000000'))
+
+    est1.refresh_from_db()
+    est2.refresh_from_db()
+    self.assertAlmostEqual(est1.estimation, Decimal('12.000000'))
+    self.assertAlmostEqual(est2.estimation, Decimal('30.000000'))
+
     # 4. Update the split to a 3-for-1 split (Before=1, After=3)
     split.after = 3
     split.save()
@@ -159,6 +224,23 @@ def test_Splits_integration_flow(self):
     dividend.refresh_from_db()
     self.assertAlmostEqual(dividend.dps, Decimal('4.000000'))
 
+    order1.refresh_from_db()
+    order2.refresh_from_db()
+    self.assertAlmostEqual(order1.shares, Decimal('36.000000'))
+    self.assertAlmostEqual(order1.price, Decimal('40.000000'))
+    self.assertAlmostEqual(order2.shares, Decimal('5.000000'))
+    self.assertAlmostEqual(order2.price, Decimal('115.000000'))
+
+    dps1.refresh_from_db()
+    dps2.refresh_from_db()
+    self.assertAlmostEqual(dps1.gross, Decimal('4.000000'))
+    self.assertAlmostEqual(dps2.gross, Decimal('15.000000'))
+
+    est1.refresh_from_db()
+    est2.refresh_from_db()
+    self.assertAlmostEqual(est1.estimation, Decimal('8.000000'))
+    self.assertAlmostEqual(est2.estimation, Decimal('30.000000'))
+
     # 6. Delete the split
     split.delete()
 
@@ -182,6 +264,23 @@ def test_Splits_integration_flow(self):
 
     dividend.refresh_from_db()
     self.assertAlmostEqual(dividend.dps, Decimal('12.000000'))
+
+    order1.refresh_from_db()
+    order2.refresh_from_db()
+    self.assertAlmostEqual(order1.shares, Decimal('12.000000'))
+    self.assertAlmostEqual(order1.price, Decimal('120.000000'))
+    self.assertAlmostEqual(order2.shares, Decimal('5.000000'))
+    self.assertAlmostEqual(order2.price, Decimal('115.000000'))
+
+    dps1.refresh_from_db()
+    dps2.refresh_from_db()
+    self.assertAlmostEqual(dps1.gross, Decimal('12.000000'))
+    self.assertAlmostEqual(dps2.gross, Decimal('15.000000'))
+
+    est1.refresh_from_db()
+    est2.refresh_from_db()
+    self.assertAlmostEqual(est1.estimation, Decimal('24.000000'))
+    self.assertAlmostEqual(est2.estimation, Decimal('30.000000'))
 
 
 def test_Splits_no_cross_product_interference(self):
