@@ -1615,7 +1615,7 @@ class Quotes(models.Model):
         """
             Returns a Quotes queryset with the last quotes of all products with quotes
         """
-        return Quotes.objects.all().order_by(
+        return Quotes.objects.order_by(
                 'products_id', 
                 '-datetime'
             ).distinct(
