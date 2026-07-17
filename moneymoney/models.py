@@ -1598,9 +1598,9 @@ class Products(models.Model):
         return Products.objects.filter(id__lt=10000000).order_by("-id")[0].id+1
 
 class Quotes(models.Model):
-    datetime = models.DateTimeField(blank=True, null=True)
-    quote = models.DecimalField(max_digits=18, decimal_places=6, blank=True, null=True)
-    products = models.ForeignKey(Products, models.DO_NOTHING, blank=True, null=True)
+    datetime = models.DateTimeField(blank=False, null=False)
+    quote = models.DecimalField(max_digits=18, decimal_places=6, blank=False, null=False)
+    products = models.ForeignKey(Products, models.DO_NOTHING, blank=False, null=False)
 
     class Meta:
         managed = True
