@@ -1,3 +1,4 @@
+from pathlib import Path
 from base64 import  b64decode
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
@@ -1510,7 +1511,7 @@ def ProductsUpdate(request):
     auto=RequestBool(request, "auto", False) ## Uses automatic request with settings globals investing.com   
     if auto is True:
         with TemporaryDirectory() as tmp:
-            run(f"""wget --header="Host: es.investing.com" \
+            command=f"""wget --header="Host: es.investing.com" \
                 --header="User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:92.0) Gecko/20100101 Firefox/92.0" \
                 --header="Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8" \
                 --header="Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3" \
@@ -1527,7 +1528,12 @@ def ProductsUpdate(request):
                 --header="Pragma: no-cache" \
                 --header="Cache-Control: no-cache" \
                 --header="TE: trailers" \
-                "{request.user.profile.investing_com_url}" -O {tmp}/portfolio.csv""", shell=True, capture_output=True)
+                "{request.user.profile.investing_com_url}" -O {tmp}/portfolio.csv"""
+
+            run(command, shell=True, capture_output=True)
+            
+            portfolio=Path(f"{tmp}/portfolio.csv")
+            print(f"DEBUG: CSV path: {portfolio}. Exists: {portfolio.exists()}")            
             ic=InvestingCom.from_filename_in_disk(request.user.profile.zone, f"{tmp}/portfolio.csv")
     else:
         # if not GET, then proceed
