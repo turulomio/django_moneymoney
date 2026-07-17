@@ -4,7 +4,6 @@ from moneymoney.reusing import tests_helpers
 from django.utils import timezone
 from datetime import timedelta
 from pydicts import casts
-from asgiref.sync import sync_to_async
 import time
 from django.core.cache import cache
 
@@ -24,7 +23,8 @@ def test_Quotes(self):
         tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/",  models.Quotes.post_payload(quote=i+1), status.HTTP_201_CREATED)
 
     with self.assertNumQueries(1):
-        quotes=tests_helpers.client_get(self, self.client_authorized_1, f"/api/quotes/?last=true", status.HTTP_200_OK)     
+        quotes=tests_helpers.client_get(self, self.client_authorized_1, f"/api/quotes/?last=true", status.HTTP_200_OK)    
+        self.assertEqual(quotes[0]["quote"], 2)
 
 def test_Quotes_ohcl(self):
     for i in range(3):
