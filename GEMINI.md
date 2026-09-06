@@ -74,5 +74,24 @@ All models in `moneymoney/models.py` have a classmethod `list_without_splits(cls
 ## 7. AI Assistant Guidelines & Rules
 - **Documentation Maintenance**: Every time a codebase edit is made, the AI assistant **MUST** update:
   - The documentation / docstrings of the modified methods/classes.
-  - The project's main [README.md](file:///home/worky/Proyectos/django_moneymoney/README.md).
-  - This [GEMINI.md](file:///home/worky/Proyectos/django_moneymoney/GEMINI.md) file, to keep the project knowledge and design history completely fresh and accurate.
+  - The project's main [README.md](file:///home/keko/Proyectos/django_moneymoney/README.md).
+  - This [GEMINI.md](file:///home/keko/Proyectos/django_moneymoney/GEMINI.md) file, to keep the project knowledge and design history completely fresh and accurate.
+
+---
+
+## 8. Accounts Balance Endpoint (`/api/accounts/{id}/balance/`)
+- **Detail Action**: Added to `AccountsViewSet` (`@action(detail=True, methods=['get'])`).
+- **Query Parameters**:
+  - `year` & `month`: Calculates balance at the end of the specified month (`casts.dtaware_month_end`). Solves the frontend issue when an account has 0 operations in a given month.
+  - `year` only: Calculates balance at the end of that year (`casts.dtaware_year_end`).
+  - `datetime`: Calculates balance at an explicit ISO datetime.
+  - *No parameters*: Defaults to current balance (`timezone.now()`).
+- **Response Format**:
+  Includes `id`, `name`, `datetime`, `balance_account`, `balance_user`, `balance_account_currency`, `balance_user_currency`, and `currency`.
+- **Validation & Error Responses (HTTP 400 Bad Request)**:
+  - Both `datetime` and `year`/`month` specified in query params.
+  - `month` provided without `year`.
+  - `month` is not an integer between 1 and 12.
+  - `year` is not an integer between 1 and 9999.
+  - `datetime` cannot be parsed as a valid ISO datetime string.
+

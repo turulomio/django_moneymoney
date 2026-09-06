@@ -185,7 +185,7 @@ class ConceptsViewSet(viewsets.ModelViewSet):
         year=RequestInteger(request, "year")
         month=RequestInteger(request, "month")
         if all_args_are_not_none(concept, year, month) is False:
-            return Response({'status': 'year,month or concept is None'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'status': 'year, month or concept is None'}, status=status.HTTP_400_BAD_REQUEST)
     
         qs_ao=models.Accountsoperations.objects.filter(concepts=concept, datetime__year=year, datetime__month=month)
         qs_cco=models.Creditcardsoperations.objects.filter(concepts=concept, datetime__year=year, datetime__month=month)
@@ -1007,6 +1007,87 @@ class AccountsViewSet(viewsets.ModelViewSet):
                 "decimals": o.decimals, 
             })
         return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='year', description='Filter by year', required=False, type=OpenApiTypes.INT), 
+            OpenApiParameter(name='month', description='Filter by month (1-12)', required=False, type=OpenApiTypes.INT), 
+            OpenApiParameter(name='datetime', description='ISO datetime string to calculate balance at', required=False, type=OpenApiTypes.DATETIME), 
+        ],
+        responses={
+            200: OpenApiResponse(description="Account balance information"),
+            400: OpenApiResponse(description="Invalid parameters (e.g. invalid date/time values, month without year, or conflicting parameters)"),
+            404: OpenApiResponse(description="Account not found"),
+        }
+    )
+    @action(detail=True, methods=['get'], name='Get account balance', url_path='balance', url_name='balance', permission_classes=[permissions.IsAuthenticated])
+    def balance(self, request, pk=None):
+        """
+        Returns account balance for a specific account.
+        Optional query parameters:
+        - year & month: calculates balance at the end of that month (casts.dtaware_month_end)
+        - year only: calculates balance at the end of that year (casts.dtaware_year_end)
+        - datetime: calculates balance at that specific datetime
+        - if none provided: calculates current balance (timezone.now())
+
+        Error responses (HTTP 400 Bad Request):
+        - Both datetime and year/month provided
+        - Month provided without year
+        - Month is not an integer between 1 and 12
+        - Year is not a valid integer between 1 and 9999
+        - Datetime cannot be parsed as an ISO datetime
+        """
+        account = self.get_object()
+
+        # Check conflicting parameters
+        if 'datetime' in request.GET and ('year' in request.GET or 'month' in request.GET):
+            return JsonResponse({'details': _("Cannot specify both datetime and year/month")}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check month without year
+        if 'month' in request.GET and 'year' not in request.GET:
+            return JsonResponse({'details': _("You must specify year when month is provided")}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate year
+        year = None
+        if 'year' in request.GET:
+            year = RequestInteger(request, 'year')
+            if year is None or year < 1 or year > 9999:
+                return JsonResponse({'details': _("Year must be an integer between 1 and 9999")}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate month
+        month = None
+        if 'month' in request.GET:
+            month = RequestInteger(request, 'month')
+            if month is None or month < 1 or month > 12:
+                return JsonResponse({'details': _("Month must be an integer between 1 and 12")}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate datetime
+        dt = None
+        if 'datetime' in request.GET:
+            dt = RequestDtaware(request, 'datetime', request.user.profile.zone)
+            if dt is None:
+                return JsonResponse({'details': _("Invalid datetime format. Expected ISO format")}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Resolve target datetime
+        if year is not None and month is not None:
+            dt = casts.dtaware_month_end(year, month, request.user.profile.zone)
+        elif year is not None:
+            dt = casts.dtaware_year_end(year, request.user.profile.zone)
+        elif dt is None:
+            dt = timezone.now()
+
+        balance_data = account.balance(dt, request.user.profile.currency)
+        r = {
+            "id": account.id,
+            "name": account.name,
+            "datetime": dt,
+            "balance_account": balance_data["balance_account_currency"],
+            "balance_user": balance_data["balance_user_currency"],
+            "balance_account_currency": balance_data["balance_account_currency"],
+            "balance_user_currency": balance_data["balance_user_currency"],
+            "currency": account.currency,
+        }
+        return JsonResponse(r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat)
 
 class AccountsoperationsViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.AccountsoperationsSerializer
