@@ -62,8 +62,6 @@ def test_ReportAnnualIncomeDetails(self):
     tests_helpers.client_post(self, self.client_authorized_1, "/api/creditcardsoperations/", cco_payload, status.HTTP_400_BAD_REQUEST)
 
     dod_=tests_helpers.client_get(self, self.client_authorized_1, f"/reports/annual/income/details/{self.static_year}/{self.static_month}/", status.HTTP_200_OK)
-    from pydicts import dod
-    dod.dod_print(dod_)
 
 
 def test_ReportAnnualGainsByProductstypes(self):

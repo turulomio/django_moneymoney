@@ -16,6 +16,7 @@ This is the backend of the [MoneyMoney](https://github.com/turulomio/moneymoney)
 - 💵 **Dividends & Estimations**: Record past dividend distributions, map them to account operations, and create future Dividend-Per-Share (DPS) estimations.
 - ⚡ **Multi-Tier Caching System**: Employs Request-level (L1) and Server-level (L2) caching for quotes, boosting retrieval performance by up to 200x.
 - 📊 **Advanced Financial Reporting**: API endpoints for generating rich financial reports, including Annual Performance, Asset Revaluations, Concept-based reports, Asset Evolution, Rankings, and Risk assessments.
+- 🔔 **System Alerts**: Centralized alert monitoring endpoint (`/alerts/`) detecting expired orders, inactive banks/accounts/investments with balance, unfinished investment transfers, and products with investments lacking quotes prior to operations.
 - 🛠️ **Fully-Documented API**: Integrated with `drf-spectacular` to provide automated OpenAPI schema generation and a Swagger UI dashboard.
 
 ---
