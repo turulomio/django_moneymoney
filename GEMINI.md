@@ -95,3 +95,15 @@ All models in `moneymoney/models.py` have a classmethod `list_without_splits(cls
   - `year` is not an integer between 1 and 9999.
   - `datetime` cannot be parsed as a valid ISO datetime string.
 
+---
+
+## 9. Alerts Endpoint (`/alerts/`)
+- Returns system alerts for:
+  - `orders_expired`: Limit orders that have expired.
+  - `banks_inactive_with_balance`: Inactive banks with non-zero total balance.
+  - `accounts_inactive_with_balance`: Inactive accounts with non-zero balance.
+  - `investments_inactive_with_balance`: Inactive investments with non-zero balance.
+  - `investments_transfers_unfinished`: Transfers without destination datetime set.
+  - `products_without_quotes_before_operations`: Products that have investment operations where no quote exists with `datetime <= operation.datetime`. Because missing quotes default to 0 in portfolio calculations (`ios.py`), this alert warns users about investments missing historical quotes prior to an operation date.
+
+
