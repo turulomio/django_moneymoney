@@ -42,7 +42,9 @@ def test_Alerts(self):
     self.assertEqual(len(lod_alerts["banks_inactive_with_balance"]), 1 )
     self.assertEqual(len(lod_alerts["investments_transfers_unfinished"]), 1 )
     self.assertEqual(len(lod_alerts["products_without_quotes_before_operations"]), 1 )
-    self.assertEqual(lod_alerts["products_without_quotes_before_operations"][0]["id"], 79226 )
+    self.assertEqual(lod_alerts["products_without_quotes_before_operations"][0]["url"], "http://testserver/api/products/79226/" )
+    self.assertIn("datetime", lod_alerts["products_without_quotes_before_operations"][0])
+    self.assertEqual(lod_alerts["products_without_quotes_before_operations"][0]["datetime"], (self.dtaware_now - timedelta(days=10)).isoformat().replace("+00:00", "Z"))
 
     # Now add quote before the operation datetime and verify alert disappears
     tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/", models.Quotes.post_payload(products="/api/products/79226/", datetime=self.dtaware_now - timedelta(days=20)), status.HTTP_201_CREATED)
