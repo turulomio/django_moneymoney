@@ -61,8 +61,8 @@ COPY . /app
 # Expose the port that Gunicorn will listen on
 EXPOSE 8000
 
-# Define environment variables for Django (adjust as needed)
-ENV DJANGO_SETTINGS_MODULE=moneymoney.settings 
+# Define environment variables for Django
+ENV DJANGO_SETTINGS_MODULE=django_moneymoney.settings_docker
 ENV PORT=8000
 # PostgreSQL connection settings
 ENV POSTGRES_DB=xulpymoney
@@ -72,5 +72,4 @@ ENV POSTGRES_HOST=db
 ENV POSTGRES_PORT=5432
 
 # Run Gunicorn to serve the Django application
-# Replace 'moneymoney.wsgi:application' with the actual path to your WSGI application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "moneymoney.wsgi:application"]
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8000} django_moneymoney.wsgi:application"]

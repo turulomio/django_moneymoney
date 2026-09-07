@@ -3,3 +3,6 @@
 
 This is the backend of the  [Money Money](https://github.com/turulomio/moneymoney) app
 
+For Docker instructions and environment variables, see [DOCKER.md](file:///home/worky/Proyectos/django_moneymoney/DOCKER.md).
+
+
