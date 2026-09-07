@@ -71,5 +71,6 @@ To run all tests:
 poetry run python manage.py test
 ```
 
-### Note on Splits Precision Testing
-SQLite and database Decimal fields round values to 6 decimal places. When writing split tests with division/multiplication factors (like 2-for-1 and 3-for-1 splits), **use initial values that are divisible by 6** (e.g., 12.0, 24.0, 120.0) to prevent assertion failures due to minor floating-point or division remainder discrepancies.
+For Docker instructions and environment variables, see [DOCKER.md](file:///home/worky/Proyectos/django_moneymoney/DOCKER.md).
+
+
