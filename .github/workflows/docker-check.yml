@@ -54,12 +54,14 @@ jobs:
         printf 'DOCKER_IMAGE_TAG=%s\n' "$DOCKER_IMAGE_TAG" >> "$GITHUB_ENV"
 
     - name: Create docker-compose override for testing published image
+      env:
+        DOCKER_IMAGE_TAG: ${{ env.DOCKER_IMAGE_TAG }}
       run: |
         cat <<EOF > docker-compose.override.yml
         version: '3.8'
         services:
           web:
-            image: ${{ env.DOCKER_IMAGE_TAG }}
+            image: $DOCKER_IMAGE_TAG
             # Anulamos la instrucción 'build' y los 'volumes' para asegurarnos de que se usa la imagen publicada
             build: {} # Un mapa vacío anula la instrucción 'build' del docker-compose.yml base
             volumes: [] # Una lista vacía anula los volúmenes montados del docker-compose.yml base
