@@ -48,15 +48,15 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
 COPY --from=builder /usr/src/app/wheels /wheels
 COPY --from=builder /app/requirements.txt /app/requirements.txt
 
-# Install dependencies from wheels (prioritizing local wheels, then falling back to PyPI)
-RUN pip install --no-cache-dir /wheels/* -r requirements.txt
+# Install dependencies from wheels and gunicorn
+RUN pip install --no-cache-dir /wheels/* -r requirements.txt gunicorn
 
 # Create a non-root user to run the application
 RUN adduser --system --group appuser
 USER appuser
 
 # Copy the entire Django project into the container
-COPY . /app
+COPY --chown=appuser:appuser . /app
 
 # Expose the port that Gunicorn will listen on
 EXPOSE 8000
