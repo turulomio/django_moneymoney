@@ -5,7 +5,7 @@ on:
     workflows: ["Django CI"] # Se ejecuta tras completar el workflow django.yml
     types:
       - completed
-    branches: [ "main" ]
+    branches: [ "main", "266-fix-docker-errors" ]
   workflow_dispatch:
 
 permissions:
@@ -17,20 +17,20 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Log in to Docker Hub
-      uses: docker/login-action@v2
+      uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      uses: docker/setup-buildx-action@v3
 
     - name: Build and push Docker image
       id: build_image # Añadimos un ID para referenciar las salidas de esta acción
-      uses: docker/build-push-action@v4
+      uses: docker/build-push-action@v5
       with:
         context: . # El contexto de construcción es el directorio actual del repositorio
         push: true # Indica que la imagen debe ser publicada (pushed)

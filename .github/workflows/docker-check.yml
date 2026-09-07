@@ -15,9 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
-    env:
-      DOCKER_IMAGE_TAG: "" # Variable para almacenar el tag de la imagen
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -37,70 +34,82 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         path: .
 
-    - name: Read image tag
+    - name: Resolve Docker Image Tag
       run: |
         DEFAULT_TAG="${{ secrets.DOCKER_USERNAME }}/django_moneymoney:latest"
         DOCKER_IMAGE_TAG="$DEFAULT_TAG"
 
         if [ -f image_tag.txt ]; then
           CANDIDATE_TAG="$(head -n 1 image_tag.txt | tr -d '\r\n')"
-          if [[ "$CANDIDATE_TAG" =~ ^[a-z0-9]+([._-][a-z0-9]+)*/[a-z0-9]+([._-][a-z0-9]+)*:[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+          if [ -n "$CANDIDATE_TAG" ]; then
             DOCKER_IMAGE_TAG="$CANDIDATE_TAG"
-          else
-            echo "Invalid image_tag.txt content; using default tag."
           fi
         fi
 
-        printf 'DOCKER_IMAGE_TAG=%s\n' "$DOCKER_IMAGE_TAG" >> "$GITHUB_ENV"
+        echo "Testing with Docker image tag: $DOCKER_IMAGE_TAG"
+        echo "DOCKER_IMAGE_TAG=$DOCKER_IMAGE_TAG" >> "$GITHUB_ENV"
 
-    - name: Create docker-compose override for testing published image
-      env:
-        DOCKER_IMAGE_TAG: ${{ env.DOCKER_IMAGE_TAG }}
+    - name: Generate docker-compose test file
       run: |
-        cat <<EOF > docker-compose.override.yml
+        cat << 'EOF' > docker-compose.test.yml
         version: '3.8'
         services:
+          db:
+            image: postgres:16.4
+            environment:
+              POSTGRES_DB: xulpymoney
+              POSTGRES_USER: postgres
+              POSTGRES_PASSWORD: postgres
+            ports:
+              - "5432:5432"
+
           web:
-            image: $DOCKER_IMAGE_TAG
-            # Anulamos la instrucción 'build' y los 'volumes' para asegurarnos de que se usa la imagen publicada
-            build: {} # Un mapa vacío anula la instrucción 'build' del docker-compose.yml base
-            volumes: [] # Una lista vacía anula los volúmenes montados del docker-compose.yml base
-EOF
+            image: ${DOCKER_IMAGE_TAG}
+            environment:
+              POSTGRES_HOST: db
+              POSTGRES_PORT: 5432
+              POSTGRES_DB: xulpymoney
+              POSTGRES_USER: postgres
+              POSTGRES_PASSWORD: postgres
+            ports:
+              - "8000:8000"
+            depends_on:
+              - db
+        EOF
 
-    - name: Run Docker Compose services with published image
+    - name: Start PostgreSQL Service
       run: |
-        # Levanta los servicios usando el docker-compose.yml principal y el override
-        docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d
+        docker compose -f docker-compose.test.yml up -d db
 
-    - name: Wait for PostgreSQL to be ready
+    - name: Install PL/Python Extension in PostgreSQL
       run: |
-        # Espera a que el servicio 'db' (PostgreSQL) esté saludable
-        docker-compose ps
-        until docker-compose exec db pg_isready -U postgres -d xulpymoney; do
+        until docker compose -f docker-compose.test.yml exec -T db pg_isready -U postgres -d xulpymoney; do
           echo "Waiting for PostgreSQL to become ready..."
           sleep 2
         done
+        docker compose -f docker-compose.test.yml exec -T db bash -c "apt-get update && apt-get install -y postgresql-plpython3-16"
+        docker compose -f docker-compose.test.yml exec -T db psql -U postgres -d xulpymoney -c "CREATE EXTENSION IF NOT EXISTS plpython3u;"
 
-    - name: Run Django Migrations
+    - name: Start Web Container and Run Migrations
       run: |
-        # Ejecuta las migraciones de Django dentro del contenedor 'web' (usando la imagen publicada)
-        docker-compose -f docker-compose.yml -f docker-compose.override.yml exec web python manage.py migrate
+        docker compose -f docker-compose.test.yml up -d web
+        docker compose -f docker-compose.test.yml exec -T web python manage.py migrate
 
-    - name: Wait for Django web service to be ready
+    - name: Verify Web Service Health
       run: |
-        # Espera a que el servicio web esté accesible en el puerto 8000
-        # Asume que tienes un endpoint /healthcheck/ en tu aplicación Django.
-        # Si no lo tienes, puedes usar un simple 'sleep 30' o un chequeo de logs.
-        for i in $(seq 1 60); do # Intenta durante 60 segundos
-          if curl -s http://localhost:8000/ > /dev/null; then # Intenta acceder a la raíz de la app
-            echo "Django app is ready!"
-            break
+        for i in $(seq 1 30); do
+          if curl -s http://localhost:8000/ > /dev/null 2>&1; then
+            echo "Django app is ready and responding!"
+            exit 0
           fi
-          echo "Waiting for Django app to be ready... ($i/60)"
-          sleep 1
+          echo "Waiting for Django app... ($i/30)"
+          sleep 2
         done
+        echo "Django app failed to respond on port 8000"
+        docker compose -f docker-compose.test.yml logs
+        exit 1
 
     - name: Clean up Docker Compose services
-      if: always() # Asegura que este paso se ejecute incluso si los pasos anteriores fallan
+      if: always()
       run: |
-        docker-compose -f docker-compose.yml -f docker-compose.override.yml down --volumes
+        docker compose -f docker-compose.test.yml down --volumes
