@@ -39,11 +39,19 @@ jobs:
 
     - name: Read image tag
       run: |
+        DEFAULT_TAG="${{ secrets.DOCKER_USERNAME }}/django_moneymoney:latest"
+        DOCKER_IMAGE_TAG="$DEFAULT_TAG"
+
         if [ -f image_tag.txt ]; then
-          echo "DOCKER_IMAGE_TAG=$(cat image_tag.txt)" >> $GITHUB_ENV
-        else
-          echo "DOCKER_IMAGE_TAG=${{ secrets.DOCKER_USERNAME }}/django_moneymoney:latest" >> $GITHUB_ENV
+          CANDIDATE_TAG="$(head -n 1 image_tag.txt | tr -d '\r\n')"
+          if [[ "$CANDIDATE_TAG" =~ ^[a-z0-9]+([._-][a-z0-9]+)*/[a-z0-9]+([._-][a-z0-9]+)*:[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+            DOCKER_IMAGE_TAG="$CANDIDATE_TAG"
+          else
+            echo "Invalid image_tag.txt content; using default tag."
+          fi
         fi
+
+        printf 'DOCKER_IMAGE_TAG=%s\n' "$DOCKER_IMAGE_TAG" >> "$GITHUB_ENV"
 
     - name: Create docker-compose override for testing published image
       run: |
