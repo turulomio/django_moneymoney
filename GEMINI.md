@@ -104,6 +104,6 @@ All models in `moneymoney/models.py` have a classmethod `list_without_splits(cls
   - `accounts_inactive_with_balance`: Inactive accounts with non-zero balance.
   - `investments_inactive_with_balance`: Inactive investments with non-zero balance.
   - `investments_transfers_unfinished`: Transfers without destination datetime set.
-  - `products_without_quotes_before_operations`: Products that have investment operations where no quote exists with `datetime <= operation.datetime`. Because missing quotes default to 0 in portfolio calculations (`ios.py`), this alert warns users about investments missing historical quotes prior to an operation date.
+  - `products_without_quotes_before_operations`: Returns a list of objects containing `{"url": "<product_url>", "datetime": "<earliest_operation_datetime>"}` for products that have investment operations where no quote exists with `datetime <= operation.datetime`. Because missing quotes default to 0 in portfolio calculations (`ios.py`), this alert provides the product reference URL and the earliest operation date needing a quote so the frontend knows what quote to add.
 
 

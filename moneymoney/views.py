@@ -6,7 +6,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.management import call_command
 from django.db import transaction, connection, reset_queries
-from django.db.models import prefetch_related_objects, Count, Sum, Q, Max, Subquery, OuterRef, Exists
+from django.db.models import prefetch_related_objects, Count, Sum, Q, Min, Max, Subquery, OuterRef, Exists
 from django.db.models.functions.datetime import ExtractMonth, ExtractYear
 from django.urls import reverse
 from django.utils import timezone
@@ -741,7 +741,12 @@ class Alerts(APIView):
                           "accounts_inactive_with_balance": [],
                           "investments_inactive_with_balance": [],
                           "investments_transfers_unfinished": [],
-                          "products_without_quotes_before_operations": []
+                          "products_without_quotes_before_operations": [
+                            {
+                              "url": "http://127.0.0.1:8000/api/products/1/",
+                              "datetime": "2023-01-01T10:00:00Z"
+                            }
+                          ]
                         },
                         response_only=True,
                     )
@@ -787,21 +792,24 @@ class Alerts(APIView):
         serializer = serializers.InvestmentstransfersSerializer(qs, many=True, context={'request': request})
         r["investments_transfers_unfinished"]=serializer.data
 
-        # Get all products that have investments without quotes before that operation
+        # Get products and their earliest operation datetime without quotes before that operation
         quote_before_subquery = models.Quotes.objects.filter(
             products=OuterRef('investments__products'),
             datetime__lte=OuterRef('datetime')
         )
-        invalid_ops_product_ids = models.Investmentsoperations.objects.filter(
+        invalid_ops = models.Investmentsoperations.objects.filter(
             ~Exists(quote_before_subquery)
-        ).values_list('investments__products_id', flat=True).distinct()
+        ).values('investments__products').annotate(
+            min_datetime=Min('datetime')
+        ).order_by('min_datetime')
 
-        qs_products = models.Products.objects.select_related("productstypes", "leverages", "stockmarkets").filter(
-            id__in=invalid_ops_product_ids
-        ).annotate(uses=Count('investments', distinct=True))
-
-        serializer_products = serializers.ProductsSerializer(qs_products, many=True, context={'request': request})
-        r["products_without_quotes_before_operations"] = serializer_products.data
+        r["products_without_quotes_before_operations"] = [
+            {
+                "url": models.Products.hurl(request, op["investments__products"]),
+                "datetime": op["min_datetime"],
+            }
+            for op in invalid_ops
+        ]
 
         return JsonResponse(r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
