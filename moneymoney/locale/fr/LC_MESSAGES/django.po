@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: django-moneymoney 1.3.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-01 07:07+0000\n"
+"POT-Creation-Date: 2026-03-22 11:19+0000\n"
 "PO-Revision-Date: 2025-02-01 10:00+0100\n"
 "Last-Translator: turulomio <turulomio@yahoo.es>\n"
 "Language-Team: French\n"
@@ -141,8 +141,8 @@ msgstr "Dépense"
 msgid "Fast investments operations"
 msgstr "Opérations d'investissement rapides"
 
-#: moneymoney/hardcoded_strings.py:33 moneymoney/models.py:1729
-#: moneymoney/views.py:1935
+#: moneymoney/hardcoded_strings.py:33 moneymoney/models.py:1738
+#: moneymoney/views.py:1956
 msgid "Fast operations"
 msgstr "Opérations rapides"
 
@@ -388,7 +388,9 @@ msgstr "Ajout de cotations depuis le portefeuille Investing.com"
 
 #: moneymoney/ios.py:158
 msgid "You need total mode to calculate sum_total_io_current_zerorisk_user"
-msgstr "Vous avez besoin du mode total pour calculer sum_total_io_current_zerorisk_user"
+msgstr ""
+"Vous avez besoin du mode total pour calculer "
+"sum_total_io_current_zerorisk_user"
 
 #: moneymoney/ios.py:461
 #, python-brace-format
@@ -420,94 +422,110 @@ msgid "Billing {} movements of {}"
 msgstr "Facturation de {} mouvements de {}"
 
 #: moneymoney/models.py:324
-msgid "From {}. Gross {}. Net {}."
+#, fuzzy
+#| msgid "From {}. Gross {}. Net {}."
+msgid "From {}. Gross {}. Net {}. Commission {}"
 msgstr "De {}. Brut {}. Net {}."
 
-#: moneymoney/models.py:331
+#: moneymoney/models.py:332
 msgid "{}: {} shares. Amount: {}. Comission: {}. Taxes: {}"
 msgstr "{}: {} actions. Montant: {}. Commission: {}. Taxes: {}"
 
-#: moneymoney/models.py:372
+#: moneymoney/models.py:373
 msgid "Income operations amount must be greater or equal to 0."
 msgstr "Le montant des opérations de revenus doit être supérieur ou égal à 0."
 
-#: moneymoney/models.py:374
+#: moneymoney/models.py:375
 msgid "Expense operations amount must be less or equal to 0."
 msgstr "Le montant des opérations de dépenses doit être inférieur ou égal à 0."
 
-#: moneymoney/models.py:631
+#: moneymoney/models.py:632
 msgid "Taxes and commissions must be equal or greater than zero"
 msgstr "Les taxes et commissions doivent être supérieures ou égales à zéro"
 
-#: moneymoney/models.py:798
+#: moneymoney/models.py:789
 #, python-brace-format
 msgid "{0} transfer from '{1}' to '{2}' started at {3}. {4}"
 msgstr "Transfert de {0} de '{1}' vers '{2}' commencé à {3}. {4}"
 
-#: moneymoney/models.py:822
+#: moneymoney/models.py:813
 msgid ""
 "Investment operation can't be created because its related product hasn't "
 "quotes."
-msgstr "L'opération d'investissement ne peut pas être créée car son produit associé n'a pas de cotations."
+msgstr ""
+"L'opération d'investissement ne peut pas être créée car son produit associé "
+"n'a pas de cotations."
 
-#: moneymoney/models.py:953
+#: moneymoney/models.py:944
 msgid "Investment transfer can't be created if products types are not the same"
-msgstr "Le transfert d'investissement ne peut pas être créé si les types de produits ne sont pas les mêmes"
+msgstr ""
+"Le transfert d'investissement ne peut pas être créé si les types de produits "
+"ne sont pas les mêmes"
 
-#: moneymoney/models.py:956
+#: moneymoney/models.py:947
 msgid "Investment transfer can't be created if investments are the same"
-msgstr "Le transfert d'investissement ne peut pas être créé si les investissements sont les mêmes"
+msgstr ""
+"Le transfert d'investissement ne peut pas être créé si les investissements "
+"sont les mêmes"
 
-#: moneymoney/models.py:959
+#: moneymoney/models.py:950
 msgid "Shares amount can't be null"
 msgstr "Le montant des actions ne peut pas être nul"
 
-#: moneymoney/models.py:962
+#: moneymoney/models.py:953
 msgid "Shares amount can't be of the same sign"
 msgstr "Le montant des actions ne peut pas être du même signe"
 
-#: moneymoney/models.py:1477
+#: moneymoney/models.py:1473
 #, python-brace-format
 msgid "Error saving '{0}'. Datetime it's in the future"
-msgstr "Erreur lors de l'enregistrement de '{0}'. La date et l'heure sont dans le futur"
+msgstr ""
+"Erreur lors de l'enregistrement de '{0}'. La date et l'heure sont dans le "
+"futur"
 
-#: moneymoney/models.py:1481
+#: moneymoney/models.py:1477
 #, python-brace-format
 msgid "Updating '{0}'"
 msgstr "Mise à jour de '{0}'"
 
-#: moneymoney/models.py:1484
+#: moneymoney/models.py:1480
 #, python-brace-format
 msgid "Inserting '{0}'"
 msgstr "Insertion de '{0}'"
 
-#: moneymoney/models.py:1726
+#: moneymoney/models.py:1735
 msgid "Pairs in same account"
 msgstr "Paires dans le même compte"
 
-#: moneymoney/models.py:1727
+#: moneymoney/models.py:1736
 msgid "Product ranges"
 msgstr "Gammes de produits"
 
-#: moneymoney/models.py:1728
+#: moneymoney/models.py:1737
 msgid "Generic"
 msgstr "Générique"
 
-#: moneymoney/serializers.py:138
+#: moneymoney/serializers.py:139
 msgid "You can't create a credit card operation with a debit credit card"
-msgstr "Vous ne pouvez pas créer une opération de carte de crédit avec une carte de débit"
+msgstr ""
+"Vous ne pouvez pas créer une opération de carte de crédit avec une carte de "
+"débit"
 
-#: moneymoney/serializers.py:272 moneymoney/serializers.py:295
+#: moneymoney/serializers.py:273 moneymoney/serializers.py:296
 msgid ""
 "You must set system parameter to set a system product (True) or a personal "
 "product (False)"
-msgstr "Vous devez définir le paramètre système pour définir un produit système (True) ou un produit personnel (False)"
+msgstr ""
+"Vous devez définir le paramètre système pour définir un produit système "
+"(True) ou un produit personnel (False)"
 
-#: moneymoney/serializers.py:287 moneymoney/serializers.py:298
+#: moneymoney/serializers.py:288 moneymoney/serializers.py:299
 msgid ""
 "You can't edit a system product if you're not a Catalog Manager (only "
 "developers)"
-msgstr "Vous ne pouvez pas modifier un produit système si vous n'êtes pas un gestionnaire de catalogue (développeurs uniquement)"
+msgstr ""
+"Vous ne pouvez pas modifier un produit système si vous n'êtes pas un "
+"gestionnaire de catalogue (développeurs uniquement)"
 
 #: moneymoney/views.py:311
 msgid "Paid or accountsoperations_id can't be None at the same time"
@@ -529,96 +547,98 @@ msgstr "La stratégie n'a pas été trouvée"
 msgid "Generic strategy was not found"
 msgstr "La stratégie générique n'a pas été trouvée"
 
-#: moneymoney/views.py:856
+#: moneymoney/views.py:877
 msgid "You must set active parameter"
 msgstr "Vous devez définir le paramètre actif"
 
-#: moneymoney/views.py:905
+#: moneymoney/views.py:926
 msgid "Insuficient data"
 msgstr "Données insuffisantes"
 
-#: moneymoney/views.py:1091
+#: moneymoney/views.py:1112
 msgid "Can't make a refund with those parameters"
 msgstr "Impossible d'effectuer un remboursement avec ces paramètres"
 
-#: moneymoney/views.py:1404
+#: moneymoney/views.py:1425
 msgid "This product hasn't quotes. You need at least one"
 msgstr "Ce produit n'a pas de cotations. Vous en avez besoin d'au moins une"
 
-#: moneymoney/views.py:1425
+#: moneymoney/views.py:1446
 msgid ""
 "You can't delete a system product if you're not a Catalog Manager (only "
 "developers)"
-msgstr "Vous ne pouvez pas supprimer un produit système si vous n'êtes pas un gestionnaire de catalogue (développeurs uniquement)"
+msgstr ""
+"Vous ne pouvez pas supprimer un produit système si vous n'êtes pas un "
+"gestionnaire de catalogue (développeurs uniquement)"
 
-#: moneymoney/views.py:1732 moneymoney/views.py:1781
+#: moneymoney/views.py:1753 moneymoney/views.py:1802
 msgid "January"
 msgstr "Janvier"
 
-#: moneymoney/views.py:1733 moneymoney/views.py:1782
+#: moneymoney/views.py:1754 moneymoney/views.py:1803
 msgid "February"
 msgstr "Février"
 
-#: moneymoney/views.py:1734 moneymoney/views.py:1783
+#: moneymoney/views.py:1755 moneymoney/views.py:1804
 msgid "March"
 msgstr "Mars"
 
-#: moneymoney/views.py:1735 moneymoney/views.py:1784
+#: moneymoney/views.py:1756 moneymoney/views.py:1805
 msgid "April"
 msgstr "Avril"
 
-#: moneymoney/views.py:1736 moneymoney/views.py:1785
+#: moneymoney/views.py:1757 moneymoney/views.py:1806
 msgid "May"
 msgstr "Mai"
 
-#: moneymoney/views.py:1737 moneymoney/views.py:1786
+#: moneymoney/views.py:1758 moneymoney/views.py:1807
 msgid "June"
 msgstr "Juin"
 
-#: moneymoney/views.py:1738 moneymoney/views.py:1787
+#: moneymoney/views.py:1759 moneymoney/views.py:1808
 msgid "July"
 msgstr "Juillet"
 
-#: moneymoney/views.py:1739 moneymoney/views.py:1788
+#: moneymoney/views.py:1760 moneymoney/views.py:1809
 msgid "August"
 msgstr "Août"
 
-#: moneymoney/views.py:1740 moneymoney/views.py:1789
+#: moneymoney/views.py:1761 moneymoney/views.py:1810
 msgid "September"
 msgstr "Septembre"
 
-#: moneymoney/views.py:1741 moneymoney/views.py:1790
+#: moneymoney/views.py:1762 moneymoney/views.py:1811
 msgid "October"
 msgstr "Octobre"
 
-#: moneymoney/views.py:1742 moneymoney/views.py:1791
+#: moneymoney/views.py:1763 moneymoney/views.py:1812
 msgid "November"
 msgstr "Novembre"
 
-#: moneymoney/views.py:1743 moneymoney/views.py:1792
+#: moneymoney/views.py:1764 moneymoney/views.py:1813
 msgid "December"
 msgstr "Décembre"
 
-#: moneymoney/views.py:1974
+#: moneymoney/views.py:1995
 msgid "You must set year and month parameters"
 msgstr "Vous devez définir les paramètres d'année et de mois"
 
-#: moneymoney/views.py:2270
+#: moneymoney/views.py:2291
 msgid "Accounts total balance"
 msgstr "Solde total des comptes"
 
-#: moneymoney/views.py:2283
+#: moneymoney/views.py:2304
 msgid "Accounts"
 msgstr "Comptes"
 
-#: moneymoney/views.py:2283
+#: moneymoney/views.py:2304
 msgid "Accounts operations"
 msgstr "Opérations de comptes"
 
-#: moneymoney/views.py:2283
+#: moneymoney/views.py:2304
 msgid "Banks"
 msgstr "Banques"
 
-#: moneymoney/views.py:2283
+#: moneymoney/views.py:2304
 msgid "Concept"
 msgstr "Concept"

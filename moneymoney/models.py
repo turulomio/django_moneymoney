@@ -1,25 +1,22 @@
 from datetime import date, timedelta
 from decimal import Decimal
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
-from django.db import models, transaction, connection
-from django.db.models import prefetch_related_objects, Case, When, Sum, Value, Subquery, F, Window, Min, Max, DateField, OuterRef, ExpressionWrapper, DurationField, FloatField
+from django.db import models, transaction
+from django.db.models import Case, When, Sum, Subquery, F, Window, Min, Max, DateField, OuterRef, ExpressionWrapper, DurationField, FloatField
+from django.core.cache import cache
 from django.db.models.functions import FirstValue, LastValue, ExtractMonth, ExtractYear, Cast, Extract
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.utils import timezone
 from moneymoney import ios, functions
-from moneymoney.reusing.decorators import ptimeit
 from moneymoney.types import eConcept, eProductType, eOperationType
-from pydicts import lod_ymv, casts, lod
+from pydicts import lod_ymv, casts
 from pydicts.currency import Currency
 
-Decimal
-ptimeit
+
 
 RANGE_RECOMENDATION_CHOICES =( 
     (1, "All"), 
@@ -33,6 +30,64 @@ RANGE_RECOMENDATION_CHOICES =(
     (9, "SMA 5"), 
     (10, "HMA 10"), 
 )
+
+class CurrencyPair:
+    def __init__(self, from_, to_):
+        self.from_=from_
+        self.to_=to_
+
+        self.SUPPORTED=[
+            ("EUR", "USD", 74747),
+            ("XAU", "EUR", 81747),
+            ("XAU", "USD", 81757),
+        ]
+
+        self.direct_supported=False
+        self.reverse_supported=False
+        self.supported=False
+        self.associated_id=None # Products Id asociado al par
+        for pair in self.SUPPORTED:
+            if pair[0]==self.from_ and pair[1]==self.to_:
+                self.direct_supported=True
+                self.reverse_supported=False
+                self.supported=True
+                self.associated_id=pair[2]
+            elif pair[1]==self.from_ and pair[0]==self.to_:
+                self.direct_supported=False
+                self.reverse_supported=True
+                self.supported=True
+                self.associated_id=pair[2]
+
+    def get_factor(self, datetime_,  request=None):
+        return self.get_dictionary(datetime_, request)["quote"]
+        
+        
+    def get_dictionary(self, datetime_, request=None):
+        """
+            Gets the factor to pass a currency to other in a datetime
+            Params:
+                - get_quotes_result: Dictionary result of Quotes.get_quote. Poner None para que se calcule3
+            Returns and object or None
+
+            Si no lo encuentra deveulve 1
+
+
+        """      
+        if self.from_==self.to_:
+            return {"datetime": datetime_, "quote": 1, "quotes_id": None}
+        
+        q=Quotes.get_quote(self.associated_id, datetime_, request)
+        if q is None or q.quote==0:
+            return {"datetime": datetime_, "quote": 1, "quotes_id": None}
+
+        if self.direct_supported==True:
+            return {"datetime": datetime_, "quote": q.quote, "quotes_id": q.id}
+        elif self.reverse_supported==True:
+            return {"datetime": datetime_, "quote": 1/q.quote, "quotes_id": None}
+        else:
+            return {"datetime": datetime_, "quote": 1, "quotes_id": None}
+
+    
 
 
 
@@ -91,12 +146,12 @@ class Accounts(models.Model):
             r["balance_account_currency"]=Decimal('0')
         else:
             r["balance_account_currency"]=b
-        factor=Quotes.get_currency_factor(dt, self.currency, currency_user, None)
-        r["balance_user_currency"]=r["balance_account_currency"]*factor
+        pair=CurrencyPair(self.currency,currency_user)
+        r["balance_user_currency"]=r["balance_account_currency"]*pair.get_factor(dt)
         return r
 
     @staticmethod
-    def accounts_balance(qs, dt, currency_user):
+    def accounts_balance(qs, dt, currency_user, request=None):
         """
             qs. Queryset Accounts
             balance_account_currency can be calculated if all accounts in qs has the same currency
@@ -109,15 +164,15 @@ class Accounts(models.Model):
                 r["balance_account_currency"]=Decimal('0')
             else:
                 r["balance_account_currency"]=b
-            factor=Quotes.get_currency_factor(dt, currencies_in_qs[0], currency_user, None)
-            r["balance_user_currency"]=r["balance_account_currency"]*factor
+            pair=CurrencyPair(currencies_in_qs[0], currency_user)
+            r["balance_user_currency"]=r["balance_account_currency"]*pair.get_factor(dt, request)
         else:
             r["balance_account_currency"]=None
             r["balance_user_currency"]=Decimal("0")
             for currency in currencies_in_qs:
                 b = Accountsoperations.objects.filter(accounts__in=qs, datetime__lte=dt, accounts__currency=currency).select_related("accounts").aggregate(Sum("amount"))["amount__sum"] or Decimal('0')
-                factor=Quotes.get_currency_factor(dt, currency, currency_user, None)
-                r["balance_user_currency"]=r["balance_user_currency"]+b*factor
+                pair=CurrencyPair(currency, currency_user)
+                r["balance_user_currency"]=r["balance_user_currency"]+b*pair.get_factor(dt, request)
         return r
 
                 
@@ -321,10 +376,11 @@ class Accountsoperations(models.Model):
             return  _("Billing {} movements of {}").format(len(qs), cc_name)
             
         elif hasattr(self, "dividends"):
-            return _( "From {}. Gross {}. Net {}.".format(
+            return _( "From {}. Gross {}. Net {}. Commission {}").format(
                 self.dividends.investments.name, 
                 self.dividends.investments.accounts.amount_string(self.dividends.gross), 
-                self.dividends.investments.accounts.amount_string(self.dividends.net))
+                self.dividends.investments.accounts.amount_string(self.dividends.net),
+                self.dividends.investments.accounts.amount_string(self.dividends.commission)
             )
         
         elif hasattr(self,  "investmentsoperations"):
@@ -366,6 +422,16 @@ class Accountsoperations(models.Model):
             "dividends",
             "investmentsoperations"
         ).get(pk=refund_tx.pk)
+    
+
+    def creditcard_payment_undo(self):
+        
+        if self.concepts_id!=eConcept.CreditCardBilling:
+            raise ValidationError(_("This account operation is not a credit card billing, so it can't be undone."))
+        
+        Creditcardsoperations.objects.filter(accountsoperations_id=self.id).update(paid_datetime=None,  paid=False, accountsoperations_id=None)
+        self.delete() #Must be at the end due to middle queries
+
 
     def clean(self):            
         if self.concepts.operationstypes.id== eOperationType.Income and self.amount<0:
@@ -418,7 +484,7 @@ class Banks(models.Model):
 
     def balance_investments(self, request):
         if hasattr(self, "_balance_investments") is False:
-            plio=ios.IOS.from_qs(timezone.now(), request.user.profile.currency, self.investments(active=True), 3)
+            plio=ios.IOS.from_qs_investments(timezone.now(), request.user.profile.currency, self.investments(active=True), 3, request=request)
             self._balance_investments=plio.sum_total_io_current()["balance_user"]
         return self._balance_investments
         
@@ -514,6 +580,48 @@ class Creditcards(models.Model):
             "number": number, 
         }
 
+    def clean(self):
+        if self.pk:  # Si la instancia ya existe (es una actualización)
+            original_instance = Creditcards.objects.get(pk=self.pk)
+            if original_instance.deferred != self.deferred:
+                raise ValidationError({'deferred': _('This field cannot be updated after creation.')})
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        self.full_clean()        
+        super(Creditcards, self).save(*args, **kwargs) #To generate io and then plio
+
+    @transaction.atomic
+    def pay(self,cco_ids, dt_payment ):
+        """
+            Makes a payment 
+        """
+        if not self.deferred:
+            raise ValidationError(_("You can't make a payment if the credit card is not deferred."))
+
+
+        qs_cco=Creditcardsoperations.objects.all().filter(pk__in=(cco_ids))
+        sumamount=0
+        for o in qs_cco:
+            sumamount=sumamount+o.amount
+        
+        c=Accountsoperations()
+        c.datetime=dt_payment
+        c.concepts_id=eConcept.CreditCardBilling
+        c.amount=sumamount
+        c.accounts=self.accounts
+        c.comment=""
+        c.save()
+
+        #Modifica el registro y lo pone como paid y la datetime de pago y añade la opercuenta
+        for o in qs_cco:
+            o.paid_datetime=dt_payment
+            o.paid=True
+            o.accountsoperations_id=c.id
+            o.save()
+
+        return c
+
 class Creditcardsoperations(models.Model):
     concepts = models.ForeignKey(Concepts, models.DO_NOTHING)
     amount = models.DecimalField(max_digits=100, decimal_places=2)
@@ -521,7 +629,7 @@ class Creditcardsoperations(models.Model):
     creditcards = models.ForeignKey(Creditcards, models.DO_NOTHING)
     paid = models.BooleanField()
     paid_datetime = models.DateTimeField(blank=True, null=True)
-    accountsoperations= models.ForeignKey(Accountsoperations, models.DO_NOTHING, null=True,  related_name="paid_accountsoperations")
+    accountsoperations= models.ForeignKey(Accountsoperations, models.DO_NOTHING, null=True, blank=True,  related_name="paid_accountsoperations")
     datetime = models.DateTimeField(blank=True, null=True)
 
     class Meta:
@@ -536,7 +644,7 @@ class Creditcardsoperations(models.Model):
         comment="CCO Comment", 
         datetime=timezone.now(), 
         paid=False, 
-        paid_datetime=None
+        paid_datetime=None,
     ):
         return {
             "concepts":concepts, 
@@ -547,6 +655,23 @@ class Creditcardsoperations(models.Model):
             "paid": paid, 
             "paid_datetime": paid_datetime, 
         }
+
+    def clean(self):
+        if not self.creditcards.deferred:
+            raise ValidationError(_("You can't create a credit card operation if the credit card is not deferred. Just create a normal account operation."))
+        
+        # Validation: accountsoperations must be null if not paid, and not null if paid
+        if not self.paid and self.accountsoperations is not None:
+            raise ValidationError({'accountsoperations': _("An accounts operation cannot be associated with an unpaid credit card operation.")})
+        if self.paid and self.accountsoperations is None:
+            raise ValidationError({'accountsoperations': _("A paid credit card operation must have an associated accounts operation.")})
+        
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        self.full_clean()        
+        super(Creditcardsoperations, self).save(*args, **kwargs) #To generate io and then plio
+
+
 
 
 class Dividends(models.Model):
@@ -627,7 +752,7 @@ class Dividends(models.Model):
 
 
     def clean(self):
-        if self.commission <0 or self.taxes<0:
+        if self.commission < 0 or self.taxes < 0:
             raise ValidationError(_("Taxes and commissions must be equal or greater than zero"))
         
     @transaction.atomic
@@ -636,7 +761,7 @@ class Dividends(models.Model):
             self.accountsoperations=Accountsoperations()
         self.accountsoperations.datetime=self.datetime
         self.accountsoperations.concepts=self.concepts
-        self.accountsoperations.amount=self.net
+        self.accountsoperations.amount=self.net-self.commission
         self.accountsoperations.comment=""
         self.accountsoperations.accounts=self.investments.accounts
         self.accountsoperations.save()
@@ -740,8 +865,6 @@ class Investments(models.Model):
         return r
 
     def set_attributes_after_investmentsoperations_crud(self):      
-#        print("setting investment attributes")
-        # Always activeive after investmentsoperations CRUD
         if self.active is False:
             self.active=True
         # Changes selling expiration after investmentsoperations CRUD y 0 shares
@@ -840,7 +963,7 @@ class Investmentsoperations(models.Model):
             return
         
         # Updates asociated ao
-        plio=ios.IOS.from_ids(timezone.now(), "EUR", [self.investments.id, ], 1) #I set EUR to reuse this code but __user values will not be used
+        plio=ios.IOS.from_ids(timezone.now(), "EUR", [self.investments.id, ], 1,request=None) #I set EUR to reuse this code but __user values will not be used
         #Searches io investments operations of the comment
         io=None
         for o in plio.d_io(self.investments.id):
@@ -962,16 +1085,16 @@ class Investmentstransfers(models.Model):
     
 
     def origin_investmentoperation(self):
-        try:
-            return Investmentsoperations.objects.get(associated_it=self, operationstypes_id=eOperationType.TransferSharesOrigin)
-        except:
-            return None
+        for io in self.investmentsoperations_set.all():
+            if io.operationstypes_id == eOperationType.TransferSharesOrigin:
+                return io
+        return None
     
     def destiny_investmentoperation(self):
-        try:
-            return Investmentsoperations.objects.get(associated_it=self, operationstypes_id=eOperationType.TransferSharesDestiny)
-        except:
-            return None 
+        for io in self.investmentsoperations_set.all():
+            if io.operationstypes_id == eOperationType.TransferSharesDestiny:
+                return io
+        return None
         
     def finished(self):
         """
@@ -1063,9 +1186,9 @@ class Orders(models.Model):
         return Currency(self.price*self.shares*self.investments.products.real_leveraged_multiplier(), self.investments.products.currency)
         
     def needs_stop_loss_warning(self):
-        if self.shares>0 and self.price>self.investments.products.basic_results()["last"]:
+        if self.shares>0 and self.price>self.investments.products.price_last():
             return True
-        elif  self.shares<0 and self.price<self.investments.products.basic_results()["last"]:
+        elif  self.shares<0 and self.price<self.investments.products.price_last():
             return True
         return False
 
@@ -1242,63 +1365,107 @@ class Products(models.Model):
         return Products.objects.filter(investments__id__in=Subquery(qs_investments.values("id"))).distinct()
 
     def fullName(self):
+        """
+        Returns the full name of the product, combining its name and the stock market's name.
+        """
         return "{} ({})".format(self.name, _(self.stockmarkets.name))
-
-    def basic_results(self):
+    
+    def quote_last(self, request=None):
         """
-            Returns a dictionary as defined in basic_results_from_list_of_products_id
+        Retrieves the most recent quote for this product.
+
+        Args:
+            request (HttpRequest, optional): The current HTTP request object.
+                                             If provided, it can be used for request-level caching.
+
+        Returns:
+            Quotes: The latest Quotes object for this product, or None if no quote is found.
         """
-        if hasattr(self, "_basic_results") is False:
-            br=Products.basic_results_from_list_of_products_id([self.id, ])
-            self._basic_results=br[self.id]
-        return self._basic_results
-
-    @staticmethod
-    def basic_results_from_list_of_products_id(list_products_id):
+        req = getattr(request, '_request', request) if request else None
+        dt = req.start if req is not None and hasattr(req, 'start') else timezone.now()
+        return Quotes.get_quote(self.id, dt, req)
+    
+    def quote_penultimate(self, request=None):
         """
-            This is made in two massive steps. One for last  and other for penultimate and lastyear
-            Returns a dictionary that can be queried d[product_id][last|last_datetime|penultimate|penultimate_datetime|lastyear|lastyear_datetime]
+        Retrieves the second most recent (penultimate) quote for this product.
+
+        Args:
+            request (HttpRequest, optional): The current HTTP request object.
+                                             If provided, it can be used for request-level caching.
+
+        Returns:
+            Quotes: The penultimate Quotes object for this product, or None if not found
+                    or if there's no last quote to base the search on.
         """
-        def dt_needed_penultimate(products_id):
-            return casts.dtaware_day_end_from_date(r_lasts[products_id][now]["datetime"].date()-timedelta(days=1), 'UTC')#Better utc to assure
-        def dt_needed_lastyear(products_id):
-            return casts.dtaware_year_end(r_lasts[products_id][now]["datetime"].year-1, 'UTC')
-        #####
+        req = getattr(request, '_request', request) if request else None
+        lastquote=self.quote_last(req)
+        if lastquote is None:
+            return None
 
-        r ={}
-        now=timezone.now()
-        lod_lasts=[]
-        for products_id in list_products_id:
-            #Initialize dictionary
-            r[products_id]={}
-            #Create lod for last
-            lod_lasts.append({"datetime": now, "products_id":products_id})
+        penultimatedt=casts.dtaware_day_end_from_date(lastquote.datetime.date()-timedelta(days=1), 'UTC')
+        return Quotes.get_quote(self.id, penultimatedt, req)
+    
+    def quote_lastyear(self, request=None):
+        """
+        Retrieves the quote for this product from approximately one year ago
+        (specifically, the last quote available at the end of the previous year
+        relative to the latest quote's date).
 
-        r_lasts=Quotes.get_quotes(lod_lasts)
-        lod_ply=[]#penultimate and last year
-        for products_id in list_products_id:
-            if r_lasts[products_id][now]["datetime"] is not None:
-                lod_ply.append({"datetime": dt_needed_penultimate(products_id), "products_id":products_id})
-                lod_ply.append({"datetime": dt_needed_lastyear(products_id), "products_id":products_id})
-        r_ply=Quotes.get_quotes(lod_ply)
-        
-        #Generate answer
-        for products_id in list_products_id:
-            r[products_id]["last"]=r_lasts[products_id][now]["quote"]
-            r[products_id]["last_datetime"]=r_lasts[products_id][now]["datetime"]
+        Args:
+            request (HttpRequest, optional): The current HTTP request object.
+                                             If provided, it can be used for request-level caching.
 
-            if r[products_id]["last_datetime"] is None:
-                r[products_id]["penultimate"]=None 
-                r[products_id]["penultimate_datetime"]=None
-                r[products_id]["lastyear"]=None
-                r[products_id]["lastyear_datetime"]=None
-            else:
-                r[products_id]["penultimate"]=r_ply[products_id][dt_needed_penultimate(products_id)]["quote"]
-                r[products_id]["penultimate_datetime"]=r_ply[products_id][dt_needed_penultimate(products_id)]["datetime"]
-                r[products_id]["lastyear"]=r_ply[products_id][dt_needed_lastyear(products_id)]["quote"]
-                r[products_id]["lastyear_datetime"]=r_ply[products_id][dt_needed_lastyear(products_id)]["datetime"]
-        return r
-        
+        Returns:
+            Quotes: The last year's Quotes object for this product, or None if not found
+                    or if there's no last quote to base the search on.
+        """
+        req = getattr(request, '_request', request) if request else None
+        lastquote=self.quote_last(req)
+        if lastquote is None:
+            return None
+        lastyeardt=casts.dtaware_year_end(lastquote.datetime.year-1, 'UTC')
+        return Quotes.get_quote(self.id, lastyeardt, req)
+
+    def price_last(self,request=None):
+        """
+        Returns the price (quote value) of the most recent quote for this product.
+
+        Args:
+            request (HttpRequest, optional): The current HTTP request object.
+                                             If provided, it can be used for request-level caching.
+
+        Returns:
+            Decimal: The quote price, or Decimal('0') if no quote is found.
+        """
+        return self.quote_last(request).quote if self.quote_last(request) else 0
+
+    def price_penultimate(self,request=None):
+        """
+        Returns the price (quote value) of the second most recent (penultimate) quote for this product.
+
+        Args:
+            request (HttpRequest, optional): The current HTTP request object.
+                                             If provided, it can be used for request-level caching.
+
+        Returns:
+            Decimal: The quote price, or Decimal('0') if no penultimate quote is found.
+        """
+        return self.quote_penultimate(request).quote if self.quote_penultimate(request) else 0
+
+    def price_lastyear(self,request=None):
+        """
+        Returns the price (quote value) of the last year's quote for this product.
+
+        Args:
+            request (HttpRequest, optional): The current HTTP request object.
+                                             If provided, it can be used for request-level caching.
+
+        Returns:
+            Decimal: The quote price, or Decimal('0') if no last year's quote is found.
+        """
+        return self.quote_lastyear(request).quote if self.quote_lastyear(request) else 0
+
+       
     ## IBEXA es x2 pero esta en el pricio
     ## CFD DAX no está en el precio
     def real_leveraged_multiplier(self):
@@ -1431,9 +1598,9 @@ class Products(models.Model):
         return Products.objects.filter(id__lt=10000000).order_by("-id")[0].id+1
 
 class Quotes(models.Model):
-    datetime = models.DateTimeField(blank=True, null=True)
-    quote = models.DecimalField(max_digits=18, decimal_places=6, blank=True, null=True)
-    products = models.ForeignKey(Products, models.DO_NOTHING, blank=True, null=True)
+    datetime = models.DateTimeField(blank=False, null=False)
+    quote = models.DecimalField(max_digits=18, decimal_places=6, blank=False, null=False)
+    products = models.ForeignKey(Products, models.DO_NOTHING, blank=False, null=False)
 
     class Meta:
         managed = True
@@ -1448,7 +1615,7 @@ class Quotes(models.Model):
         """
             Returns a Quotes queryset with the last quotes of all products with quotes
         """
-        return Quotes.objects.all().order_by(
+        return Quotes.objects.order_by(
                 'products_id', 
                 '-datetime'
             ).distinct(
@@ -1483,218 +1650,56 @@ class Quotes(models.Model):
         return request.build_absolute_uri(reverse('quotes-detail', args=(id, )))
     
     @staticmethod
-    def get_quote(product_id, datetime_):
+    def get_quote(product_id, datetime_, request=None):
         """
             Gets a quote object of a product in a datetime or less.
             Returns and object or None
 
             Si no lo encuentra deveulve un precio de 0
+
+
+            Las consultas a quotes son masivas por eso, voy a crear en el middleware un cache en cada request
+            Si el parametro request es pasado se usará si no no
+
+            Tendrá llaves (product_id, datetime )
+
+            El asked datetime es el pasado por parametro y el datetime final es el quote.datetime
         """
+
+        req = getattr(request, '_request', request) if request else None
+
+        if req is not None and hasattr(req, 'cache_quotes'):
+            if (product_id, datetime_) in req.cache_quotes:
+                req.quotes_hit_count += 1
+                req.quotes_request_count += 1
+                return req.cache_quotes[(product_id, datetime_)]
+            req.quotes_request_count += 1
+
+        is_old = datetime_ < timezone.now() - timedelta(days=1)
+        cache_key = f"quote_{product_id}_{datetime_.timestamp()}" if is_old else None
+
+        if is_old:
+            cached_val = cache.get(cache_key, "NOT_FOUND")
+            if cached_val != "NOT_FOUND":
+                if req is not None and hasattr(req, 'cache_quotes'):
+                    req.cache_quotes[(product_id, datetime_)] = cached_val
+                    if hasattr(req, 'quotes_server_cache_hit_count'):
+                        req.quotes_server_cache_hit_count += 1
+                return cached_val
+
         try:
-            r=Quotes.objects.filter(products__id=product_id, datetime__lte=datetime_).order_by("-datetime")[0]
+            r=Quotes.objects.filter(products__id=product_id, datetime__lte=datetime_).select_related("products").order_by("-datetime")[0]
+            if req is not None and hasattr(req, 'cache_quotes'):
+                req.cache_quotes[(product_id, datetime_)] = r
+            if is_old:
+                cache.set(cache_key, r, timeout=60*60*24*30) # Se cachea 30 días
             return r
-        except:
-            # print(_("I coudn't get a quote for product '{0}' at '{1}'").format(product_id, datetime_))
+        except IndexError:
+            if req is not None and hasattr(req, 'cache_quotes'):
+                req.cache_quotes[(product_id, datetime_)] = None
+            if is_old:
+                cache.set(cache_key, None, timeout=60*60*24*30) # También cacheamos los None para evitar consultas repetidas
             return None
-
-    @staticmethod
-    def get_quotes(lod_):
-        """
-            Gets a massive quote query
-            Parameters:
-                - lod_= [{"products_id": 79234, "datetime": ...}, ]
-            To look for we must r[product_id][datetime]
-
-            Si no la encuentra devuelve un precio de 0
-        """
-        if len (lod_)==0:
-            return {}
-
-        lod_=lod.lod_remove_duplicates(lod_)
-
-        r={}            
-        for needed_quote in lod_:
-            qs=Quotes.objects.filter(products__id=needed_quote["products_id"], datetime__lte=needed_quote["datetime"])\
-            .annotate(
-                needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()), 
-                needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
-            ).order_by("-datetime")
-            tmplod=qs.values().first()
-            if not needed_quote["products_id"] in r:
-                r[needed_quote["products_id"]]={}
-            if tmplod:
-                r[needed_quote["products_id"]][needed_quote["datetime"]]=tmplod
-            else:
-                r[needed_quote["products_id"]][needed_quote["datetime"]]={
-                    "datetime": needed_quote["datetime"], "id": needed_quote["products_id"], "needed_datetime": needed_quote["datetime"],
-                    "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": 0
-                }
-                # print(_("I coudn't get a quote for product '{0}' at '{1}' assigning a price of 0").format(needed_quote["products_id"], needed_quote["datetime"]))
-        return r
-    
-    @staticmethod
-    def get_quotes_with_threadpool(lod_):
-        """
-        Gets a massive quote query using a thread pool to parallelize queries.
-        Parameters:
-            - lod_= [{"products_id": 79234, "datetime": ...}, ]
-        To look for we must r[product_id][datetime]
-
-        Si no la encuentra deveulve 0
-
-        SOLO USADO EN TESTS
-        """
-        if len (lod_)==0:
-            return {}
-
-        lod_ = lod.lod_remove_duplicates(lod_)
-
-        def fetch_quote(needed_quote):
-            # Each thread needs its own connection to the database.
-            # This ensures that the main connection is not shared across threads.
-            try:
-                qs=Quotes.objects.filter(products__id=needed_quote["products_id"], datetime__lte=needed_quote["datetime"])\
-                .annotate(
-                    needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()), 
-                    needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
-                ).order_by("-datetime")
-                result = qs.values().first()
-                if result:
-                    return result
-                return {"datetime": None, "id": None, "needed_datetime": needed_quote["datetime"], "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": 0}
-            finally:
-                connection.close()
-
-        with ThreadPoolExecutor() as executor:
-            results = list(executor.map(fetch_quote, lod_))
-
-        r = {}
-        for d in results:
-            if d["needed_products_id"] not in r:
-                r[d["needed_products_id"]] = {}
-            r[d["needed_products_id"]][d["needed_datetime"]] = d
-        return r
-
-
-
-    @staticmethod
-    async def async_get_quotes_with_a_methods(lod_):
-        """
-            An asynchronous version of get_quotes using Django's async ORM.
-            This method MUST be called from an async context (e.g., an `async def` view).
-            
-            Parameters:
-                - lod_= [{"products_id": 79234, "datetime": ...}, ]
-            To look for we must r[product_id][datetime]
-
-            SOLO USADO EN TESTS
-        """
-        if not lod_:
-            return {}
-
-        lod_ = lod.lod_remove_duplicates(lod_)
-
-        async def fetch_quote(needed_quote):
-            qs = Quotes.objects.filter(
-                products__id=needed_quote["products_id"],
-                datetime__lte=needed_quote["datetime"]
-            ).annotate(
-                needed_datetime=Value(needed_quote["datetime"], output_field=models.DateTimeField()),
-                needed_products_id=Value(needed_quote["products_id"], output_field=models.IntegerField())
-            ).order_by("-datetime")
-            internal_r= await qs.values().afirst()
-            if internal_r is not None:
-                return internal_r
-            else:
-                return     { "datetime": None, "id": None, "needed_datetime": needed_quote  ["datetime"], "needed_products_id": needed_quote["products_id"], "products_id": needed_quote["products_id"], "quote": 0 }
-
-        tasks = [fetch_quote(nq) for nq in lod_]
-        results = await asyncio.gather(*tasks)
-
-        r = {}
-        for d in results:
-            if d["needed_products_id"] not in r:
-                r[d["needed_products_id"]] = {}
-            r[d["needed_products_id"]][d["needed_datetime"]] = d
-        return r
-
-
-
-    @staticmethod
-    def get_currency_factor(datetime_, from_, to_ ,  get_quotes_result):
-        """
-            Gets the factor to pass a currency to other in a datetime
-            Params:
-                - get_quotes_result: Dictionary result of Quotes.get_quotes. Poner None para que se calcule3
-            Returns and object or None
-
-            Si no lo encuentra deveulve 1
-        """
-        def get_quote(products_id,  datetime_):
-            if get_quotes_result is None:
-                q=Quotes.get_quote(products_id, datetime_)
-                if q is None:
-                    return None
-                else:
-                    return q.quote
-            else:
-                return get_quotes_result[products_id][datetime_]["quote"]
-        
-        
-        if from_==to_:
-            return 1
-            
-        if from_== 'EUR' and to_== 'USD':
-            return get_quote(74747, datetime_)
-        elif from_== 'USD' and to_== 'EUR':
-            q=get_quote(74747, datetime_)
-            if q is None:
-                return None
-            else:
-                if q==0:
-                    return None
-                else:
-                    return 1/q
-        # print(_("I coudn't find currency factor from '{0}' to '{1}' at '{2}' returning 1 by default").format(from_, to_, datetime_ ))
-        return 1        
-    
-
-    
-    @staticmethod
-    def get_quote_dictionary_for_currency_factor(datetime_,  from_,  to_):
-        """
-            Returns a dictionary to be used to create the lod of get_quotes
-    """
-        if (from_== 'EUR' and  to_=='USD') or  (from_=="USD" and  to_=="EUR"):
-            return {"products_id":74747,  "datetime":datetime_}
-        print("CANT CONVERT TO GET_QUOTE DICTIONARY",  datetime_,  from_,  to_) 
-#    
-#        r_quotes=Quotes.get_quotes(lod_quotes)
-#        
-#        r_factors={}
-#        for needed_factor in lod_:
-#            #Initialize dictionary
-#            if not needed_factor["from_"] in r_factors:
-#                r_factors[needed_factor["from_"]]={}
-#                if not needed_factor["to_"] in r_factors[needed_factor["from_"]]:
-#                    r_factors[needed_factor["from_"]][needed_factor["to_"]]={}
-#                
-#            # Assign values
-#            if (needed_factor["from_"]== needed_factor["to_"]):
-#                r_factors[needed_factor["from_"]][needed_factor["to_"]][needed_factor["datetime"]]=1
-#                
-#            elif (needed_factor["from_"]== 'EUR' and  needed_factor["to_"]== 'USD'):
-#                r_factors["EUR"]["USD"][needed_factor["datetime"]]=r_quotes[74747][needed_factor["datetime"]]["quote"]
-#                
-#            elif (needed_factor["from_"]== 'USD' and  needed_factor["to_"]== 'EUR'):
-#                if r_quotes[74747][needed_factor["datetime"]]["quote"] is None:
-#                    r_factors["USD"]["EUR"][needed_factor["datetime"]]=None
-#                else:
-#                    r_factors["USD"]["EUR"][needed_factor["datetime"]]=1/r_quotes[74747][needed_factor["datetime"]]["quote"]
-#            
-#            else:
-#                print("MASSIVE FACTOR NOT FOUND",  needed_factor)
-#        return r_factors
 
 class Productspairs(models.Model):
     name = models.CharField(max_length=200, blank=False, null=False)
@@ -1728,6 +1733,132 @@ class Splits(models.Model):
     class Meta:
         managed = True
         db_table = 'splits'
+
+    def clean(self):
+        super().clean()
+        if self.before is not None and self.before <= 0:
+            raise ValidationError({'before': _('Before must be greater than zero.')})
+        if self.after is not None and self.after <= 0:
+            raise ValidationError({'after': _('After must be greater than zero.')})
+
+    def apply_adjustments(self):
+        if self.before <= 0 or self.after <= 0:
+            return
+        
+        factor = Decimal(self.after) / Decimal(self.before)
+
+        # 1. Adjust Quotes before the split datetime
+        Quotes.objects.filter(products=self.products, datetime__lt=self.datetime).update(
+            quote=F('quote') / factor
+        )
+
+        # 2. Adjust Investmentsoperations before the split datetime
+        Investmentsoperations.objects.filter(investments__products=self.products, datetime__lt=self.datetime).update(
+            shares=F('shares') * factor,
+            price=F('price') / factor
+        )
+
+        # 3. Adjust Investments selling_price
+        Investments.objects.filter(products=self.products).update(
+            selling_price=F('selling_price') / factor
+        )
+
+        # 4. Adjust Dividends.dps before the split datetime
+        Dividends.objects.filter(investments__products=self.products, datetime__lt=self.datetime).update(
+            dps=F('dps') / factor
+        )
+
+        # 5. Adjust Orders before the split datetime
+        Orders.objects.filter(investments__products=self.products, date__lt=self.datetime.date()).update(
+            shares=F('shares') * factor,
+            price=F('price') / factor
+        )
+
+        # 6. Adjust Dps before the split datetime
+        Dps.objects.filter(products=self.products, date__lt=self.datetime.date()).update(
+            gross=F('gross') / factor
+        )
+
+        # 7. Adjust EstimationsDps before the split datetime
+        EstimationsDps.objects.filter(products=self.products, date_estimation__lt=self.datetime.date()).update(
+            estimation=F('estimation') / factor
+        )
+
+        # Refresh investments metadata
+        for inv in Investments.objects.filter(products=self.products):
+            inv.set_attributes_after_investmentsoperations_crud()
+
+        # Clear Django cache
+        cache.clear()
+
+    def revert_adjustments(self):
+        if self.before <= 0 or self.after <= 0:
+            return
+
+        factor = Decimal(self.after) / Decimal(self.before)
+
+        # 1. Revert Quotes before the split datetime
+        Quotes.objects.filter(products=self.products, datetime__lt=self.datetime).update(
+            quote=F('quote') * factor
+        )
+
+        # 2. Revert Investmentsoperations before the split datetime
+        Investmentsoperations.objects.filter(investments__products=self.products, datetime__lt=self.datetime).update(
+            shares=F('shares') / factor,
+            price=F('price') * factor
+        )
+
+        # 3. Revert Investments selling_price
+        Investments.objects.filter(products=self.products).update(
+            selling_price=F('selling_price') * factor
+        )
+
+        # 4. Revert Dividends.dps before the split datetime
+        Dividends.objects.filter(investments__products=self.products, datetime__lt=self.datetime).update(
+            dps=F('dps') * factor
+        )
+
+        # 5. Revert Orders before the split datetime
+        Orders.objects.filter(investments__products=self.products, date__lt=self.datetime.date()).update(
+            shares=F('shares') / factor,
+            price=F('price') * factor
+        )
+
+        # 6. Revert Dps before the split datetime
+        Dps.objects.filter(products=self.products, date__lt=self.datetime.date()).update(
+            gross=F('gross') * factor
+        )
+
+        # 7. Revert EstimationsDps before the split datetime
+        EstimationsDps.objects.filter(products=self.products, date_estimation__lt=self.datetime.date()).update(
+            estimation=F('estimation') * factor
+        )
+
+        # Refresh investments metadata
+        for inv in Investments.objects.filter(products=self.products):
+            inv.set_attributes_after_investmentsoperations_crud()
+
+        # Clear Django cache
+        cache.clear()
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        
+        if self.pk is not None:
+            try:
+                orig = Splits.objects.get(pk=self.pk)
+                orig.revert_adjustments()
+            except Splits.DoesNotExist:
+                pass
+
+        super().save(*args, **kwargs)
+        self.apply_adjustments()
+
+    @transaction.atomic
+    def delete(self, *args, **kwargs):
+        self.revert_adjustments()
+        super().delete(*args, **kwargs)
 
 
 class StrategiesTypes(models.IntegerChoices):
@@ -2089,22 +2220,19 @@ class Assets:
         """
             Makes a money conversion from a currency to other in a moment
         """
-        factor=Quotes.get_currency_factor(dt, from_, to_, None)
-        if factor is None:
-            return None
-        else:
-            return amount*factor
+        pair=CurrencyPair(from_, to_)
+        return amount*pair.get_factor(dt)
 
         
     @staticmethod
-    def pl_total_balance(dt, local_currency, mode=ios.IOSModes.sumtotals):
+    def pl_total_balance(dt, local_currency, mode=ios.IOSModes.sumtotals, request=None):
         """
             Returns a dict with the following keys:
             {'accounts_user': 0, 'investments_user': 0, 'total_user': 0, 'investments_invested_user': 0}
         """
-        accounts_user= Accounts.accounts_balance(Accounts.objects.all(), dt, local_currency)["balance_user_currency"]
+        accounts_user= Accounts.accounts_balance(Accounts.objects.all(), dt, local_currency, request)["balance_user_currency"]
        
-        plio=ios.IOS.from_all(dt,  local_currency,  mode)
+        plio=ios.IOS.from_all(dt,  local_currency,  mode, request=request)
 
         r= { 
             "accounts_user": accounts_user, 
@@ -2127,4 +2255,89 @@ class FastOperationsCoverage(models.Model):
 
     class Meta:
         managed = True
+
+
+def list_without_splits(cls):
+    queryset = cls.objects.all()
+    results = list(queryset.values())
+    
+    affected_classes = {
+        'Quotes': ('products_id', 'datetime', ['quote'], 'div'),
+        'Investmentsoperations': ('investments__products_id', 'datetime', ['shares', 'price'], 'op'),
+        'Investments': ('products_id', None, ['selling_price'], 'div'),
+        'Dividends': ('investments__products_id', 'datetime', ['dps'], 'div'),
+        'Orders': ('investments__products_id', 'date', ['shares', 'price'], 'op'),
+        'Dps': ('products_id', 'date', ['gross'], 'div'),
+        'EstimationsDps': ('products_id', 'date_estimation', ['estimation'], 'div'),
+    }
+    
+    class_name = cls.__name__
+    if class_name in affected_classes:
+        product_field, date_field, adjust_fields, operation_type = affected_classes[class_name]
+        
+        from decimal import Decimal
+        from moneymoney.models import Splits
+        
+        splits = list(Splits.objects.all())
+        
+        for item in results:
+            prod_id = None
+            if product_field == 'products_id':
+                prod_id = item.get('products_id')
+            elif product_field == 'investments__products_id':
+                inv_id = item.get('investments_id')
+                if inv_id:
+                    from moneymoney.models import Investments
+                    inv = Investments.objects.filter(id=inv_id).select_related('products').first()
+                    if inv:
+                        prod_id = inv.products_id
+                        
+            if prod_id is None:
+                continue
+                
+            record_date = None
+            if date_field:
+                record_date = item.get(date_field)
+                
+            combined_factor = Decimal('1.0')
+            for split in splits:
+                if split.products_id == prod_id:
+                    is_after = False
+                    if record_date is None:
+                        is_after = True
+                    else:
+                        import datetime
+                        split_dt = split.datetime
+                        if isinstance(record_date, datetime.datetime):
+                            if timezone.is_aware(record_date):
+                                if not timezone.is_aware(split_dt):
+                                    split_dt = timezone.make_aware(split_dt)
+                            else:
+                                if timezone.is_aware(split_dt):
+                                    split_dt = timezone.make_naive(split_dt)
+                            is_after = record_date < split_dt
+                        elif isinstance(record_date, datetime.date):
+                            is_after = record_date < split_dt.date()
+                            
+                    if is_after:
+                        factor = Decimal(split.after) / Decimal(split.before)
+                        combined_factor *= factor
+                        
+            if combined_factor != Decimal('1.0'):
+                for field in adjust_fields:
+                    if item.get(field) is not None:
+                        val = Decimal(str(item[field]))
+                        if operation_type == 'div':
+                            item[field] = val * combined_factor
+                        elif operation_type == 'op':
+                            if field == 'shares':
+                                item[field] = val / combined_factor
+                            elif field == 'price':
+                                item[field] = val * combined_factor
+                                
+    return results
+
+for name, obj in list(globals().items()):
+    if isinstance(obj, type) and issubclass(obj, models.Model) and obj is not models.Model:
+        setattr(obj, 'list_without_splits', classmethod(list_without_splits))
         

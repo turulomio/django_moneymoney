@@ -183895,7 +183895,7 @@
             "ticker_morningstar": null,
             "ticker_quefondos": null,
             "ticker_investingcom": "LQQ.PA#EPA",
-            "decimals": 2
+            "decimals": 3
         }
     },
     {
@@ -183949,7 +183949,7 @@
             "ticker_morningstar": null,
             "ticker_quefondos": null,
             "ticker_investingcom": "LP60081294#EPA",
-            "decimals": 3
+            "decimals": 6
         }
     },
     {
