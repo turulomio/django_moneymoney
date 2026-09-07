@@ -5,6 +5,7 @@ on:
     workflows: ["Docker Image CI"] # Nombre del workflow de publicación (docker-publish.yml)
     types:
       - completed # Se ejecuta cuando el workflow de publicación ha terminado
+    branches: [ "main", "266-fix-docker-errors" ]
   workflow_dispatch:
 
 permissions:
