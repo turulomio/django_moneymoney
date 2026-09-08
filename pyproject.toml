@@ -38,4 +38,5 @@ testserver_e2e = { script = "moneymoney.poethepoet:testserver_e2e" }
 [project.urls]
 homepage = "https://github.com/turulomio/django_moneymoney/"
 repository = "https://github.com/turulomio/django_moneymoney/"
+docker = "https://hub.docker.com/r/turulomio/django_moneymoney"
 changelog = "https://github.com/turulomio/django_moneymoney#changelog"

@@ -106,4 +106,21 @@ All models in `moneymoney/models.py` have a classmethod `list_without_splits(cls
   - `investments_transfers_unfinished`: Transfers without destination datetime set.
   - `products_without_quotes_before_operations`: Returns a list of objects containing `{"url": "<product_url>", "datetime": "<earliest_operation_datetime>"}` for products that have investment operations where no quote exists with `datetime <= operation.datetime`. Because missing quotes default to 0 in portfolio calculations (`ios.py`), this alert provides the product reference URL and the earliest operation date needing a quote so the frontend knows what quote to add.
 
+---
+
+## 10. Docker Deployment & Configuration
+- **Official Docker Hub Image**: [`turulomio/django_moneymoney`](https://hub.docker.com/r/turulomio/django_moneymoney)
+- **Container Settings**: Configured in `django_moneymoney/settings_docker.py` (inherits from `settings.py` without modifying development configuration).
+- **Environment Variables**:
+  - `PORT`: Web server listen port (default `8000`).
+  - `POSTGRES_DB` / `DB_NAME`: Database name (default `xulpymoney`).
+  - `POSTGRES_USER` / `DB_USER`: PostgreSQL username (default `postgres`).
+  - `POSTGRES_PASSWORD` / `DB_PASSWORD`: PostgreSQL password (default `postgres`).
+  - `POSTGRES_HOST` / `DB_HOST`: PostgreSQL host (default `db`).
+  - `POSTGRES_PORT` / `DB_PORT`: PostgreSQL port (default `5432`).
+  - `ALLOWED_HOSTS`: Extra allowed hosts (comma-separated).
+- **CI / Publishing**: Handled via `.github/workflows/docker-publish.yml` with automated build, push, and health verification against PostgreSQL with the `plpython3u` extension.
+
+
+
 
