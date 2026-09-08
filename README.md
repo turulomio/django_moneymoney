@@ -1,6 +1,7 @@
 # 💰 Django MoneyMoney
 
 [![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fturulomio%2Fdjango_moneymoney%2Fbadge%3Fref%3Dmain&style=flat)](https://actions-badge.atrox.dev/turulomio/django_moneymoney/goto?ref=main)
+[![Docker Image](https://img.shields.io/badge/docker-turulomio%2Fdjango__moneymoney-blue.svg?logo=docker&logoColor=white)](https://hub.docker.com/r/turulomio/django_moneymoney)
 
 Django MoneyMoney is a powerful, high-performance financial management backend built with **Django** and **Django REST Framework (DRF)**. It tracks and analyzes bank accounts, investment operations, dividends, orders, and credit card expenses across multiple currencies.
 
@@ -71,6 +72,13 @@ To run all tests:
 poetry run python manage.py test
 ```
 
-For Docker instructions and environment variables, see [DOCKER.md](file:///home/worky/Proyectos/django_moneymoney/DOCKER.md).
+---
+
+## 🐳 Docker
+
+The official Docker image is available on [Docker Hub (turulomio/django_moneymoney)](https://hub.docker.com/r/turulomio/django_moneymoney).
+
+For complete Docker deployment instructions and environment variables, see [DOCKER.md](file:///home/worky/Proyectos/django_moneymoney/DOCKER.md).
+
 
 
