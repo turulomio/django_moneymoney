@@ -2,9 +2,9 @@ name: Django CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "266-fix-docker-errors" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "266-fix-docker-errors" ]
   workflow_dispatch:
 
 jobs:
