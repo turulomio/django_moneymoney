@@ -1,4 +1,4 @@
-name: Django CI
+name: Django CI/CD
 
 on:
   push:
@@ -7,55 +7,85 @@ on:
     branches: [ "main", "269-crear-imagen-docker-con-tag-e2e-para-testing" ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  build:
+  build_and_test:
+    name: Build & Run Tests in Docker
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16.4
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: github_actions
-        ports:
-          - 5432:5432
-        # needed because the postgres container does not provide a healthcheck
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v4
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build E2E test image
+      uses: docker/build-push-action@v5
       with:
-        python-version: 3.12
+        context: .
+        file: ./Dockerfile.e2e
+        load: true
+        tags: django_moneymoney:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
 
-    - name: Install PL/Python in the PostgreSQL container (Old migrations)
+    - name: Run Django Tests inside Docker Container
       run: |
-        # Version can change see in docker page wich is postgres:latest
-        docker exec ${{ job.services.postgres.id }} bash -c "apt-get update && apt-get install -y postgresql-plpython3-16"
+        docker run --rm django_moneymoney:test sh -c "service postgresql start && until pg_isready -h 127.0.0.1 -p 5432; do sleep 1; done && python manage.py test"
 
+  publish_docker_images:
+    name: Publish Docker Hub Images
+    needs: [build_and_test]
+    runs-on: ubuntu-latest
+    if: ${{ (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/269-crear-imagen-docker-con-tag-e2e-para-testing')) || github.event_name == 'workflow_dispatch' }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-    - name: Create PL/Python Extension
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and push Docker image (latest)
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: ${{ secrets.DOCKER_USERNAME }}/django_moneymoney:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build and push Docker E2E image (e2e)
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.e2e
+        push: true
+        tags: ${{ secrets.DOCKER_USERNAME }}/django_moneymoney:e2e
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Verify E2E Image in Standalone Mode
       run: |
-        docker exec ${{ job.services.postgres.id }} bash -c "PGPASSWORD=postgres psql -h localhost -U postgres -c 'CREATE EXTENSION plpython3u;'"
-        docker exec ${{ job.services.postgres.id }} bash -c "PGPASSWORD=postgres createdb -h localhost -U postgres xulpymoney"
-
-
-    - name: Wait for PostgreSQL
-      run: |
-        until pg_isready -h localhost -p 5432; do
-          echo "Waiting for PostgreSQL to become ready..."
+        docker run -d --name moneymoney-e2e -p 8000:8000 ${{ secrets.DOCKER_USERNAME }}/django_moneymoney:e2e
+        for i in $(seq 1 30); do
+          if curl -s http://localhost:8000/ > /dev/null 2>&1; then
+            echo "Django E2E app is ready and responding!"
+            docker rm -f moneymoney-e2e
+            exit 0
+          fi
+          echo "Waiting for Django E2E app... ($i/30)"
           sleep 2
         done
-
-    - name: Install python dependencies ${{ matrix.python-version }}
-      run: |
-        sudo apt-get install python3.12 python3.12-venv
-        sudo python3.12 -m venv .python3.12
-        sudo .python3.12/bin/pip install .
-
-    - name: Run Tests
-      run: |
-        sudo .python3.12/bin/python manage.py test
+        echo "Django E2E app failed to respond on port 8000"
+        docker logs moneymoney-e2e
+        docker rm -f moneymoney-e2e
+        exit 1

@@ -121,7 +121,7 @@ All models in `moneymoney/models.py` have a classmethod `list_without_splits(cls
   - `POSTGRES_HOST` / `DB_HOST`: PostgreSQL host (default `db` for `:latest`, `127.0.0.1` for `:e2e`).
   - `POSTGRES_PORT` / `DB_PORT`: PostgreSQL port (default `5432`).
   - `ALLOWED_HOSTS`: Extra allowed hosts (comma-separated).
-- **CI / Publishing**: Handled via `.github/workflows/docker-publish.yml` with automated build, push, and health verification for both `:latest` and `:e2e` images.
+- **CI / Publishing**: Handled via a unified container-first workflow in `.github/workflows/django.yml`. It builds the Docker image with GitHub Actions caching, runs the full Django test suite hermetically inside the container, and automatically publishes both `:latest` and `:e2e` images to Docker Hub on push to `main`.
 
 
 
