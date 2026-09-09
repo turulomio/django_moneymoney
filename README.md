@@ -76,9 +76,8 @@ poetry run python manage.py test
 
 ## 🐳 Docker
 
-The official Docker image is available on [Docker Hub (turulomio/django_moneymoney)](https://hub.docker.com/r/turulomio/django_moneymoney).
+The official Docker images are available on [Docker Hub (turulomio/django_moneymoney)](https://hub.docker.com/r/turulomio/django_moneymoney):
+- **`turulomio/django_moneymoney:latest`**: Standard production-ready image (requires external PostgreSQL database).
+- **`turulomio/django_moneymoney:e2e`**: Standalone testing image with embedded PostgreSQL 16, pre-applied migrations, and pre-loaded fixtures (`all.json`, `test_users.json`) for fast frontend/E2E test runs.
 
-For complete Docker deployment instructions and environment variables, see [DOCKER.md](file:///home/worky/Proyectos/django_moneymoney/DOCKER.md).
-
-
-
+For complete Docker deployment instructions, environment variables, and usage examples, see [DOCKER.md](file:///home/worky/Proyectos/django_moneymoney/DOCKER.md).

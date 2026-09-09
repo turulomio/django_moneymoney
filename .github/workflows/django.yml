@@ -2,9 +2,9 @@ name: Django CI
 
 on:
   push:
-    branches: [ "main", "266-fix-docker-errors" ]
+    branches: [ "main", "269-crear-imagen-docker-con-tag-e2e-para-testing" ]
   pull_request:
-    branches: [ "main", "266-fix-docker-errors" ]
+    branches: [ "main", "269-crear-imagen-docker-con-tag-e2e-para-testing" ]
   workflow_dispatch:
 
 jobs:
