@@ -109,17 +109,19 @@ All models in `moneymoney/models.py` have a classmethod `list_without_splits(cls
 ---
 
 ## 10. Docker Deployment & Configuration
-- **Official Docker Hub Image**: [`turulomio/django_moneymoney`](https://hub.docker.com/r/turulomio/django_moneymoney)
+- **Official Docker Hub Images**: [`turulomio/django_moneymoney`](https://hub.docker.com/r/turulomio/django_moneymoney)
+  - **`turulomio/django_moneymoney:latest`**: Standard production-ready image. Requires external PostgreSQL database configured via environment variables.
+  - **`turulomio/django_moneymoney:e2e`**: Standalone testing image containing embedded PostgreSQL 16 with the `plpython3u` extension, pre-applied migrations, and pre-loaded fixtures (`all.json`, `test_users.json`). Built to accelerate frontend E2E and CI test suites without needing external database provisioning.
 - **Container Settings**: Configured in `django_moneymoney/settings_docker.py` (inherits from `settings.py` without modifying development configuration).
 - **Environment Variables**:
   - `PORT`: Web server listen port (default `8000`).
   - `POSTGRES_DB` / `DB_NAME`: Database name (default `xulpymoney`).
   - `POSTGRES_USER` / `DB_USER`: PostgreSQL username (default `postgres`).
   - `POSTGRES_PASSWORD` / `DB_PASSWORD`: PostgreSQL password (default `postgres`).
-  - `POSTGRES_HOST` / `DB_HOST`: PostgreSQL host (default `db`).
+  - `POSTGRES_HOST` / `DB_HOST`: PostgreSQL host (default `db` for `:latest`, `127.0.0.1` for `:e2e`).
   - `POSTGRES_PORT` / `DB_PORT`: PostgreSQL port (default `5432`).
   - `ALLOWED_HOSTS`: Extra allowed hosts (comma-separated).
-- **CI / Publishing**: Handled via `.github/workflows/docker-publish.yml` with automated build, push, and health verification against PostgreSQL with the `plpython3u` extension.
+- **CI / Publishing**: Handled via a unified container-first workflow in `.github/workflows/django.yml`. It builds the Docker image with GitHub Actions caching, runs the full Django test suite hermetically inside the container, and automatically publishes both `:latest` and `:e2e` images to Docker Hub on push to `main`.
 
 
 

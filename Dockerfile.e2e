@@ -1,0 +1,94 @@
+# --- Stage 1: Build dependencies ---
+FROM python:3.12-slim-bookworm AS builder
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    gcc \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install poetry
+RUN poetry self add poetry-plugin-export
+
+COPY pyproject.toml poetry.lock /app/
+RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
+RUN pip wheel --no-cache-dir --wheel-dir=/usr/src/app/wheels -r requirements.txt
+
+# --- Stage 2: Final image (E2E with embedded PostgreSQL & pre-loaded fixtures) ---
+FROM python:3.12-slim-bookworm
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app
+
+# Install PostgreSQL 16, PL/Python extension, and runtime dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    gnupg \
+    lsb-release \
+    libpq-dev \
+    && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg \
+    && echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update && apt-get install -y \
+    postgresql-16 \
+    postgresql-contrib-16 \
+    postgresql-plpython3-16 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy pre-built wheels and install Python dependencies
+COPY --from=builder /usr/src/app/wheels /wheels
+COPY --from=builder /app/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir /wheels/* -r requirements.txt gunicorn
+
+# Copy application source code
+COPY . /app
+
+# Configure PostgreSQL pg_hba.conf for local connections
+RUN echo "local   all             all                                     trust" > /etc/postgresql/16/main/pg_hba.conf && \
+    echo "host    all             all             127.0.0.1/32            trust" >> /etc/postgresql/16/main/pg_hba.conf && \
+    echo "host    all             all             ::1/128                 trust" >> /etc/postgresql/16/main/pg_hba.conf
+
+# Initialize database, run migrations, and preload fixtures during image build
+RUN service postgresql start && \
+    until pg_isready -h 127.0.0.1 -p 5432; do sleep 1; done && \
+    su - postgres -c "psql -c \"ALTER USER postgres WITH PASSWORD 'postgres';\"" && \
+    su - postgres -c "psql -c \"CREATE EXTENSION IF NOT EXISTS plpython3u;\"" && \
+    su - postgres -c "createdb -U postgres xulpymoney" && \
+    su - postgres -c "psql -U postgres -d xulpymoney -c \"CREATE EXTENSION IF NOT EXISTS plpython3u;\"" && \
+    DJANGO_SETTINGS_MODULE=django_moneymoney.settings_docker \
+    POSTGRES_HOST=127.0.0.1 \
+    POSTGRES_PORT=5432 \
+    POSTGRES_DB=xulpymoney \
+    POSTGRES_USER=postgres \
+    POSTGRES_PASSWORD=postgres \
+    python manage.py migrate && \
+    DJANGO_SETTINGS_MODULE=django_moneymoney.settings_docker \
+    POSTGRES_HOST=127.0.0.1 \
+    POSTGRES_PORT=5432 \
+    POSTGRES_DB=xulpymoney \
+    POSTGRES_USER=postgres \
+    POSTGRES_PASSWORD=postgres \
+    python manage.py loaddata moneymoney/fixtures/all.json moneymoney/fixtures/test_users.json && \
+    service postgresql stop
+
+# Expose web server port
+EXPOSE 8000
+
+# Default environment variables
+ENV DJANGO_SETTINGS_MODULE=django_moneymoney.settings_docker
+ENV PORT=8000
+ENV POSTGRES_DB=xulpymoney
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_PASSWORD=postgres
+ENV POSTGRES_HOST=127.0.0.1
+ENV POSTGRES_PORT=5432
+
+# Start embedded PostgreSQL and run Gunicorn
+CMD ["sh", "-c", "service postgresql start && until pg_isready -h 127.0.0.1 -p 5432; do sleep 1; done && exec gunicorn --bind 0.0.0.0:${PORT:-8000} django_moneymoney.wsgi:application"]
