@@ -63,6 +63,21 @@ This is the backend of the [MoneyMoney](https://github.com/turulomio/moneymoney)
 
 ---
 
+## ⚙️ Management Commands
+
+- **Products Update (`products_update`)**:
+  Fetches quotes from online providers (`yahoo`, `google`, `morningstar`, `quefondos`, `investingcom`) for products associated with investments or favorites that have ticker symbols configured.
+  ```bash
+  # Dry-run (display quotes and insert/update status)
+  poetry run python manage.py products_update yahoo
+
+  # Save quotes to the database with custom delay between requests
+  poetry run python manage.py products_update yahoo --write --delay 1.5
+  ```
+
+
+---
+
 ## 🧪 Testing
 
 The project is backed by a comprehensive unit and integration test suite.
@@ -71,6 +86,7 @@ To run all tests:
 ```bash
 poetry run python manage.py test
 ```
+
 
 ---
 

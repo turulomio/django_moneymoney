@@ -146,6 +146,31 @@ All models in `moneymoney/models.py` have a classmethod `list_without_splits(cls
 - **Benchmark Testing**:
   - Benchmarked via `test_Alerts_benchmark` in `moneymoney/tests/test_alerts.py`, confirming response latency under 250ms with hundreds of historical quotes, operations, accounts, and orders.
 
+---
+
+## 12. Management Commands: Products Update (`products_update`)
+- **Usage**:
+  ```bash
+  poetry run python manage.py products_update <ticker_provider> [--write] [--delay <seconds>]
+  ```
+- **Supported Ticker Providers**: `yahoo`, `google`, `morningstar`, `quefondos`, `investingcom` (case-insensitive, with aliases such as `investing_com`).
+- **Pacing & Rate-Limit Handling**:
+  - Accepts `--delay` (default `1.0` seconds) to space requests between product fetches.
+  - Automatically handles Yahoo HTTP 429 rate limit responses by backing off and retrying with alternative endpoints.
+- **Product Selection**:
+  - Automatically queries products associated with `Investments` (`investments__isnull=False`) and products in user `Profile.favorites` (`profile__isnull=False`).
+  - Only includes products with a non-null, non-empty ticker for the requested provider (`ticker_yahoo`, `ticker_google`, `ticker_morningstar`, `ticker_quefondos`, `ticker_investingcom`).
+- **Operation / Action Detection**:
+  - Compares the quote datetime against existing database records for that product to flag each entry as `insert` or `update`.
+- **Output & Execution**:
+  - Prints a formatted ASCII table using `pydicts.lod.lod_print` with `product`, `datetime`, `quote`, and `action` (`insert` / `update`).
+  - If any products failed to be retrieved, prints a separate table with `product`, `ticker`, and `reason` (explaining why it could not be fetched).
+  - Summary counts displayed at the end: total selected products and total successfully fetched quotes (`Seleccionados: X`, `Buscados: Y`).
+  - By default runs in dry-run mode. When `--write` is specified, writes the quotes to the database via `Quotes.save()`.
+
+
+
+
 
 
 
