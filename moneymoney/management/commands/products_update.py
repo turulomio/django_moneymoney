@@ -1,5 +1,5 @@
 from decimal import Decimal
-from datetime import datetime, timezone as dt_timezone
+from datetime import datetime, date as dt_date, timezone as dt_timezone
 import json
 import re
 import time
@@ -49,6 +49,14 @@ class Command(BaseCommand):
             help="Delay in seconds between requests to avoid rate limits (default: 1.0)"
         )
 
+    def _resolve_date_to_dtaware_closes(self, product, date_obj):
+        """
+        Converts a date object to an aware datetime using the product's stockmarket closing time.
+        """
+        if product.stockmarkets:
+            return product.stockmarkets.dtaware_closes(date_obj)
+        return casts.dtaware_day_end_from_date(date_obj, 'UTC')
+
     def fetch_yahoo(self, product, ticker_value):
         """
         Fetches the latest quote for a product using Yahoo Finance API with retry and backoff on 429.
@@ -85,10 +93,9 @@ class Command(BaseCommand):
                 ts = meta.get('regularMarketTime')
                 if price is None:
                     return None, "No se encontró regularMarketPrice en los metadatos"
-                if ts:
-                    dt = datetime.fromtimestamp(ts, tz=dt_timezone.utc)
-                else:
-                    dt = timezone.now()
+                if not ts:
+                    return None, "No se encontró fecha/hora en los metadatos de Yahoo"
+                dt = datetime.fromtimestamp(ts, tz=dt_timezone.utc)
                 return {
                     'datetime': dt,
                     'quote': Decimal(str(price))
@@ -124,25 +131,47 @@ class Command(BaseCommand):
                 if response.status_code != 200:
                     last_error = f"HTTP {response.status_code}"
                     continue
+
                 # Pattern 1: data-last-price attribute
+                quote_val = None
                 m = re.search(r'data-last-price="([^"]+)"', response.text)
                 if m:
                     price_str = m.group(1).replace(',', '')
-                    return {'datetime': timezone.now(), 'quote': Decimal(price_str)}, None
-                
-                # Pattern 2: span jsname="Pdsbrc" or class YMlKec
-                m = re.search(r'<span[^>]*jsname="Pdsbrc"[^>]*><span>([^<]+)</span>', response.text)
-                if not m:
-                    m = re.search(r'class="[^"]*YMlKec fxKbKc[^"]*">([^<]+)<', response.text)
-                if m:
-                    val_str = m.group(1).strip()
-                    val_clean = re.sub(r'[^\d.,]', '', val_str)
-                    if ',' in val_clean and '.' in val_clean:
-                        val_clean = val_clean.replace('.', '').replace(',', '.')
-                    elif ',' in val_clean:
-                        val_clean = val_clean.replace(',', '.')
-                    return {'datetime': timezone.now(), 'quote': Decimal(val_clean)}, None
-                last_error = "No se encontró el elemento de precio en el HTML"
+                    quote_val = Decimal(price_str)
+                else:
+                    # Pattern 2: span jsname="Pdsbrc" or class YMlKec
+                    m = re.search(r'<span[^>]*jsname="Pdsbrc"[^>]*><span>([^<]+)</span>', response.text)
+                    if not m:
+                        m = re.search(r'class="[^"]*YMlKec fxKbKc[^"]*">([^<]+)<', response.text)
+                    if m:
+                        val_str = m.group(1).strip()
+                        val_clean = re.sub(r'[^\d.,]', '', val_str)
+                        if ',' in val_clean and '.' in val_clean:
+                            val_clean = val_clean.replace('.', '').replace(',', '.')
+                        elif ',' in val_clean:
+                            val_clean = val_clean.replace(',', '.')
+                        quote_val = Decimal(val_clean)
+
+                if quote_val is None:
+                    last_error = "No se encontró el elemento de precio en el HTML"
+                    continue
+
+                # Extract date / timestamp from Google Finance
+                dt = None
+                m_time = re.search(r'data-last-time="(\d+)"', response.text)
+                if m_time:
+                    dt = datetime.fromtimestamp(int(m_time.group(1)), tz=dt_timezone.utc)
+                else:
+                    m_date = re.search(r'(\d{2}/\d{2}/\d{4})', response.text)
+                    if m_date:
+                        date_obj = casts.str2date(m_date.group(1), "DD/MM/YYYY")
+                        dt = self._resolve_date_to_dtaware_closes(product, date_obj)
+
+                if dt is None:
+                    last_error = "No se encontró la fecha de la cotización en Google Finance"
+                    continue
+
+                return {'datetime': dt, 'quote': quote_val}, None
             except Exception as e:
                 last_error = f"Excepción / Error de conexión: {e}"
         return None, last_error
@@ -158,13 +187,25 @@ class Command(BaseCommand):
             response = self.session.get(url, headers=headers, timeout=10)
             if response.status_code not in (200, 202):
                 return None, f"HTTP {response.status_code}"
-            m = re.search(r'class="text">([0-9]+,[0-9]+)</td>', response.text)
-            if not m:
-                m = re.search(r'([0-9]+,[0-9]+)\s*EUR', response.text)
-            if m:
-                val_clean = m.group(1).replace(',', '.')
-                return {'datetime': timezone.now(), 'quote': Decimal(val_clean)}, None
-            return None, "No se encontró el valor liquidativo / precio en el HTML"
+            m_price = re.search(r'class="text">([0-9]+,[0-9]+)</td>', response.text)
+            if not m_price:
+                m_price = re.search(r'([0-9]+,[0-9]+)\s*EUR', response.text)
+            if not m_price:
+                return None, "No se encontró el valor liquidativo / precio en el HTML"
+
+            val_clean = m_price.group(1).replace(',', '.')
+
+            # Extract date (e.g. DD/MM/YYYY)
+            m_date = re.search(r'heading"[^>]*>(?:Fecha|Date|NAV)[^<]*</span>\s*<span class="text">(\d{2}/\d{2}/\d{4})</span>', response.text, re.IGNORECASE)
+            if not m_date:
+                m_date = re.search(r'(\d{2}/\d{2}/\d{4})', response.text)
+
+            if not m_date:
+                return None, "No se encontró la fecha del valor liquidativo en Morningstar"
+
+            date_obj = casts.str2date(m_date.group(1), "DD/MM/YYYY")
+            dt = self._resolve_date_to_dtaware_closes(product, date_obj)
+            return {'datetime': dt, 'quote': Decimal(val_clean)}, None
         except Exception as e:
             return None, f"Excepción / Error de conexión: {e}"
 
@@ -185,13 +226,27 @@ class Command(BaseCommand):
                 if response.status_code != 200:
                     last_error = f"HTTP {response.status_code}"
                     continue
-                m = re.search(r'class="floatright">([0-9]+,[0-9]+)</span>', response.text)
-                if not m:
-                    m = re.search(r'Valor liquidativo:[^0-9]*([0-9]+,[0-9]+)', response.text)
-                if m:
-                    val_clean = m.group(1).replace(',', '.')
-                    return {'datetime': timezone.now(), 'quote': Decimal(val_clean)}, None
-                last_error = "No se encontró el valor liquidativo en el HTML"
+                m_price = re.search(r'class="floatright">([0-9]+,[0-9]+)</span>', response.text)
+                if not m_price:
+                    m_price = re.search(r'Valor liquidativo:[^0-9]*([0-9]+,[0-9]+)', response.text)
+                if not m_price:
+                    last_error = "No se encontró el valor liquidativo en el HTML"
+                    continue
+
+                val_clean = m_price.group(1).replace(',', '.')
+
+                # Extract date in Quefondos (DD/MM/YYYY)
+                m_date = re.search(r'Fecha:\s*(\d{2}/\d{2}/\d{4})', response.text, re.IGNORECASE)
+                if not m_date:
+                    m_date = re.search(r'(\d{2}/\d{2}/\d{4})', response.text)
+
+                if not m_date:
+                    last_error = "No se encontró la fecha del valor liquidativo en Quefondos"
+                    continue
+
+                date_obj = casts.str2date(m_date.group(1), "DD/MM/YYYY")
+                dt = self._resolve_date_to_dtaware_closes(product, date_obj)
+                return {'datetime': dt, 'quote': Decimal(val_clean)}, None
             except Exception as e:
                 last_error = f"Excepción / Error de conexión: {e}"
         return None, last_error
@@ -208,11 +263,28 @@ class Command(BaseCommand):
             response = self.session.get(url, headers=headers, timeout=10)
             if response.status_code != 200:
                 return None, f"HTTP {response.status_code}"
-            m = re.search(r'class="[^"]*last-price[^"]*">([^<]+)<', response.text)
-            if m:
-                val_clean = m.group(1).strip().replace('.', '').replace(',', '.')
-                return {'datetime': timezone.now(), 'quote': Decimal(val_clean)}, None
-            return None, "No se encontró el precio en el HTML"
+            m_price = re.search(r'class="[^"]*last-price[^"]*">([^<]+)<', response.text)
+            if not m_price:
+                return None, "No se encontró el precio en el HTML"
+
+            val_clean = m_price.group(1).strip().replace('.', '').replace(',', '.')
+
+            # Extract date (e.g. DD/MM/YYYY or data-pair-date)
+            m_date = re.search(r'data-pair-date="([^"]+)"', response.text)
+            if not m_date:
+                m_date = re.search(r'(\d{2}/\d{2}/\d{4})', response.text)
+
+            if not m_date:
+                return None, "No se encontró la fecha de la cotización en Investing.com"
+
+            date_str = m_date.group(1)
+            try:
+                date_obj = casts.str2date(date_str, "DD/MM/YYYY")
+                dt = self._resolve_date_to_dtaware_closes(product, date_obj)
+            except Exception:
+                return None, "Error parseando la fecha de Investing.com"
+
+            return {'datetime': dt, 'quote': Decimal(val_clean)}, None
         except Exception as e:
             return None, f"Excepción / Error de conexión: {e}"
 
@@ -282,11 +354,23 @@ class Command(BaseCommand):
             dt = quote_data['datetime']
             quote_val = quote_data['quote']
 
-            # Ensure dt is a Python datetime object and timezone-aware
             if dt is None:
-                dt = timezone.now()
+                not_found_results.append({
+                    "product": product.fullName(),
+                    "ticker": ticker_val,
+                    "reason": "No se encontró la fecha de la cotización",
+                })
+                continue
+
+            # If it's a date object (and not datetime), convert to stockmarket closes
+            if isinstance(dt, dt_date) and not isinstance(dt, datetime):
+                dt = self._resolve_date_to_dtaware_closes(product, dt)
             elif isinstance(dt, str):
-                dt = casts.str2dtaware(dt, 'UTC')
+                if len(dt) == 10 and '-' in dt:
+                    date_obj = casts.str2date(dt, 'YYYY-MM-DD')
+                    dt = self._resolve_date_to_dtaware_closes(product, date_obj)
+                else:
+                    dt = casts.str2dtaware(dt, 'UTC')
             elif timezone.is_naive(dt):
                 dt = timezone.make_aware(dt)
 

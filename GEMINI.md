@@ -162,6 +162,9 @@ All models in `moneymoney/models.py` have a classmethod `list_without_splits(cls
   - Only includes products with a non-null, non-empty ticker for the requested provider (`ticker_yahoo`, `ticker_google`, `ticker_morningstar`, `ticker_quefondos`, `ticker_investingcom`).
 - **Operation / Action Detection**:
   - Compares the quote datetime against existing database records for that product to flag each entry as `insert` or `update`.
+- **Date Resolution & Stockmarket Closing Time**:
+  - Requires valid date/datetime returned from the provider without fallback/invented dates; if date information is missing, the product is reported as not found with reason.
+  - When the provider returns a `date` without time (such as daily fund NAVs from Morningstar or Quefondos), the quote datetime is calculated using the product's stockmarket closing time (`product.stockmarkets.dtaware_closes(date)`).
 - **Timezone Conversion**:
   - Converts quote datetimes to the user's configured timezone (`Profile.zone`, defaulting to `Europe/Madrid`) as timezone-aware Python `datetime` objects.
 - **Output & Execution**:
@@ -169,6 +172,7 @@ All models in `moneymoney/models.py` have a classmethod `list_without_splits(cls
   - If any products failed to be retrieved, prints a separate table with `product`, `ticker`, and `reason` (explaining why it could not be fetched).
   - Summary metrics displayed at the end: total selected products, total successfully fetched quotes, and elapsed execution time (`Seleccionados: X`, `Buscados: Y`, `Tiempo: Z s`).
   - By default runs in dry-run mode. When `--write` is specified, writes the quotes to the database via `Quotes.save()`.
+
 
 
 

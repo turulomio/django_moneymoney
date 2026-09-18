@@ -2,10 +2,10 @@ from io import StringIO
 from contextlib import redirect_stdout
 from unittest.mock import patch, MagicMock
 from decimal import Decimal
+from datetime import datetime, date, timezone as dt_timezone
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.utils import timezone
-from datetime import datetime, timezone as dt_timezone
 from moneymoney import models
 
 
@@ -162,6 +162,35 @@ def test_command_products_update_not_found_with_reason(self):
     self.assertIn("Buscados: 0", output)
 
 
+def test_command_products_update_date_resolves_to_stockmarket_closes(self):
+    p = models.Products.objects.get(id=79329)
+    p.ticker_morningstar = "F000001W2L"
+    p.save()
+
+    models.Investments.objects.create(
+        name="Inv for stockmarket closes",
+        active=True,
+        accounts_id=4,
+        products=p,
+        selling_price=0,
+        daily_adjustment=False,
+        balance_percentage=100
+    )
+
+    # Return a date object instead of datetime
+    test_date = date(2026, 9, 17)
+    expected_closing_dt = p.stockmarkets.dtaware_closes(test_date)
+
+    with patch('moneymoney.management.commands.products_update.Command.fetch_morningstar', return_value=({'datetime': test_date, 'quote': Decimal("20.500000")}, None)):
+        out = StringIO()
+        with redirect_stdout(out):
+            call_command('products_update', 'morningstar', '--write', delay=0)
+
+    quote_obj = models.Quotes.objects.filter(products=p).order_by('-datetime').first()
+    self.assertIsNotNone(quote_obj)
+    self.assertEqual(quote_obj.datetime, expected_closing_dt)
+
+
 def test_command_products_update_fetchers_mocked(self):
     p = models.Products.objects.get(id=79329)
     p.ticker_yahoo = "SAN.MC"
@@ -206,11 +235,11 @@ def test_command_products_update_fetchers_mocked(self):
             self.assertIn("12.9", out.getvalue())
             self.assertIn("Buscados: 1", out.getvalue())
 
-    # Test Google
+    # Test Google with date
     with patch('requests.Session.get') as mock_get:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
-        mock_resp.text = '<span jsname="Pdsbrc"><span>€15.60</span></span>'
+        mock_resp.text = '<span jsname="Pdsbrc"><span>€15.60</span></span> data-last-time="1789716914"'
         mock_get.return_value = mock_resp
 
         out = StringIO()
@@ -219,11 +248,11 @@ def test_command_products_update_fetchers_mocked(self):
         self.assertIn("15.6", out.getvalue())
         self.assertIn("Buscados: 1", out.getvalue())
 
-    # Test Morningstar
+    # Test Morningstar with date
     with patch('requests.Session.get') as mock_get:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
-        mock_resp.text = '<td class="text">23,45</td>'
+        mock_resp.text = '<td class="text">23,45</td> <span class="heading">Fecha</span><span class="text">17/09/2026</span>'
         mock_get.return_value = mock_resp
 
         out = StringIO()
@@ -232,11 +261,11 @@ def test_command_products_update_fetchers_mocked(self):
         self.assertIn("23.45", out.getvalue())
         self.assertIn("Buscados: 1", out.getvalue())
 
-    # Test Quefondos
+    # Test Quefondos with date
     with patch('requests.Session.get') as mock_get:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
-        mock_resp.text = '<span class="floatright">18,72</span>'
+        mock_resp.text = '<span class="floatright">18,72</span> Fecha: 17/09/2026'
         mock_get.return_value = mock_resp
 
         out = StringIO()
@@ -245,11 +274,11 @@ def test_command_products_update_fetchers_mocked(self):
         self.assertIn("18.72", out.getvalue())
         self.assertIn("Buscados: 1", out.getvalue())
 
-    # Test Investing.com
+    # Test Investing.com with date
     with patch('requests.Session.get') as mock_get:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
-        mock_resp.text = '<span class="last-price">14,20</span>'
+        mock_resp.text = '<span class="last-price">14,20</span> data-pair-date="17/09/2026"'
         mock_get.return_value = mock_resp
 
         out = StringIO()
