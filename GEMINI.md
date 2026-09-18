@@ -123,6 +123,31 @@ All models in `moneymoney/models.py` have a classmethod `list_without_splits(cls
   - `ALLOWED_HOSTS`: Extra allowed hosts (comma-separated).
 - **CI / Publishing**: Handled via a unified container-first workflow in `.github/workflows/django.yml`. It builds the Docker image with GitHub Actions caching, runs the full Django test suite hermetically inside the container, and automatically publishes both `:latest` and `:e2e` images to Docker Hub on push to `main`.
 
+---
+
+## 11. Database Indexes & Alerts Endpoint Optimization
+- **Database Performance Indexes (Migration `0067`)**:
+  - `Quotes`: `(products, datetime)`, `(datetime)`
+  - `Investmentsoperations`: `(investments, datetime)`, `(datetime)`
+  - `Accountsoperations`: `(accounts, datetime)`, `(datetime)`
+  - `Orders`: `(executed, expiration)`, `(investments, executed)`
+  - `Investments`: `(active, accounts)`, `(products)`
+  - `Accounts`: `(banks, active)`, `(active)`
+  - `Banks`: `(active)`
+  - `Investmentstransfers`: `(datetime_destiny)`
+  - `Dividends`: `(investments, datetime)`
+  - `Dps`: `(products, date)`
+  - `EstimationsDps`: `(products, year)`
+  - `Creditcardsoperations`: `(creditcards, paid)`
+- **Alerts Optimization**:
+  - `investments_inactive_with_balance`: Filters inactive investments with operations (`investmentsoperations__isnull=False`) before evaluating full IOS calculation.
+  - `orders_expired`: Eliminates redundant `price_last()` calls when iterating over matched orders.
+  - `products_without_quotes_before_operations`: Correlated subquery accelerated via composite index `quotes_prod_dt_idx`.
+- **Benchmark Testing**:
+  - Benchmarked via `test_Alerts_benchmark` in `moneymoney/tests/test_alerts.py`, confirming response latency under 250ms with hundreds of historical quotes, operations, accounts, and orders.
+
+
+
 
 
 

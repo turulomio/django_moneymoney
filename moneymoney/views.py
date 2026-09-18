@@ -437,6 +437,7 @@ class OrdersViewSet(viewsets.ModelViewSet):
         
         r=[]
         for o in self.queryset:
+            current_price = o.investments.products.price_last(request)
             r.append({
                 "id": o.id,  
                 "url": request.build_absolute_uri(reverse('orders-detail', args=(o.pk, ))), 
@@ -449,9 +450,9 @@ class OrdersViewSet(viewsets.ModelViewSet):
                 "shares": o.shares, 
                 "price": o.price, 
                 "amount": o.shares*o.price*o.investments.products.real_leveraged_multiplier(), 
-                "percentage_from_price": percentage_between(o.investments.products.price_last(request), o.price),
+                "percentage_from_price": percentage_between(current_price, o.price),
                 "executed": o.executed,  
-                "current_price": o.investments.products.price_last(request), 
+                "current_price": current_price, 
             })
         return JsonResponse( r, encoder=myjsonencoder.MyJSONEncoderDecimalsAsFloat, safe=False)
 
@@ -755,6 +756,15 @@ class Alerts(APIView):
         }, 
     )
     def get(self, request, *args, **kwargs):
+        """
+        Returns application-wide alerts with optimized indexed queries across:
+        - Expired limit orders (within expired_days window).
+        - Inactive banks with non-zero balance.
+        - Inactive accounts with non-zero balance.
+        - Inactive investments with active share balances (evaluated via IOS).
+        - Unfinished investments transfers.
+        - Products with investment operations lacking preceding price quotes.
+        """
         r={}
         r["server_time"]=timezone.now()
         
@@ -779,12 +789,13 @@ class Alerts(APIView):
 
         # Get all investments status
         r["investments_inactive_with_balance"]=[]
-        qs=models.Investments.objects.filter(active=False)
-        plio_inactive=ios.IOS.from_qs_investments(timezone.now(), request.user.profile.currency, qs,  2,self.request)
-        for id in plio_inactive.entries():
-            plio=plio_inactive.d(id)
-            if plio["total_io_current"]["balance_investment"]!=0:
-                r["investments_inactive_with_balance"].append(plio)
+        qs=models.Investments.objects.filter(active=False, investmentsoperations__isnull=False).distinct()
+        if qs.exists():
+            plio_inactive=ios.IOS.from_qs_investments(timezone.now(), request.user.profile.currency, qs,  2,self.request)
+            for id in plio_inactive.entries():
+                plio=plio_inactive.d(id)
+                if plio["total_io_current"]["balance_investment"]!=0:
+                    r["investments_inactive_with_balance"].append(plio)
 
         # Get all unfinished investments transfers
         qs=models.Investmentstransfers.objects.filter(datetime_destiny__isnull=True).prefetch_related('investmentsoperations_set')
