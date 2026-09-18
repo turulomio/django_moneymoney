@@ -50,3 +50,117 @@ def test_Alerts(self):
     tests_helpers.client_post(self, self.client_authorized_1, "/api/quotes/", models.Quotes.post_payload(products="/api/products/79226/", datetime=self.dtaware_now - timedelta(days=20)), status.HTTP_201_CREATED)
     lod_alerts=tests_helpers.client_get(self, self.client_authorized_1, "/alerts/",  status.HTTP_200_OK)
     self.assertEqual(len(lod_alerts["products_without_quotes_before_operations"]), 0 )
+
+
+def test_Alerts_benchmark(self):
+    """
+    Benchmark test for Alerts endpoint with scaled dataset.
+    Populates hundreds of quotes, operations, accounts, and orders to test index efficiency.
+    """
+    import time
+    from decimal import Decimal
+
+    # Setup 5 products with 100 historical quotes each (500 quotes)
+    products = list(models.Products.objects.filter(obsolete=False)[:5])
+    quotes_to_create = []
+    for product in products:
+        for day in range(1, 101):
+            dt = self.dtaware_now - timedelta(days=day)
+            quotes_to_create.append(
+                models.Quotes(
+                    products=product,
+                    datetime=dt,
+                    quote=Decimal("100.000000") + Decimal(str(day * 0.1))
+                )
+            )
+    models.Quotes.objects.bulk_create(quotes_to_create)
+
+    # Setup inactive and active accounts with operations
+    bank = models.Banks.objects.first()
+    concept = models.Concepts.objects.first()
+    accounts_to_create = [
+        models.Accounts(name=f"Bench Account {i}", banks=bank, active=(i % 2 == 0), currency="EUR", decimals=2)
+        for i in range(10)
+    ]
+    models.Accounts.objects.bulk_create(accounts_to_create)
+    all_accounts = list(models.Accounts.objects.filter(name__startswith="Bench Account"))
+
+    # Bulk insert account operations
+    ao_to_create = []
+    for acc in all_accounts:
+        for day in range(1, 21):
+            ao_to_create.append(
+                models.Accountsoperations(
+                    accounts=acc,
+                    concepts=concept,
+                    amount=Decimal("50.00"),
+                    datetime=self.dtaware_now - timedelta(days=day)
+                )
+            )
+    models.Accountsoperations.objects.bulk_create(ao_to_create)
+
+    # Setup investments with operations
+    optype = models.Operationstypes.objects.get(id=4)
+    investments_to_create = [
+        models.Investments(
+            name=f"Bench Inv {i}",
+            active=(i % 2 == 0),
+            accounts=all_accounts[i % len(all_accounts)],
+            products=products[i % len(products)],
+            selling_price=Decimal("0"),
+            daily_adjustment=False,
+            balance_percentage=Decimal("100"),
+            decimals=6
+        )
+        for i in range(6)
+    ]
+    models.Investments.objects.bulk_create(investments_to_create)
+    all_investments = list(models.Investments.objects.filter(name__startswith="Bench Inv"))
+
+    invops_to_create = []
+    for inv in all_investments:
+        for day in range(1, 15):
+            invops_to_create.append(
+                models.Investmentsoperations(
+                    investments=inv,
+                    operationstypes=optype,
+                    shares=Decimal("10.000000"),
+                    price=Decimal("100.000000"),
+                    taxes=Decimal("0.00"),
+                    commission=Decimal("0.00"),
+                    currency_conversion=Decimal("1.0000000000"),
+                    datetime=self.dtaware_now - timedelta(days=day)
+                )
+            )
+    models.Investmentsoperations.objects.bulk_create(invops_to_create)
+
+    # Setup orders
+    orders_to_create = [
+        models.Orders(
+            date=self.today - timedelta(days=5),
+            expiration=self.today - timedelta(days=2),
+            shares=Decimal("10.000000"),
+            price=Decimal("100.000000"),
+            investments=all_investments[0],
+            executed=None
+        )
+    ]
+    models.Orders.objects.bulk_create(orders_to_create)
+
+    # Warmup call
+    tests_helpers.client_get(self, self.client_authorized_1, "/alerts/", status.HTTP_200_OK)
+
+    # Benchmark multiple calls
+    iterations = 5
+    start_time = time.perf_counter()
+    for _ in range(iterations):
+        resp = tests_helpers.client_get(self, self.client_authorized_1, "/alerts/", status.HTTP_200_OK)
+        self.assertIn("server_time", resp)
+        self.assertIn("orders_expired", resp)
+        self.assertIn("products_without_quotes_before_operations", resp)
+
+    elapsed_time = time.perf_counter() - start_time
+    avg_time_per_request = elapsed_time / iterations
+
+    # Average request time should be well below 250ms (0.25s) with database indexes
+    self.assertLess(avg_time_per_request, 0.25, f"Alerts.get too slow: {avg_time_per_request:.4f}s per request")

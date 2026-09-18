@@ -103,6 +103,10 @@ class Accounts(models.Model):
         managed = True
         db_table = 'accounts'
         ordering = ['name']
+        indexes = [
+            models.Index(fields=['banks', 'active'], name='acc_bank_active_idx'),
+            models.Index(fields=['active'], name='acc_active_idx'),
+        ]
         
     def __str__(self):
         return self.fullName()
@@ -312,6 +316,10 @@ class Accountsoperations(models.Model):
     class Meta:
         managed = True
         db_table = 'accountsoperations'
+        indexes = [
+            models.Index(fields=['accounts', 'datetime'], name='accops_acc_dt_idx'),
+            models.Index(fields=['datetime'], name='accops_dt_idx'),
+        ]
         
     def __str__(self):
         return functions.string_oneline_object(self)
@@ -464,7 +472,10 @@ class Banks(models.Model):
 
     class Meta:
         managed = True
-        db_table = 'banks'      
+        db_table = 'banks'
+        indexes = [
+            models.Index(fields=['active'], name='banks_active_idx'),
+        ]      
 
     def __str__(self):
         return self.name  
@@ -635,6 +646,9 @@ class Creditcardsoperations(models.Model):
     class Meta:
         managed = True
         db_table = 'creditcardsoperations'
+        indexes = [
+            models.Index(fields=['creditcards', 'paid'], name='ccops_card_paid_idx'),
+        ]
         
     @staticmethod
     def post_payload(
@@ -689,6 +703,9 @@ class Dividends(models.Model):
     class Meta:
         managed = True
         db_table = 'dividends'
+        indexes = [
+            models.Index(fields=['investments', 'datetime'], name='div_inv_dt_idx'),
+        ]
 
 
     @staticmethod
@@ -785,6 +802,10 @@ class Investments(models.Model):
         managed = True
         db_table = 'investments'
         ordering = ['name']
+        indexes = [
+            models.Index(fields=['active', 'accounts'], name='inv_active_acc_idx'),
+            models.Index(fields=['products'], name='inv_products_idx'),
+        ]
         
 
     def __str__(self):
@@ -897,6 +918,10 @@ class Investmentsoperations(models.Model):
     class Meta:
         managed = True
         db_table = 'investmentsoperations'
+        indexes = [
+            models.Index(fields=['investments', 'datetime'], name='invops_inv_dt_idx'),
+            models.Index(fields=['datetime'], name='invops_dt_idx'),
+        ]
         
     def __str__(self):
         return functions.string_oneline_object(self)
@@ -1079,6 +1104,9 @@ class Investmentstransfers(models.Model):
     class Meta:
         managed = True
         db_table = 'investmentstransfers'
+        indexes = [
+            models.Index(fields=['datetime_destiny'], name='invtrans_dt_dest_idx'),
+        ]
         
     def __str__(self):
         return functions.string_oneline_object(self)
@@ -1181,6 +1209,10 @@ class Orders(models.Model):
     class Meta:
         managed = True
         db_table = 'orders'
+        indexes = [
+            models.Index(fields=['executed', 'expiration'], name='orders_exec_exp_idx'),
+            models.Index(fields=['investments', 'executed'], name='orders_inv_exec_idx'),
+        ]
         
     def currency_amount(self):
         return Currency(self.price*self.shares*self.investments.products.real_leveraged_multiplier(), self.investments.products.currency)
@@ -1605,6 +1637,10 @@ class Quotes(models.Model):
     class Meta:
         managed = True
         db_table = 'quotes'
+        indexes = [
+            models.Index(fields=['products', 'datetime'], name='quotes_prod_dt_idx'),
+            models.Index(fields=['datetime'], name='quotes_dt_idx'),
+        ]
         
     def __str__(self):
         return f"Quote ({self.id}) of '{self.products.name}' at {self.datetime} is {self.quote}"
@@ -2117,6 +2153,9 @@ class EstimationsDps(models.Model):
     class Meta:
         managed = True
         db_table = 'estimations_dps'
+        indexes = [
+            models.Index(fields=['products', 'year'], name='estdps_prod_year_idx'),
+        ]
 
     @staticmethod
     def post_payload(year=date.today().year,  products="http://testserver/api/products/79329/",  estimation=0.52,  date_estimation=date.today()):
@@ -2143,6 +2182,9 @@ class Dps(models.Model):
     class Meta:
         managed = True
         db_table = 'dps'
+        indexes = [
+            models.Index(fields=['products', 'date'], name='dps_prod_date_idx'),
+        ]
 
 
 class Assets:    
