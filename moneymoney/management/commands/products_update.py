@@ -4,6 +4,8 @@ import json
 import re
 import time
 import requests
+from zoneinfo import ZoneInfo
+from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 from django.utils import timezone
@@ -237,6 +239,12 @@ class Command(BaseCommand):
         canonical_ticker = ticker_field.replace('ticker_', '')
         fetcher = self.get_ticker_fetcher(canonical_ticker)
 
+        # Retrieve user timezone from profile (defaulting to Europe/Madrid)
+        user = User.objects.filter(profile__isnull=False).first() or User.objects.first()
+        user_zone_name = user.profile.zone if user and hasattr(user, 'profile') and user.profile.zone else "Europe/Madrid"
+
+        start_time = time.perf_counter()
+
         # 1. Select products: distinct products associated with investments or in favorites having that ticker
         products_qs = Products.objects.filter(
             Q(investments__isnull=False) | Q(profile__isnull=False)
@@ -274,13 +282,27 @@ class Command(BaseCommand):
             dt = quote_data['datetime']
             quote_val = quote_data['quote']
 
+            # Ensure dt is a Python datetime object and timezone-aware
+            if dt is None:
+                dt = timezone.now()
+            elif isinstance(dt, str):
+                dt = casts.str2dtaware(dt, 'UTC')
+            elif timezone.is_naive(dt):
+                dt = timezone.make_aware(dt)
+
+            # Convert to user timezone
+            try:
+                dt = dt.astimezone(ZoneInfo(user_zone_name))
+            except Exception:
+                pass
+
             # Determine whether this quote would be an insert or update
             is_update = Quotes.objects.filter(products=product, datetime=dt).exists()
             action = "update" if is_update else "insert"
 
             results.append({
                 "product": product.fullName(),
-                "datetime": dt.isoformat() if hasattr(dt, 'isoformat') else str(dt),
+                "datetime": dt,
                 "quote": quote_val,
                 "action": action,
             })
@@ -298,5 +320,7 @@ class Command(BaseCommand):
             self.stdout.write("\nNo encontrados:")
             lod.lod_print(not_found_results)
 
+        elapsed_seconds = round(time.perf_counter() - start_time, 2)
         self.stdout.write(f"\nSeleccionados: {selected_count}")
         self.stdout.write(f"Buscados: {found_count}")
+        self.stdout.write(f"Tiempo: {elapsed_seconds} s")

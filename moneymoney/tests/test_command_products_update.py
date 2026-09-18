@@ -77,6 +77,7 @@ def test_command_products_update_selection_and_dryrun(self):
     # P1 and P2 should be selected (total 2 selected)
     self.assertIn("Seleccionados: 2", output)
     self.assertIn("Buscados: 2", output)
+    self.assertIn("Tiempo:", output)
     self.assertIn("insert", output)
     self.assertIn("12.5", output)
     self.assertIn("9.25", output)

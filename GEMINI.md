@@ -162,11 +162,15 @@ All models in `moneymoney/models.py` have a classmethod `list_without_splits(cls
   - Only includes products with a non-null, non-empty ticker for the requested provider (`ticker_yahoo`, `ticker_google`, `ticker_morningstar`, `ticker_quefondos`, `ticker_investingcom`).
 - **Operation / Action Detection**:
   - Compares the quote datetime against existing database records for that product to flag each entry as `insert` or `update`.
+- **Timezone Conversion**:
+  - Converts quote datetimes to the user's configured timezone (`Profile.zone`, defaulting to `Europe/Madrid`) as timezone-aware Python `datetime` objects.
 - **Output & Execution**:
   - Prints a formatted ASCII table using `pydicts.lod.lod_print` with `product`, `datetime`, `quote`, and `action` (`insert` / `update`).
   - If any products failed to be retrieved, prints a separate table with `product`, `ticker`, and `reason` (explaining why it could not be fetched).
-  - Summary counts displayed at the end: total selected products and total successfully fetched quotes (`Seleccionados: X`, `Buscados: Y`).
+  - Summary metrics displayed at the end: total selected products, total successfully fetched quotes, and elapsed execution time (`Seleccionados: X`, `Buscados: Y`, `Tiempo: Z s`).
   - By default runs in dry-run mode. When `--write` is specified, writes the quotes to the database via `Quotes.save()`.
+
+
 
 
 
