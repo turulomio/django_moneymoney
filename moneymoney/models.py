@@ -955,10 +955,12 @@ class Investmentsoperations(models.Model):
         }
 
     def clean(self):
-        #Checks investment has quotes
+        # Checks investment has quotes
         if not Quotes.objects.filter(products=self.investments.products).exists():
             raise ValidationError(_("Investment operation can't be created because its related product hasn't quotes."))
 
+        if self.datetime and self.datetime > timezone.now():
+            raise ValidationError(_("Investment operations cannot have a datetime in the future."))
 
     @transaction.atomic
     def delete(self):
@@ -971,7 +973,8 @@ class Investmentsoperations(models.Model):
     @transaction.atomic
     def save(self, *args, **kwargs):
         """
-            This save must use self.fullClean when used as a model
+        Saves the investment operation and generates or updates its associated
+        account operation (Accountsoperations) by evaluating portfolio metrics through IOS.
         """
         self.full_clean()
         super(Investmentsoperations, self).save(*args, **kwargs) #To generate io and then plio
@@ -987,14 +990,17 @@ class Investmentsoperations(models.Model):
         if self.investments.daily_adjustment is True: #Because it uses adjustment information
             return
         
-        # Updates asociated ao
-        plio=ios.IOS.from_ids(timezone.now(), "EUR", [self.investments.id, ], 1,request=None) #I set EUR to reuse this code but __user values will not be used
-        #Searches io investments operations of the comment
-        io=None
+        # Updates associated ao
+        plio = ios.IOS.from_ids(timezone.now(), "EUR", [self.investments.id, ], 1, request=None) # I set EUR to reuse this code but __user values will not be used
+        # Searches io investments operations of the comment
+        io = None
         for o in plio.d_io(self.investments.id):
-            if o["id"]==self.id:
-                io=o
+            if o["id"] == self.id:
+                io = o
         
+        if io is None:
+            raise ValidationError(_(f"Could not calculate portfolio metrics for investment operation {self.id}."))
+
         if self.operationstypes.id==eOperationType.SharesPurchase:#Compra Acciones
             c=Accountsoperations()
             c.datetime=self.datetime

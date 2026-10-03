@@ -30,6 +30,17 @@ def test_Investmentsoperations(self):
     self.assertFalse(models.Investmentsoperations.objects.filter(pk=dict_io_updated["id"]).exists(), "Investments operation should not exist")
     self.assertFalse(models.Accountsoperations.objects.filter(pk=id_from_url(dict_io_updated["associated_ao"])).exists(), "Associated account operation should not exist")
 
+    # Create investment operation with future datetime should fail validation
+    future_dt = timezone.now() + timezone.timedelta(days=10)
+    response_future = tests_helpers.client_post(
+        self,
+        self.client_authorized_1,
+        "/api/investmentsoperations/",
+        models.Investmentsoperations.post_payload(dict_investment["url"], datetime=future_dt),
+        status.HTTP_400_BAD_REQUEST
+    )
+    self.assertEqual(response_future["__all__"][0], "Investment operations cannot have a datetime in the future.")
+
     # Query investments operations with and investment without quotes 79226
     dict_investment=tests_helpers.client_post(self, self.client_authorized_1, "/api/investments/", models.Investments.post_payload(products="/api/products/79226/"), status.HTTP_201_CREATED)
     self.assertEqual(models.Quotes.objects.filter(products_id=79226).count(), 0)
@@ -88,3 +99,18 @@ def test_Investmentsoperations_models(self):
     io.full_clean()
     io.save()
     self.assertEqual(io.associated_ao, None)
+
+    # Test future datetime operation raises ValidationError
+    io_future = models.Investmentsoperations()
+    io_future.datetime = timezone.now() + timezone.timedelta(days=30)
+    io_future.operationstypes_id = types.eOperationType.SharesPurchase
+    io_future.investments = inv
+    io_future.price = 10
+    io_future.shares = 50
+    io_future.commission = 2
+    io_future.taxes = 1
+    io_future.currency_conversion = 1
+    io_future.comment = "Future operation test"
+    with self.assertRaises(ValidationError) as cm_future:
+        io_future.full_clean()
+    self.assertEqual("Investment operations cannot have a datetime in the future.", cm_future.exception.message_dict['__all__'][0])

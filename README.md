@@ -26,7 +26,7 @@ This is the backend of the [MoneyMoney](https://github.com/turulomio/moneymoney)
 
 - **Accounts**: Standard accounts mapping to specific banks.
 - **Investments**: Groups a financial product with a bank account.
-- **Investmentsoperations**: Tracks shares purchase/sell operations with price, taxes, and commissions.
+- **Investmentsoperations**: Tracks shares purchase/sell operations with price, taxes, and commissions, automatically generating linked `Accountsoperations` ledger records.
 - **Quotes**: Historical price points for products.
 - **Orders**: Limit orders placed with brokers.
 - **Dividends**: Realized dividend payments, linked to `Accountsoperations` for ledger consistency.
